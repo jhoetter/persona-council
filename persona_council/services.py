@@ -2681,6 +2681,13 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
     if project.get("methodology"):
         try:
             methodology_state = get_methodology_state(project["id"], store=store)
+            # Make each step's OPEN TAGS first-class on its nodes so they are filterable in the
+            # graph exactly like theme tags (capability/role/etc. — no hardcoded vocabulary).
+            step_tags = {s["key"]: list(s.get("tags") or []) for s in methodology_state["steps"]}
+            for node in nodes:
+                extra = step_tags.get(node.get("phase", ""), [])
+                if extra:
+                    node["theme_tags"] = list(dict.fromkeys((node.get("theme_tags") or []) + extra))
         except Exception:
             methodology_state = None
     return {
@@ -2993,13 +3000,19 @@ from . import prototypes as _proto  # noqa: E402
 from . import browser as _browser   # noqa: E402
 
 
-def scaffold_prototype(slug, name, concept, kind="web", template="spa-min",
+def scaffold_artifact(slug, name, concept, type="prototype", tags=None, template=None,
+                      project_id=None, store: Store | None = None):
+    return _proto.scaffold_artifact(slug, name, concept, type=type, tags=tags, template=template,
+                                    project_id=project_id, store=store)
+
+
+def scaffold_prototype(slug, name, concept, kind="web", template=None,
                        project_id=None, fidelity=None, store: Store | None = None):
     return _proto.scaffold_prototype(slug, name, concept, kind, template, project_id, fidelity=fidelity, store=store)
 
 
 def register_prototype(slug, name, path, entry="index.html", run="static", run_cmd=None,
-                       version="v0.1", project_id=None, notes="", fidelity="midfi", store: Store | None = None):
+                       version="v0.1", project_id=None, notes="", fidelity="", store: Store | None = None):
     return _proto.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes,
                                      fidelity=fidelity, store=store)
 

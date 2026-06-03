@@ -54,11 +54,11 @@ def _validate_concept(concept: dict[str, Any]) -> dict[str, Any]:
     return concept
 
 
-TEMPLATES = {"spa-min": "midfi", "spa-sketch": "lofi"}
-
-
-def _render_spa(name: str, concept: dict[str, Any], template: str = "spa-min") -> str:
-    tpl = (prototype_templates_dir() / template / "index.html").read_text(encoding="utf-8")
+def _render_spa(name: str, concept: dict[str, Any], template: str) -> str:
+    tdir = prototype_templates_dir() / template
+    if not (tdir / "index.html").exists():
+        raise PrototypeError("UNKNOWN_TEMPLATE", f"renderer template '{template}' not found")
+    tpl = (tdir / "index.html").read_text(encoding="utf-8")
     return (tpl
             .replace("__TITLE__", _esc(concept.get("title") or name))
             .replace("__SUMMARY__", _esc(concept.get("summary", "")))
@@ -69,41 +69,69 @@ def _esc(s: str) -> str:
     return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
-def scaffold_prototype(slug: str, name: str, concept: dict[str, Any], kind: str = "web",
-                       template: str = "spa-min", project_id: str | None = None,
-                       fidelity: str | None = None, store: Store | None = None) -> dict[str, Any]:
+def scaffold_artifact(slug: str, name: str, concept: dict[str, Any], type: str = "prototype",
+                      tags: list[str] | None = None, template: str | None = None,
+                      project_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
+    """Scaffold a real, runnable artifact of any TYPE. The renderer template is resolved from DATA
+    (the artifact-type registry in suggestions/artifact_types.json) — there is no code template map
+    and no fidelity enum. `tags` carry discriminators (e.g. a fidelity tag)."""
+    from . import presentation as _pres
     store = store or Store()
-    if template not in TEMPLATES:
-        raise PrototypeError("UNKNOWN_TEMPLATE", f"template must be one of {sorted(TEMPLATES)} (got {template})")
-    fidelity = fidelity or TEMPLATES[template]
+    tags = list(tags or [])
+    resolved = _pres.resolve_template(type, tags, explicit=template)
+    if not resolved:
+        raise PrototypeError("UNKNOWN_TEMPLATE",
+                             f"no renderer template for artifact type '{type}' (tags={tags}); "
+                             f"declare one in suggestions/artifact_types.json")
     concept = _validate_concept(concept)
     out_dir = prototypes_dir() / slug
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "index.html").write_text(_render_spa(name, concept, template), encoding="utf-8")
+    (out_dir / "index.html").write_text(_render_spa(name, concept, resolved), encoding="utf-8")
     (out_dir / "concept.json").write_text(json.dumps(concept, ensure_ascii=False, indent=2), encoding="utf-8")
     try:
         stored_path = str(out_dir.relative_to(ROOT))
     except ValueError:
         stored_path = str(out_dir)
-    return register_prototype(slug, name, stored_path, entry="index.html", run="static", version="v0.1",
-                              project_id=project_id, fidelity=fidelity,
-                              notes=f"generated from {template} ({len(concept['screens'])} screens)", store=store)
+    return register_artifact(slug, name, stored_path, entry="index.html", run="static", version="v0.1",
+                             project_id=project_id, type=type, tags=tags,
+                             notes=f"generated from {resolved} ({len(concept['screens'])} screens)", store=store)
+
+
+def register_artifact(slug: str, name: str, path: str, entry: str = "index.html", run: str = "static",
+                      run_cmd: str | None = None, version: str = "v0.1", project_id: str | None = None,
+                      notes: str = "", type: str = "prototype", tags: list[str] | None = None,
+                      store: Store | None = None) -> dict[str, Any]:
+    store = store or Store()
+    from .services import stable_id
+    now = utc_now_iso()
+    tags = list(tags or [])
+    existing = store.get_prototype(slug)
+    pid = (existing or {}).get("id") or stable_id("prototype", slug, now)
+    # legacy `fidelity` = the first discriminator tag (kept so old readers/_artifact_tags still work)
+    fidelity = next((t for t in tags if t), "") or (existing or {}).get("fidelity", "")
+    rec = Prototype(id=pid, slug=slug, project_id=project_id, name=name, version=version,
+                    kind="web", path=path, entry=entry, run=run, run_cmd=run_cmd, notes=notes,
+                    created_at=(existing or {}).get("created_at", now),
+                    fidelity=fidelity, type=type, tags=tags).to_dict()
+    store.upsert_prototype(rec)
+    return rec
+
+
+# back-compat wrappers: a "prototype" is just an artifact whose type tag is "prototype";
+# the legacy `fidelity` argument becomes a discriminator tag.
+def scaffold_prototype(slug: str, name: str, concept: dict[str, Any], kind: str = "web",
+                       template: str | None = None, project_id: str | None = None,
+                       fidelity: str | None = None, store: Store | None = None) -> dict[str, Any]:
+    return scaffold_artifact(slug, name, concept, type="prototype",
+                             tags=[fidelity] if fidelity else [], template=template,
+                             project_id=project_id, store=store)
 
 
 def register_prototype(slug: str, name: str, path: str, entry: str = "index.html", run: str = "static",
                        run_cmd: str | None = None, version: str = "v0.1", project_id: str | None = None,
-                       notes: str = "", fidelity: str = "midfi", store: Store | None = None) -> dict[str, Any]:
-    store = store or Store()
-    from .services import stable_id
-    now = utc_now_iso()
-    existing = store.get_prototype(slug)
-    pid = (existing or {}).get("id") or stable_id("prototype", slug, now)
-    rec = Prototype(id=pid, slug=slug, project_id=project_id, name=name, version=version,
-                    kind="web", path=path, entry=entry, run=run, run_cmd=run_cmd, notes=notes,
-                    created_at=(existing or {}).get("created_at", now),
-                    fidelity=(fidelity or "midfi")).to_dict()
-    store.upsert_prototype(rec)
-    return rec
+                       notes: str = "", fidelity: str = "", store: Store | None = None) -> dict[str, Any]:
+    return register_artifact(slug, name, path, entry, run, run_cmd, version, project_id, notes,
+                             type="prototype", tags=[fidelity] if fidelity else [], store=store)
 
 
 def list_prototypes(project_id: str | None = None, store: Store | None = None) -> list[dict[str, Any]]:

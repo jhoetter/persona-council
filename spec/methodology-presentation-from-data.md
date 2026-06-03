@@ -1,6 +1,6 @@
 # Presentation-from-Data — Zero Hardcoded Methodology Values
 
-> **Status:** DESIGN — build-ready. Amends `spec/methodology-constellations.md` (the tag-driven
+> **Status:** IMPLEMENTED — milestones P1–P4 landed; full suite green. Amends `spec/methodology-constellations.md` (the tag-driven
 > model) with a strict **presentation contract**: the UI must render a methodology **entirely from
 > data authored via MCP** — no methodology- or artifact-specific *value* may live in code.
 > **User directive (verbatim intent):** "it is JUST methodology generated via LLMs in the MCP that

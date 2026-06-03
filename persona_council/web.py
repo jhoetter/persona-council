@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 from datetime import date, timedelta
 
 from . import services
+from . import presentation as _pres
 from .config import DATA_DIR, load_env, ui_language, set_ui_language, SUPPORTED_LANGUAGES
 from .storage import Store
 
@@ -35,7 +36,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "syntheses_lead": "Studien-Bögen über Council-Ketten — die Reports.",
         "projects": "Projekte",
         "projects_lead": "Forschungs-Graphen: Studien (Synthesen) als Knoten, getaggt und verkettet.",
-        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen", "prototypes_h": "Prototypen",
+        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen", "prototypes_h": "Artefakte",
         "no_projects": "Noch keine Projekte. Lege eines an oder backfille deine Synthesen (CLI: research-backfill).",
         "source_studies": "Quell-Studien", "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
         "filter": "Filter", "clear_filter": "zurücksetzen", "legend": "Legende",
@@ -160,7 +161,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "syntheses_lead": "Study arcs across council chains — the reports.",
         "projects": "Projects",
         "projects_lead": "Research graphs: studies (syntheses) as nodes, tagged and linked.",
-        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Open questions", "prototypes_h": "Prototypes",
+        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Open questions", "prototypes_h": "Artifacts",
         "no_projects": "No projects yet. Create one or backfill your syntheses (CLI: research-backfill).",
         "source_studies": "Source studies", "themes_h": "Themes", "build_order_h": "Build order",
         "filter": "Filter", "clear_filter": "clear", "legend": "Legend",
@@ -1080,13 +1081,27 @@ _LAYOUT_VERSION = 4
 
 
 def _proto_tags(pr: dict) -> set:
-    """An artifact's open tags, mirroring methodology._artifact_tags (type + discriminators)."""
-    tags = {"prototype"}
+    """An artifact's open tags, mirroring methodology._artifact_tags (type tag + discriminators).
+    Read from the record's data; no artifact value assumed."""
+    tags = {pr.get("type") or _pres.DEFAULT_ARTIFACT_TYPE}
     if pr.get("fidelity"):
         tags.add(pr["fidelity"])
     for tg in (pr.get("tags") or []):
         tags.add(tg)
     return tags
+
+
+def _artifact_present(pr: dict) -> dict:
+    """Resolve an artifact's display fields purely from data: the type tag's presentation hint +
+    the first discriminator tag's short label. Generic fallbacks when no hint exists."""
+    type_tag = pr.get("type") or _pres.DEFAULT_ARTIFACT_TYPE
+    tp = _pres.present(type_tag, pr.get("presentation"))
+    disc = ""
+    for tg in ([pr.get("fidelity")] + list(pr.get("tags") or [])):
+        if tg:
+            disc = _pres.present(tg)["short"]
+            break
+    return {"label": tp["label"], "color": tp["color"], "glyph": tp["glyph"], "icon": tp["icon"], "disc": disc}
 
 
 def _methodology_layout(graph: dict) -> dict | None:
@@ -1125,7 +1140,8 @@ def _methodology_layout(graph: dict) -> dict | None:
         sk = s["key"]
         ns = sorted(by_step.get(sk, []), key=lambda n: n.get("created_at", ""))
         k = len(ns)
-        is_fan[sk] = k > 1 or (s.get("mode") == "diverge")
+        # a diamond emerges only once a fan actually HAS nodes (no empty silhouettes)
+        is_fan[sk] = k > 1 or (s.get("is_fan") and k >= 1)
         for i, n in enumerate(ns):
             pos[n["study_id"]] = (col_x[sk], AXIS + (i - (k - 1) / 2.0) * ROWH)
         fan_half[sk] = (((k - 1) / 2.0) * ROWH + 64) if k else 64
@@ -1247,21 +1263,28 @@ def _graph_interactive(graph: dict) -> str:
             col = _EDGE_COLORS.get(e["type"], "#9aa0a6")
             jedges.append({"from": e["from_study"], "to": e["to_study"], "color": col, "type": e["type"],
                            "mid": _colorlist.index(col) if col in _colorlist else 0})
-    # Prototype nodes (placed in their build phase) + dashed "tested-at" edges.
+    # Artifact nodes (placed in their build step) + dashed "tested-at" edges. Every label, glyph
+    # and color is resolved from DATA (the artifact's type/tags + presentation hints) — nothing
+    # methodology-specific is hardcoded here.
     if ml:
         ppos = ml.get("proto_pos", {})
         pw = ml.get("proto_w", 200)
+        acolor: dict[str, str] = {}
         for pr in (graph.get("prototypes") or []):
             if pr["id"] not in ppos:
                 continue
             x, y = ppos[pr["id"]]
-            fid = "lo-fi" if pr.get("fidelity") == "lofi" else "mid-fi"
+            ap = _artifact_present(pr)
+            acolor[pr["id"]] = ap["color"]
+            prefix = (ap["glyph"] + " ") if ap["glyph"] else ""
+            sub = f'{ap["disc"]} · {ap["label"]} ↗' if ap["disc"] else f'{ap["label"]} ↗'
             jnodes.append({"id": pr["id"], "x": x, "y": y, "tags": [], "w": pw, "h": 46,
-                           "label": ("▢ " + pr["name"])[:30] + ("…" if len(pr["name"]) > 28 else ""),
-                           "sub": f"{fid} · Prototyp ↗", "color": "#00897b",
+                           "label": (prefix + pr["name"])[:30] + ("…" if len(pr["name"]) > 28 else ""),
+                           "sub": sub, "color": ap["color"],
                            "href": f'/prototypes/{pr["slug"]}', "proto": True})
         for a, b, dashed in ml.get("proto_edges", []):
-            jedges.append({"from": a, "to": b, "color": "#00897b", "type": "prototype", "mid": 0, "dashed": bool(dashed)})
+            col = acolor.get(a) or acolor.get(b) or "#9aa0a6"
+            jedges.append({"from": a, "to": b, "color": col, "type": "artifact", "mid": 0, "dashed": bool(dashed)})
     # Bump _LAYOUT_VERSION whenever the layout algorithm changes → stale saved drags are dropped.
     data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds,
                        "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION}, ensure_ascii=False)
@@ -2280,10 +2303,17 @@ def create_app():
         reports = store.list_meta_reports(proj["id"])
         meta_btn = (f'<a class="btn" href="/projects/{_esc(proj["id"])}/meta">{_icon("syntheses")} {t("meta_report")}</a>'
                     if reports else "")
-        # Linear-style filter: theme tags are toggleable chips that filter the graph.
+        # Linear-style filter: EVERY tag present on a node is a toggleable chip — incl. the
+        # methodology's open step tags (capability/role), not just LLM theme tags. No fixed vocab.
+        node_tags = []
+        for n in graph["nodes"]:
+            for tgx in n.get("theme_tags", []):
+                if tgx not in node_tags:
+                    node_tags.append(tgx)
+        vocab_all = list(dict.fromkeys((proj.get("themes") or []) + node_tags))
         chips = "".join(
-            f'<button class="rgchip" data-theme="{_esc(th)}" style="--c:{_theme_color(th, proj["themes"])}">{_esc(th)}</button>'
-            for th in proj["themes"])
+            f'<button class="rgchip" data-theme="{_esc(th)}" style="--c:{_theme_color(th, vocab_all)}">{_esc(th)}</button>'
+            for th in vocab_all)
         left = (f'<span class="ptlabel">{_icon("search")}{t("filter")}</span>{chips}'
                 f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if chips else ""
         oqbtn = f'<button class="btn" id="oqbtn">{t("legend")} · {t("open_questions_h")} ({len(oqs)})</button>'
@@ -2295,10 +2325,10 @@ def create_app():
             for ph in (ms.get("steps") or ms.get("phases") or []):
                 state = ph["status"]
                 cls = "done" if state == "converged" else ("active" if ph["key"] == ms.get("phase") else "pend")
-                # shape is the only fixed visual convention: a waist (single, derived) vs a fan.
-                shape = "◆" if ph["mode"] == "converge" else "◇"
+                # glyph from the STRUCTURAL fan/waist boolean (or a data override) — not a value lookup.
+                shape = _pres.step_glyph(ph.get("is_fan", True), ph.get("presentation"))
                 count = (f' <b>{ph["exploration_count"]}</b>'
-                         if ph["mode"] == "diverge" and ph["exploration_count"] else "")
+                         if ph.get("is_fan") and ph["exploration_count"] else "")
                 tags = ph.get("tags") or []
                 tg = ", ".join(tags)
                 # the label is just the step's FIRST tag — no hardcoded tag vocabulary in the UI.
@@ -2310,7 +2340,7 @@ def create_app():
                       + '<span class="msep">→</span>'.join(chips)
                       + f'<span class="spacer"></span><span class="mstate">{state_txt}</span></div>')
         toolbar = f'<div class="ptoolbar">{left}<span class="spacer"></span>{oqbtn}{meta_btn}</div>'
-        # Prototype viewer: artifacts + recorded persona sessions (read-only).
+        # Artifact viewer: artifacts + recorded persona sessions (read-only).
         protos = graph.get("prototypes") or []
         proto_html = ""
         if protos:
@@ -2326,9 +2356,10 @@ def create_app():
                     sl.append(f'<li>{_esc(s.get("persona_id",""))}: {_esc(str(r.get("verdict") or r.get("summary","")))[:80]} '
                               f'<span class="muted small">{gv} grounded</span></li>')
                 sl_html = ("<ul style='margin:4px 0 0 18px'>" + "".join(sl) + "</ul>") if sl else '<div class="muted small">— keine Sessions —</div>'
-                fid = "lo-fi" if p.get("fidelity") == "lofi" else "mid-fi"
+                ap = _artifact_present(p)
+                pill = ap["disc"] or ap["label"]
                 rows.append(f'<div class="strow"><a href="/prototypes/{_esc(p["slug"])}">{_icon("projects")}<b>{_esc(p["name"])}</b></a> '
-                            f'<span class="pill">{fid}</span> <span class="muted small">{_esc(p.get("version",""))}</span> '
+                            f'<span class="pill">{_esc(pill)}</span> <span class="muted small">{_esc(p.get("version",""))}</span> '
                             f'<a class="btn" style="padding:2px 8px" href="/prototypes/{_esc(p["slug"])}">ansehen ↗</a>{sl_html}</div>')
             proto_html = (f'<div class="oqp-h" style="margin-top:14px">{t("prototypes_h")} ({len(protos)})</div>'
                           + "".join(rows))
@@ -2381,7 +2412,8 @@ def create_app():
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((p["name"], None))
-        fid = '<span class="pill">lo-fi</span>' if p.get("fidelity") == "lofi" else '<span class="pill">mid-fi</span>'
+        _ap = _artifact_present(p)
+        fid = f'<span class="pill">{_esc(_ap["disc"] or _ap["label"])}</span>'
         src = f'/proto-files/{_esc(slug)}/{_esc(p.get("entry", "index.html"))}'
         sessions = store.list_prototype_sessions(prototype_id=p["id"])
         sl = []

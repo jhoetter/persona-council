@@ -295,7 +295,9 @@ class Prototype:
     run_cmd: str | None
     notes: str
     created_at: str
-    fidelity: str = "midfi"     # lofi | midfi (spec §5)
+    fidelity: str = "midfi"     # legacy discriminator (now just one of `tags`)
+    type: str = "prototype"     # free artifact-type tag (spec/methodology-presentation-from-data.md)
+    tags: list[str] = field(default_factory=list)  # free discriminator/extra tags (e.g. fidelity)
 
     def to_dict(self) -> Json:
         return asdict(self)

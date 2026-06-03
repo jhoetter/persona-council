@@ -76,6 +76,7 @@ def _norm_step(raw: dict[str, Any]) -> dict[str, Any]:
             "session_of_tags": list(requires.get("session_of_tags") or []),
         },
         "loop_back": raw.get("loop_back", ""),
+        "presentation": dict(raw.get("presentation") or {}),
     }
 
 
@@ -303,8 +304,9 @@ def _judgments(store: Store, project_id: str, step_id: str | None = None,
 
 
 def _artifact_tags(proto: dict[str, Any]) -> set[str]:
-    """An artifact's open tags — its type plus any discriminators (e.g. fidelity)."""
-    tags = {"prototype"}
+    """An artifact's open tags — its type tag plus any discriminators (e.g. a fidelity tag).
+    All read from the record's data; no artifact value is assumed."""
+    tags = {proto.get("type") or "prototype"}
     if proto.get("fidelity"):
         tags.add(proto["fidelity"])
     for tg in (proto.get("tags") or []):
@@ -682,7 +684,8 @@ def get_methodology_state(project_id: str, store: Store | None = None) -> dict[s
         else:
             status = "pending"
         steps.append({
-            "key": s["id"], "name": s["name"], "mode": _mode(s), "role": s["produces"]["role"],
+            "key": s["id"], "name": s["name"], "mode": _mode(s), "is_fan": not _is_decide(s),
+            "role": s["produces"]["role"], "presentation": s.get("presentation") or {},
             "tags": s["tags"], "consumes": s["consumes"], "status": status,
             "produces": s["produces"], "requires": s["requires"],
             "exploration_count": len(log.get("node_ids", [])),
