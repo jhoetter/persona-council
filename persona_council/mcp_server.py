@@ -12,9 +12,10 @@ SERVER_VERSION = "0.2.0"
 # Implicit decision DAG: each tool hints the natural next
 # step so the host agent can route the simulate -> consolidate -> digest loop.
 _NEXT: dict[str, dict[str, Any]] = {
-    "create_persona": {"name": "brief_day", "reason": "plan the persona's first day before simulating"},
-    "bulk_create_personas": {"name": "list_personas", "reason": "review the created personas"},
-    "brief_day": {"name": "put_day_plan", "reason": "persist the day plan you authored from this briefing"},
+    "brief_persona": {"name": "record_persona", "reason": "persist the profile JSON you authored"},
+    "record_persona": {"name": "brief_day", "reason": "plan the persona's first day before simulating"},
+    "brief_day": {"name": "record_day", "reason": "author day_plan + activities, then persist the whole day"},
+    "record_day": {"name": "brief_consolidation", "reason": "consolidate the day into memory"},
     "put_day_plan": {"name": "simulate_day", "reason": "simulate the planned day"},
     "simulate_day": {"name": "brief_consolidation", "reason": "consolidate the day into memory"},
     "brief_consolidation": {"name": "record_memory_deltas", "reason": "persist the entities/facts/threads you extracted"},
@@ -33,7 +34,7 @@ _NEXT: dict[str, dict[str, Any]] = {
     "brief_evidence_check": {"name": "record_evidence_check", "reason": "persist provenance verdict (confirmed/contradicted)"},
     "brief_synthesis": {"name": "record_synthesis", "reason": "persist the cross-council synthesis you authored"},
     "record_synthesis": {"name": "export_synthesis", "reason": "render the stakeholder report"},
-    "run_council": {"name": "brief_synthesis", "reason": "chain councils into a synthesis once you have several"},
+    "brief_council": {"name": "record_council", "reason": "author the turns + synthesis, then persist the council"},
     "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
 }
 
@@ -59,16 +60,20 @@ def build_server():
 
     # ================= Persona / identity =================
     @mcp.tool()
-    def create_persona(description: str, segment_hint: str | None = None, evidence: str | None = None, generate_avatar: bool = False) -> dict[str, Any]:
-        """Create one persona from a source description. Profile text is host-authored."""
+    def brief_persona(description: str, segment_hint: str | None = None, evidence: str | None = None) -> dict[str, Any]:
+        """Gather the prompt + frame to AUTHOR one persona profile from a source
+        description. You write the profile JSON from `instructions`, then call
+        record_persona. Detects/persists the content language from the description."""
         t = time.perf_counter()
-        return _env("create_persona", services.create_persona(description, segment_hint, evidence, generate_avatar), t)
+        return _env("brief_persona", services.brief_persona(description, segment_hint, evidence), t)
 
     @mcp.tool()
-    def bulk_create_personas(descriptions: list[str], segment_strategy: str | None = None, generate_avatars: bool = False) -> dict[str, Any]:
-        """Create many personas at once from a list of source descriptions."""
+    def record_persona(description: str, profile: dict[str, Any], segment_hint: str | None = None,
+                       evidence: str | None = None, generate_avatar: bool = False) -> dict[str, Any]:
+        """Validate + persist the persona profile you authored from brief_persona.
+        This is the create path (no server-side text generation)."""
         t = time.perf_counter()
-        return _env("bulk_create_personas", services.bulk_create_personas(descriptions, segment_strategy, generate_avatars), t)
+        return _env("record_persona", services.record_persona(description, profile, segment_hint, evidence, generate_avatar), t)
 
     @mcp.tool()
     def get_persona(persona_id: str) -> dict[str, Any]:
@@ -122,6 +127,16 @@ def build_server():
         """Persist the day plan you authored from brief_day."""
         t = time.perf_counter()
         return _env("put_day_plan", services.put_day_plan(persona_id, date, plan), t)
+
+    @mcp.tool()
+    def record_day(persona_id: str, date: str, day_plan: dict[str, Any], plan: dict[str, Any],
+                   activities: dict[str, Any], deltas: dict[str, Any] | None = None,
+                   workday_start_hour: int | None = None, seed: str | None = None) -> dict[str, Any]:
+        """Persist a host-authored SINGLE day end-to-end (put_day_plan -> simulate the
+        authored blocks/activities -> optional consolidation). See brief_day's
+        `day_bundle_hint` for the schema. Use record_month_bundle for whole months."""
+        t = time.perf_counter()
+        return _env("record_day", services.record_day(persona_id, date, day_plan, plan, activities, deltas, workday_start_hour, seed), t)
 
     @mcp.tool()
     def get_day_plan(persona_id: str, date: str) -> dict[str, Any]:
@@ -280,6 +295,26 @@ def build_server():
         return _env("get_world_context", services.get_world_context(as_of), t)
 
     @mcp.tool()
+    def get_language() -> dict[str, Any]:
+        """Read the active content language (host-authored text) and UI language."""
+        from .config import content_language, ui_language
+        t = time.perf_counter()
+        return _env("get_language", {"content_language": content_language(), "ui_language": ui_language()}, t)
+
+    @mcp.tool()
+    def set_language(content_language: str | None = None, ui_language: str | None = None) -> dict[str, Any]:
+        """Set the content language (de|en) for generated text and/or the web UI
+        language. By default content is authored in the language the user writes in;
+        use this to override. Returns the resulting settings."""
+        from . import config as _cfg
+        t = time.perf_counter()
+        if content_language:
+            _cfg.set_content_language(content_language, also_ui=ui_language is None)
+        if ui_language:
+            _cfg.set_ui_language(ui_language)
+        return _env("set_language", {"content_language": _cfg.content_language(), "ui_language": _cfg.ui_language()}, t)
+
+    @mcp.tool()
     def brief_persona_revision(persona_id: str, date: str | None = None) -> dict[str, Any]:
         """GATHER evidence (digests/facts) to propose SLOW identity drift. Change is the exception."""
         t = time.perf_counter()
@@ -400,25 +435,21 @@ def build_server():
 
     # ================= Council =================
     @mcp.tool()
-    def select_council(prompt: str, filters: dict[str, Any] | None = None, count: int = 3, disagreement_goal: str | None = None) -> dict[str, Any]:
+    def brief_council(prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None,
+                      count: int = 3, context: str | None = None) -> dict[str, Any]:
+        """Gather a council. Without persona_ids: returns candidate personas to select
+        from. With persona_ids: returns each participant's loaded agent context (SOUL +
+        memory) to author turns against. Then author proposal/votes/exec_summary and
+        call record_council. See the run-council skill."""
         t = time.perf_counter()
-        return _env("select_council", services.select_council(prompt, filters, count, disagreement_goal), t)
+        return _env("brief_council", services.brief_council(prompt, persona_ids, filters, count, context), t)
 
     @mcp.tool()
-    def run_council(prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None, rounds: int = 3, context: str | None = None) -> dict[str, Any]:
+    def brief_ask(persona_id: str, question: str, context: str | None = None) -> dict[str, Any]:
+        """Gather one persona's loaded context (SOUL + recent events + task-keyed memory)
+        so you can author an honest, in-character answer. No server-side generation."""
         t = time.perf_counter()
-        return _env("run_council", services.run_council(prompt, persona_ids, filters, rounds, context), t)
-
-    @mcp.tool()
-    def ask_persona(persona_id: str, question: str, context: str | None = None) -> dict[str, Any]:
-        """Interview one persona. Grounded in SOUL + memory; it can recall on demand."""
-        t = time.perf_counter()
-        return _env("ask_persona", services.ask_persona(persona_id, question, context), t)
-
-    @mcp.tool()
-    def compare_personas(prompt: str, persona_ids: list[str], output_format: str | None = None) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("compare_personas", services.compare_personas(prompt, persona_ids, output_format), t)
+        return _env("brief_ask", services.brief_ask(persona_id, question, context), t)
 
     @mcp.tool()
     def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "") -> dict[str, Any]:

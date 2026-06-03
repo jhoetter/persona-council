@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from .config import language_instruction
+
 
 ACTIVITY_SCHEMA_KEYS = {
     "what_happened": str,
@@ -160,8 +162,8 @@ def _recs(items: list[Any], limit: int = 20) -> list[dict]:
     return out
 
 
-def generate_profile_with_llm(description: str, segment_hint: str | None = None, evidence: str | None = None) -> dict[str, Any]:
-    prompt = f"""Create one authentic synthetic customer profile from the source description.
+def build_profile_prompt(description: str, segment_hint: str | None = None, evidence: str | None = None, language: str | None = None) -> str:
+    return f"""Create one authentic synthetic customer profile from the source description.
 
 Return ONLY one JSON object with exactly these keys:
 display_name: string
@@ -192,6 +194,7 @@ Rules:
 - tools must be only actual tools, media, channels, or recurring work surfaces mentioned or strongly implied.
 - tool_ids must be lowercase stable slugs matching tools, e.g. "e_mail" for "E-Mail".
 - Avoid slogans, repeated catchphrases, and generic consultant language.
+- {language_instruction(language)} (proper names and tool names keep their real spelling).
 
 Source description:
 {description}
@@ -202,7 +205,10 @@ Segment hint:
 Evidence:
 {evidence or "none"}
 """
-    out = _require_keys(_call_llm_json(prompt), PROFILE_SCHEMA_KEYS, "Profile")
+
+
+def validate_profile_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    out = _require_keys(payload, PROFILE_SCHEMA_KEYS, "Profile")
     out["display_name"] = str(out["display_name"]).strip()[:120] or "Unnamed Profile"
     out["goals"] = _strings(out["goals"], 8)
     out["constraints"] = _strings(out["constraints"], 8)
@@ -240,6 +246,12 @@ Evidence:
         if not str(out["personality"].get(key, "")).strip():
             raise ValueError(f"Profile personality missing `{key}`.")
     return out
+
+
+def generate_profile_with_llm(description: str, segment_hint: str | None = None, evidence: str | None = None, language: str | None = None) -> dict[str, Any]:
+    """Legacy one-shot path. Server-side generation is disabled, so this raises;
+    use brief_persona -> (host authors) -> record_persona instead."""
+    return validate_profile_payload(_call_llm_json(build_profile_prompt(description, segment_hint, evidence, language)))
 
 
 def validate_day_plan_payload(payload: dict[str, Any], frame: dict[str, Any]) -> dict[str, Any]:
@@ -488,7 +500,7 @@ Frame:
 _KINDS = {"project", "person", "org", "building", "authority", "topic"}
 
 
-def build_consolidation_prompt(frame: dict[str, Any]) -> str:
+def build_consolidation_prompt(frame: dict[str, Any], language: str | None = None) -> str:
     return f"""You consolidate ONE simulated workday into persistent memory for a synthetic persona.
 
 You are given the day's activities and the persona's currently known entities.
@@ -505,7 +517,7 @@ Rules:
 - `invalidates` = the prior fact text this fact supersedes (e.g. an old status), so it can be retired.
 - threads: open NEW loops or resolve existing ones (ref = the loop text you are closing).
 - Do not invent product interest / BIM / AI / automation adoption unless the day's evidence shows it.
-- German content, matching the persona.
+- {language_instruction(language)} Match the persona's voice.
 
 Frame:
 {json.dumps(frame, indent=2, ensure_ascii=False)}
@@ -562,7 +574,7 @@ def validate_memory_deltas_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def build_plan_prompt(frame: dict[str, Any]) -> str:
+def build_plan_prompt(frame: dict[str, Any], language: str | None = None) -> str:
     scope = frame.get("scope", "day")
     extra = (
         "Because this is a PERIOD plan, also pick `sample_days` (YYYY-MM-DD): the few "
@@ -585,7 +597,7 @@ Rules:
 - {extra}
 - This is analysis, not narration: name what plausibly moves, what stays stuck, what is overdue.
 - Do not steer the persona toward any product/tool adoption unless memory supports it.
-- German content.
+- {language_instruction(language)}
 
 Frame:
 {json.dumps(frame, indent=2, ensure_ascii=False)}
@@ -605,7 +617,7 @@ def validate_plan_payload(payload: dict[str, Any], scope: str) -> dict[str, Any]
     }
 
 
-def build_digest_prompt(frame: dict[str, Any]) -> str:
+def build_digest_prompt(frame: dict[str, Any], language: str | None = None) -> str:
     return f"""You write a consolidated {frame.get('scope','period')} digest for a synthetic persona.
 
 Return ONLY one JSON object with exactly these keys:
@@ -617,7 +629,7 @@ trends: array of strings (longer-running tendencies, e.g. workload, market, mood
 Rules:
 - Summarize from the supplied days, facts, and threads. Capture arcs and trends, not every detail.
 - Be honest about stalls and unresolved loops; do not invent progress or product enthusiasm.
-- German content.
+- {language_instruction(language)}
 
 Frame:
 {json.dumps(frame, indent=2, ensure_ascii=False)}
@@ -639,7 +651,7 @@ def validate_digest_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_persona_revision_prompt(frame: dict[str, Any]) -> str:
+def build_persona_revision_prompt(frame: dict[str, Any], language: str | None = None) -> str:
     return f"""You propose SLOW, evidence-backed drift in a synthetic persona's identity.
 
 Return ONLY one JSON object with exactly these keys:
@@ -656,7 +668,7 @@ Rules:
 - Every change must be justified by the supplied facts/digests — never from nothing.
 - Never drift the persona toward product/tool enthusiasm unless evidence forces it (and then say why).
 - If nothing should change, return empty `changes` and say so in `rationale`.
-- German content.
+- {language_instruction(language)}
 
 Frame:
 {json.dumps(frame, indent=2, ensure_ascii=False)}
@@ -697,7 +709,7 @@ _CRITIC_DIMENSIONS = ["anti_steering", "in_character", "dialogue_believability",
                       "arc_plausibility", "mundane_balance"]
 
 
-def build_eval_critic_prompt(frame: dict[str, Any]) -> str:
+def build_eval_critic_prompt(frame: dict[str, Any], language: str | None = None) -> str:
     return f"""You are a strict quality critic for a synthetic persona simulation.
 Judge the SAMPLE below against the persona's own SOUL and source description.
 
@@ -719,7 +731,7 @@ Rules:
 - Be specific and skeptical. Cite ref_ids in flagged_items.
 - anti_steering is the priority: any ungrounded product/method drift => low score + flag.
 - Do not reward vendor-friendly narratives; reward honest, ordinary, in-character work.
-- German findings are fine.
+- {language_instruction(language)}
 
 Frame (persona source, SOUL, sampled activities with ids, project arcs, digests):
 {json.dumps(frame, indent=2, ensure_ascii=False)}
@@ -763,7 +775,7 @@ def validate_eval_critic_payload(payload: dict[str, Any]) -> dict[str, Any]:
 # F5 — Evidence check (validate synthetic profile against real evidence).#
 # ===================================================================== #
 
-def build_evidence_check_prompt(frame: dict[str, Any]) -> str:
+def build_evidence_check_prompt(frame: dict[str, Any], language: str | None = None) -> str:
     return f"""Compare a SYNTHETIC persona profile against attached REAL evidence.
 
 Return ONLY one JSON object with exactly these keys:
@@ -777,6 +789,7 @@ Rules:
 - Be conservative: only 'confirmed' when the evidence clearly supports it.
 - 'contradicted' must quote what the evidence actually says.
 - Do not invent evidence. If evidence is thin, most claims are 'unsupported'.
+- {language_instruction(language)}
 
 Frame (profile claims + attached evidence):
 {json.dumps(frame, indent=2, ensure_ascii=False)}
@@ -803,7 +816,7 @@ def validate_evidence_check_payload(payload: dict[str, Any]) -> dict[str, Any]:
 # Synthesis — consolidate an ordered chain of councils into learnings.   #
 # ===================================================================== #
 
-def build_synthesis_prompt(frame: dict[str, Any]) -> str:
+def build_synthesis_prompt(frame: dict[str, Any], language: str | None = None) -> str:
     return f"""You synthesize an ordered CHAIN of councils (a study arc) into cross-council learnings.
 This is like the meta-analysis over several iterations of user studies.
 
@@ -843,7 +856,7 @@ Rules:
   STATELESS across councils and remember nothing, so it must include all needed
   context (the product briefing essentials + the precise new angle) to stand alone.
   If the goal is reached or follow-ups would only repeat → status="done" + stop_reason.
-- German content.
+- {language_instruction(language)}
 
 Frame (start input + the councils in order with exec_summaries, per-persona turns and votes — use the turns/votes to author `voices`):
 {json.dumps(frame, indent=2, ensure_ascii=False)}

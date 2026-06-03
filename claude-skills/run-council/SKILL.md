@@ -84,8 +84,14 @@ Don't run a fixed number of rounds — run until the energy is spent:
 ## 4. Synthesize (host)
 Collect turns → author a `proposal`, `votes` (SUPPORT/MAYBE/ABSTAIN/OPPOSE), a
 short `summary`, and a rich Markdown `exec_summary` (verdict · spectrum of
-who/why · cross-cutting conditions · tensions · bottom line). Persist as a
-CouncilSession (it carries `exec_summary`, shown in the web UI).
+who/why · cross-cutting conditions · tensions · bottom line). Persist via
+`record_council(prompt, persona_ids, turns, votes, proposal, summary, exec_summary)`
+(it carries `exec_summary`, shown in the web UI). Tip: `brief_council(prompt)`
+returns candidate personas to choose from, and `brief_council(prompt, persona_ids)`
+returns each participant's loaded context to author turns against.
+
+When the council is recorded, point the user to the web inspector to read it:
+**http://127.0.0.1:8787** (`make dev` if it is not running yet).
 
 ## Principle
 A good harness lets the persona *reason about whether* the past is relevant —

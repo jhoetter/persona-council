@@ -16,20 +16,31 @@ surface only.
   `prepare_persona_agent_context` or `persona-council persona-context`.
 - Use CLI/MCP for all mutations: create profiles, generate avatars, simulate
   days, attach evidence, run councils, clear simulations, and export logs.
+- Point the user to the web inspector as soon as there is something to see. Once
+  personas/councils/syntheses exist, tell them to open **http://127.0.0.1:8787**
+  (start it with `make dev`, or `persona-council-web`, which prints the URL). The
+  web UI is read-only; all authoring still happens through CLI/MCP.
+- Language: generated CONTENT follows the language the user writes in, auto-
+  detected on first input and persisted (de|en). Do not switch languages
+  mid-stream. The web UI language is independent (toggle in the top bar, or
+  `set_language`/`set-language`). Override content language only if asked.
 
 ## CLI
 
 ```bash
-persona-council persona-create "Restaurantleiterin in Deutschland, mittelgroßes Team, plant Schichten, Lieferanten, Reklamationen und Tagesabschluss, nutzt Kassensystem, Dienstplan, E-Mail und Telefon."
-persona-council persona-bulk personas.md
+# Persona creation is host-authored (no server-side text generation):
+# gather -> you author the profile JSON -> persist.
+persona-council brief-persona "Restaurantleiterin in Deutschland, mittelgroßes Team, plant Schichten, Lieferanten, Reklamationen und Tagesabschluss, nutzt Kassensystem, Dienstplan, E-Mail und Telefon."
+persona-council record-persona profile.json   # JSON: {description, profile, segment_hint?, evidence?, generate_avatar?}
 persona-council persona-list
 persona-council persona-get <persona-id-or-slug>
 persona-council persona-soul <persona-id-or-slug>
 persona-council persona-context <persona-id-or-slug> --task "Evaluate this idea neutrally" --text
 persona-council avatar-generate <persona-id-or-slug>
 
-persona-council simulate-day <persona-id-or-slug> --date 2026-06-02
-persona-council simulate-range <persona-id-or-slug> 2026-06-01 2026-06-30
+# Single day, host-authored: brief-day -> author {day_plan, plan, activities} -> record-day.
+persona-council brief-day <persona-id-or-slug> --date 2026-06-02
+persona-council record-day <persona-id-or-slug> 2026-06-02 day.json
 persona-council simulate-continue --all --days 1
 persona-council simulate-clear
 persona-council purge-runtime-data
@@ -40,9 +51,16 @@ persona-council activity <activity-id>
 persona-council state <persona-id-or-slug>
 persona-council summary <persona-id-or-slug> --start 2026-06-01 --end 2026-06-30
 
-persona-council council-run "Should we change the approval workflow?" --persona <id> --persona <id>
-persona-council ask <persona-id-or-slug> "What would make this unacceptable in your week?"
-persona-council compare "Which workflow breaks first?" <persona-id-or-slug> <persona-id-or-slug>
+# Councils & interviews are host-authored (see the run-council skill):
+#   brief-council <prompt>                 -> candidate personas to choose from
+#   brief-council <prompt> --persona <id>… -> each participant's loaded context
+#   (author turns + synthesis) -> record-council council.json
+persona-council brief-council "Should we change the approval workflow?" --persona <id> --persona <id>
+persona-council brief-ask <persona-id-or-slug> "What would make this unacceptable in your week?"
+
+# Language: content is auto-detected from what you write, then persisted (de|en).
+persona-council language
+persona-council set-language --content de --ui en
 
 persona-council evidence-attach <persona-id-or-slug> interview notes/interview-01.md --notes "Customer interview"
 persona-council export-logs <persona-id-or-slug> --format md --out exports/logs.md
@@ -59,16 +77,17 @@ persona-council-mcp
 
 Core MCP tools:
 
-- `create_persona`, `bulk_create_personas`, `update_persona`
+- `brief_persona` (gather) → `record_persona` (persist authored profile), `update_persona`
 - `get_persona`, `list_personas`, `get_persona_soul`
 - `prepare_persona_agent_context`
 - `generate_avatar`
-- `simulate_day`, `simulate_range`, `continue_simulation`, `clear_simulations`,
-  `purge_runtime_data`
+- `brief_day` → `record_day` (host-authored single day); `record_month_bundle` for
+  months; `continue_simulation`, `clear_simulations`, `purge_runtime_data`
 - `get_current_state`, `get_calendar`, `get_calendar_period`, `get_activity`
 - `summarize_persona_period`, `extract_pain_points`
-- `select_council`, `run_council`, `record_council`, `get_council`,
-  `list_councils`, `ask_persona`, `compare_personas`
+- `brief_council` (gather candidates/contexts) → `record_council` (persist authored
+  turns + synthesis), `get_council`, `list_councils`, `brief_ask`
+- `get_language`, `set_language` (UI + generated-content language, de|en)
 - `attach_evidence`
 - `export_persona`, `export_logs`, `export_council_session`
 

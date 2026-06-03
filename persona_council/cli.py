@@ -35,6 +35,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--evidence")
     p.add_argument("--avatar", action="store_true")
 
+    # host-authored persona creation (gather -> author -> persist)
+    p = sub.add_parser("brief-persona")
+    p.add_argument("description")
+    p.add_argument("--segment")
+    p.add_argument("--evidence")
+    p = sub.add_parser("record-persona")
+    p.add_argument("file", help="JSON: {description, profile, segment_hint?, evidence?, generate_avatar?}")
+
     p = sub.add_parser("persona-bulk")
     p.add_argument("file")
     p.add_argument("--segment")
@@ -115,6 +123,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("prompt")
     p.add_argument("--persona", action="append", dest="personas")
     p.add_argument("--rounds", type=int, default=3)
+
+    p = sub.add_parser("brief-council")
+    p.add_argument("prompt")
+    p.add_argument("--persona", action="append", dest="personas")
+    p.add_argument("--count", type=int, default=3)
+    p.add_argument("--context")
+
+    p = sub.add_parser("brief-ask")
+    p.add_argument("persona_id")
+    p.add_argument("question")
+    p.add_argument("--context")
 
     p = sub.add_parser("ask")
     p.add_argument("persona_id")
@@ -221,6 +240,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("world-set")
     p.add_argument("file", help="JSON file: list of {category, fact, valid_from, valid_to?, relevance_tags?}")
 
+    sub.add_parser("language")
+    p = sub.add_parser("set-language")
+    p.add_argument("--content", choices=["de", "en"])
+    p.add_argument("--ui", choices=["de", "en"])
+
     # brief_* (gather → print instructions+frame for authoring)
     for name in ["brief-day", "brief-consolidation", "brief-digest", "brief-period", "brief-revision"]:
         bp = sub.add_parser(name)
@@ -232,6 +256,9 @@ def build_parser() -> argparse.ArgumentParser:
     # record/put (read authored JSON from file → persist)
     p = sub.add_parser("put-day-plan")
     p.add_argument("persona_id"); p.add_argument("date"); p.add_argument("file")
+    p = sub.add_parser("record-day")
+    p.add_argument("persona_id"); p.add_argument("date")
+    p.add_argument("file", help="JSON: {day_plan, plan, activities, deltas?, workday_start_hour?, seed?}")
     p = sub.add_parser("put-period-plan")
     p.add_argument("persona_id"); p.add_argument("scope"); p.add_argument("date"); p.add_argument("file")
     p = sub.add_parser("record-deltas")
@@ -285,6 +312,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "persona-create":
             _print(services.create_persona(args.description, args.segment, args.evidence, args.avatar))
+        elif args.command == "brief-persona":
+            _print(services.brief_persona(args.description, args.segment, args.evidence))
+        elif args.command == "record-persona":
+            _print(services.record_persona(**json.loads(Path(args.file).read_text(encoding="utf-8"))))
         elif args.command == "persona-bulk":
             _print(services.bulk_create_personas(_read_descriptions(args.file), args.segment, args.avatar))
         elif args.command == "persona-list":
@@ -328,6 +359,10 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.extract_pain_points(args.persona_id, args.start, args.end))
         elif args.command == "council-run":
             _print(services.run_council(args.prompt, args.personas, rounds=args.rounds))
+        elif args.command == "brief-council":
+            _print(services.brief_council(args.prompt, args.personas, count=args.count, context=args.context))
+        elif args.command == "brief-ask":
+            _print(services.brief_ask(args.persona_id, args.question, args.context))
         elif args.command == "ask":
             _print(services.ask_persona(args.persona_id, args.question))
         elif args.command == "compare":
@@ -378,6 +413,16 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.get_world_context(args.as_of))
         elif args.command == "world-set":
             _print(services.set_world_context(json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "language":
+            from .config import content_language, ui_language
+            _print({"content_language": content_language(), "ui_language": ui_language()})
+        elif args.command == "set-language":
+            from . import config as _cfg
+            if args.content:
+                _cfg.set_content_language(args.content, also_ui=args.ui is None)
+            if args.ui:
+                _cfg.set_ui_language(args.ui)
+            _print({"content_language": _cfg.content_language(), "ui_language": _cfg.ui_language()})
         elif args.command == "brief-day":
             _print(services.brief_day(args.persona_id, args.date))
         elif args.command == "brief-consolidation":
@@ -390,6 +435,8 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.brief_persona_revision(args.persona_id, args.date))
         elif args.command == "put-day-plan":
             _print(services.put_day_plan(args.persona_id, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "record-day":
+            _print(services.record_day(args.persona_id, args.date, **json.loads(Path(args.file).read_text(encoding="utf-8"))))
         elif args.command == "put-period-plan":
             _print(services.put_period_plan(args.persona_id, args.scope, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
         elif args.command == "record-deltas":
