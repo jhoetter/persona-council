@@ -2732,6 +2732,79 @@ def backfill_project_from_syntheses(title: str = "Research", synthesis_ids: list
     return get_project_graph(pid, store=store)
 
 
+# --- Deletes (D in CRUD; MCP/CLI only — the web UI is read-only) -------------
+
+def delete_research_project(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Delete a project container + its graph metadata (edges/open questions/meta-reports).
+    The syntheses stay (they are independent studies)."""
+    store = store or Store()
+    p = _require_research_project(store, project_id)
+    return {"deleted": store.delete_research_project(p["id"]), "project_id": p["id"]}
+
+
+def remove_study_from_project(project_id: str, study_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Detach a study from a project (drops its edges in that project); keeps the synthesis."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    if study_id in project["study_ids"]:
+        project["study_ids"].remove(study_id)
+    project.get("study_tags", {}).pop(study_id, None)
+    project["updated_at"] = utc_now_iso()
+    store.upsert_research_project(project)
+    edges = store.delete_edges_touching(project["id"], study_id)
+    return {"project_id": project["id"], "removed_study": study_id, "edges_removed": edges}
+
+
+def unlink_studies(project_id: str, from_study_id: str, to_study_id: str, type: str | None = None,
+                   store: Store | None = None) -> dict[str, Any]:
+    """Remove an edge (or all edges) between two studies in a project."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    return {"project_id": project["id"], "removed": store.delete_study_edges(project["id"], from_study_id, to_study_id, type)}
+
+
+def delete_synthesis(synthesis_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Delete a synthesis (study) and detach it from any project graphs that contain it."""
+    store = store or Store()
+    detached = []
+    for p in store.list_research_projects():
+        if synthesis_id in (p.get("study_ids") or []):
+            p["study_ids"].remove(synthesis_id)
+            p.get("study_tags", {}).pop(synthesis_id, None)
+            p["updated_at"] = utc_now_iso()
+            store.upsert_research_project(p)
+            store.delete_edges_touching(p["id"], synthesis_id)
+            detached.append(p["id"])
+    return {"deleted": store.delete_synthesis(synthesis_id), "detached_from_projects": detached}
+
+
+def delete_council(session_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Delete a council session. Syntheses keep their council_id reference (harmless)."""
+    store = store or Store()
+    return {"deleted": store.delete_council_session(session_id)}
+
+
+def delete_persona(persona_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Delete a persona and all of its persona-scoped rows + rendered SOUL/avatar files."""
+    store = store or Store()
+    persona = store.get_persona(persona_id)
+    if not persona:
+        raise KeyError(f"Unknown persona: {persona_id}")
+    deleted = store.delete_persona_cascade(persona["id"])
+    removed: list[str] = []
+    d = persona_dir(persona)
+    if d.exists():
+        for path in sorted(d.rglob("*"), reverse=True):
+            if path.is_file():
+                path.unlink()
+                removed.append(str(path.relative_to(ROOT)))
+        try:
+            d.rmdir()
+        except OSError:
+            pass
+    return {"persona_id": persona["id"], "deleted": deleted, "removed_files": removed}
+
+
 # ===================================================================== #
 # Meta-Report: second-order synthesis over a whole project graph.        #
 # gather graph -> author OUTLINE -> author each SECTION (grounded) ->     #

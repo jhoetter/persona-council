@@ -87,6 +87,37 @@ def test_purge_clears_research_graph(store):
     assert store.list_open_questions(pid) == []
 
 
+def test_deletes_cascade_and_detach(store):
+    _seed_studies(store, 2)
+    g = services.backfill_project_from_syntheses("Del", store=store)
+    pid = g["project"]["id"]
+    # unlink an edge
+    assert services.unlink_studies(pid, "syn0", "syn1", "spawned_from", store=store)["removed"] == 1
+    # remove a study from the project (keeps the synthesis)
+    services.remove_study_from_project(pid, "syn1", store=store)
+    assert "syn1" not in services.get_research_project(pid, store=store)["study_ids"]
+    assert store.get_synthesis("syn1") is not None
+    # delete a synthesis -> also detaches from the project graph
+    services.delete_synthesis("syn0", store=store)
+    assert store.get_synthesis("syn0") is None
+    assert "syn0" not in services.get_research_project(pid, store=store)["study_ids"]
+    # delete the project container
+    services.delete_research_project(pid, store=store)
+    assert services.list_research_projects(store=store) == []
+    # delete a council
+    services.delete_council("c1", store=store)
+    assert store.get_council_session("c1") is None
+
+
+def test_delete_persona(store):
+    from conftest import create_persona
+    pid = create_persona(store, "Doomed")
+    assert any(p["id"] == pid for p in services.list_personas(store=store))
+    out = services.delete_persona(pid, store=store)
+    assert out["deleted"]["personas"] == 1
+    assert all(p["id"] != pid for p in services.list_personas(store=store))
+
+
 def test_invalid_outline_rejected(store):
     _seed_studies(store, 1)
     graph = services.backfill_project_from_syntheses("X", store=store)

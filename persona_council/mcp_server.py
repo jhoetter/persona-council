@@ -483,6 +483,43 @@ def build_server():
         t = time.perf_counter()
         return _env("export_meta_report", services.export_meta_report(project_id, report_id, format), t)
 
+    # ----- Deletes (CRUD complete; delete is MCP/CLI-only, never the read-only UI) -----
+    @mcp.tool()
+    def delete_research_project(project_id: str) -> dict[str, Any]:
+        """Delete a project container + its edges/open-questions/meta-reports. Syntheses are kept."""
+        t = time.perf_counter()
+        return _env("delete_research_project", services.delete_research_project(project_id), t)
+
+    @mcp.tool()
+    def remove_study_from_project(project_id: str, study_id: str) -> dict[str, Any]:
+        """Detach a study (synthesis) from a project (drops its edges there); keeps the synthesis."""
+        t = time.perf_counter()
+        return _env("remove_study_from_project", services.remove_study_from_project(project_id, study_id), t)
+
+    @mcp.tool()
+    def unlink_studies(project_id: str, from_study_id: str, to_study_id: str, type: str | None = None) -> dict[str, Any]:
+        """Remove an edge (or all edges) between two studies in a project."""
+        t = time.perf_counter()
+        return _env("unlink_studies", services.unlink_studies(project_id, from_study_id, to_study_id, type), t)
+
+    @mcp.tool()
+    def delete_synthesis(synthesis_id: str) -> dict[str, Any]:
+        """Delete a synthesis (study) and detach it from any project graphs."""
+        t = time.perf_counter()
+        return _env("delete_synthesis", services.delete_synthesis(synthesis_id), t)
+
+    @mcp.tool()
+    def delete_council(session_id: str) -> dict[str, Any]:
+        """Delete a council session."""
+        t = time.perf_counter()
+        return _env("delete_council", services.delete_council(session_id), t)
+
+    @mcp.tool()
+    def delete_persona(persona_id: str) -> dict[str, Any]:
+        """Delete a persona + all its persona-scoped rows and rendered SOUL/avatar files."""
+        t = time.perf_counter()
+        return _env("delete_persona", services.delete_persona(persona_id), t)
+
     # ----- F3 autonomous loop driver -----
     @mcp.tool()
     def brief_month(persona_id: str, month: str) -> dict[str, Any]:

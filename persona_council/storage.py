@@ -534,6 +534,79 @@ class Store:
             "SELECT data FROM meta_reports WHERE project_id=? ORDER BY created_at DESC", (project_id,)).fetchall()
         return [json.loads(r["data"]) for r in rows]
 
+    # ---- Granular deletes (D in CRUD; all via MCP/CLI, never the read-only UI) ----
+    def delete_research_project(self, project_id: str) -> dict[str, int]:
+        """Delete a project container + its graph metadata (edges, open questions,
+        meta-reports). The syntheses themselves are independent studies and are kept."""
+        p = self.get_research_project(project_id)
+        if not p:
+            return {}
+        pid = p["id"]
+        deleted: dict[str, int] = {}
+        for table in ("study_edges", "research_open_questions", "meta_reports"):
+            cur = self.conn.execute(f"DELETE FROM {table} WHERE project_id=?", (pid,))
+            deleted[table] = cur.rowcount
+        cur = self.conn.execute("DELETE FROM research_projects WHERE id=?", (pid,))
+        deleted["research_projects"] = cur.rowcount
+        self.conn.commit()
+        return deleted
+
+    def delete_study_edges(self, project_id: str, from_study: str, to_study: str, type: str | None = None) -> int:
+        if type:
+            cur = self.conn.execute(
+                "DELETE FROM study_edges WHERE project_id=? AND from_study=? AND to_study=? AND type=?",
+                (project_id, from_study, to_study, type))
+        else:
+            cur = self.conn.execute(
+                "DELETE FROM study_edges WHERE project_id=? AND from_study=? AND to_study=?",
+                (project_id, from_study, to_study))
+        self.conn.commit()
+        return cur.rowcount
+
+    def delete_edges_touching(self, project_id: str, study_id: str) -> int:
+        cur = self.conn.execute(
+            "DELETE FROM study_edges WHERE project_id=? AND (from_study=? OR to_study=?)",
+            (project_id, study_id, study_id))
+        self.conn.commit()
+        return cur.rowcount
+
+    def delete_open_question(self, question_id: str) -> int:
+        cur = self.conn.execute("DELETE FROM research_open_questions WHERE id=?", (question_id,))
+        self.conn.commit()
+        return cur.rowcount
+
+    def delete_meta_report(self, report_id: str) -> int:
+        cur = self.conn.execute("DELETE FROM meta_reports WHERE id=?", (report_id,))
+        self.conn.commit()
+        return cur.rowcount
+
+    def delete_synthesis(self, synthesis_id: str) -> int:
+        cur = self.conn.execute("DELETE FROM syntheses WHERE id=?", (synthesis_id,))
+        self.conn.commit()
+        return cur.rowcount
+
+    def delete_council_session(self, session_id: str) -> int:
+        cur = self.conn.execute("DELETE FROM council_sessions WHERE id=?", (session_id,))
+        self.conn.commit()
+        return cur.rowcount
+
+    def delete_persona_cascade(self, persona_id: str) -> dict[str, int]:
+        """Delete a persona and all of its persona-scoped rows (memory, simulation,
+        evidence, eval). Council/synthesis rows reference personas only inside JSON and
+        are left intact."""
+        deleted: dict[str, int] = {}
+        scoped = ["calendar_events", "experience_events", "daily_summaries", "reflections",
+                  "pain_points", "entities", "entity_facts", "event_entities", "threads",
+                  "plans", "memory_digests", "embeddings", "persona_revisions", "evidence",
+                  "eval_reports", "memory_anomalies"]
+        for table in scoped:
+            cur = self.conn.execute(f"DELETE FROM {table} WHERE persona_id=?", (persona_id,))
+            deleted[table] = cur.rowcount
+        cur = self.conn.execute("DELETE FROM personas WHERE id=?", (persona_id,))
+        deleted["personas"] = cur.rowcount
+        self.conn.commit()
+        return deleted
+
     # ---- Memory layer: entities ---------------------------------------
     def upsert_entity(self, entity: dict[str, Any]) -> None:
         self.conn.execute(

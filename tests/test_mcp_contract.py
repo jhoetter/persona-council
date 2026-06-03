@@ -46,6 +46,9 @@ def test_expected_tools_registered():
         "backfill_project_from_syntheses",
         "brief_meta_report", "record_meta_outline", "brief_meta_section",
         "record_meta_section", "export_meta_report",
+        # deletes (CRUD complete via MCP):
+        "delete_research_project", "remove_study_from_project", "unlink_studies",
+        "delete_synthesis", "delete_council", "delete_persona",
     }
     missing = expected - names
     assert not missing, f"MCP tools missing: {sorted(missing)}"

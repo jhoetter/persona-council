@@ -329,6 +329,13 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("meta-section"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("file"); p.add_argument("--report")
     p = sub.add_parser("meta-export")
     p.add_argument("project_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out"); p.add_argument("--report")
+    # Deletes (CRUD: delete via CLI/MCP only)
+    p = sub.add_parser("research-delete"); p.add_argument("project_id")
+    p = sub.add_parser("research-remove-study"); p.add_argument("project_id"); p.add_argument("study_id")
+    p = sub.add_parser("research-unlink"); p.add_argument("project_id"); p.add_argument("from_study"); p.add_argument("to_study"); p.add_argument("--type")
+    p = sub.add_parser("synthesis-delete"); p.add_argument("synthesis_id")
+    p = sub.add_parser("council-delete"); p.add_argument("session_id")
+    p = sub.add_parser("persona-delete"); p.add_argument("persona_id")
     return parser
 
 
@@ -538,6 +545,18 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "meta-export":
             content = services.export_meta_report(args.project_id, args.report, args.format)
             _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
+        elif args.command == "research-delete":
+            _print(services.delete_research_project(args.project_id))
+        elif args.command == "research-remove-study":
+            _print(services.remove_study_from_project(args.project_id, args.study_id))
+        elif args.command == "research-unlink":
+            _print(services.unlink_studies(args.project_id, args.from_study, args.to_study, args.type))
+        elif args.command == "synthesis-delete":
+            _print(services.delete_synthesis(args.synthesis_id))
+        elif args.command == "council-delete":
+            _print(services.delete_council(args.session_id))
+        elif args.command == "persona-delete":
+            _print(services.delete_persona(args.persona_id))
         return 0
     except Exception as exc:
         print(f"{type(exc).__name__}: {exc}", file=sys.stderr)

@@ -496,7 +496,10 @@ input,select{font:inherit;border:1px solid var(--line);background:var(--panel);c
 .pcard{position:relative}
 .pcard .starbtn{position:absolute;top:9px;right:9px;opacity:0;transition:opacity 120ms}
 .pcard:hover .starbtn,.pcard .starbtn.on{opacity:1}
-#favs a{display:flex;align-items:center;gap:6px}
+#favs a{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.favrow{display:flex;align-items:center;gap:2px}
+.favx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:1px 7px;border-radius:6px;opacity:0;transition:opacity 120ms}
+.favrow:hover .favx{opacity:1}.favx:hover{color:#e3a008;background:var(--hover)}
 
 /* ---- analytics (Linear-style insight cards) ---- */
 .insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -711,11 +714,17 @@ APP_JS = """
     var keys=Object.keys(m);
     favs.innerHTML='';
     if(!keys.length){ var e=document.createElement('span'); e.className='muted small'; e.style.cssText='padding:5px 9px;display:block'; e.textContent='Mit Stern markieren'; favs.appendChild(e); return; }
-    keys.forEach(function(k){ var f=m[k]; var a=document.createElement('a'); a.href=f.href||'#'; a.title=f.label||'';
+    keys.forEach(function(k){ var f=m[k];
+      var row=document.createElement('div'); row.className='favrow';
+      var a=document.createElement('a'); a.href=f.href||'#'; a.title=f.label||'';
       var ic=document.createElement('span'); ic.className='favic'; ic.innerHTML=ICN[f.type]||''; a.appendChild(ic);
-      a.appendChild(document.createTextNode(' '+(f.label||k))); favs.appendChild(a); });
+      a.appendChild(document.createTextNode(' '+(f.label||k)));
+      var x=document.createElement('button'); x.className='favx'; x.setAttribute('data-unstar',k); x.setAttribute('aria-label','Unstar'); x.title='Unstar'; x.textContent='\\u00d7';
+      row.appendChild(a); row.appendChild(x); favs.appendChild(row); });
   }
   document.addEventListener('click',function(e){
+    var ux=e.target.closest && e.target.closest('[data-unstar]');
+    if(ux){ e.preventDefault(); e.stopPropagation(); var mm=readStars(); delete mm[ux.getAttribute('data-unstar')]; writeStars(mm); renderStars(); return; }
     var b=e.target.closest && e.target.closest('[data-star]'); if(!b) return;
     e.preventDefault(); e.stopPropagation();
     var m=readStars(), k=b.getAttribute('data-star');
