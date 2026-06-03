@@ -610,7 +610,7 @@ _AV_COLORS = ["#3d7b5f", "#2f6f9f", "#a66b1f", "#7a5ea6", "#b3493f", "#4a7d7d", 
 
 
 def _avatar(p: dict, size: int = 36) -> str:
-    if p.get("avatar", {}).get("path"):
+    if (p.get("avatar") or {}).get("path"):
         return f'<img class="av" style="width:{size}px;height:{size}px" src="/{_esc(p["avatar"]["path"])}" alt="">'
     name = p.get("display_name", "?")
     ini = "".join(w[0] for w in name.split()[:2]).upper() or "?"
