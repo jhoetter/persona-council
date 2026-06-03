@@ -38,6 +38,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen",
         "no_projects": "Noch keine Projekte. Lege eines an oder backfille deine Synthesen (CLI: research-backfill).",
         "source_studies": "Quell-Studien", "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
+        "filter": "Filter", "clear_filter": "zurücksetzen", "legend": "Legende",
         "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Synthese.",
         "export_pdf": "Export PDF",
         # generic / not-found
@@ -162,6 +163,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Open questions",
         "no_projects": "No projects yet. Create one or backfill your syntheses (CLI: research-backfill).",
         "source_studies": "Source studies", "themes_h": "Themes", "build_order_h": "Build order",
+        "filter": "Filter", "clear_filter": "clear", "legend": "Legend",
         "no_councils": "No councils yet.", "no_synthesis": "No synthesis yet.",
         "export_pdf": "Export PDF",
         # generic / not-found
@@ -352,6 +354,19 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgn{user-select:none}.rgn:hover rect:first-of-type{stroke:var(--accent)}
 .strow{padding:9px 0;border-bottom:1px solid var(--line)}.strow:last-child{border-bottom:0}
 .strow a{text-decoration:none}.strow .ic{vertical-align:-3px;margin-right:5px}
+.ptoolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 10px}
+.ptlabel{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted)}.ptlabel .ic{width:14px;height:14px}
+.rgchip{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.rgchip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,#9aa0a6)}
+.rgchip:hover{background:var(--hover)}
+.rgchip.active{border-color:var(--c,var(--accent));background:color-mix(in srgb,var(--c) 14%,var(--panel));font-weight:600}
+.rgclear{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline}
+.graphcard{padding:0;border:0;background:none}
+.oqd{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.oqd>summary{cursor:pointer;padding:10px 14px;font-size:13px;font-weight:600;list-style:none}
+.oqd>summary::-webkit-details-marker{display:none}
+.oqd[open]>summary{border-bottom:1px solid var(--line)}
+.oqd>div{padding:10px 14px}
 .resize{width:8px;margin:0 -4px;flex-shrink:0;cursor:col-resize;position:relative;z-index:10}
 .app.collapsed .resize{display:none}
 .resize::after{content:"";position:absolute;inset:0 50%;width:2px;transform:translateX(-50%);background:var(--accent);opacity:0;transition:opacity 150ms}
@@ -828,20 +843,24 @@ _RGRAPH_JS = """<script>
   var edgeEls=[];
   D.edges.forEach(function(ed){ var p=el('path',{fill:'none',stroke:ed.color,'stroke-width':'1.8','marker-end':'url(#rgah-'+ed.mid+')',opacity:'0.85'}); gE.appendChild(p); edgeEls.push({ed:ed,p:p}); });
   function border(n,tX,tY){ var cx=n.x+NW/2, cy=n.y+NH/2, dx=tX-cx, dy=tY-cy; if(!dx&&!dy) return [cx,cy]; var s=Math.min((NW/2)/Math.abs(dx||1e-6),(NH/2)/Math.abs(dy||1e-6)); return [cx+dx*s, cy+dy*s]; }
-  function route(){ edgeEls.forEach(function(o){ var a=byId[o.ed.from], b=byId[o.ed.to]; if(!a||!b) return; var ac=[a.x+NW/2,a.y+NH/2], bc=[b.x+NW/2,b.y+NH/2]; var s=border(a,bc[0],bc[1]), t=border(b,ac[0],ac[1]); o.p.setAttribute('d','M'+s[0]+' '+s[1]+' L '+t[0]+' '+t[1]); }); }
+  function route(){ edgeEls.forEach(function(o){ var a=byId[o.ed.from], b=byId[o.ed.to]; if(!a||!b) return; o.p.style.display=(a.hidden||b.hidden)?'none':''; var ac=[a.x+NW/2,a.y+NH/2], bc=[b.x+NW/2,b.y+NH/2]; var s=border(a,bc[0],bc[1]), t=border(b,ac[0],ac[1]); o.p.setAttribute('d','M'+s[0]+' '+s[1]+' L '+t[0]+' '+t[1]); }); }
+  function applyFilter(){ var active=[]; document.querySelectorAll('.rgchip.active').forEach(function(c){ active.push(c.getAttribute('data-theme')); });
+    D.nodes.forEach(function(n){ var show=!active.length||(n.tags||[]).some(function(tg){return active.indexOf(tg)>=0;}); n.hidden=!show; if(n.el){ n.el.style.opacity=show?'1':'0.12'; n.el.style.pointerEvents=show?'':'none'; } });
+    var clr=document.querySelector('.rgclear'); if(clr) clr.style.display=active.length?'':'none'; route(); }
+  document.addEventListener('click',function(e){ var chip=e.target.closest&&e.target.closest('.rgchip'); if(chip){ chip.classList.toggle('active'); applyFilter(); return; } var clr=e.target.closest&&e.target.closest('.rgclear'); if(clr){ document.querySelectorAll('.rgchip.active').forEach(function(c){c.classList.remove('active');}); applyFilter(); } });
   D.nodes.forEach(function(n){
     var g=el('g',{'class':'rgn',transform:'translate('+n.x+','+n.y+')'});
     g.appendChild(el('rect',{width:NW,height:NH,rx:9,fill:'var(--panel)',stroke:'var(--line)'}));
     g.appendChild(el('rect',{width:5,height:NH,rx:2.5,fill:n.color}));
     var a=el('text',{x:16,y:24,'font-size':'13.5','font-weight':'600',fill:'var(--ink)'}); a.textContent=n.label; g.appendChild(a);
     var b=el('text',{x:16,y:43,'font-size':'11.5',fill:'var(--muted)'}); b.textContent=n.sub; g.appendChild(b);
-    gN.appendChild(g);
+    gN.appendChild(g); n.el=g;
     var down=null,moved=false;
     g.addEventListener('pointerdown',function(e){ e.stopPropagation(); down={x:e.clientX,y:e.clientY,nx:n.x,ny:n.y}; moved=false; try{g.setPointerCapture(e.pointerId);}catch(_){} });
     g.addEventListener('pointermove',function(e){ if(!down) return; var dx=(e.clientX-down.x)/scale, dy=(e.clientY-down.y)/scale; if(Math.abs(dx)+Math.abs(dy)>3) moved=true; n.x=down.nx+dx; n.y=down.ny+dy; g.setAttribute('transform','translate('+n.x+','+n.y+')'); route(); });
     g.addEventListener('pointerup',function(e){ if(down&&!moved) location.href=n.href; down=null; });
   });
-  route(); applyT();
+  route(); applyT(); applyFilter();
   var pan=null;
   svg.addEventListener('pointerdown',function(e){ if(e.target.closest('.rgn')) return; pan={x:e.clientX,y:e.clientY,tx:tx,ty:ty}; });
   svg.addEventListener('pointermove',function(e){ if(!pan) return; tx=pan.tx+(e.clientX-pan.x); ty=pan.ty+(e.clientY-pan.y); applyT(); });
@@ -895,7 +914,7 @@ def _graph_interactive(graph: dict) -> str:
         tags = n.get("theme_tags", [])
         x, y = pos[n["study_id"]]
         sent = max(n.get("sentiment", {}).items(), key=lambda kv: kv[1])[0] if n.get("sentiment") else "—"
-        jnodes.append({"id": n["study_id"], "x": x, "y": y,
+        jnodes.append({"id": n["study_id"], "x": x, "y": y, "tags": tags,
                        "label": n["title"][:38] + ("…" if len(n["title"]) > 38 else ""),
                        "sub": f'{n.get("council_count", 0)} {t("councils")} · {sent} · ' + (", ".join(tags[:3]) or "—"),
                        "color": _theme_color(tags[0], vocab) if tags else "#9aa0a6",
@@ -911,7 +930,7 @@ def _graph_interactive(graph: dict) -> str:
     hint = "Knoten ziehen · Hintergrund schieben · scrollen = Zoom" if _lang() == "de" else "drag nodes · pan background · scroll = zoom"
     return (
         '<div class="rgwrap">'
-        '<svg id="rg" width="100%" height="520"><defs>'
+        '<svg id="rg" width="100%" height="600"><defs>'
         + "".join(f'<marker id="rgah-{i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
                   f'orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="{c}"/></marker>'
                   for i, c in enumerate(_EDGE_COLORS.values()))
@@ -1901,36 +1920,27 @@ def create_app():
         oq_html = "".join(f'<li>{_esc(o["text"])}</li>' for o in oqs[:30]) or f'<li class="muted">—</li>'
         reports = store.list_meta_reports(proj["id"])
         meta_btn = (f'<a class="btn" href="/projects/{_esc(proj["id"])}/meta">{_icon("syntheses")} {t("meta_report")}</a>'
-                    if reports else f'<span class="muted small">{t("meta_report")}: —</span>')
-        # Studies (syntheses) + their councils live INSIDE the project.
-        tagmap = {n["study_id"]: n.get("theme_tags", []) for n in graph["nodes"]}
-        study_rows = []
-        for sid in graph["build_order"]:
-            syn = store.get_synthesis(sid)
-            if not syn:
-                continue
-            tags = " ".join(f'<span class="pill">{_esc(x)}</span>' for x in tagmap.get(sid, []))
-            cl = []
-            for cidx in syn.get("council_ids", []):
-                c = store.get_council_session(cidx) or {}
-                lbl = (c.get("prompt") or "Council")[:34]
-                cl.append(f'<a href="/councils/{_esc(cidx)}">{_icon("councils")}{_esc(lbl)}…</a>')
-            councils_line = (" · ".join(cl)) or f'<span class="muted">—</span>'
-            study_rows.append(
-                f'<div class="strow"><div class="vline1"><a href="/syntheses/{_esc(sid)}">{_icon("syntheses")}<b>{_esc(syn["title"])}</b></a> {tags}</div>'
-                f'<div class="muted small" style="margin-top:3px">{t("councils")}: {councils_line}</div></div>')
-        studies_html = "".join(study_rows) or f'<div class="muted">{t("no_synthesis")}</div>'
+                    if reports else "")
+        # Linear-style filter: theme tags are toggleable chips that filter the graph.
+        chips = "".join(
+            f'<button class="rgchip" data-theme="{_esc(th)}" style="--c:{_theme_color(th, proj["themes"])}">{_esc(th)}</button>'
+            for th in proj["themes"])
+        left = (f'<span class="ptlabel">{_icon("search")}{t("filter")}</span>{chips}'
+                f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if chips else ""
+        toolbar = f'<div class="ptoolbar">{left}<span class="spacer"></span>{meta_btn}</div>'
+        details = (
+            f'<details class="oqd"><summary>{t("legend")} · {t("open_questions_h")} ({len(oqs)})</summary><div>'
+            f'<div class="muted small">{t("build_order_h")} (edges)</div>'
+            f'<div class="pills" style="margin:6px 0 14px">{edge_leg}</div>'
+            f'<div class="muted small">{t("open_questions_h")}</div>'
+            f'<ul style="margin:6px 0 0 18px">{oq_html}</ul></div></details>')
         body = (
             f'<div class="page"><h1 class="h1">{_esc(proj["title"])}</h1>'
             f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
             f'<div class="stats">{stats}</div>'
-            f'<div class="card"><div class="vline1" style="margin-bottom:8px">{_icon("projects")} <b>{t("graph")}</b>'
-            f'<span class="spacer"></span>{meta_btn}</div>{_graph_interactive(graph)}</div>'
-            f'<div class="card"><b>{t("syntheses")} &amp; {t("councils")}</b><div style="margin-top:6px">{studies_html}</div></div>'
-            f'<div class="card"><b>{t("themes_h")}</b><div class="pills" style="margin-top:6px">{theme_leg}</div>'
-            f'<div style="margin-top:10px"><b>{t("build_order_h")}</b> <span class="muted small">(edges)</span>'
-            f'<div class="pills" style="margin-top:6px">{edge_leg}</div></div></div>'
-            f'<div class="card"><b>{t("open_questions_h")}</b><ul style="margin:6px 0 0 18px">{oq_html}</ul></div>'
+            f'{toolbar}'
+            f'<div class="card graphcard">{_graph_interactive(graph)}</div>'
+            f'{details}'
             f'</div>')
         return _layout(proj["title"], body, store, crumbs=[(t("projects"), "/projects"), (proj["title"], None)], active="projects")
 
