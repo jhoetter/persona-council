@@ -230,6 +230,158 @@ def record_frame(project_id: str, task_id: str, questions: list[str], hypotheses
     return t
 
 
+# ------------------------------------------------------------------ evidence, judgments, gates
+
+def link_evidence(project_id: str, task_id: str, ref: dict[str, Any],
+                  store: Store | None = None) -> dict[str, Any]:
+    """Attach an evidence ref {kind,id} (council/artifact/session/synthesis) to a task (usually an
+    act task whose run-council/scaffold/session just produced it)."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    t = task(plan, task_id)
+    if not t:
+        raise PlanError("BAD_LINK", f"unknown task '{task_id}'")
+    r = _ref(ref)
+    if not r["id"] or not r["kind"]:
+        raise PlanError("BAD_LINK", "evidence ref needs a kind and an id")
+    if r not in t["produces"]:
+        t["produces"].append(r)
+    save_plan(plan, store=store)
+    return t
+
+
+def record_judgment(project_id: str, task_id: str, gate_tag: str, decided: bool, rationale: str,
+                    evidence_refs: list[str] | None = None, store: Store | None = None) -> dict[str, Any]:
+    """Record an evidence-backed gate judgment against a task (the fan or the verify). gate_tag is a
+    FREE tag; a decided judgment needs a rationale + >=1 evidence_ref."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    if task(plan, task_id) is None:
+        raise PlanError("BAD_JUDGMENT", f"unknown task '{task_id}'")
+    if not (gate_tag or "").strip():
+        raise PlanError("BAD_JUDGMENT", "a judgment needs a gate_tag")
+    refs = [str(r) for r in (evidence_refs or []) if str(r).strip()]
+    if decided and not rationale.strip():
+        raise PlanError("BAD_JUDGMENT", "a decided judgment needs a rationale")
+    if decided and not refs:
+        raise PlanError("BAD_JUDGMENT", "a decided gate judgment needs >= 1 evidence_ref")
+    j = {"task_id": task_id, "gate_tag": gate_tag, "decided": bool(decided),
+         "rationale": rationale.strip(), "evidence_refs": refs, "created_at": utc_now_iso()}
+    plan.setdefault("judgments", []).append(j)
+    save_plan(plan, store=store)
+    return j
+
+
+def _fan_tasks(plan: dict[str, Any], vtask: dict[str, Any]) -> list[dict[str, Any]]:
+    """The act 'fan' a verify task consolidates: sibling tasks sharing one of its consumed frames."""
+    frames = set(vtask["consumes"])
+    return [t for t in plan["tasks"]
+            if t["id"] != vtask["id"] and (set(t["consumes"]) & frames) and t["bucket"] != "verify"]
+
+
+def _fan_evidence(plan: dict[str, Any], vtask: dict[str, Any]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for t in _fan_tasks(plan, vtask):
+        for r in t["produces"]:
+            if r["kind"] != "frame":
+                out.append(r)
+    return out
+
+
+def _eff_min(vtask: dict[str, Any]) -> int:
+    mi = vtask["requires"]["min_inputs"]
+    return mi if mi is not None else 2
+
+
+def verify_unmet(plan: dict[str, Any], vtask: dict[str, Any], store: Store) -> list[str]:
+    """Non-raising: what a verify task still needs before it can complete."""
+    from . import methodology as M
+    pid = plan["project_id"]
+    req = vtask["requires"]
+    unmet: list[str] = []
+    fan = _fan_evidence(plan, vtask)
+    eff = _eff_min(vtask)
+    if len(fan) < eff:
+        unmet.append(f"need >= {eff} act evidence items in the fan (have {len(fan)})")
+    if req["gate_tag"]:
+        scope = {vtask["id"], *vtask["consumes"], *[t["id"] for t in _fan_tasks(plan, vtask)]}
+        ok = any(j.get("decided") and j["gate_tag"] == req["gate_tag"] and j["task_id"] in scope
+                 for j in plan.get("judgments", []))
+        if not ok:
+            unmet.append(f"a decided `{req['gate_tag']}` judgment must exist")
+    for tg in req["artifact_tags"]:
+        if not M._project_artifacts_with(store, pid, tg):
+            unmet.append(f"need >= 1 artifact tagged `{tg}`")
+    for tg in req["session_of_tags"]:
+        if not M._sessions_of(store, pid, tg):
+            unmet.append(f"need >= 1 recorded session of an artifact tagged `{tg}`")
+    return unmet
+
+
+def complete_task(project_id: str, task_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Mark a ready task done. Verify tasks are gate-checked (breadth + gate judgment + artifacts/
+    sessions) and rejected until satisfied. Handles loop_back on verify tasks."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    t = task(plan, task_id)
+    if not t:
+        raise PlanError("BAD_TASK", f"unknown task '{task_id}'")
+    ready = {x["id"] for x in ready_tasks(plan)}
+    if task_id not in ready:
+        raise PlanError("TASK_NOT_READY", f"task '{task_id}' is not on the ready frontier")
+    if t["bucket"] == "verify":
+        unmet = verify_unmet(plan, t, store)
+        if unmet:
+            raise PlanError("GATE_UNMET", f"verify task '{task_id}' blocked: {unmet}")
+    t["status"] = "done"
+    save_plan(plan, store=store)
+    return t
+
+
+def brief_next(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Plan router: the ready task frontier + per-task instructions (bucket/capability aware)."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    ready = ready_tasks(plan)
+    if not ready:
+        done = is_complete(plan)
+        return {"project_id": project_id, "complete": done, "ready": [],
+                "instructions": ("Plan complete — export plan.md and present the answer." if done
+                                 else "No ready tasks — resolve a blocker / open question, or add tasks.")}
+    # prefer analyze, then act, then verify when several are ready
+    pref = {"analyze": 0, "act": 1, "verify": 2}
+    primary = sorted(ready, key=lambda t: (pref.get(t["bucket"], 3), plan["tasks"].index(t)))[0]
+    unmet: list[str] = []
+    if primary["bucket"] == "analyze":
+        instr = (f"ANALYZE/{primary['capability']}: {primary['intent']} → record_frame(questions, "
+                 f"hypotheses, memory_refs citing persona memory). Understand before concluding.")
+        if primary["capability"] == "frame":
+            unmet.append("record_frame (>=1 question + >=1 memory ref)")
+    elif primary["bucket"] == "verify":
+        unmet = verify_unmet(plan, primary, store)
+        instr = (f"VERIFY/{primary['capability']}: consolidate the fan into a {primary['capability']} "
+                 f"(record_synthesis / record_decision), record the gate judgment, then complete_task.")
+    else:
+        instr = (f"ACT/{primary['capability']}: do the work (run-council on a framed question / "
+                 f"scaffold_artifact / record_artifact_session), link_evidence, then complete_task. "
+                 f"Breadth = angles × persona diversity, not one council per persona.")
+    return {
+        "project_id": project_id, "task": primary["id"], "ready": [t["id"] for t in ready],
+        "bucket": primary["bucket"], "capability": primary["capability"], "title": primary["title"],
+        "intent": primary["intent"], "step": primary["step"], "consumes": primary["consumes"],
+        "requires": primary["requires"], "unmet": unmet, "complete": False, "instructions": instr,
+        "goal": plan.get("goal", ""),
+    }
+
+
 # ------------------------------------------------------------------ plan.md render
 
 _STATUS_MARK = {"done": "x", "active": "~", "todo": " ", "blocked": "!"}

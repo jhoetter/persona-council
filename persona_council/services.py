@@ -3050,6 +3050,37 @@ def record_frame(project_id, task_id, questions, hypotheses=None, memory_refs=No
     return _plan.record_frame(project_id, task_id, questions, hypotheses, memory_refs, store=store)
 
 
+def link_evidence(project_id, task_id, ref, store: Store | None = None) -> dict[str, Any]:
+    return _plan.link_evidence(project_id, task_id, ref, store=store)
+
+
+def complete_task(project_id, task_id, store: Store | None = None) -> dict[str, Any]:
+    return _plan.complete_task(project_id, task_id, store=store)
+
+
+# brief_next + record_judgment DISPATCH: plan-driven when the project has a plan, else the legacy
+# methodology engine. (These names were imported from .methodology above; redefined here to dispatch.)
+_m_brief_next = brief_next            # the methodology engine's router (legacy fallback)
+_m_record_judgment = record_judgment
+
+
+def brief_next(project_id: str, store: Store | None = None) -> dict[str, Any]:  # noqa: F811
+    store = store or Store()
+    if _plan.get_plan(project_id, store=store) is not None:
+        return _plan.brief_next(project_id, store=store)
+    return _m_brief_next(project_id, store=store)
+
+
+def record_judgment(project_id, task_id_or_step, gate_tag, decided, rationale,  # noqa: F811
+                    evidence_refs=None, store: Store | None = None) -> dict[str, Any]:
+    store = store or Store()
+    if _plan.get_plan(project_id, store=store) is not None:
+        return _plan.record_judgment(project_id, task_id_or_step, gate_tag, decided, rationale,
+                                     evidence_refs, store=store)
+    return _m_record_judgment(project_id, task_id_or_step, gate_tag, decided, rationale,
+                              evidence_refs, store=store)
+
+
 def export_plan_md(project_id: str, store: Store | None = None) -> str:
     store = store or Store()
     p = _plan.get_plan(project_id, store=store)

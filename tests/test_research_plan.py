@@ -145,3 +145,43 @@ def test_act_blocked_until_frame_discharged(store):
     assert fr["produces"] == [{"kind": "frame", "id": "frame__discover"}]
     ready = {t["id"] for t in services.ready_tasks(plan)}
     assert any(t.startswith("act__") for t in ready)   # the act council is now ready
+
+
+# --------------------------------------------------------------------------- R4: router + gates
+
+def test_verify_gated_until_breadth_and_judgment(store):
+    proj = services.start_project("Deep", "hmw?", "double_diamond_deep", persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__discover", ["q1?", "q2?"], memory_refs=["persona:p1/day:1"], store=store)
+    # one act council so far
+    a1 = services.add_task(pid, "act", "explore", "Council A", consumes=["frame__discover"], store=store)
+    services.link_evidence(pid, a1["id"], {"kind": "council", "id": "c1"}, store=store)
+
+    # verify is on the frontier (frame done) but GATED: needs >=2 fan evidence + a gate judgment
+    b = services.brief_next(pid, store=store)
+    assert "verify__define" in b["ready"]
+    import pytest
+    with pytest.raises(services.PlanError) as e:
+        services.complete_task(pid, "verify__define", store=store)
+    assert e.value.code == "GATE_UNMET"
+
+    # add the second council → breadth ok, but still no judgment
+    a2 = services.add_task(pid, "act", "explore", "Council B", consumes=["frame__discover"], store=store)
+    services.link_evidence(pid, a2["id"], {"kind": "council", "id": "c2"}, store=store)
+    with pytest.raises(services.PlanError):
+        services.complete_task(pid, "verify__define", store=store)   # missing divergence_complete
+
+    # record the evidence-backed gate judgment → verify can complete
+    services.record_judgment(pid, "verify__define", "divergence_complete", True,
+                             "two distinct pain clusters; saturating", evidence_refs=["c1", "c2"], store=store)
+    services.complete_task(pid, "verify__define", store=store)
+    plan = services.get_plan(pid, store=store)
+    assert next(t for t in plan["tasks"] if t["id"] == "verify__define")["status"] == "done"
+    # next frame unlocks
+    assert "frame__ideate" in {t["id"] for t in services.ready_tasks(plan)}
+
+
+def test_brief_next_dispatches_to_plan(store):
+    proj = services.start_project("F", "what?", None, persona_ids=["p1"], store=store)
+    b = services.brief_next(proj["id"], store=store)
+    assert b["task"] == "frame__root" and b["bucket"] == "analyze" and not b["complete"]
