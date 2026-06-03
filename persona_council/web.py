@@ -424,6 +424,7 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .mphase.active{border-color:var(--accent);color:var(--accent);background:var(--accent-weak);font-weight:600}
 .mphase.done{border-color:var(--green);color:var(--green)}
 .mphase b{color:var(--ink)}
+.mphase .mcap{font-size:10px;text-transform:uppercase;letter-spacing:.04em;opacity:.7;margin-left:3px}
 .mstrip .mstate{font-size:12px;color:var(--muted)}
 
 /* ---- generic ---- */
@@ -1075,60 +1076,85 @@ def _graph_layout(graph: dict) -> dict:
 # node box dimensions (must match _RGRAPH_JS NW/NH)
 _NW, _NH = 250, 58
 # Saved drag-layouts in localStorage are keyed by this; bump on any layout-algorithm change.
-_LAYOUT_VERSION = 3
+_LAYOUT_VERSION = 4
+
+
+def _proto_tags(pr: dict) -> set:
+    """An artifact's open tags, mirroring methodology._artifact_tags (type + discriminators)."""
+    tags = {"prototype"}
+    if pr.get("fidelity"):
+        tags.add(pr["fidelity"])
+    for tg in (pr.get("tags") or []):
+        tags.add(tg)
+    return tags
 
 
 def _methodology_layout(graph: dict) -> dict | None:
-    """Diamond layout: x by phase column; diverge phases fan vertically symmetric around the
-    axis (wide), converge phases sit on the axis (waist). Returns {pos, diamonds} or None when
-    the project has no methodology. (spec/deep-design-thinking-and-diamond.md §6)"""
+    """Generic DAG layout (spec/methodology-constellations.md §5): x = longest-path depth over
+    `consumes`; a step's nodes fan vertically when it has >1 (diverge), sit on the axis when 1
+    (a waist) → diamonds emerge for any fan→waist. Artifacts are placed in their PRODUCING step's
+    column and routed to the first downstream step that consumes their tag — all read from the
+    graph + tags, no phase-key literals. Returns {pos, diamonds, proto_*} or None (no methodology)."""
     ms = graph.get("methodology_state") or {}
-    phases = ms.get("phases") or []
-    if not phases:
+    steps = ms.get("steps") or ms.get("phases") or []
+    if not steps:
         return None
-    order = [p["key"] for p in phases]
-    modes = {p["key"]: p["mode"] for p in phases}
+    by_id = {s["key"]: s for s in steps}
+    # longest-path depth over the consumes DAG
+    depth: dict[str, int] = {}
+
+    def dep(sid: str) -> int:
+        if sid in depth:
+            return depth[sid]
+        depth[sid] = 0  # guard
+        cs = by_id.get(sid, {}).get("consumes", [])
+        depth[sid] = (max((dep(c) for c in cs), default=-1) + 1)
+        return depth[sid]
+
+    for s in steps:
+        dep(s["key"])
     COLW, ROWH, X0, AXIS = 520, 118, 40, 340
-    by_phase: dict[str, list] = {}
+    by_step: dict[str, list] = {}
     for n in graph["nodes"]:
-        by_phase.setdefault(n.get("phase", ""), []).append(n)
+        by_step.setdefault(n.get("phase", ""), []).append(n)
+    col_x = {s["key"]: X0 + depth[s["key"]] * COLW for s in steps}
     pos: dict[str, tuple] = {}
-    col_x: dict[str, float] = {}
     fan_half: dict[str, float] = {}
-    for idx, pk in enumerate(order):
-        x = X0 + idx * COLW
-        col_x[pk] = x
-        ns = sorted(by_phase.get(pk, []), key=lambda n: n.get("created_at", ""))
+    is_fan: dict[str, bool] = {}
+    for s in steps:
+        sk = s["key"]
+        ns = sorted(by_step.get(sk, []), key=lambda n: n.get("created_at", ""))
         k = len(ns)
+        is_fan[sk] = k > 1 or (s.get("mode") == "diverge")
         for i, n in enumerate(ns):
-            pos[n["study_id"]] = (x, AXIS + (i - (k - 1) / 2.0) * ROWH)
-        fan_half[pk] = (((k - 1) / 2.0) * ROWH + 64) if k else 64
-    extra_x, j = X0 + len(order) * COLW, 0
+            pos[n["study_id"]] = (col_x[sk], AXIS + (i - (k - 1) / 2.0) * ROWH)
+        fan_half[sk] = (((k - 1) / 2.0) * ROWH + 64) if k else 64
+    maxdepth = max(depth.values(), default=0)
+    extra_x, j = X0 + (maxdepth + 1) * COLW, 0
     for n in graph["nodes"]:
         if n["study_id"] not in pos:
             pos[n["study_id"]] = (extra_x, AXIS + j * ROWH); j += 1
-    # one faint diamond silhouette per diverge phase (left waist → top → right waist → bottom)
+    # one faint diamond silhouette per fan step (left = a consumed step's col, right = a consumer's)
     cy = AXIS + _NH / 2
+    consumers: dict[str, list[str]] = {s["key"]: [] for s in steps}
+    for s in steps:
+        for c in s.get("consumes", []):
+            consumers.setdefault(c, []).append(s["key"])
     diamonds = []
-    for idx, pk in enumerate(order):
-        if modes.get(pk) != "diverge":
+    for s in steps:
+        sk = s["key"]
+        if not is_fan.get(sk):
             continue
-        cx = col_x[pk] + _NW / 2
-        half = max(ROWH * 0.95, fan_half[pk] + 26)
-        leftX = (col_x[order[idx - 1]] if idx - 1 >= 0 else col_x[pk] - COLW * 0.6) + _NW / 2
-        rightX = (col_x[order[idx + 1]] if idx + 1 < len(order) else col_x[pk] + COLW * 0.6) + _NW / 2
+        cx = col_x[sk] + _NW / 2
+        half = max(ROWH * 0.95, fan_half[sk] + 26)
+        cons = s.get("consumes", [])
+        outs = consumers.get(sk, [])
+        leftX = (col_x[cons[0]] if cons else col_x[sk] - COLW * 0.6) + _NW / 2
+        rightX = (col_x[outs[0]] if outs else col_x[sk] + COLW * 0.6) + _NW / 2
         diamonds.append([[leftX, cy], [cx, cy - half], [rightX, cy], [cx, cy + half]])
-    # Prototypes sit AFTER their source idea — between the build phase (lo-fi=ideate,
-    # mid-fi=refine) and the convergence where they were tested. Flow: idea → prototype →
-    # down-select. Each is matched to its source exploration by title-keyword overlap.
-    ms_phase = {p["key"]: p for p in phases}
-    order_idx = {pk: i for i, pk in enumerate(order)}
-    build_col = {"lofi": "ideate", "midfi": "refine"}
-    test_conv = {"lofi": (ms_phase.get("lofi_select") or {}).get("convergence_node"),
-                 "midfi": (ms_phase.get("deliver") or {}).get("convergence_node")}
 
-    def _match(name: str, phase_key: str):
-        cands = by_phase.get(phase_key, [])
+    def _match(name: str, step_key: str):
+        cands = by_step.get(step_key, [])
         nw = set(re.findall(r"\w+", name.lower())) - {"lo", "fi", "mid", "der", "die", "das", "idee", "·"}
         best, score = None, 0
         for n in cands:
@@ -1137,26 +1163,47 @@ def _methodology_layout(graph: dict) -> dict | None:
                 best, score = n, sc
         return best or (cands[0] if cands else None)
 
-    PW = 200  # prototype node width (smaller than NW so it fits between columns)
+    # build steps (declare produces.artifact_type) and the steps that consume each artifact tag
+    build_steps = [s for s in steps if (s.get("produces") or {}).get("artifact_type")]
+    PW = 200
     proto_pos, proto_edges, used_y = {}, [], {}
     for pr in (graph.get("prototypes") or []):
-        fid = pr.get("fidelity", "midfi")
-        bk = build_col.get(fid)
-        bi = order_idx.get(bk)
-        if bi is None:
+        ptags = _proto_tags(pr)
+        # the producing step: artifact_type matches, disambiguated by a shared discriminator tag
+        bs = None
+        for s in build_steps:
+            prod = s["produces"]
+            if prod.get("artifact_type") in ptags:
+                disc = set(prod.get("more_tags") or [])
+                if not disc or (disc & ptags):
+                    bs = s; break
+        if bs is None and build_steps:
+            bs = build_steps[0]
+        if bs is None:
             continue
-        nxt = order[bi + 1] if bi + 1 < len(order) else bk
+        bk = bs["key"]
+        outs = consumers.get(bk, [])
+        nxt = outs[0] if outs else bk
         src = _match(pr.get("name", ""), bk)
-        cx = (col_x[bk] + _NW + col_x[nxt]) / 2 - PW / 2          # midway between idea-end and next column
-        cy = pos[src["study_id"]][1] if src else AXIS
-        while round(cy) in used_y.get(round(cx), set()):          # avoid exact overlap
-            cy += 70
-        used_y.setdefault(round(cx), set()).add(round(cy))
-        proto_pos[pr["id"]] = (cx, cy)
+        cx = (col_x[bk] + _NW + col_x[nxt]) / 2 - PW / 2
+        cy2 = pos[src["study_id"]][1] if src else AXIS
+        while round(cy2) in used_y.get(round(cx), set()):
+            cy2 += 70
+        used_y.setdefault(round(cx), set()).add(round(cy2))
+        proto_pos[pr["id"]] = (cx, cy2)
         if src:
-            proto_edges.append((src["study_id"], pr["id"], False))   # idea → prototype (solid)
-        if test_conv.get(fid):
-            proto_edges.append((pr["id"], test_conv[fid], True))     # prototype → tested-at (dashed)
+            proto_edges.append((src["study_id"], pr["id"], False))   # idea → artifact (solid)
+        # tested-at: the nearest downstream decide step requiring a session of one of this artifact's tags
+        test_step = None
+        for s in sorted(steps, key=lambda s: depth[s["key"]]):
+            if depth[s["key"]] <= depth[bk]:
+                continue
+            req = s.get("requires") or {}
+            need = set(req.get("session_of_tags") or []) | set(req.get("artifact_tags") or [])
+            if need & ptags and s.get("convergence_node"):
+                test_step = s; break
+        if test_step:
+            proto_edges.append((pr["id"], test_step["convergence_node"], True))  # artifact → tested-at (dashed)
     return {"pos": pos, "diamonds": diamonds, "proto_pos": proto_pos, "proto_edges": proto_edges, "proto_w": PW}
 
 
@@ -2240,18 +2287,23 @@ def create_app():
         left = (f'<span class="ptlabel">{_icon("search")}{t("filter")}</span>{chips}'
                 f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if chips else ""
         oqbtn = f'<button class="btn" id="oqbtn">{t("legend")} · {t("open_questions_h")} ({len(oqs)})</button>'
-        # Methodology strip: the Double-Diamond phases with diverge(◇)/converge(◆) + status.
+        # Methodology strip: constellation steps with fan(◇)/waist(◆) shape (derived) + open tags.
         ms = graph.get("methodology_state")
         mstrip = ""
         if ms:
             chips = []
-            for ph in ms["phases"]:
+            for ph in (ms.get("steps") or ms.get("phases") or []):
                 state = ph["status"]
                 cls = "done" if state == "converged" else ("active" if ph["key"] == ms.get("phase") else "pend")
                 shape = "◆" if ph["mode"] == "converge" else "◇"
                 count = (f' <b>{ph["exploration_count"]}</b>'
                          if ph["mode"] == "diverge" and ph["exploration_count"] else "")
-                chips.append(f'<span class="mphase {cls}" title="{ph["mode"]} · {state}">{shape} {_esc(ph["name"])}{count}</span>')
+                tg = ", ".join(ph.get("tags") or [])
+                cap = next((x for x in (ph.get("tags") or []) if x in
+                            ("explore", "cluster", "decide", "build", "test", "synthesize")), "")
+                captxt = f' <span class="mcap">{_esc(cap)}</span>' if cap else ""
+                chips.append(f'<span class="mphase {cls}" title="{tg or ph["mode"]} · {state}">'
+                             f'{shape} {_esc(ph["name"])}{captxt}{count}</span>')
             state_txt = "✓" if ms.get("complete") else f'@ {_esc(ms.get("phase") or "—")}'
             mstrip = (f'<div class="mstrip"><span class="mname">{_esc(ms["methodology"])}</span>'
                       + '<span class="msep">→</span>'.join(chips)

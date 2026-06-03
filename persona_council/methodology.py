@@ -684,6 +684,7 @@ def get_methodology_state(project_id: str, store: Store | None = None) -> dict[s
         steps.append({
             "key": s["id"], "name": s["name"], "mode": _mode(s), "role": s["produces"]["role"],
             "tags": s["tags"], "consumes": s["consumes"], "status": status,
+            "produces": s["produces"], "requires": s["requires"],
             "exploration_count": len(log.get("node_ids", [])),
             "convergence_node": log.get("decision_node_id"),
             "judgments": [{"kind": j["kind"], "decided": j["decided"], "rationale": j["rationale"]}
