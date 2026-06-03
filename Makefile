@@ -3,7 +3,7 @@ FORWARDED_WEB_PORT ?= 18787
 
 UV ?= uv
 
-.PHONY: install dev dev-forwarded mcp snapshot restore skills test-smoke kill-ports
+.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports
 
 # Symlink version-controlled skills into .claude/skills/ so Claude Code discovers
 # them (.claude/skills is gitignored). Run once after clone.
@@ -35,6 +35,10 @@ dev-forwarded:
 
 mcp:
 	$(UV) run persona-council-mcp
+
+# Full test suite (pytest, dev dependency-group). Hermetic: temp DB, no network.
+test:
+	$(UV) run --group dev pytest -q
 
 test-smoke:
 	$(UV) run python -m compileall persona_council

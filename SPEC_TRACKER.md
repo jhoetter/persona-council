@@ -343,29 +343,43 @@ Text generation config:
 - `persona_council/cli.py`: terminal entrypoint.
 - `persona_council/mcp_server.py`: MCP tool server.
 - `persona_council/web.py`: FastAPI dashboard and JSON API.
+- `tests/`: pytest suite — MCP contract/envelope, gather→author→write-back
+  round-trip, seeded-scaffolding regression, cohort diversity + critic tunables.
 
-## Outstanding Work
+## Outstanding Work — complete ✅
 
-The core system is built: persona store, LLM-authored simulation loop, persistent
-memory (bi-temporal facts, recall, time-travel), council orchestration with
-mediator strategies, iterative synthesis, an LLM critic eval stage, evidence
-checks, the autonomous cohort driver skill, and the read-only web inspector.
-What remains is testing, reproducibility, and a few quality enhancements:
+The core system was already built (persona store, LLM-authored simulation loop,
+persistent memory, council orchestration, iterative synthesis, LLM critic,
+evidence checks, cohort driver skill, web inspector). The remaining testing,
+reproducibility, and quality items are now implemented:
 
 **Testing & reproducibility**
-- [ ] Integration tests for the MCP tool calls (gather → author → write-back).
-- [ ] Regression fixtures for stable, seeded simulation scaffolding.
+- [x] Integration tests for the MCP tool calls (gather → author → write-back) —
+      `tests/test_mcp_contract.py` (tool registration + envelope) and
+      `tests/test_gather_author_writeback.py` (persona → council → synthesis →
+      evidence → cohort critic round-trip on a temp DB, no network).
+- [x] Regression fixtures for stable, seeded simulation scaffolding —
+      `tests/test_seeded_scaffolding.py` (golden RNG stream + reproducible,
+      seed-sensitive `simulate_day` scaffolding).
 
 **Quality & validation**
-- [ ] Diversity and consistency checks for bulk persona generation (avoid
-      near-duplicate or implausibly uniform cohorts).
-- [ ] Surface source/evidence citations more explicitly inside generated
-      conclusions (recall hits + attached evidence → inline provenance).
+- [x] Diversity and consistency checks for bulk persona generation —
+      `evaluation.evaluate_cohort_diversity` (Jaccard over segment/role/pains/
+      goals/tools; flags near-duplicate pairs + implausibly uniform cohorts);
+      CLI `cohort-diversity`, MCP `evaluate_cohort_diversity`.
+- [x] Source/evidence citations inside generated conclusions — `brief_synthesis`
+      surfaces attached evidence + recall hits with ids (`frame.provenance`); the
+      synthesis carries a validated `citations` field, rendered in the report.
 
-**Enhancements (optional)**
-- [ ] Cohort-wide critic cross-comparison: flag a persona that falls out of the
-      cohort's range, in addition to the per-persona critic pass.
-- [ ] Tune the LLM-critic threshold (default ≥4/5) and sample size on larger runs.
+**Enhancements**
+- [x] Cohort-wide critic cross-comparison — `brief_cohort_critic` /
+      `record_cohort_critic` (flags personas out of the cohort's range, persists
+      anomalies); CLI + MCP wired.
+- [x] Tunable LLM-critic threshold + sample size — `config.critic_threshold()` /
+      `config.critic_sample_k()` (env `PERSONA_COUNCIL_CRITIC_THRESHOLD` /
+      `_CRITIC_SAMPLE_K`), threaded through brief/record_eval_critic.
+
+Run the suite with `make test` (pytest, `dev` dependency-group) or `make test-smoke`.
 
 ## Quality Bar
 

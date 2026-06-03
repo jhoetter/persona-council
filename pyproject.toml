@@ -16,6 +16,12 @@ persona-council = "persona_council.cli:main"
 persona-council-mcp = "persona_council.mcp_server:main"
 persona-council-web = "persona_council.web:main"
 
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

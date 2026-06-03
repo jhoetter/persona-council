@@ -270,11 +270,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     # F2 critic / F3 driver / F5 evidence
     p = sub.add_parser("brief-critic")
-    p.add_argument("persona_id"); p.add_argument("--start"); p.add_argument("--end"); p.add_argument("--k", type=int, default=12)
+    p.add_argument("persona_id"); p.add_argument("--start"); p.add_argument("--end"); p.add_argument("--k", type=int, default=None)
     p = sub.add_parser("record-critic")
     p.add_argument("persona_id"); p.add_argument("file"); p.add_argument("--start"); p.add_argument("--end")
     p = sub.add_parser("evaluate-full")
     p.add_argument("persona_id"); p.add_argument("--start"); p.add_argument("--end")
+    # Cohort quality: diversity gate + cross-persona critic
+    p = sub.add_parser("cohort-diversity")
+    p.add_argument("--persona", action="append", dest="personas", help="restrict to these persona ids/slugs (repeatable)")
+    p = sub.add_parser("brief-cohort-critic")
+    p.add_argument("--persona", action="append", dest="personas"); p.add_argument("--start"); p.add_argument("--end")
+    p = sub.add_parser("record-cohort-critic")
+    p.add_argument("file")
     p = sub.add_parser("brief-month")
     p.add_argument("persona_id"); p.add_argument("month")
     p = sub.add_parser("record-month")
@@ -451,6 +458,12 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.record_eval_critic(args.persona_id, json.loads(Path(args.file).read_text(encoding="utf-8")), args.start, args.end))
         elif args.command == "evaluate-full":
             _print(services.evaluate_simulation_full(args.persona_id, args.start, args.end))
+        elif args.command == "cohort-diversity":
+            _print(services.evaluate_cohort_diversity(args.personas))
+        elif args.command == "brief-cohort-critic":
+            _print(services.brief_cohort_critic(args.personas, args.start, args.end))
+        elif args.command == "record-cohort-critic":
+            _print(services.record_cohort_critic(json.loads(Path(args.file).read_text(encoding="utf-8"))))
         elif args.command == "brief-month":
             _print(services.brief_month(args.persona_id, args.month))
         elif args.command == "record-month":

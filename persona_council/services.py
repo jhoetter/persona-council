@@ -10,7 +10,10 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 
-from .config import ROOT, utc_now_iso, content_language, ensure_content_language, language_instruction
+from .config import (
+    ROOT, utc_now_iso, content_language, ensure_content_language, language_instruction,
+    critic_threshold, critic_sample_k,
+)
 from .models import (
     CalendarEvent,
     CouncilSession,
@@ -28,6 +31,7 @@ from .taxonomy import GENERIC_TOOLS, normalized_tool_ids, normalized_tools
 from . import memory as memory_mod
 from . import evaluation as evaluation_mod
 from .llm_simulation import (
+    build_cohort_critic_prompt,
     build_consolidation_prompt,
     build_digest_prompt,
     build_eval_critic_prompt,
@@ -39,6 +43,7 @@ from .llm_simulation import (
     generate_activity,
     generate_day_plan_with_llm,
     validate_activity_payload,
+    validate_cohort_critic_payload,
     validate_digest_payload,
     validate_eval_critic_payload,
     validate_evidence_check_payload,
@@ -1711,6 +1716,13 @@ def evaluate_simulation(persona_id: str | None = None, start: str | None = None,
     return evaluation_mod.evaluate_simulation(persona_id, period, store=store, persist=persist)
 
 
+def evaluate_cohort_diversity(persona_ids: list[str] | None = None, store: Store | None = None, persist: bool = True) -> dict[str, Any]:
+    """Structural bulk-generation gate: flag near-duplicate personas + uniform cohorts."""
+    store = store or Store()
+    resolved = [_require_persona(store, pid)["id"] for pid in persona_ids] if persona_ids else None
+    return evaluation_mod.evaluate_cohort_diversity(resolved, store=store, persist=persist)
+
+
 def backfill_embeddings(persona_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
     store = store or Store()
     personas = [store.get_persona(persona_id)] if persona_id else store.list_personas()
@@ -1747,7 +1759,10 @@ def prune_memory(persona_id: str, keep_days: int = 120, as_of: str | None = None
 # F2 — LLM critic (semantic eval stage).                                #
 # ===================================================================== #
 
-CRITIC_THRESHOLD = 4  # each dimension must reach this for semantic "top"
+# Default per-dimension critic threshold. The live value is resolved from
+# config.critic_threshold() (env-tunable) at call time; this constant is kept as
+# a documented default / backward-compatible reference.
+CRITIC_THRESHOLD = 4  # each dimension must reach this for semantic "top" (see config.critic_threshold)
 
 
 def _sample_activities(store: Store, persona_id: str, start: str | None, end: str | None, k: int) -> list[dict[str, Any]]:
@@ -1771,10 +1786,11 @@ def _sample_activities(store: Store, persona_id: str, start: str | None, end: st
     return out
 
 
-def brief_eval_critic(persona_id: str, start: str | None = None, end: str | None = None, sample_k: int = 12, store: Store | None = None) -> dict[str, Any]:
+def brief_eval_critic(persona_id: str, start: str | None = None, end: str | None = None, sample_k: int | None = None, store: Store | None = None) -> dict[str, Any]:
     store = store or Store()
     persona = _require_persona(store, persona_id)
     pid = persona["id"]
+    k = sample_k if sample_k is not None else critic_sample_k()
     arcs = []
     for ent in store.list_entities(pid, "project"):
         facts = store.list_entity_facts(ent["id"])
@@ -1785,7 +1801,9 @@ def brief_eval_critic(persona_id: str, start: str | None = None, end: str | None
         "source_description": persona["source_description"],
         "soul": get_persona_soul(pid, store)["content"],
         "period": {"start": start, "end": end},
-        "sample_activities": _sample_activities(store, pid, start, end, sample_k),
+        "sample_k": k,
+        "threshold": critic_threshold(),
+        "sample_activities": _sample_activities(store, pid, start, end, k),
         "project_arcs": arcs,
         "digests": [{"scope": d["scope"], "period": d["period_start"], "text": d.get("text")} for d in store.list_digests(pid)],
     }
@@ -1799,11 +1817,12 @@ def record_eval_critic(persona_id: str, verdict: dict[str, Any], start: str | No
     now = utc_now_iso()
     payload = validate_eval_critic_payload(verdict)
     dims = payload["dimensions"]
-    low = sorted([d for d, v in dims.items() if v < CRITIC_THRESHOLD])
+    threshold = critic_threshold()
+    low = sorted([d for d, v in dims.items() if v < threshold])
     green = not low
     report = {
         "id": stable_id("critic", pid, now), "persona_id": pid, "kind": "llm_critic",
-        "period_start": start, "period_end": end, "green": green,
+        "period_start": start, "period_end": end, "green": green, "threshold": threshold,
         "dimensions": dims, "low_dimensions": low,
         "findings": payload["findings"], "flagged_items": payload["flagged_items"],
         "overall_note": payload["overall_note"], "created_at": now,
@@ -1848,6 +1867,75 @@ def evaluate_simulation_full(persona_id: str, start: str | None = None, end: str
                  "no critic run yet" if not critic else
                  f"critic below threshold: {', '.join(critic.get('low_dimensions', []))}"),
     }
+
+
+# --- Cohort-wide critic (cross-persona outlier detection) --------------------
+
+def _cohort_member_record(store: Store, persona: dict[str, Any]) -> dict[str, Any]:
+    pid = persona["id"]
+    crit = latest_critic_report(pid, store=store)
+    quotes: list[str] = []
+    for e in store.list_experience_events(pid)[-12:]:
+        for q in (e.get("key_quotes") or []):
+            if str(q).strip():
+                quotes.append(str(q).strip()[:200])
+    return {
+        "persona_id": pid,
+        "persona_name": persona["display_name"],
+        "source_description": str(persona.get("source_description", ""))[:400],
+        "segment": (persona.get("segment") or {}).get("customer_type"),
+        "role": (persona.get("role") or {}).get("title"),
+        "pain_points": (persona.get("pain_points") or [])[:4],
+        "goals": (persona.get("goals") or [])[:3],
+        "critic_dimensions": (crit or {}).get("dimensions"),
+        "project_arcs": len(store.list_entities(pid, "project")),
+        "sample_utterances": quotes[:3],
+    }
+
+
+def brief_cohort_critic(persona_ids: list[str] | None = None, start: str | None = None,
+                        end: str | None = None, store: Store | None = None) -> dict[str, Any]:
+    """GATHER compact per-persona records across the cohort so the host can judge
+    which personas fall OUT of the cohort's range (relative outliers / clones)."""
+    store = store or Store()
+    if persona_ids:
+        personas = [_require_persona(store, pid) for pid in persona_ids]
+    else:
+        personas = [p for p in store.list_personas() if p]
+    if len(personas) < 2:
+        return {"schema": "cohort_critic", "cohort_size": len(personas),
+                "instructions": "Need >=2 personas for a cohort comparison.", "frame": {}}
+    frame = {
+        "period": {"start": start, "end": end},
+        "cohort": [_cohort_member_record(store, p) for p in personas],
+    }
+    return {"schema": "cohort_critic", "cohort_size": len(personas),
+            "persona_ids": [p["id"] for p in personas],
+            "instructions": build_cohort_critic_prompt(frame), "frame": frame}
+
+
+def record_cohort_critic(verdict: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
+    """Persist a host-authored cohort critique: eval_report (kind=cohort_critic) + an
+    anomaly per flagged outlier persona."""
+    store = store or Store()
+    now = utc_now_iso()
+    payload = validate_cohort_critic_payload(verdict)
+    outliers = payload["outliers"]
+    report = {
+        "id": stable_id("cohortcritic", now), "persona_id": None, "kind": "cohort_critic",
+        "green": len(outliers) == 0, "outliers": outliers,
+        "cohort_note": payload["cohort_note"], "created_at": now,
+    }
+    store.insert_eval_report(report)
+    for o in outliers:
+        store.insert_anomaly({
+            "id": stable_id("anom", "cohortcritic", o["persona_id"], o["dimension"], now),
+            "persona_id": o["persona_id"], "kind": f"cohort_critic:{o['dimension']}",
+            "severity": o["severity"], "detail": f"cohort outlier ({o['dimension']}): {o['reason']}",
+            "created_at": now,
+        })
+    store.commit()
+    return report
 
 
 # ===================================================================== #
@@ -2167,6 +2255,36 @@ def _council_brief_row(store: Store, cid: str) -> dict[str, Any]:
     }
 
 
+def _synthesis_provenance(store: Store, council_ids: list[str], topic: str | None) -> dict[str, Any]:
+    """Assemble inline-citable provenance for a synthesis: attached real evidence and
+    relevant recalled facts (each with a stable id) for every persona in the chain.
+    This is what lets generated conclusions cite their source (recall hits + evidence)."""
+    persona_ids: list[str] = []
+    for cid in council_ids:
+        c = store.get_council_session(cid) or {}
+        for pid in c.get("persona_ids", []) or []:
+            if pid not in persona_ids:
+                persona_ids.append(pid)
+    evidence: list[dict[str, Any]] = []
+    recall: list[dict[str, Any]] = []
+    for pid in persona_ids:
+        persona = store.get_persona(pid) or {}
+        name = persona.get("display_name", pid)
+        for ev in store.list_evidence(pid)[:6]:
+            evidence.append({"ref": ev["id"], "persona": name, "kind": "evidence",
+                             "source_type": ev.get("source_type"),
+                             "quote": str(ev.get("content_or_path", ""))[:400]})
+        if topic and str(topic).strip():
+            try:
+                hits = memory_mod.recall(store, pid, topic, k=2).get("hits", [])
+            except Exception:
+                hits = []
+            for h in hits:
+                recall.append({"ref": h.get("id", ""), "persona": name, "kind": "recall",
+                               "quote": str(h.get("text") or h.get("fact") or "")[:400]})
+    return {"evidence": evidence[:30], "recall": recall[:30]}
+
+
 def brief_synthesis(council_ids: list[str], title: str | None = None, start_input: str | None = None,
                     goal: str | None = None, store: Store | None = None) -> dict[str, Any]:
     """GATHER an ordered chain of councils so the host can author a synthesis."""
@@ -2175,6 +2293,7 @@ def brief_synthesis(council_ids: list[str], title: str | None = None, start_inpu
     frame = {
         "title": title, "goal": goal, "start_input": start_input,
         "councils_in_order": chain,
+        "provenance": _synthesis_provenance(store, council_ids, goal or start_input or title),
     }
     return {"schema": "synthesis", "council_ids": council_ids,
             "instructions": build_synthesis_prompt(frame), "frame": frame}
@@ -2202,7 +2321,7 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str], paylo
         goal=goal or (existing or {}).get("goal", ""),
         status=data["status"], next_council_question=data["next_council_question"],
         stop_reason=data["stop_reason"], iterations=len(council_ids),
-        voices=data["voices"],
+        voices=data["voices"], citations=data["citations"],
     ).to_dict()
     rec["updated_at"] = utc_now_iso()
     store.upsert_synthesis(rec)
@@ -2303,6 +2422,13 @@ def export_synthesis(synthesis_id: str, format: str = "md", store: Store | None 
                 lines.append(f"  - „{e.get('quote','')}“ [{e.get('council_id','')}]")
     lines += ["", f"## {L['open_questions']}"]
     lines += [f"- {x}" for x in syn.get("offene_fragen", [])] or ["—"]
+    cites = syn.get("citations", [])
+    if cites:
+        cite_label = "Belege (Evidenz / Recall)" if content_language() == "de" else "Citations (evidence / recall)"
+        lines += ["", f"## {cite_label}"]
+        for c in cites:
+            q = f" — „{c['quote']}“" if c.get("quote") else ""
+            lines.append(f"- [{c.get('kind','')}:{c.get('ref','')}]{q}")
     lines += ["", f"## {L['sources']}"]
     for cid in syn["council_ids"]:
         c = store.get_council_session(cid)

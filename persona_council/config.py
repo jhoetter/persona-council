@@ -82,6 +82,25 @@ def default_sample_days_per_month() -> int:
         return 4
 
 
+def critic_threshold() -> int:
+    """Minimum per-dimension score (1-5) the LLM critic must reach for semantic
+    'top'. Tunable via PERSONA_COUNCIL_CRITIC_THRESHOLD; clamped to 1-5, default 4."""
+    try:
+        return max(1, min(5, int(os.getenv("PERSONA_COUNCIL_CRITIC_THRESHOLD", 4))))
+    except (TypeError, ValueError):
+        return 4
+
+
+def critic_sample_k() -> int:
+    """How many activities the critic samples per run. Tunable via
+    PERSONA_COUNCIL_CRITIC_SAMPLE_K; larger = more thorough on long horizons.
+    Clamped to 1-100, default 12."""
+    try:
+        return max(1, min(100, int(os.getenv("PERSONA_COUNCIL_CRITIC_SAMPLE_K", 12))))
+    except (TypeError, ValueError):
+        return 12
+
+
 # --- i18n: UI + generated-content language (German/English) -------------------
 # Two independent axes:
 #   - content_language: the language host-authored text (personas, days, councils,

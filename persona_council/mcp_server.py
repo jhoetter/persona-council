@@ -29,6 +29,7 @@ _NEXT: dict[str, dict[str, Any]] = {
     "get_persona": {"name": "get_persona_memory", "reason": "see the rendered memory (active projects, threads)"},
     "brief_eval_critic": {"name": "record_eval_critic", "reason": "persist the semantic verdict you authored"},
     "record_eval_critic": {"name": "evaluate_simulation_full", "reason": "combined structural+semantic top verdict"},
+    "brief_cohort_critic": {"name": "record_cohort_critic", "reason": "persist the cohort outlier verdict you authored"},
     "brief_month": {"name": "record_month_bundle", "reason": "persist the authored month bundle through the loop"},
     "record_month_bundle": {"name": "brief_month", "reason": "continue with the next month"},
     "brief_evidence_check": {"name": "record_evidence_check", "reason": "persist provenance verdict (confirmed/contradicted)"},
@@ -345,9 +346,10 @@ def build_server():
 
     # ----- F2 LLM critic (semantic eval) -----
     @mcp.tool()
-    def brief_eval_critic(persona_id: str, start: str | None = None, end: str | None = None, sample_k: int = 12) -> dict[str, Any]:
+    def brief_eval_critic(persona_id: str, start: str | None = None, end: str | None = None, sample_k: int | None = None) -> dict[str, Any]:
         """GATHER source+SOUL+sampled activities+arcs for a semantic critique. Author a
-        verdict (anti_steering/in_character/dialogue/arc/mundane 0-5 + flags) then record."""
+        verdict (anti_steering/in_character/dialogue/arc/mundane 0-5 + flags) then record.
+        sample_k/threshold default from config (PERSONA_COUNCIL_CRITIC_SAMPLE_K / _THRESHOLD)."""
         t = time.perf_counter()
         return _env("brief_eval_critic", services.brief_eval_critic(persona_id, start, end, sample_k), t)
 
@@ -362,6 +364,28 @@ def build_server():
         """Combined 'top' verdict: structural harness + latest LLM critic (definition v2)."""
         t = time.perf_counter()
         return _env("evaluate_simulation_full", services.evaluate_simulation_full(persona_id, start, end), t)
+
+    # ----- Cohort quality: diversity gate + cross-persona critic -----
+    @mcp.tool()
+    def evaluate_cohort_diversity(persona_ids: list[str] | None = None) -> dict[str, Any]:
+        """Structural bulk-generation gate: flag near-duplicate personas and implausibly
+        uniform cohorts (Jaccard over segment/role/pains/goals/tools). No authoring needed."""
+        t = time.perf_counter()
+        return _env("evaluate_cohort_diversity", services.evaluate_cohort_diversity(persona_ids), t)
+
+    @mcp.tool()
+    def brief_cohort_critic(persona_ids: list[str] | None = None, start: str | None = None, end: str | None = None) -> dict[str, Any]:
+        """GATHER compact per-persona records across the cohort so you can judge which
+        personas fall OUT of the cohort's range (relative outliers / clones). Then record."""
+        t = time.perf_counter()
+        return _env("brief_cohort_critic", services.brief_cohort_critic(persona_ids, start, end), t)
+
+    @mcp.tool()
+    def record_cohort_critic(verdict: dict[str, Any]) -> dict[str, Any]:
+        """Persist the host-authored cohort critique (outliers + cohort_note) as an eval
+        report + an anomaly per flagged outlier persona."""
+        t = time.perf_counter()
+        return _env("record_cohort_critic", services.record_cohort_critic(verdict), t)
 
     # ----- F3 autonomous loop driver -----
     @mcp.tool()

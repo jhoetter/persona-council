@@ -232,3 +232,115 @@ def evaluate_simulation(persona_id: str | None = None, period: dict[str, str] | 
                 })
         store.commit()
     return report
+
+
+# --- Cohort diversity & consistency (bulk-generation quality gate) -----------
+# Structural, deterministic check over a SET of personas: are any two near-
+# duplicates, and is the cohort implausibly uniform? Catches the classic failure
+# mode of bulk persona generation (stamped-out, interchangeable profiles). Like
+# the rest of this module this is structural only — believability stays the
+# LLM-critic's job; here we measure spread, not voice.
+
+_COHORT_DUP_PAIR = 0.60      # Jaccard >= this on feature tokens => near-duplicate pair
+_COHORT_CLONE_PAIR = 0.85    # essentially interchangeable => red
+_COHORT_MEAN_WARN = 0.40     # mean pairwise similarity above this => cohort too uniform
+_COHORT_MEAN_RED = 0.60
+_COHORT_STOPWORDS = {"und", "der", "die", "das", "the", "and", "für", "for", "mit", "with", "von"}
+
+
+def _persona_feature_tokens(p: dict[str, Any]) -> set[str]:
+    parts: list[str] = []
+    seg = p.get("segment") or {}
+    parts += [str(seg.get("customer_type", "")), str(seg.get("market", "")), str(seg.get("region", ""))]
+    role = p.get("role") or {}
+    parts += [str(role.get("title", "")), str(role.get("responsibilities", ""))]
+    for field in ("pain_points", "goals", "tools", "constraints", "success_criteria"):
+        parts += [str(x) for x in (p.get(field) or [])]
+    toks: set[str] = set()
+    for s in parts:
+        toks.update(_WORD.findall(s.lower()))
+    return {t for t in toks if len(t) > 2 and t not in _COHORT_STOPWORDS}
+
+
+def _jaccard(a: set[str], b: set[str]) -> float:
+    if not a and not b:
+        return 0.0
+    union = len(a | b)
+    return len(a & b) / union if union else 0.0
+
+
+def evaluate_cohort_diversity(persona_ids: list[str] | None = None, store: Store | None = None,
+                              persist: bool = True) -> dict[str, Any]:
+    """Flag near-duplicate personas and implausibly uniform cohorts (bulk-gen gate)."""
+    store = store or Store()
+    if persona_ids:
+        personas = [store.get_persona(pid) for pid in persona_ids]
+    else:
+        personas = store.list_personas()
+    personas = [p for p in personas if p]
+    now = utc_now_iso()
+    if len(personas) < 2:
+        return {"id": mem_id("cohortdiv", "all", now), "kind": "cohort_diversity",
+                "status": "na", "green": True, "detail": "need >=2 personas",
+                "persona_count": len(personas), "duplicate_pairs": [], "metrics": {}, "created_at": now}
+
+    feats = {p["id"]: (p["display_name"], _persona_feature_tokens(p)) for p in personas}
+    ids = list(feats)
+    sims: list[float] = []
+    duplicate_pairs: list[dict[str, Any]] = []
+    clone = False
+    for i in range(len(ids)):
+        for j in range(i + 1, len(ids)):
+            a_name, a = feats[ids[i]]
+            b_name, b = feats[ids[j]]
+            s = round(_jaccard(a, b), 3)
+            sims.append(s)
+            if s >= _COHORT_DUP_PAIR:
+                duplicate_pairs.append({"a": a_name, "a_id": ids[i], "b": b_name, "b_id": ids[j], "similarity": s})
+                clone = clone or s >= _COHORT_CLONE_PAIR
+
+    mean_sim = round(statistics.fmean(sims), 3) if sims else 0.0
+    cust_types = Counter(str((p.get("segment") or {}).get("customer_type", "")).strip().lower() or "—" for p in personas)
+    max_segment_share = round(cust_types.most_common(1)[0][1] / len(personas), 2)
+    distinct_segment_ratio = round(len(cust_types) / len(personas), 2)
+
+    status = "green"
+    if clone or mean_sim >= _COHORT_MEAN_RED:
+        status = "red"
+    elif duplicate_pairs or mean_sim >= _COHORT_MEAN_WARN or (
+        len(personas) >= 4 and (max_segment_share > 0.6 or distinct_segment_ratio < 0.4)
+    ):
+        status = "warn"
+
+    report = {
+        "id": mem_id("cohortdiv", "all", now), "kind": "cohort_diversity",
+        "status": status, "green": status == "green",
+        "persona_count": len(personas),
+        "personas_evaluated": [p["display_name"] for p in personas],
+        "duplicate_pairs": sorted(duplicate_pairs, key=lambda d: -d["similarity"]),
+        "detail": (f"mean_pairwise_similarity={mean_sim} near_duplicate_pairs={len(duplicate_pairs)} "
+                   f"max_segment_share={max_segment_share} distinct_segment_ratio={distinct_segment_ratio}"),
+        "metrics": {"mean_pairwise_similarity": mean_sim, "near_duplicate_pairs": len(duplicate_pairs),
+                    "max_segment_share": max_segment_share, "distinct_segment_ratio": distinct_segment_ratio,
+                    "segment_distribution": dict(cust_types)},
+        "created_at": now,
+    }
+    if persist:
+        store.insert_eval_report(report)
+        for dp in duplicate_pairs:
+            store.insert_anomaly({
+                "id": mem_id("anom", "cohort", dp["a_id"], dp["b_id"]),
+                "persona_id": None, "kind": "cohort_duplicate",
+                "severity": 3 if dp["similarity"] >= _COHORT_CLONE_PAIR else 2,
+                "detail": f"near-duplicate personas: {dp['a']} <-> {dp['b']} (sim={dp['similarity']})",
+                "metrics": {"similarity": dp["similarity"]}, "created_at": now,
+            })
+        if status != "green" and not duplicate_pairs:
+            store.insert_anomaly({
+                "id": mem_id("anom", "cohort", "uniform", now), "persona_id": None,
+                "kind": "cohort_uniform", "severity": 2,
+                "detail": f"cohort looks implausibly uniform: {report['detail']}",
+                "metrics": report["metrics"], "created_at": now,
+            })
+        store.commit()
+    return report

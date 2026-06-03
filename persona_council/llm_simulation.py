@@ -731,6 +731,8 @@ Rules:
 - Be specific and skeptical. Cite ref_ids in flagged_items.
 - anti_steering is the priority: any ungrounded product/method drift => low score + flag.
 - Do not reward vendor-friendly narratives; reward honest, ordinary, in-character work.
+- The acceptance bar is {frame.get("threshold", 4)}/5 per dimension: any dimension below
+  it marks the run as not "top". Score honestly against that bar.
 - {language_instruction(language)}
 
 Frame (persona source, SOUL, sampled activities with ids, project arcs, digests):
@@ -769,6 +771,63 @@ def validate_eval_critic_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "flagged_items": flagged[:20],
         "overall_note": str(payload.get("overall_note", "")).strip()[:1000],
     }
+
+
+# --- Cohort-wide critic (cross-persona outlier detection) --------------------
+# The per-persona critic judges one persona against its own SOUL. The cohort
+# critic judges each persona against its PEERS: who falls out of the cohort's
+# range (an implausible outlier in believability/consistency/voice, or a clone
+# that adds no distinct perspective). Host-authored, like the per-persona critic.
+
+def build_cohort_critic_prompt(frame: dict[str, Any], language: str | None = None) -> str:
+    return f"""You are a quality critic comparing a COHORT of synthetic personas against
+each other (not against their own brief). Find the personas that fall OUT of the
+cohort's range.
+
+You are given a compact profile per persona (source, segment, role, pains, and — when
+available — its per-persona critic dimensions and a couple of sample utterances).
+
+Return ONLY one JSON object with exactly these keys:
+outliers: array of {{persona_id:string, persona_name:string, reason:string,
+  dimension:string (one of: believability | consistency | distinctiveness | tone | range),
+  severity:1-5}}
+  Include a persona ONLY if it genuinely stands out from the others — e.g. it reads as
+  far less believable/consistent than its peers, or it is a near-clone that contributes
+  no distinct perspective. An empty list is a valid, good result.
+cohort_note: string (one paragraph: is the cohort balanced and diverse, or skewed?)
+
+Rules:
+- Judge RELATIVE to the cohort, not against an absolute ideal.
+- Do not invent problems to fill the list; flag only real outliers.
+- Distinctiveness matters: two interchangeable personas are an outlier pair, not a strength.
+- {language_instruction(language)}
+
+Cohort frame (one compact record per persona):
+{json.dumps(frame, indent=2, ensure_ascii=False)}
+"""
+
+
+def validate_cohort_critic_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("Cohort critic verdict must be a JSON object.")
+    allowed_dims = {"believability", "consistency", "distinctiveness", "tone", "range"}
+    outliers = []
+    for it in payload.get("outliers", []) or []:
+        if not isinstance(it, dict) or not str(it.get("persona_id", "")).strip():
+            continue
+        try:
+            sev = max(1, min(5, int(it.get("severity", 3))))
+        except (TypeError, ValueError):
+            sev = 3
+        dim = str(it.get("dimension", "")).strip().lower()
+        outliers.append({
+            "persona_id": str(it["persona_id"]).strip()[:80],
+            "persona_name": str(it.get("persona_name", "")).strip()[:120],
+            "reason": str(it.get("reason", "")).strip()[:400],
+            "dimension": dim if dim in allowed_dims else "range",
+            "severity": sev,
+        })
+    return {"outliers": outliers[:50], "cohort_note": str(payload.get("cohort_note", "")).strip()[:1000]}
 
 
 # ===================================================================== #
@@ -829,6 +888,10 @@ pain_solvers: array of strings (the validated pains/delight-engines the product 
 segmente: array of objects {{segment:string, stance:string, why:string}} (who to win, who is a deliberate non-target)
 offene_fragen: array of strings (open questions / what to study next)
 references: array of objects {{council_id:string, role:string}} (each council's role in the arc)
+citations: array of objects {{kind:"evidence"|"recall"|"council", ref:string, quote:string}}
+  (inline provenance for the load-bearing conclusions: when a pain_solver / positionierung /
+  recommendation rests on attached real EVIDENCE or a specific RECALLed fact, cite it here using
+  the ids from frame.provenance; council quotes use kind="council" + the council_id. May be empty.)
 voices: array of objects, ONE per persona that appears in the chain — the structured per-persona record:
   {{persona_id:string, persona_name:string, segment:string (which segment from `segmente` they belong to),
     sentiment: one of "positiv"|"bedingt"|"neutral"|"skeptisch"|"ablehnend",
@@ -845,6 +908,9 @@ Rules:
 - Capture the PROGRESSION, do not flatten: how did sentiment/positions change across the ordered councils?
 - Keep every conclusion traceable to a council (use references; mention which council a learning came from).
 - Be honest: preserve who stays neutral/negative and why that is fine; do not invent consensus or product enthusiasm.
+- PROVENANCE: prefer conclusions you can ground. Where `frame.provenance` offers attached evidence or
+  recalled facts that back a pain_solver / positioning / recommendation, cite them in `citations`. Never
+  fabricate a citation ref — only use ids present in the frame.
 - VOICES: author one voice per distinct persona across the chain. `key_argument` must be the persona's
   actual point (grounded in their turns/votes), not a generic label. Set `shift` ONLY when the evidence shows
   a real change of stance across councils; otherwise null. `relevance` reflects how much the topic touches the
@@ -907,6 +973,17 @@ def validate_synthesis_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "shift": sh,
             "evidence": ev[:3],
         })
+    cite_kinds = {"evidence", "recall", "council"}
+    citations = []
+    for c in payload.get("citations", []) or []:
+        if not isinstance(c, dict) or not str(c.get("ref", "")).strip():
+            continue
+        kind = str(c.get("kind", "")).strip().lower()
+        citations.append({
+            "kind": kind if kind in cite_kinds else "council",
+            "ref": str(c["ref"]).strip()[:80],
+            "quote": str(c.get("quote", "")).strip()[:600],
+        })
     return {
         "arc_narrative": str(payload.get("arc_narrative", "")).strip()[:6000],
         "gesamtbild": str(payload.get("gesamtbild", "")).strip()[:4000],
@@ -916,6 +993,7 @@ def validate_synthesis_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "segmente": seg[:30],
         "offene_fragen": _strings(payload.get("offene_fragen", []) or [], 20, 400),
         "references": refs[:50],
+        "citations": citations[:50],
         "voices": voices[:200],
         "status": ("in_progress" if str(payload.get("status", "")).strip().lower() == "in_progress" else "done"),
         "next_council_question": str(payload.get("next_council_question", "")).strip()[:2000],

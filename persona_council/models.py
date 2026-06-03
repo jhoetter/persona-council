@@ -170,6 +170,7 @@ class Synthesis:
     stop_reason: str = ""                # why the loop stopped (goal reached / no follow-up / max)
     iterations: int = 0                  # councils consumed so far
     voices: list[Json] = field(default_factory=list)  # structured per-persona voice records
+    citations: list[Json] = field(default_factory=list)  # inline provenance: [{kind, ref, quote}]
     # each voice: {persona_id, persona_name, segment, sentiment, relevance,
     #              key_argument, shift:{from,to,trigger,council_id}|None, evidence:[{council_id,quote}]}
 
