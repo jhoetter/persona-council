@@ -883,13 +883,16 @@ _RGRAPH_JS = """<script>
   var byId={}; D.nodes.forEach(function(n){ byId[n.id]=n; n.dx=n.x; n.dy=n.y; });
 
   // ---- persistence (per project): node positions, viewport, active filters ----
+  // Discard saved positions when the layout algorithm changed (D.lv) so a stale drag
+  // layout never masks a new diamond layout.
   var saved=null; try{ saved=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){}
+  if(saved && saved.lv !== D.lv) saved=null;
   if(saved&&saved.pos) D.nodes.forEach(function(n){ var p=saved.pos[n.id]; if(p){ n.x=p[0]; n.y=p[1]; } });
   var saveT=null;
   function save(){ if(saveT) return; saveT=setTimeout(function(){ saveT=null;
     var pos={}; D.nodes.forEach(function(n){ pos[n.id]=[Math.round(n.x),Math.round(n.y)]; });
     var f=[]; document.querySelectorAll('.rgchip.active').forEach(function(c){ f.push(c.getAttribute('data-theme')); });
-    try{ localStorage.setItem(KEY,JSON.stringify({pos:pos,view:{tx:tx,ty:ty,scale:scale},filter:f})); }catch(_){}
+    try{ localStorage.setItem(KEY,JSON.stringify({lv:D.lv,pos:pos,view:{tx:tx,ty:ty,scale:scale},filter:f})); }catch(_){}
   },300); }
 
   var zl=document.getElementById('rgzl'), bgp=document.getElementById('rggrid');
@@ -1071,6 +1074,8 @@ def _graph_layout(graph: dict) -> dict:
 
 # node box dimensions (must match _RGRAPH_JS NW/NH)
 _NW, _NH = 250, 58
+# Saved drag-layouts in localStorage are keyed by this; bump on any layout-algorithm change.
+_LAYOUT_VERSION = 3
 
 
 def _methodology_layout(graph: dict) -> dict | None:
@@ -1197,8 +1202,9 @@ def _graph_interactive(graph: dict) -> str:
                            "href": f'/prototypes/{pr["slug"]}', "proto": True})
         for a, b, dashed in ml.get("proto_edges", []):
             jedges.append({"from": a, "to": b, "color": "#00897b", "type": "prototype", "mid": 0, "dashed": bool(dashed)})
+    # Bump _LAYOUT_VERSION whenever the layout algorithm changes → stale saved drags are dropped.
     data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds,
-                       "key": graph["project"].get("id", "x")}, ensure_ascii=False)
+                       "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION}, ensure_ascii=False)
     de = _lang() == "de"
     hint = ("Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen"
             if de else "drag · pan background · pinch / ⌘+scroll to zoom · F to fit")
