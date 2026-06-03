@@ -810,7 +810,7 @@ This is like the meta-analysis over several iterations of user studies.
 Return ONLY one JSON object with exactly these keys:
 arc_narrative: string (the trajectory: what we started with -> how positions/sentiment evolved across the councils in order -> where we landed)
 gesamtbild: string (the overall picture)
-handlungsempfehlungen: array of {text, aufwand (1-5), nutzen (1-5)} (prioritized actions on an effort/value matrix; plain strings also accepted, then unscored)
+handlungsempfehlungen: array of {{text, aufwand (1-5), nutzen (1-5)}} (prioritized actions on an effort/value matrix; plain strings also accepted, then unscored)
 positionierung: string (positioning statement(s) implied by the evidence)
 pain_solvers: array of strings (the validated pains/delight-engines the product addresses)
 segmente: array of objects {{segment:string, stance:string, why:string}} (who to win, who is a deliberate non-target)
