@@ -1,0 +1,10 @@
+{
+  "kind": "artifact_types",
+  "note": "SUGGESTED artifact-type tags for produces.artifact_type and requires.artifact_tags / requires.session_of_tags. Matched by tag-EQUALITY between the producing step and the requirer — no string is special-cased in code. Invent your own (survey, journey-map, ab-test, …).",
+  "items": [
+    {"tag": "prototype", "hint": "A real, minimal, locally-runnable app (scaffold_prototype). Tested via the Playwright harness.", "discriminators": ["lofi", "midfi"]},
+    {"tag": "lofi", "hint": "Fidelity discriminator: a sketchy, cheap prototype (template spa-sketch)."},
+    {"tag": "midfi", "hint": "Fidelity discriminator: a more concrete prototype (template spa-min)."},
+    {"tag": "survey", "hint": "Example of a NON-prototype artifact type — proves the engine is artifact-type-generic.", "discriminators": []}
+  ]
+}

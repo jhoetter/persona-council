@@ -1,0 +1,18 @@
+{
+  "title": "S",
+  "summary": "",
+  "start": "home",
+  "screens": [
+    {
+      "id": "home",
+      "title": "H",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "t",
+          "label": "done"
+        }
+      ]
+    }
+  ]
+}

@@ -52,6 +52,12 @@ def prototype_templates_dir() -> Path:
     return ROOT / "persona_council" / "prototype_templates"
 
 
+def suggestions_dir() -> Path:
+    """Editable, MCP-served SUGGESTIONS (capabilities/roles/artifact-types/templates). Pure
+    data — never enforced. See spec/methodology-constellations.md §2.3."""
+    return ROOT / "persona_council" / "suggestions"
+
+
 def prototypes_dir() -> Path:
     """Where generated/registered prototype apps live (committed, runnable locally)."""
     return ROOT / "prototypes"

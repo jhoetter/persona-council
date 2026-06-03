@@ -2969,12 +2969,22 @@ from .methodology import (  # noqa: E402
     register_methodology,
     start_methodology_project,
     set_project_methodology,
+    brief_next,
     brief_phase,
+    record_node,
     record_exploration,
     record_judgment,
+    record_decision,
     record_convergence,
+    advance,
     advance_phase,
     get_methodology_state,
+)
+from .suggestions import (  # noqa: E402
+    suggest_capabilities,
+    suggest_roles,
+    suggest_artifact_types,
+    suggest_methodologies,
 )
 
 

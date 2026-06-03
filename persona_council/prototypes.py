@@ -101,7 +101,7 @@ def register_prototype(slug: str, name: str, path: str, entry: str = "index.html
     rec = Prototype(id=pid, slug=slug, project_id=project_id, name=name, version=version,
                     kind="web", path=path, entry=entry, run=run, run_cmd=run_cmd, notes=notes,
                     created_at=(existing or {}).get("created_at", now),
-                    fidelity=(fidelity if fidelity in ("lofi", "midfi") else "midfi")).to_dict()
+                    fidelity=(fidelity or "midfi")).to_dict()
     store.upsert_prototype(rec)
     return rec
 

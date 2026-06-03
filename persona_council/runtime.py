@@ -1,16 +1,15 @@
-"""Orchestration runtime (spec/methodology-engine-and-prototyping.md §5).
+"""Orchestration runtime (spec/methodology-constellations.md §4 / §6).
 
 The engine (methodology.py) is always-present and host-stepped. This module adds a STRUCTURAL
-orchestration loop: `run_methodology` steps a whole diamond by delegating text authoring to a
-pluggable AuthoringBackend, while calling the SAME engine functions — so the structural
-invariants and gates apply identically.
+orchestration loop: `run_methodology` walks the constellation's topological frontier, delegating
+text authoring to a pluggable AuthoringBackend while calling the SAME engine functions — so the
+structural invariants and gates apply identically.
 
-IMPORTANT (spec/deep-design-thinking-and-diamond.md §2 — locked principle): there is NO
-in-process LLM text-generation backend. Real runs are driven by the HOST (Claude) or its
-subagents authoring text via the MCP `brief_*→record_*` contract (see the `design-thinking-deep`
-/ `methodology-run` skills). The only backend shipped here is `StubAuthoringBackend` —
-deterministic, for tests and as the AuthoringBackend reference. The OpenAI key is embeddings +
-image generation only; it is never used for authoring.
+IMPORTANT (locked principle): there is NO in-process LLM text-generation backend. Real runs are
+driven by the HOST (Claude) or its subagents authoring text via the MCP brief_*→record_* contract
+(see the design-thinking-deep / methodology-run skills). The only backend shipped here is
+`StubAuthoringBackend` — deterministic, for tests and as the AuthoringBackend reference. The
+OpenAI key is embeddings + image generation only; it is never used for authoring.
 """
 from __future__ import annotations
 
@@ -24,22 +23,22 @@ from .storage import Store
 class AuthoringBackend(Protocol):
     """The runtime owns deterministic orchestration; the backend authors the text."""
 
-    def author_exploration(self, project: dict, phase: dict, index: int, store: Store) -> dict[str, Any]:
-        """Return {title, council_ids, payload} for one diverge exploration."""
+    def author_exploration(self, project: dict, step: dict, index: int, store: Store) -> dict[str, Any]:
+        """Return {title, council_ids, payload} for one fan exploration node."""
 
-    def divergence_decision(self, project: dict, phase: dict, explorations: list[dict], store: Store) -> dict[str, Any]:
+    def divergence_decision(self, project: dict, step: dict, explorations: list[dict], store: Store) -> dict[str, Any]:
         """Return {decided, rationale, evidence_refs} — 'have we explored enough?' (LLM-judged)."""
 
-    def before_converge(self, project: dict, phase: dict, store: Store) -> None:
-        """Hook to satisfy converge prerequisites (e.g. record a prototype_session)."""
+    def before_decide(self, project: dict, step: dict, store: Store) -> None:
+        """Hook to satisfy a decide step's prerequisites (e.g. record a required session)."""
 
-    def author_convergence(self, project: dict, phase: dict, fan_node_ids: list[str], store: Store) -> dict[str, Any]:
-        """Return {title, from_node_ids, payload} for the converge node."""
+    def author_decision(self, project: dict, step: dict, fan_node_ids: list[str], store: Store) -> dict[str, Any]:
+        """Return {title, from_node_ids, payload} for the decision (waist) node."""
 
 
 def run_methodology(project_id: str, backend: AuthoringBackend | None = None,
-                    max_steps: int = 40, store: Store | None = None) -> dict[str, Any]:
-    """Autonomously step a methodology project to completion via `backend`."""
+                    max_steps: int = 60, store: Store | None = None) -> dict[str, Any]:
+    """Autonomously walk a constellation's frontier to completion via `backend`."""
     store = store or Store()
     if backend is None:
         backend = StubAuthoringBackend()
@@ -47,36 +46,39 @@ def run_methodology(project_id: str, backend: AuthoringBackend | None = None,
     steps = 0
     while steps < max_steps:
         steps += 1
-        b = M.brief_phase(project_id, store=store)
+        b = M.brief_next(project_id, store=store)
         if b.get("complete"):
             break
-        phase = M._phase(spec, b["phase"])
+        sid = b["step"]
+        step = M._step(spec, sid)
         project = store.get_research_project(project_id)
-        if b["mode"] == "diverge":
+        if not M._is_decide(step):
             explorations: list[dict] = []
             inner = 0
             while inner < max_steps:
                 inner += 1
-                decision = backend.divergence_decision(project, phase, explorations, store)
+                decision = backend.divergence_decision(project, step, explorations, store)
                 if decision.get("decided") and len(explorations) >= 2:
-                    M.record_judgment(project_id, phase["key"], "divergence_complete", True,
-                                      decision.get("rationale", "explored enough"),
-                                      decision.get("evidence_refs") or _all_councils(explorations), store=store)
+                    gate = M._gate_tag_for_fan(spec, sid)
+                    if gate:
+                        M.record_judgment(project_id, sid, gate, True,
+                                          decision.get("rationale", "explored enough"),
+                                          decision.get("evidence_refs") or _all_councils(explorations), store=store)
                     break
-                ex = backend.author_exploration(project, phase, len(explorations), store)
-                node = M.record_exploration(project_id, ex["title"], ex["council_ids"], ex["payload"],
-                                            ex.get("start_input", ""), store=store)
+                ex = backend.author_exploration(project, step, len(explorations), store)
+                node = M.record_node(project_id, ex["title"], ex["council_ids"], ex["payload"],
+                                     ex.get("start_input", ""), step_id=sid, store=store)
                 explorations.append(node)
                 project = store.get_research_project(project_id)
-            M.advance_phase(project_id, store=store)
+            M.advance(project_id, sid, store=store)
         else:
-            backend.before_converge(project, phase, store)
+            backend.before_decide(project, step, store)
             project = store.get_research_project(project_id)
-            fan = (project.get("phase_log") or {}).get(phase["consumes"], {}).get("exploration_node_ids", [])
-            conv = backend.author_convergence(project, phase, fan, store)
-            M.record_convergence(project_id, conv["title"], conv["from_node_ids"], conv["payload"],
-                                 conv.get("start_input", ""), store=store)
-            M.advance_phase(project_id, store=store)
+            fan = [n for c in step["consumes"] for n in M._nodes(project, c)]
+            conv = backend.author_decision(project, step, fan, store)
+            M.record_decision(project_id, conv["title"], conv["from_node_ids"], conv["payload"],
+                              conv.get("start_input", ""), step_id=sid, store=store)
+            M.advance(project_id, sid, store=store)
     return M.get_methodology_state(project_id, store=store)
 
 
@@ -96,62 +98,67 @@ def _payload(text: str) -> dict[str, Any]:
 
 
 class StubAuthoringBackend:
-    """Deterministic backend that drives a full diamond offline (no LLM). Used by tests and
+    """Deterministic backend that drives a full constellation offline (no LLM). Used by tests and
     as a reference implementation of the AuthoringBackend contract."""
 
     def __init__(self, explorations_per_phase: int = 2) -> None:
         self.n = max(2, explorations_per_phase)
 
-    def author_exploration(self, project, phase, index, store):
+    def author_exploration(self, project, step, index, store):
         from . import services as svc
         cid = svc.record_council(
-            prompt=f"[{phase['key']}] exploration {index + 1}",
+            prompt=f"[{step['id']}] exploration {index + 1}",
             persona_ids=(project.get("persona_ids") or ["p1"])[:1],
-            turns=[{"speaker": "Auto", "persona_id": "p1", "content": f"{phase['intent']} (exploration {index + 1})"}],
+            turns=[{"speaker": "Auto", "persona_id": "p1", "content": f"{step['intent']} (exploration {index + 1})"}],
             votes=[], proposal="", summary="auto", exec_summary="auto", selection_reason="auto", store=store)["id"]
-        # the develop diverge phase requires a real prototype artifact
-        if "prototype" in (phase.get("requires_artifacts") or []) and index == 0:
-            self._ensure_prototype(project, store)
-        return {"title": f"{phase['name']} · option {index + 1}", "council_ids": [cid],
-                "payload": _payload(f"{phase['name']} exploration {index + 1}")}
+        # a build step produces a real artifact of its declared type
+        if step["produces"].get("artifact_type") == "prototype" and index == 0:
+            fid = (step["produces"].get("more_tags") or [None])[0]
+            self._ensure_prototype(project, store, fidelity=fid)
+        return {"title": f"{step['name']} · option {index + 1}", "council_ids": [cid],
+                "payload": _payload(f"{step['name']} exploration {index + 1}")}
 
-    def divergence_decision(self, project, phase, explorations, store):
+    def divergence_decision(self, project, step, explorations, store):
         decided = len(explorations) >= self.n
         return {"decided": decided, "rationale": f"{len(explorations)} explorations cover the space",
                 "evidence_refs": _all_councils(explorations)}
 
-    def before_converge(self, project, phase, store):
-        if "prototype_session" in (phase.get("requires_artifacts") or []):
-            self._record_session(project, store)
+    def before_decide(self, project, step, store):
+        for tg in step["requires"].get("session_of_tags") or []:
+            self._record_session(project, store, tag=tg)
 
-    def author_convergence(self, project, phase, fan_node_ids, store):
-        return {"title": f"{phase['name']} · {phase['produces_role']}",
+    def author_decision(self, project, step, fan_node_ids, store):
+        role = step["produces"].get("role") or "decision"
+        return {"title": f"{step['name']} · {role}",
                 "from_node_ids": fan_node_ids[:max(2, len(fan_node_ids))],
-                "payload": _payload(f"{phase['name']} convergence ({phase['produces_role']})")}
+                "payload": _payload(f"{step['name']} decision ({role})")}
 
     # ----- prototype helpers -----
-    def _proto_slug(self, project) -> str:
-        return f"auto-{project['slug']}"[:60]
+    def _proto_slug(self, project, fidelity=None) -> str:
+        suffix = f"-{fidelity}" if fidelity else ""
+        return f"auto-{project['slug']}{suffix}"[:60]
 
-    def _ensure_prototype(self, project, store) -> dict[str, Any]:
+    def _ensure_prototype(self, project, store, fidelity=None) -> dict[str, Any]:
         from . import services as svc
-        existing = [p for p in store.list_prototypes(project["id"])]
-        if existing:
-            return existing[0]
+        want = {"prototype"} | ({fidelity} if fidelity else set())
+        for p in store.list_prototypes(project["id"]):
+            if want <= M._artifact_tags(p):
+                return p
         concept = {"title": project.get("title", "Prototype"), "summary": project.get("goal", ""),
                    "start": "home",
                    "screens": [{"id": "home", "title": "Start", "elements": [
                        {"kind": "button", "id": "go", "label": "Try it", "goto": "result"}]},
                        {"id": "result", "title": "Result", "elements": [
                            {"kind": "text", "id": "t", "label": "It worked."}]}]}
-        return svc.scaffold_prototype(self._proto_slug(project), "Auto prototype", concept,
-                                      project_id=project["id"], store=store)
+        return svc.scaffold_prototype(self._proto_slug(project, fidelity), "Auto prototype", concept,
+                                      project_id=project["id"], fidelity=fidelity, store=store)
 
-    def _record_session(self, project, store) -> None:
+    def _record_session(self, project, store, tag="prototype") -> None:
         from . import services as svc
-        protos = store.list_prototypes(project["id"])
+        protos = [p for p in store.list_prototypes(project["id"]) if tag in M._artifact_tags(p)]
         if not protos:
-            protos = [self._ensure_prototype(project, store)]
+            fid = tag if tag in ("lofi", "midfi") else None
+            protos = [self._ensure_prototype(project, store, fidelity=fid)]
         proto = protos[0]
         persona = (project.get("persona_ids") or ["auto"])[0]
         observed = ["It worked."]
@@ -162,7 +169,6 @@ class StubAuthoringBackend:
                 run = svc.run_prototype(proto["id"], store=store)
                 opened = browser.open_session(run["url"], proto["id"], persona)
                 session_id = opened["session_id"]
-                # click the first actionable ref to produce a real observed state change
                 tree = opened["snapshot"]["tree"]
                 nodes = tree if isinstance(tree, list) else [tree]
                 ref = next((n["ref"] for n in nodes if n.get("ref")), None)
@@ -183,4 +189,3 @@ class StubAuthoringBackend:
                 svc.stop_prototype(proto["id"], store=store)
             except Exception:
                 pass
-

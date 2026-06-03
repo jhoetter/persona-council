@@ -1,0 +1,13 @@
+{
+  "kind": "roles",
+  "note": "SUGGESTED role tags for a step's produces.role — the light artifact label carried by the node it records. Recommendations only; invent your own freely.",
+  "items": [
+    {"tag": "problem-landscape", "hint": "A diverge node mapping lived problems/pains (no solutions yet)."},
+    {"tag": "key-problems", "hint": "A converge node naming the clustered key problem(s)."},
+    {"tag": "point-of-view", "hint": "A converge node: user + need + surprising insight; frames the next How-Might-We."},
+    {"tag": "solution-options", "hint": "A diverge node exploring one solution candidate."},
+    {"tag": "solution-shortlist", "hint": "A converge node down-selecting tested candidates (ranking + shortlist)."},
+    {"tag": "solution-presentation", "hint": "A converge node: winning concept, who-wins + non-targets, validated solves, risks, spec."},
+    {"tag": "spec", "hint": "A converge node: a buildable specification for a dev team."}
+  ]
+}
