@@ -384,6 +384,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .bc-sep{color:var(--line);flex-shrink:0;user-select:none}
 section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .page{max-width:1120px;margin:0 auto}
+.page.wide{max-width:none}
 
 /* ---- generic ---- */
 h1,h2,h3,h4{color:var(--ink)}
@@ -928,9 +929,13 @@ def _graph_interactive(graph: dict) -> str:
                            "mid": _colorlist.index(col) if col in _colorlist else 0})
     data = json.dumps({"nodes": jnodes, "edges": jedges}, ensure_ascii=False)
     hint = "Knoten ziehen · Hintergrund schieben · scrollen = Zoom" if _lang() == "de" else "drag nodes · pan background · scroll = zoom"
+    # Fit the canvas to the laid-out content (with breathing room) instead of a
+    # fixed-tall box that looks empty for small graphs.
+    maxy = max((y for _x, y in pos.values()), default=0)
+    height = max(360, int(maxy) + 64 + 48)
     return (
         '<div class="rgwrap">'
-        '<svg id="rg" width="100%" height="600"><defs>'
+        f'<svg id="rg" width="100%" height="{height}"><defs>'
         + "".join(f'<marker id="rgah-{i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
                   f'orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="{c}"/></marker>'
                   for i, c in enumerate(_EDGE_COLORS.values()))
@@ -1935,7 +1940,7 @@ def create_app():
             f'<div class="muted small">{t("open_questions_h")}</div>'
             f'<ul style="margin:6px 0 0 18px">{oq_html}</ul></div></details>')
         body = (
-            f'<div class="page"><h1 class="h1">{_esc(proj["title"])}</h1>'
+            f'<div class="page wide"><h1 class="h1">{_esc(proj["title"])}</h1>'
             f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
             f'<div class="stats">{stats}</div>'
             f'{toolbar}'
