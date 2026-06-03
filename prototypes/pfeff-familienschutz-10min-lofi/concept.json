@@ -1,0 +1,102 @@
+{
+  "title": "10-Minuten-Familienschutz",
+  "summary": "Ohne Fachchinesisch: was bekommt deine Familie, wenn dir was passiert – in 10 Minuten, flexibel.",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "title": "Start",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "i",
+          "label": "In Klartext: wenn dir etwas passiert, wer braucht dann Geld – und wie viel? In 10 Minuten, ohne Termin."
+        },
+        {
+          "kind": "button",
+          "id": "go",
+          "label": "Los",
+          "goto": "wer"
+        }
+      ]
+    },
+    {
+      "id": "wer",
+      "title": "Wer hängt an dir?",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "w",
+          "label": "Wen müsstest du absichern?"
+        },
+        {
+          "kind": "select",
+          "id": "sel",
+          "label": "Wen schützen?",
+          "options": [
+            "Mein Kind",
+            "Partner/in",
+            "Meine Eltern"
+          ]
+        },
+        {
+          "kind": "button",
+          "id": "n",
+          "label": "Weiter",
+          "goto": "summe"
+        }
+      ]
+    },
+    {
+      "id": "summe",
+      "title": "Wie viel?",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "s",
+          "label": "Beispiel: 150.000 € – damit Miete/Kita weiterläuft. Du kannst das jederzeit anpassen."
+        },
+        {
+          "kind": "button",
+          "id": "n",
+          "label": "Was kostet das?",
+          "goto": "preis"
+        }
+      ]
+    },
+    {
+      "id": "preis",
+      "title": "Dein Preis",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "p",
+          "label": "Ungefähr 9 € im Monat. Jederzeit anpassen oder pausieren. Kein Kleingedrucktes, kein Berater."
+        },
+        {
+          "kind": "button",
+          "id": "ab",
+          "label": "In der App abschließen (10 Min)",
+          "goto": "fertig"
+        },
+        {
+          "kind": "button",
+          "id": "flex",
+          "label": "Erst anpassen/pausieren ansehen",
+          "goto": "summe"
+        }
+      ]
+    },
+    {
+      "id": "fertig",
+      "title": "Fertig",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "f",
+          "label": "Geschützt. Jederzeit in der App änderbar."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "title": "Lebensmoment-Radar",
+  "summary": "Du sagst uns deinen Lebensmoment – wir melden uns NUR dann, mit einer konkreten Zahl. Sonst Ruhe.",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "title": "Start",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "i",
+          "label": "Wir verkaufen dir jetzt nichts. Sag uns, was bei dir ansteht – wir melden uns nur, wenn es wirklich zählt."
+        },
+        {
+          "kind": "button",
+          "id": "go",
+          "label": "Lebensmoment wählen",
+          "goto": "pick"
+        }
+      ]
+    },
+    {
+      "id": "pick",
+      "title": "Was steht an?",
+      "elements": [
+        {
+          "kind": "select",
+          "id": "sel",
+          "label": "Mein nächster Lebensmoment",
+          "options": [
+            "Hauskauf / Kredit",
+            "Kind geplant",
+            "Zusammenziehen",
+            "Aktuell nichts"
+          ]
+        },
+        {
+          "kind": "button",
+          "id": "n",
+          "label": "Merken",
+          "goto": "done"
+        }
+      ]
+    },
+    {
+      "id": "done",
+      "title": "Gemerkt",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "d",
+          "label": "Gemerkt. Wir melden uns NUR dann – mit einer konkreten Zahl, was es für dich bedeutet. Bis dahin: Ruhe."
+        },
+        {
+          "kind": "button",
+          "id": "ok",
+          "label": "Passt"
+        }
+      ]
+    }
+  ]
+}

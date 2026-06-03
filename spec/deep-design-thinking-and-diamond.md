@@ -1,6 +1,14 @@
 # Deep Design Thinking, Fidelity Ladder & Diamond Visualization — Specification
 
-> **Status:** DESIGN — build-ready. Builds on (and amends) `spec/methodology-engine-and-prototyping.md`.
+> **Status:** **IMPLEMENTED — D1–D5 shipped 2026-06-03** (design below).
+> **Built:** deep methodology `double_diamond_deep` (6 phases) + expanded roles/clustering/ranking;
+> prototype `fidelity` ladder + `spa-sketch` lo-fi template; retired the in-process LLM backend
+> (host/subagents author all text); methodology-aware **diamond layout** (fan/waist + silhouettes);
+> the `design-thinking-deep` driver skill. **Validated by a real re-run** of Pfefferminzia: 14
+> segmented personas → a 12-node Discover fan → 2 key problems (incl. the under-served high-need
+> segment) → 5 ideas + 3 lo-fi prototypes tested via Playwright → down-select → mid-fi built +
+> tested → solution presentation. Three real diamonds (discover 12 / ideate 5 / refine 2 fans).
+> Builds on (and amends) `spec/methodology-engine-and-prototyping.md`.
 > **Trigger:** the first Pfefferminzia run came out as a *line, not a diamond* — too few personas,
 > 2 explorations/phase, one prototype, no lo-fi→mid-fi ladder, no clustering, and no diamond layout.
 > **Decisions locked with the user:**
