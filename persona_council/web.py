@@ -385,6 +385,17 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .page{max-width:1120px;margin:0 auto}
 .page.wide{max-width:none}
+/* Project detail = full-bleed graph hero */
+.main>section:has(.proj){flex:1;min-height:0;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.proj{flex:1;min-height:0;display:flex;flex-direction:column}
+.proj-head{flex-shrink:0;padding:22px 30px 12px}
+.proj-head .stats{margin:0 0 14px}
+.proj-head .ptoolbar{margin:0}
+.proj-graph{flex:1;min-height:0;display:flex}
+.proj-graph .rgwrap{flex:1;border:0;border-top:1px solid var(--line);border-radius:0}
+.proj-graph #rg{height:100%}
+.oqpanel{position:fixed;right:26px;bottom:26px;width:380px;max-width:calc(100vw - 320px);max-height:62vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 44px rgba(0,0,0,.22);padding:14px 16px;z-index:60}
+.oqp-h{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 
 /* ---- generic ---- */
 h1,h2,h3,h4{color:var(--ink)}
@@ -1932,20 +1943,28 @@ def create_app():
             for th in proj["themes"])
         left = (f'<span class="ptlabel">{_icon("search")}{t("filter")}</span>{chips}'
                 f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if chips else ""
-        toolbar = f'<div class="ptoolbar">{left}<span class="spacer"></span>{meta_btn}</div>'
-        details = (
-            f'<details class="oqd"><summary>{t("legend")} · {t("open_questions_h")} ({len(oqs)})</summary><div>'
-            f'<div class="muted small">{t("build_order_h")} (edges)</div>'
+        oqbtn = f'<button class="btn" id="oqbtn">{t("legend")} · {t("open_questions_h")} ({len(oqs)})</button>'
+        toolbar = f'<div class="ptoolbar">{left}<span class="spacer"></span>{oqbtn}{meta_btn}</div>'
+        # Open questions + legend live in a floating panel so the graph keeps the full canvas.
+        panel = (
+            f'<div class="oqpanel" id="oqpanel" hidden>'
+            f'<div class="oqp-h">{t("build_order_h")} (edges)</div>'
             f'<div class="pills" style="margin:6px 0 14px">{edge_leg}</div>'
-            f'<div class="muted small">{t("open_questions_h")}</div>'
-            f'<ul style="margin:6px 0 0 18px">{oq_html}</ul></div></details>')
+            f'<div class="oqp-h">{t("open_questions_h")}</div>'
+            f'<ul style="margin:6px 0 0 18px">{oq_html}</ul></div>')
+        oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"
+                 "p=document.getElementById('oqpanel');if(!b||!p)return;"
+                 "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
+                 "document.addEventListener('click',function(e){"
+                 "if(!p.hidden&&!p.contains(e.target)&&e.target!==b)p.hidden=true;});})();</script>")
         body = (
-            f'<div class="page wide"><h1 class="h1">{_esc(proj["title"])}</h1>'
+            f'<div class="proj">'
+            f'<div class="proj-head"><h1 class="h1">{_esc(proj["title"])}</h1>'
             f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
             f'<div class="stats">{stats}</div>'
-            f'{toolbar}'
-            f'<div class="card graphcard">{_graph_interactive(graph)}</div>'
-            f'{details}'
+            f'{toolbar}</div>'
+            f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>'
+            f'{panel}{oq_js}'
             f'</div>')
         return _layout(proj["title"], body, store, crumbs=[(t("projects"), "/projects"), (proj["title"], None)], active="projects")
 
