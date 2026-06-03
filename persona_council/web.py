@@ -987,16 +987,25 @@ _RGRAPH_JS = """<script>
     else return; e.preventDefault(); });
 
   // ---- minimap ----
+  // Scale to the union of node bbox + current viewport so the viewport rectangle
+  // always fits inside the minimap and stays accurate at any zoom level.
   var mini=document.getElementById('rgmini'), gMN=document.getElementById('rgmnodes'), vp=document.getElementById('rgmvp');
   var MMW=172, MMH=118, mm={s:1,ox:0,oy:0};
-  function drawMini(){ if(!mini) return; var b=bbox(false), pad=10; var bw=Math.max(1,b.X-b.x), bh=Math.max(1,b.Y-b.y);
-    var s=Math.min((MMW-pad*2)/bw,(MMH-pad*2)/bh); var ox=pad+((MMW-pad*2)-bw*s)/2-b.x*s, oy=pad+((MMH-pad*2)-bh*s)/2-b.y*s; mm={s:s,ox:ox,oy:oy};
+  function drawMini(){ if(!mini) return;
+    var b=bbox(false), r=svg.getBoundingClientRect(), hasV=r.width>0, vx,vy,vw,vh;
+    if(hasV){ vx=(-tx)/scale; vy=(-ty)/scale; vw=r.width/scale; vh=r.height/scale;
+      b={x:Math.min(b.x,vx),y:Math.min(b.y,vy),X:Math.max(b.X,vx+vw),Y:Math.max(b.Y,vy+vh)}; }
+    var pad=10, bw=Math.max(1,b.X-b.x), bh=Math.max(1,b.Y-b.y);
+    var s=Math.min((MMW-pad*2)/bw,(MMH-pad*2)/bh);
+    var ox=pad+((MMW-pad*2)-bw*s)/2-b.x*s, oy=pad+((MMH-pad*2)-bh*s)/2-b.y*s; mm={s:s,ox:ox,oy:oy};
     while(gMN.firstChild) gMN.removeChild(gMN.firstChild);
     D.nodes.forEach(function(n){ if(n.hidden) return; gMN.appendChild(el('rect',{'class':'mn',x:ox+n.x*s,y:oy+n.y*s,width:NW*s,height:NH*s,rx:1.5})); });
-    var r=svg.getBoundingClientRect(); if(r.width){ var vx=(-tx)/scale, vy=(-ty)/scale, vw=r.width/scale, vh=r.height/scale;
-      vp.setAttribute('x',ox+vx*s); vp.setAttribute('y',oy+vy*s); vp.setAttribute('width',Math.max(4,vw*s)); vp.setAttribute('height',Math.max(4,vh*s)); vp.setAttribute('rx',3); } }
-  function miniTo(e){ var r=mini.getBoundingClientRect(); var cx=((e.clientX-r.left)*(MMW/r.width)-mm.ox)/mm.s, cy=((e.clientY-r.top)*(MMH/r.height)-mm.oy)/mm.s; var sr=svg.getBoundingClientRect(); tx=sr.width/2-cx*scale; ty=sr.height/2-cy*scale; applyT(); save(); }
-  if(mini){ var mdown=false; mini.addEventListener('pointerdown',function(e){ mdown=true; miniTo(e); try{mini.setPointerCapture(e.pointerId);}catch(_){} }); mini.addEventListener('pointermove',function(e){ if(mdown) miniTo(e); }); window.addEventListener('pointerup',function(){ mdown=false; }); }
+    if(hasV){ vp.style.display=''; vp.setAttribute('x',ox+vx*s); vp.setAttribute('y',oy+vy*s); vp.setAttribute('width',Math.max(3,vw*s)); vp.setAttribute('height',Math.max(3,vh*s)); vp.setAttribute('rx',3); } }
+  function miniCenter(e){ var r=mini.getBoundingClientRect(); var cx=((e.clientX-r.left)*(MMW/r.width)-mm.ox)/mm.s, cy=((e.clientY-r.top)*(MMH/r.height)-mm.oy)/mm.s; var sr=svg.getBoundingClientRect(); tx=sr.width/2-cx*scale; ty=sr.height/2-cy*scale; applyT(); save(); }
+  if(mini){ var md=null;
+    mini.addEventListener('pointerdown',function(e){ md={x:e.clientX,y:e.clientY}; try{mini.setPointerCapture(e.pointerId);}catch(_){} miniCenter(e); md.x=e.clientX; md.y=e.clientY; });
+    mini.addEventListener('pointermove',function(e){ if(!md) return; var r=mini.getBoundingClientRect(); var dcx=(e.clientX-md.x)*(MMW/r.width)/mm.s, dcy=(e.clientY-md.y)*(MMH/r.height)/mm.s; tx-=dcx*scale; ty-=dcy*scale; md.x=e.clientX; md.y=e.clientY; applyT(); save(); });
+    window.addEventListener('pointerup',function(){ md=null; }); }
 
   window.addEventListener('resize',function(){ applyT(); });
 
