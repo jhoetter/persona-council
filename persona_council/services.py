@@ -24,6 +24,7 @@ from .models import (
     OpenQuestion,
     PainPointObservation,
     Persona,
+    PrototypeSession,
     Reflection,
     ResearchProject,
     SimulationResult,
@@ -2947,3 +2948,160 @@ def export_meta_report(project_id: str, report_id: str | None = None, format: st
                       ", ".join(titles.get(x, x) for x in sec["source_study_ids"]) + "_"]
         lines += [""]
     return "\n".join(lines) + "\n"
+
+
+# --- Methodology engine (spec/methodology-engine-and-prototyping.md) -----------
+# Re-exported into the services namespace so MCP/CLI keep the services.* pattern.
+from .methodology import (  # noqa: E402
+    MethodologyError,
+    list_methodologies,
+    get_methodology,
+    register_methodology,
+    start_methodology_project,
+    set_project_methodology,
+    brief_phase,
+    record_exploration,
+    record_judgment,
+    record_convergence,
+    advance_phase,
+    get_methodology_state,
+)
+
+
+# --- Prototypes + Playwright harness seam (spec §6/§7) -------------------------
+from . import prototypes as _proto  # noqa: E402
+from . import browser as _browser   # noqa: E402
+
+
+def scaffold_prototype(slug, name, concept, kind="web", template="spa-min",
+                       project_id=None, store: Store | None = None):
+    return _proto.scaffold_prototype(slug, name, concept, kind, template, project_id, store=store)
+
+
+def register_prototype(slug, name, path, entry="index.html", run="static", run_cmd=None,
+                       version="v0.1", project_id=None, notes="", store: Store | None = None):
+    return _proto.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes, store=store)
+
+
+def list_prototypes_artifacts(project_id=None, store: Store | None = None):
+    return _proto.list_prototypes(project_id, store=store)
+
+
+def get_prototype_artifact(prototype_id, store: Store | None = None):
+    return _proto.get_prototype(prototype_id, store=store)
+
+
+def run_prototype(prototype_id, store: Store | None = None):
+    return _proto.run_prototype(prototype_id, store=store)
+
+
+def stop_prototype(prototype_id, store: Store | None = None):
+    return _proto.stop_prototype(prototype_id, store=store)
+
+
+def delete_prototype_artifact(prototype_id, store: Store | None = None):
+    return _proto.delete_prototype(prototype_id, store=store)
+
+
+def proto_open(prototype_id=None, url=None, persona_id=None, store: Store | None = None):
+    store = store or Store()
+    if prototype_id and not url:
+        url = _proto.run_prototype(prototype_id, store=store)["url"]
+    if not url:
+        raise ValueError("proto_open needs a prototype_id or a url")
+    return _browser.open_session(url, prototype_id, persona_id)
+
+
+def proto_act(session_id, action, store: Store | None = None):
+    return _browser.act(session_id, action)
+
+
+def proto_read(session_id, store: Store | None = None):
+    return _browser.read(session_id)
+
+
+def proto_close(session_id, store: Store | None = None):
+    return _browser.close(session_id)
+
+
+def list_proto_sessions(store: Store | None = None):
+    return _browser.list_sessions()
+
+
+def brief_prototype_session(persona_id, prototype_id, store: Store | None = None):
+    store = store or Store()
+    proto = _proto.get_prototype(prototype_id, store=store)
+    ctx = prepare_persona_agent_context(
+        persona_id, task=f"Use the prototype '{proto['name']}' as you really would and report what you experienced",
+        recent_events=8, store=store)
+    screens = []
+    try:
+        import json as _json
+        cpath = ROOT / proto["path"] / "concept.json"
+        if cpath.exists():
+            screens = [{"id": s["id"], "title": s.get("title", s["id"])}
+                       for s in _json.loads(cpath.read_text(encoding="utf-8")).get("screens", [])]
+    except Exception:
+        pass
+    return {
+        "schema": "prototype_session", "persona_id": persona_id,
+        "prototype": {"id": proto["id"], "name": proto["name"], "slug": proto["slug"], "screens": screens},
+        "agent_context": ctx.get("agent_context"),
+        "instructions": ("Open the running app (proto_open), drive it like THIS persona "
+                         "(proto_act click/type/select on refs from the latest snapshot), observe the REAL "
+                         "state, then author a grounded reaction. Anti-steering: only praise what you actually "
+                         "exercised; honest friction and rejection are first-class. Cite the states you saw in "
+                         "observed_state_refs."),
+    }
+
+
+def record_prototype_session(persona_id, prototype_id, session_id, date_value, reaction,
+                             store: Store | None = None):
+    store = store or Store()
+    proto = _proto.get_prototype(prototype_id, store=store)
+    refs = [str(r).strip() for r in (reaction.get("observed_state_refs") or []) if str(r).strip()]
+    if not refs:
+        raise ValueError("reaction.observed_state_refs must cite >= 1 observed state (a ref or text actually seen)")
+    log = _browser.session_log(session_id)
+    grounded = True
+    if log:
+        seen_refs: set[str] = set()
+        seen_text = ""
+        for entry in log:
+            if entry.get("kind") == "snapshot":
+                seen_refs.update(entry.get("refs", []))
+                seen_text += " " + (entry.get("text") or "")
+        unmatched = [r for r in refs if r not in seen_refs and r.lower() not in seen_text.lower()]
+        if unmatched:
+            raise ValueError(f"prototype-reaction groundedness: observed_state_refs not present in the session log: {unmatched}")
+    else:
+        grounded = False  # session closed / harness unavailable — record but mark unverified
+    now = utc_now_iso()
+    sess = PrototypeSession(
+        id=stable_id("protosession", persona_id, prototype_id, now), persona_id=persona_id,
+        prototype_id=proto["id"], session_id=session_id, date=date_value, reaction=reaction,
+        observed_state_refs=refs, created_at=now).to_dict()
+    sess["grounded_verified"] = grounded
+    store.insert_prototype_session(sess)
+    # write the real use into persona memory so the test council surfaces it
+    name = proto["name"]
+    facts = []
+    for h in (reaction.get("liked") or [])[:4]:
+        facts.append({"entity": name, "fact": str(h), "status": "positiv", "valid_from": date_value, "importance": 4})
+    for h in (reaction.get("friction") or [])[:4]:
+        facts.append({"entity": name, "fact": str(h), "status": "offen", "valid_from": date_value, "importance": 4})
+    if reaction.get("verdict"):
+        facts.append({"entity": name, "fact": "Verdict: " + str(reaction["verdict"]), "status": "neutral",
+                      "valid_from": date_value, "importance": 3})
+    deltas = {
+        "entities": [{"mention": name, "kind": "topic", "status": "ausprobiert", "aliases": [proto["slug"]]}],
+        "facts": facts or [{"entity": name, "fact": str(reaction.get("summary", "Prototype tried")),
+                            "status": "neutral", "valid_from": date_value, "importance": 3}],
+        "threads": [], "event_links": [],
+    }
+    try:
+        record_memory_deltas(persona_id, date_value, deltas, store=store)
+        memory_written = True
+    except Exception:
+        memory_written = False
+    return {"prototype_session": sess, "grounded_verified": grounded, "memory_written": memory_written}

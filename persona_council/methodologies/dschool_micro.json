@@ -1,0 +1,40 @@
+{
+  "key": "dschool_micro",
+  "name": "d.school Micro-Cycle",
+  "description": "Stanford d.school micro-cycle: Understand/Observe (diverge) -> Define POV (converge) -> Ideate (diverge) -> Prototype & Test (converge).",
+  "when_to_use": "Human-centered design when you want empathy-first divergence and rapid prototype testing.",
+  "phases": [
+    {
+      "key": "understand_observe", "name": "Understand & Observe", "mode": "diverge",
+      "intent": "Build empathy: observe and surface user needs, contexts and frictions broadly.",
+      "council_strategy": "pain-discovery",
+      "diverge_by": "persona_subset",
+      "produces_role": "problem-landscape"
+    },
+    {
+      "key": "define_pov", "name": "Define POV", "mode": "converge",
+      "intent": "Consolidate observations into a single Point-of-View statement (user + need + insight).",
+      "council_strategy": "goal",
+      "consumes": "understand_observe",
+      "produces_role": "point-of-view"
+    },
+    {
+      "key": "ideate", "name": "Ideate", "mode": "diverge",
+      "intent": "Generate many diverse solution concepts; build a prototype for the most promising.",
+      "council_strategy": "positive-deepdive",
+      "consumes": "define_pov",
+      "diverge_by": "solution_candidate",
+      "requires_artifacts": ["prototype"],
+      "produces_role": "solution-options"
+    },
+    {
+      "key": "prototype_test", "name": "Prototype & Test", "mode": "converge",
+      "intent": "Personas use the prototype; gather feedback and converge to refined requirements.",
+      "council_strategy": "tension",
+      "consumes": "ideate",
+      "requires_artifacts": ["prototype_session"],
+      "produces_role": "spec",
+      "loop_back": "ideate"
+    }
+  ]
+}

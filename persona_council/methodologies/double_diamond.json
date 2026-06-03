@@ -1,0 +1,40 @@
+{
+  "key": "double_diamond",
+  "name": "Double Diamond",
+  "description": "Problem space (Discover diverge -> Define converge) then solution space (Develop diverge -> Deliver converge). Frame an ambiguous problem and take it to a buildable solution.",
+  "when_to_use": "When you have a 'How Might We' question and want a rigorous problem framing plus a tested, buildable solution spec.",
+  "phases": [
+    {
+      "key": "discover", "name": "Discover", "mode": "diverge",
+      "intent": "Surface the real, lived pains broadly across personas and angles. No solutions yet. Anti-steering is strongest here.",
+      "council_strategy": "pain-discovery",
+      "diverge_by": "persona_subset",
+      "produces_role": "problem-landscape"
+    },
+    {
+      "key": "define", "name": "Define", "mode": "converge",
+      "intent": "Cluster the breadth into ONE core problem and a sharp Point-of-View (who + needs what + surprising insight). Frame the next How-Might-We.",
+      "council_strategy": "goal",
+      "consumes": "discover",
+      "produces_role": "point-of-view"
+    },
+    {
+      "key": "develop", "name": "Develop", "mode": "diverge",
+      "intent": "Generate multiple solution candidates from the POV and build at least one real, minimal prototype to test.",
+      "council_strategy": "positive-deepdive",
+      "consumes": "define",
+      "diverge_by": "solution_candidate",
+      "requires_artifacts": ["prototype"],
+      "produces_role": "solution-options"
+    },
+    {
+      "key": "deliver", "name": "Deliver", "mode": "converge",
+      "intent": "Have personas actually USE the prototype(s), then converge to a buildable specification (must-haves, who-for, validated solves, open risks).",
+      "council_strategy": "tension",
+      "consumes": "develop",
+      "requires_artifacts": ["prototype_session"],
+      "produces_role": "spec",
+      "loop_back": "develop"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "lean_jtbd",
+  "name": "Lean / Jobs-to-be-Done",
+  "description": "Problem-explore (diverge) -> Problem-pick (converge) -> Solution-explore (diverge) -> Validate (converge). Lean-startup framing around the customer's job-to-be-done.",
+  "when_to_use": "When you want to anchor on the customer's job, find the highest-value problem, then validate a minimal solution.",
+  "phases": [
+    {
+      "key": "problem_explore", "name": "Problem Explore", "mode": "diverge",
+      "intent": "Explore the jobs-to-be-done and the problems blocking them, broadly across customers.",
+      "council_strategy": "pain-discovery",
+      "diverge_by": "angle",
+      "produces_role": "problem-landscape"
+    },
+    {
+      "key": "problem_pick", "name": "Problem Pick", "mode": "converge",
+      "intent": "Pick the single highest-value, most-underserved problem/job to solve first.",
+      "council_strategy": "goal",
+      "consumes": "problem_explore",
+      "produces_role": "point-of-view"
+    },
+    {
+      "key": "solution_explore", "name": "Solution Explore", "mode": "diverge",
+      "intent": "Explore solution/MVP candidates and build a minimal prototype.",
+      "council_strategy": "positive-deepdive",
+      "consumes": "problem_pick",
+      "diverge_by": "solution_candidate",
+      "requires_artifacts": ["prototype"],
+      "produces_role": "solution-options"
+    },
+    {
+      "key": "validate", "name": "Validate", "mode": "converge",
+      "intent": "Personas use the MVP; validate the value proposition and converge to a buildable spec.",
+      "council_strategy": "tension",
+      "consumes": "solution_explore",
+      "requires_artifacts": ["prototype_session"],
+      "produces_role": "spec",
+      "loop_back": "solution_explore"
+    }
+  ]
+}

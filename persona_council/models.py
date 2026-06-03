@@ -173,6 +173,11 @@ class Synthesis:
     citations: list[Json] = field(default_factory=list)  # inline provenance: [{kind, ref, quote}]
     # each voice: {persona_id, persona_name, segment, sentiment, relevance,
     #              key_argument, shift:{from,to,trigger,council_id}|None, evidence:[{council_id,quote}]}
+    # --- methodology-engine metadata (spec/methodology-engine-and-prototyping.md) ---
+    phase: str = ""          # which methodology phase produced this node (e.g. "discover")
+    mode: str = ""           # "diverge" (one of a fan) | "converge" (the waist)
+    role: str = ""           # light artifact tag: problem-landscape|point-of-view|solution-options|spec
+    methodology: str = ""    # methodology key this node belongs to
 
     def to_dict(self) -> Json:
         return asdict(self)
@@ -194,6 +199,11 @@ class ResearchProject:
     status: str
     created_at: str
     updated_at: str
+    # --- methodology-engine binding (spec/methodology-engine-and-prototyping.md) ---
+    methodology: str = ""       # methodology key, "" = freeform project
+    phase: str = ""             # current phase key
+    phase_log: Json = field(default_factory=dict)
+    # phase_log: {phase_key: {status, exploration_node_ids:[], convergence_node_id?, decided_at?}}
 
     def to_dict(self) -> Json:
         return asdict(self)
@@ -240,6 +250,61 @@ class MetaReport:
     sections: list[Json]        # [{section_id, markdown, citations:[{study_id, council_id, quote}]}]
     build_order_narrative: str
     graph_snapshot: Json
+    created_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class MethodologyJudgment:
+    """An LLM-made, evidence-backed decision at a methodology gate. The engine
+    requires its PRESENCE (you can't converge without a divergence_complete) but
+    never dictates its content or a number."""
+    id: str
+    project_id: str
+    phase_key: str
+    kind: str                   # divergence_complete|core_problem_chosen|spec_ready|loop_back
+    decided: bool
+    rationale: str
+    evidence_refs: list[str]    # council_id | synthesis_id | session_id
+    created_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class Prototype:
+    """A real, minimal, locally-runnable app artifact (versioned)."""
+    id: str
+    slug: str
+    project_id: str | None
+    name: str
+    version: str
+    kind: str                   # web
+    path: str                   # prototypes/<slug>/
+    entry: str                  # index.html or entry file
+    run: str                    # static | node | python
+    run_cmd: str | None
+    notes: str
+    created_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class PrototypeSession:
+    """A persona's recorded use of a prototype (Playwright session), with the
+    observed-state evidence the reaction is grounded in."""
+    id: str
+    persona_id: str
+    prototype_id: str
+    session_id: str
+    date: str
+    reaction: Json
+    observed_state_refs: list[str]
     created_at: str
 
     def to_dict(self) -> Json:

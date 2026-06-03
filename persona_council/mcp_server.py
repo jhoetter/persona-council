@@ -43,6 +43,22 @@ _NEXT: dict[str, dict[str, Any]] = {
     "record_synthesis": {"name": "export_synthesis", "reason": "render the stakeholder report"},
     "brief_council": {"name": "record_council", "reason": "author the turns + synthesis, then persist the council"},
     "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
+    # --- methodology engine (spec/methodology-engine-and-prototyping.md) ---
+    "list_methodologies": {"name": "get_methodology", "reason": "inspect a methodology's phases before starting"},
+    "get_methodology": {"name": "start_methodology_project", "reason": "bind a project to this methodology"},
+    "start_methodology_project": {"name": "brief_phase", "reason": "gather what the first phase needs"},
+    "set_project_methodology": {"name": "brief_phase", "reason": "gather what the current phase needs"},
+    "brief_phase": {"name": "record_exploration", "reason": "diverge: fan out explorations; converge: record_convergence"},
+    "record_exploration": {"name": "record_judgment", "reason": "more explorations, or judge divergence_complete"},
+    "record_judgment": {"name": "advance_phase", "reason": "advance once the gate judgment is recorded"},
+    "record_convergence": {"name": "advance_phase", "reason": "advance to the next phase"},
+    "advance_phase": {"name": "brief_phase", "reason": "gather what the next phase needs"},
+    # --- prototypes + harness ---
+    "scaffold_prototype": {"name": "run_prototype", "reason": "start the generated app locally"},
+    "run_prototype": {"name": "proto_open", "reason": "open the running app in a headless browser session"},
+    "proto_open": {"name": "proto_act", "reason": "act on the snapshot (click/type), or proto_read"},
+    "brief_prototype_session": {"name": "proto_open", "reason": "drive the app as the persona, then record the session"},
+    "record_prototype_session": {"name": "brief_council", "reason": "fold the grounded reaction into a test council"},
 }
 
 
@@ -482,6 +498,174 @@ def build_server():
         """Render the assembled meta-report (md or json)."""
         t = time.perf_counter()
         return _env("export_meta_report", services.export_meta_report(project_id, report_id, format), t)
+
+    # ================= Methodology engine (data-driven, structure+LLM-judged) =================
+    @mcp.tool()
+    def list_methodologies() -> dict[str, Any]:
+        """List available methodologies (built-in + user-defined) and their phase keys."""
+        t = time.perf_counter()
+        return _env("list_methodologies", services.list_methodologies(), t)
+
+    @mcp.tool()
+    def get_methodology(key: str) -> dict[str, Any]:
+        """The full declarative spec for one methodology (phases, modes, gates, roles)."""
+        t = time.perf_counter()
+        return _env("get_methodology", services.get_methodology(key), t)
+
+    @mcp.tool()
+    def start_methodology_project(title: str, goal: str, methodology_key: str,
+                                  persona_ids: list[str] | None = None, description: str = "") -> dict[str, Any]:
+        """Create a research project bound to a methodology (the goal is the How-Might-We)."""
+        t = time.perf_counter()
+        return _env("start_methodology_project",
+                    services.start_methodology_project(title, goal, methodology_key, persona_ids, description), t)
+
+    @mcp.tool()
+    def set_project_methodology(project_id: str, methodology_key: str) -> dict[str, Any]:
+        """Bind an existing research project to a methodology (resets to phase[0])."""
+        t = time.perf_counter()
+        return _env("set_project_methodology", services.set_project_methodology(project_id, methodology_key), t)
+
+    @mcp.tool()
+    def brief_phase(project_id: str) -> dict[str, Any]:
+        """GATHER what the current methodology phase needs now (mode, strategy, unmet
+        requirements, consumed artifact). The engine's heartbeat — diverge: fan out and
+        record_exploration; converge: record_convergence."""
+        t = time.perf_counter()
+        return _env("brief_phase", services.brief_phase(project_id), t)
+
+    @mcp.tool()
+    def record_exploration(project_id: str, title: str, council_ids: list[str], payload: dict[str, Any],
+                           start_input: str = "") -> dict[str, Any]:
+        """Record ONE diverge exploration node (a synthesis over council(s)) under the current phase."""
+        t = time.perf_counter()
+        return _env("record_exploration",
+                    services.record_exploration(project_id, title, council_ids, payload, start_input), t)
+
+    @mcp.tool()
+    def record_judgment(project_id: str, phase_key: str, kind: str, decided: bool, rationale: str,
+                        evidence_refs: list[str] | None = None) -> dict[str, Any]:
+        """Record an evidence-backed LLM gate judgment (e.g. divergence_complete). The engine
+        requires its presence to converge but never dictates its content."""
+        t = time.perf_counter()
+        return _env("record_judgment",
+                    services.record_judgment(project_id, phase_key, kind, decided, rationale, evidence_refs), t)
+
+    @mcp.tool()
+    def record_convergence(project_id: str, title: str, from_node_ids: list[str], payload: dict[str, Any],
+                           start_input: str = "") -> dict[str, Any]:
+        """Cluster a diverge fan into one convergence node (validates the structural invariants)."""
+        t = time.perf_counter()
+        return _env("record_convergence",
+                    services.record_convergence(project_id, title, from_node_ids, payload, start_input), t)
+
+    @mcp.tool()
+    def advance_phase(project_id: str) -> dict[str, Any]:
+        """Advance to the next phase (or loop back); errors if the structural gate is unmet."""
+        t = time.perf_counter()
+        return _env("advance_phase", services.advance_phase(project_id), t)
+
+    @mcp.tool()
+    def get_methodology_state(project_id: str) -> dict[str, Any]:
+        """Phase-by-phase progress: status, exploration counts, judgments, convergence nodes."""
+        t = time.perf_counter()
+        return _env("get_methodology_state", services.get_methodology_state(project_id), t)
+
+    # ================= Prototypes (real, minimal, locally-runnable apps) =================
+    @mcp.tool()
+    def scaffold_prototype(slug: str, name: str, concept: dict[str, Any], kind: str = "web",
+                           template: str = "spa-min", project_id: str | None = None) -> dict[str, Any]:
+        """Generate a real, minimal, runnable web app from a host-authored concept (screens +
+        elements) and register it. The app is genuinely clickable (real DOM) for Playwright."""
+        t = time.perf_counter()
+        return _env("scaffold_prototype",
+                    services.scaffold_prototype(slug, name, concept, kind, template, project_id), t)
+
+    @mcp.tool()
+    def register_prototype(slug: str, name: str, path: str, entry: str = "index.html", run: str = "static",
+                           run_cmd: str | None = None, version: str = "v0.1", project_id: str | None = None,
+                           notes: str = "") -> dict[str, Any]:
+        """Register a hand-authored app under prototypes/ as a runnable artifact."""
+        t = time.perf_counter()
+        return _env("register_prototype",
+                    services.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes), t)
+
+    @mcp.tool()
+    def list_prototypes(project_id: str | None = None) -> dict[str, Any]:
+        """List registered prototype artifacts (optionally for one project)."""
+        t = time.perf_counter()
+        return _env("list_prototypes", services.list_prototypes_artifacts(project_id), t)
+
+    @mcp.tool()
+    def get_prototype(prototype_id: str) -> dict[str, Any]:
+        """One prototype artifact by id or slug."""
+        t = time.perf_counter()
+        return _env("get_prototype", services.get_prototype_artifact(prototype_id), t)
+
+    @mcp.tool()
+    def run_prototype(prototype_id: str) -> dict[str, Any]:
+        """Start the app on an ephemeral localhost port; returns {url, pid}. Local-only."""
+        t = time.perf_counter()
+        return _env("run_prototype", services.run_prototype(prototype_id), t)
+
+    @mcp.tool()
+    def stop_prototype(prototype_id: str) -> dict[str, Any]:
+        """Stop a running prototype."""
+        t = time.perf_counter()
+        return _env("stop_prototype", services.stop_prototype(prototype_id), t)
+
+    @mcp.tool()
+    def delete_prototype(prototype_id: str) -> dict[str, Any]:
+        """Delete a prototype artifact record (files on disk are kept)."""
+        t = time.perf_counter()
+        return _env("delete_prototype", services.delete_prototype_artifact(prototype_id), t)
+
+    # ================= Playwright harness — agents drive the real app =================
+    @mcp.tool()
+    def proto_open(prototype_id: str | None = None, url: str | None = None,
+                   persona_id: str | None = None) -> dict[str, Any]:
+        """Open a real running app in a headless browser session; returns {session_id, snapshot}."""
+        t = time.perf_counter()
+        return _env("proto_open", services.proto_open(prototype_id, url, persona_id), t)
+
+    @mcp.tool()
+    def proto_act(session_id: str, action: dict[str, Any]) -> dict[str, Any]:
+        """Act on the latest snapshot: {type: click|type|select|scroll|key|wait, ref?, text?, value?}."""
+        t = time.perf_counter()
+        return _env("proto_act", services.proto_act(session_id, action), t)
+
+    @mcp.tool()
+    def proto_read(session_id: str) -> dict[str, Any]:
+        """Re-read the current snapshot of a session."""
+        t = time.perf_counter()
+        return _env("proto_read", services.proto_read(session_id), t)
+
+    @mcp.tool()
+    def proto_close(session_id: str) -> dict[str, Any]:
+        """Close a browser session."""
+        t = time.perf_counter()
+        return _env("proto_close", services.proto_close(session_id), t)
+
+    @mcp.tool()
+    def list_proto_sessions() -> dict[str, Any]:
+        """List live browser sessions."""
+        t = time.perf_counter()
+        return _env("list_proto_sessions", services.list_proto_sessions(), t)
+
+    @mcp.tool()
+    def brief_prototype_session(persona_id: str, prototype_id: str) -> dict[str, Any]:
+        """GATHER persona context + how-to-drive + anti-steering before a persona uses the app."""
+        t = time.perf_counter()
+        return _env("brief_prototype_session", services.brief_prototype_session(persona_id, prototype_id), t)
+
+    @mcp.tool()
+    def record_prototype_session(persona_id: str, prototype_id: str, session_id: str, date: str,
+                                 reaction: dict[str, Any]) -> dict[str, Any]:
+        """Persist a persona's grounded prototype use as an experience + memory + artifact;
+        rejects claims with no matching observed state in the session log."""
+        t = time.perf_counter()
+        return _env("record_prototype_session",
+                    services.record_prototype_session(persona_id, prototype_id, session_id, date, reaction), t)
 
     # ----- Deletes (CRUD complete; delete is MCP/CLI-only, never the read-only UI) -----
     @mcp.tool()

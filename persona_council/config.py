@@ -38,7 +38,42 @@ def utc_now_iso() -> str:
 
 # --- Memory & simulation settings (spec/memory-and-simulation-architecture.md) ---
 
-MEMORY_SCHEMA_VERSION = 3
+MEMORY_SCHEMA_VERSION = 4
+
+
+# --- Methodology engine & prototyping (spec/methodology-engine-and-prototyping.md) ---
+
+def methodologies_dir() -> Path:
+    """Built-in methodology specs ship inside the package."""
+    return ROOT / "persona_council" / "methodologies"
+
+
+def prototype_templates_dir() -> Path:
+    return ROOT / "persona_council" / "prototype_templates"
+
+
+def prototypes_dir() -> Path:
+    """Where generated/registered prototype apps live (committed, runnable locally)."""
+    return ROOT / "prototypes"
+
+
+def max_browser_sessions() -> int:
+    try:
+        return max(1, min(16, int(os.getenv("PERSONA_COUNCIL_MAX_BROWSER_SESSIONS", 4))))
+    except (TypeError, ValueError):
+        return 4
+
+
+def llm_provider() -> str:
+    return os.getenv("PERSONA_COUNCIL_LLM_PROVIDER", "anthropic")
+
+
+def llm_model() -> str:
+    return os.getenv("PERSONA_COUNCIL_LLM_MODEL", "claude-opus-4-8")
+
+
+def llm_api_key() -> str | None:
+    return os.getenv("PERSONA_COUNCIL_LLM_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
 
 
 def embedding_model() -> str:

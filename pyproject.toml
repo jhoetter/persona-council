@@ -11,6 +11,12 @@ dependencies = [
     "uvicorn>=0.30.0",
 ]
 
+[project.optional-dependencies]
+# Prototype harness (spec/methodology-engine-and-prototyping.md §7): agents drive real
+# apps in a headless browser. Optional — the harness degrades gracefully without it.
+# Install: `make playwright` (pip install + chromium download).
+prototyping = ["playwright>=1.40.0"]
+
 [project.scripts]
 persona-council = "persona_council.cli:main"
 persona-council-mcp = "persona_council.mcp_server:main"

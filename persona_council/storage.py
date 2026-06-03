@@ -272,6 +272,47 @@ CREATE TABLE IF NOT EXISTS meta_reports (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_meta_reports_project ON meta_reports(project_id);
+
+-- Methodology engine (spec/methodology-engine-and-prototyping.md): user-defined
+-- methodology specs + the LLM-judged gate decisions recorded per phase.
+CREATE TABLE IF NOT EXISTS methodologies (
+  key TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS methodology_judgments (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  phase_key TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  decided INTEGER NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mjudge_project ON methodology_judgments(project_id);
+
+-- Prototype artifacts (real, minimal, locally-runnable apps) + recorded persona use.
+CREATE TABLE IF NOT EXISTS prototypes (
+  id TEXT PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  project_id TEXT,
+  version TEXT,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_prototypes_project ON prototypes(project_id);
+
+CREATE TABLE IF NOT EXISTS prototype_sessions (
+  id TEXT PRIMARY KEY,
+  persona_id TEXT NOT NULL,
+  prototype_id TEXT NOT NULL,
+  session_id TEXT,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_protosess_proto ON prototype_sessions(prototype_id);
 """
 
 
@@ -534,6 +575,85 @@ class Store:
             "SELECT data FROM meta_reports WHERE project_id=? ORDER BY created_at DESC", (project_id,)).fetchall()
         return [json.loads(r["data"]) for r in rows]
 
+    # ---- Methodology engine: user-defined specs + per-phase judgments ----
+    def upsert_methodology(self, spec: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT INTO methodologies (key, name, data, created_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET name=excluded.name, data=excluded.data",
+            (spec["key"], spec["name"], json.dumps(spec, ensure_ascii=False),
+             spec.get("created_at", utc_now_iso())))
+        self.conn.commit()
+
+    def get_methodology(self, key: str) -> dict[str, Any] | None:
+        row = self.conn.execute("SELECT data FROM methodologies WHERE key=?", (key,)).fetchone()
+        return json.loads(row["data"]) if row else None
+
+    def list_methodologies(self) -> list[dict[str, Any]]:
+        rows = self.conn.execute("SELECT data FROM methodologies ORDER BY key").fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
+    def insert_methodology_judgment(self, j: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT OR REPLACE INTO methodology_judgments (id, project_id, phase_key, kind, decided, data, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (j["id"], j["project_id"], j["phase_key"], j["kind"], 1 if j.get("decided") else 0,
+             json.dumps(j, ensure_ascii=False), j["created_at"]))
+        self.conn.commit()
+
+    def list_methodology_judgments(self, project_id: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT data FROM methodology_judgments WHERE project_id=? ORDER BY created_at", (project_id,)).fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
+    # ---- Prototype artifacts + recorded persona sessions ----
+    def upsert_prototype(self, proto: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT INTO prototypes (id, slug, project_id, version, data, created_at) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET slug=excluded.slug, project_id=excluded.project_id, "
+            "version=excluded.version, data=excluded.data",
+            (proto["id"], proto["slug"], proto.get("project_id"), proto.get("version", ""),
+             json.dumps(proto, ensure_ascii=False), proto["created_at"]))
+        self.conn.commit()
+
+    def get_prototype(self, id_or_slug: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT data FROM prototypes WHERE id=? OR slug=?", (id_or_slug, id_or_slug)).fetchone()
+        return json.loads(row["data"]) if row else None
+
+    def list_prototypes(self, project_id: str | None = None) -> list[dict[str, Any]]:
+        if project_id:
+            rows = self.conn.execute(
+                "SELECT data FROM prototypes WHERE project_id=? ORDER BY created_at DESC", (project_id,)).fetchall()
+        else:
+            rows = self.conn.execute("SELECT data FROM prototypes ORDER BY created_at DESC").fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
+    def delete_prototype(self, prototype_id: str) -> int:
+        cur = self.conn.execute("DELETE FROM prototypes WHERE id=? OR slug=?", (prototype_id, prototype_id))
+        self.conn.commit()
+        return cur.rowcount
+
+    def insert_prototype_session(self, sess: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT OR REPLACE INTO prototype_sessions (id, persona_id, prototype_id, session_id, data, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (sess["id"], sess["persona_id"], sess["prototype_id"], sess.get("session_id"),
+             json.dumps(sess, ensure_ascii=False), sess["created_at"]))
+        self.conn.commit()
+
+    def list_prototype_sessions(self, prototype_id: str | None = None,
+                                persona_id: str | None = None) -> list[dict[str, Any]]:
+        q, params = "SELECT data FROM prototype_sessions", []
+        clauses = []
+        if prototype_id:
+            clauses.append("prototype_id=?"); params.append(prototype_id)
+        if persona_id:
+            clauses.append("persona_id=?"); params.append(persona_id)
+        if clauses:
+            q += " WHERE " + " AND ".join(clauses)
+        q += " ORDER BY created_at DESC"
+        return [json.loads(r["data"]) for r in self.conn.execute(q, params).fetchall()]
+
     # ---- Granular deletes (D in CRUD; all via MCP/CLI, never the read-only UI) ----
     def delete_research_project(self, project_id: str) -> dict[str, int]:
         """Delete a project container + its graph metadata (edges, open questions,
@@ -543,7 +663,7 @@ class Store:
             return {}
         pid = p["id"]
         deleted: dict[str, int] = {}
-        for table in ("study_edges", "research_open_questions", "meta_reports"):
+        for table in ("study_edges", "research_open_questions", "meta_reports", "methodology_judgments"):
             cur = self.conn.execute(f"DELETE FROM {table} WHERE project_id=?", (pid,))
             deleted[table] = cur.rowcount
         cur = self.conn.execute("DELETE FROM research_projects WHERE id=?", (pid,))
@@ -902,6 +1022,9 @@ class Store:
             "study_edges",
             "research_open_questions",
             "meta_reports",
+            "methodology_judgments",
+            "prototypes",
+            "prototype_sessions",
             "personas",
             "audit_log",
         ]
