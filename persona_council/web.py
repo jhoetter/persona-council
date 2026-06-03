@@ -882,11 +882,15 @@ _RGRAPH_JS = """<script>
   if(saved && saved.lv !== D.lv) saved=null;
   if(saved&&saved.pos) D.nodes.forEach(function(n){ var p=saved.pos[n.id]; if(p){ n.x=p[0]; n.y=p[1]; } });
   var saveT=null;
-  function save(){ if(saveT) return; saveT=setTimeout(function(){ saveT=null;
+  function writeNow(){ if(saveT){ clearTimeout(saveT); saveT=null; }
     var pos={}; D.nodes.forEach(function(n){ pos[n.id]=[Math.round(n.x),Math.round(n.y)]; });
     var f=[]; document.querySelectorAll('.rgchip.active').forEach(function(c){ f.push(c.getAttribute('data-theme')); });
     try{ localStorage.setItem(KEY,JSON.stringify({lv:D.lv,pos:pos,view:{tx:tx,ty:ty,scale:scale},filter:f})); }catch(_){}
-  },300); }
+  }
+  function save(){ if(saveT) return; saveT=setTimeout(writeNow,250); }   // debounced (continuous gestures)
+  // Flush any pending write before the page goes away, so a quick refresh never loses a change.
+  window.addEventListener('pagehide',function(){ if(saveT) writeNow(); });
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden'&&saveT) writeNow(); });
 
   var zl=document.getElementById('rgzl'), bgp=document.getElementById('rggrid');
   function applyT(){ root.setAttribute('transform','translate('+tx+','+ty+') scale('+scale+')');
@@ -920,7 +924,7 @@ _RGRAPH_JS = """<script>
   // ---- theme filter ----
   function applyFilter(){ var act=[]; document.querySelectorAll('.rgchip.active').forEach(function(c){ act.push(c.getAttribute('data-theme')); });
     D.nodes.forEach(function(n){ var show=!act.length||(n.tags||[]).some(function(t){ return act.indexOf(t)>=0; }); n.hidden=!show; if(n.el) n.el.classList.toggle('rg-hidden',!show); });
-    var clr=document.querySelector('.rgclear'); if(clr) clr.style.display=act.length?'':'none'; route(); save(); }
+    var clr=document.querySelector('.rgclear'); if(clr) clr.style.display=act.length?'':'none'; route(); writeNow(); }
   document.addEventListener('click',function(e){ var chip=e.target.closest&&e.target.closest('.rgchip'); if(chip){ chip.classList.toggle('active'); applyFilter(); return; } var clr=e.target.closest&&e.target.closest('.rgclear'); if(clr){ document.querySelectorAll('.rgchip.active').forEach(function(c){c.classList.remove('active');}); applyFilter(); } });
 
   // ---- neighborhood highlight + selection ----
@@ -948,7 +952,7 @@ _RGRAPH_JS = """<script>
     var down=null,moved=false;
     g.addEventListener('pointerdown',function(e){ e.stopPropagation(); down={x:e.clientX,y:e.clientY,nx:n.x,ny:n.y}; moved=false; gN.appendChild(g); try{g.setPointerCapture(e.pointerId);}catch(_){} });
     g.addEventListener('pointermove',function(e){ if(!down) return; var dx=(e.clientX-down.x)/scale, dy=(e.clientY-down.y)/scale; if(Math.abs(dx)+Math.abs(dy)>3) moved=true; n.x=down.nx+dx; n.y=down.ny+dy; g.setAttribute('transform','translate('+n.x+','+n.y+')'); route(); });
-    g.addEventListener('pointerup',function(e){ if(down){ if(!moved){ if(selId===n.id) location.href=n.href; else select(n.id); } else save(); } down=null; });
+    g.addEventListener('pointerup',function(e){ if(down){ if(!moved){ if(selId===n.id) location.href=n.href; else select(n.id); } else writeNow(); } down=null; });
     g.addEventListener('dblclick',function(e){ e.preventDefault(); location.href=n.href; });
     g.addEventListener('pointerenter',function(){ if(!selId&&!down) highlight(n.id); });
     g.addEventListener('pointerleave',function(){ if(!selId&&!down) highlight(null); });
@@ -978,14 +982,18 @@ _RGRAPH_JS = """<script>
 
   // ---- background pan + wheel/trackpad ----
   var pan=null;
-  svg.addEventListener('pointerdown',function(e){ if(e.target.closest('.rgn')) return; pan={x:e.clientX,y:e.clientY,tx:tx,ty:ty,moved:false}; svg.classList.add('grabbing'); });
+  svg.addEventListener('pointerdown',function(e){ if(e.target.closest('.rgn')) return; pan={x:e.clientX,y:e.clientY,tx:tx,ty:ty,moved:false,pid:e.pointerId}; svg.classList.add('grabbing'); try{svg.setPointerCapture(e.pointerId);}catch(_){} });
   svg.addEventListener('pointermove',function(e){ if(!pan) return; if(Math.abs(e.clientX-pan.x)+Math.abs(e.clientY-pan.y)>3) pan.moved=true; tx=pan.tx+(e.clientX-pan.x); ty=pan.ty+(e.clientY-pan.y); applyT(); });
-  window.addEventListener('pointerup',function(){ if(pan){ if(!pan.moved&&selId) deselect(); else if(pan.moved) save(); svg.classList.remove('grabbing'); } pan=null; });
+  function endPan(){ if(!pan) return; if(!pan.moved&&selId) deselect(); else if(pan.moved) writeNow(); try{svg.releasePointerCapture(pan.pid);}catch(_){} svg.classList.remove('grabbing'); pan=null; }
+  svg.addEventListener('pointerup',endPan); svg.addEventListener('pointercancel',endPan); window.addEventListener('pointerup',endPan);
+  // Detect a trackpad ONCE per session and latch it, so the same device never flip-flops
+  // between "two-finger pan" and "mouse-wheel zoom" tick to tick (the main source of jumpiness).
+  var trackpadSeen=false;
   svg.addEventListener('wheel',function(e){ e.preventDefault(); var r=svg.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
     if(e.ctrlKey){ zoomAt(mx,my,Math.exp(-e.deltaY*0.01)); return; }              // pinch / ctrl+wheel = zoom to cursor
     if(e.shiftKey){ tx-=e.deltaY; applyT(); save(); return; }                      // shift+wheel = horizontal pan
-    var trackpad=(e.deltaX!==0)||!Number.isInteger(e.deltaY);
-    if(trackpad){ tx-=e.deltaX; ty-=e.deltaY; applyT(); save(); }                  // two-finger scroll = pan
+    if(e.deltaX!==0 || !Number.isInteger(e.deltaY)) trackpadSeen=true;             // latch on any trackpad signal
+    if(trackpadSeen){ tx-=e.deltaX; ty-=e.deltaY; applyT(); save(); }              // two-finger scroll = pan
     else { zoomAt(mx,my,e.deltaY<0?1.12:0.892); }                                  // mouse wheel = zoom to cursor
   },{passive:false});
 
