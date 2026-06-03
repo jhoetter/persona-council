@@ -3039,6 +3039,17 @@ def save_plan(plan: dict[str, Any], store: Store | None = None) -> dict[str, Any
     return _plan.save_plan(plan, store=store)
 
 
+def add_task(project_id, bucket, capability, title, intent="", consumes=None, requires=None,
+             step="", plan_note="", task_id=None, store: Store | None = None) -> dict[str, Any]:
+    return _plan.add_task(project_id, bucket, capability, title, intent, consumes, requires,
+                          step, plan_note, task_id, store=store)
+
+
+def record_frame(project_id, task_id, questions, hypotheses=None, memory_refs=None,
+                 store: Store | None = None) -> dict[str, Any]:
+    return _plan.record_frame(project_id, task_id, questions, hypotheses, memory_refs, store=store)
+
+
 def export_plan_md(project_id: str, store: Store | None = None) -> str:
     store = store or Store()
     p = _plan.get_plan(project_id, store=store)

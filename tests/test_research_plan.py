@@ -114,3 +114,34 @@ def test_freeform_seeds_single_root_frame(store):
     t = plan["tasks"][0]
     assert t["bucket"] == "analyze" and t["capability"] == "frame" and t["consumes"] == []
     assert "## Analyze" in services.export_plan_md(proj["id"], store=store)
+
+
+# --------------------------------------------------------------------------- R3: frame
+
+def test_act_blocked_until_frame_discharged(store):
+    proj = services.start_project("Deep", "hmw?", "double_diamond_deep", persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    # orchestrator adds an act council under the discover frame
+    services.add_task(pid, "act", "explore", "Pain council", consumes=["frame__discover"], store=store)
+    plan = services.get_plan(pid, store=store)
+    ready = {t["id"] for t in services.ready_tasks(plan)}
+    assert "frame__discover" in ready and not any(t.startswith("act__") for t in ready)  # act blocked
+
+    # frame requires >=1 question AND >=1 memory ref (can't silently skip)
+    import pytest
+    with pytest.raises(services.PlanError):
+        services.record_frame(pid, "frame__discover", ["q?"], memory_refs=[], store=store)
+    with pytest.raises(services.PlanError):
+        services.record_frame(pid, "frame__discover", [], memory_refs=["fact:1"], store=store)
+
+    # a minimal honest frame discharges it; act now unlocks
+    services.record_frame(pid, "frame__discover",
+                          questions=["Welche Versicherungen haben sie schon?", "Vorsorge-Bewusstsein?"],
+                          hypotheses=["KFZ-Moment ist Pflichtakt"], memory_refs=["persona:aylin/day:2026-05-20"],
+                          store=store)
+    plan = services.get_plan(pid, store=store)
+    fr = next(t for t in plan["tasks"] if t["id"] == "frame__discover")
+    assert fr["status"] == "done" and fr["frame"]["memory_refs"] == ["persona:aylin/day:2026-05-20"]
+    assert fr["produces"] == [{"kind": "frame", "id": "frame__discover"}]
+    ready = {t["id"] for t in services.ready_tasks(plan)}
+    assert any(t.startswith("act__") for t in ready)   # the act council is now ready

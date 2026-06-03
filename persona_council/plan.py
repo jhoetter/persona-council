@@ -51,6 +51,7 @@ def _norm_task(raw: dict[str, Any]) -> dict[str, Any]:
         },
         "loop_back": raw.get("loop_back", ""),
         "presentation": dict(raw.get("presentation") or {}),
+        "frame": dict(raw["frame"]) if raw.get("frame") else None,   # analyze output (questions/hypotheses)
     }
 
 
@@ -170,6 +171,63 @@ def ready_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
 
 def is_complete(plan: dict[str, Any]) -> bool:
     return all(t["status"] == "done" for t in plan["tasks"]) and bool(plan["tasks"])
+
+
+# ------------------------------------------------------------------ mutations
+
+def add_task(project_id: str, bucket: str, capability: str, title: str, intent: str = "",
+             consumes: list[str] | None = None, requires: dict | None = None, step: str = "",
+             plan_note: str = "", task_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
+    """Insert a task into the plan (the orchestrator shaping the breadth — e.g. another act council,
+    an extra analyze, a mid-stream synthesis). Returns the created task."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    tid = task_id or _fresh_id(plan, f"{bucket}__{capability or 'task'}")
+    raw = {"id": tid, "title": title, "bucket": bucket, "capability": capability, "intent": intent,
+           "step": step, "consumes": consumes or [], "requires": requires or {}, "plan_note": plan_note}
+    plan["tasks"].append(_norm_task(raw))
+    save_plan(plan, store=store)
+    return task(plan, tid)
+
+
+def _fresh_id(plan: dict[str, Any], base: str) -> str:
+    existing = {t["id"] for t in plan["tasks"]}
+    if base not in existing:
+        return base
+    i = 2
+    while f"{base}_{i}" in existing:
+        i += 1
+    return f"{base}_{i}"
+
+
+def record_frame(project_id: str, task_id: str, questions: list[str], hypotheses: list[str] | None = None,
+                 memory_refs: list[str] | None = None, store: Store | None = None) -> dict[str, Any]:
+    """Discharge an `analyze` frame task: author research questions + hypotheses grounded in cited
+    persona memory / prior evidence. Default-but-discharge­able: must cite >=1 memory ref and >=1
+    question (can't be silently skipped), but a minimal honest frame discharges it."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    t = task(plan, task_id)
+    if not t:
+        raise PlanError("BAD_FRAME", f"unknown task '{task_id}'")
+    if t["bucket"] != "analyze":
+        raise PlanError("BAD_FRAME", f"record_frame targets an analyze task (got bucket '{t['bucket']}')")
+    qs = [str(q).strip() for q in (questions or []) if str(q).strip()]
+    refs = [str(r).strip() for r in (memory_refs or []) if str(r).strip()]
+    if not qs:
+        raise PlanError("BAD_FRAME", "a frame needs >= 1 research question")
+    if not refs:
+        raise PlanError("BAD_FRAME", "a frame must cite >= 1 memory ref (persona memory / prior evidence)")
+    t["frame"] = {"questions": qs, "hypotheses": [str(h).strip() for h in (hypotheses or []) if str(h).strip()],
+                  "memory_refs": refs}
+    t["produces"] = [{"kind": "frame", "id": task_id}]
+    t["status"] = "done"
+    save_plan(plan, store=store)
+    return t
 
 
 # ------------------------------------------------------------------ plan.md render
