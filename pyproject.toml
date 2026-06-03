@@ -1,0 +1,24 @@
+[project]
+name = "persona-council"
+version = "0.1.0"
+description = "Terminal-first MCP customer persona simulation and council system."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "mcp>=1.2.0",
+    "python-multipart>=0.0.9",
+    "python-dotenv>=1.0.0",
+    "uvicorn>=0.30.0",
+]
+
+[project.scripts]
+persona-council = "persona_council.cli:main"
+persona-council-mcp = "persona_council.mcp_server:main"
+persona-council-web = "persona_council.web:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["persona_council"]

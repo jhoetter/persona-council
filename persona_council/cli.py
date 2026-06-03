@@ -1,0 +1,442 @@
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+from .avatar import generate_persona_avatar
+from .config import load_env
+from . import services
+
+
+def _print(data: Any, as_json: bool = True) -> None:
+    if as_json:
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+    else:
+        print(data)
+
+
+def _read_descriptions(path: str) -> list[str]:
+    text = Path(path).read_text(encoding="utf-8")
+    if "\n\n" in text:
+        return [chunk.strip(" -\n\t") for chunk in text.split("\n\n") if chunk.strip()]
+    return [line.strip(" -\t") for line in text.splitlines() if line.strip()]
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="persona-council")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("persona-create")
+    p.add_argument("description")
+    p.add_argument("--segment")
+    p.add_argument("--evidence")
+    p.add_argument("--avatar", action="store_true")
+
+    p = sub.add_parser("persona-bulk")
+    p.add_argument("file")
+    p.add_argument("--segment")
+    p.add_argument("--avatar", action="store_true")
+
+    p = sub.add_parser("persona-list")
+    p.add_argument("--filter")
+
+    p = sub.add_parser("persona-get")
+    p.add_argument("persona_id")
+
+    p = sub.add_parser("persona-soul")
+    p.add_argument("persona_id")
+    p.add_argument("--path-only", action="store_true")
+
+    p = sub.add_parser("persona-context")
+    p.add_argument("persona_id")
+    p.add_argument("--task")
+    p.add_argument("--recent-events", type=int, default=8)
+    p.add_argument("--text", action="store_true")
+
+    p = sub.add_parser("persona-update")
+    p.add_argument("persona_id")
+    p.add_argument("patch_json")
+    p.add_argument("--reason", default="cli update")
+
+    p = sub.add_parser("persona-refresh")
+    p.add_argument("persona_id")
+
+    p = sub.add_parser("avatar-generate")
+    p.add_argument("persona_id")
+    p.add_argument("--style")
+
+    p = sub.add_parser("simulate-day")
+    p.add_argument("persona_id")
+    p.add_argument("--date")
+    p.add_argument("--seed")
+
+    p = sub.add_parser("simulate-range")
+    p.add_argument("persona_id")
+    p.add_argument("start_date")
+    p.add_argument("end_date")
+    p.add_argument("--seed")
+    p.add_argument("--all-days", action="store_true")
+
+    p = sub.add_parser("simulate-continue")
+    p.add_argument("--persona")
+    p.add_argument("--all", action="store_true")
+    p.add_argument("--days", type=int, default=1)
+
+    sub.add_parser("simulate-clear")
+
+    p = sub.add_parser("purge-runtime-data")
+    p.add_argument("--keep-files", action="store_true")
+
+    p = sub.add_parser("state")
+    p.add_argument("persona_id")
+
+    p = sub.add_parser("calendar")
+    p.add_argument("persona_id")
+    p.add_argument("--date")
+    p.add_argument("--view", choices=["day", "week", "month", "year"], default="day")
+
+    p = sub.add_parser("activity")
+    p.add_argument("activity_id")
+
+    p = sub.add_parser("summary")
+    p.add_argument("persona_id")
+    p.add_argument("--start")
+    p.add_argument("--end")
+
+    p = sub.add_parser("pain-points")
+    p.add_argument("persona_id")
+    p.add_argument("--start")
+    p.add_argument("--end")
+
+    p = sub.add_parser("council-run")
+    p.add_argument("prompt")
+    p.add_argument("--persona", action="append", dest="personas")
+    p.add_argument("--rounds", type=int, default=3)
+
+    p = sub.add_parser("ask")
+    p.add_argument("persona_id")
+    p.add_argument("question")
+
+    p = sub.add_parser("compare")
+    p.add_argument("prompt")
+    p.add_argument("personas", nargs="+")
+
+    p = sub.add_parser("evidence-attach")
+    p.add_argument("persona_id")
+    p.add_argument("source_type")
+    p.add_argument("content_or_path")
+    p.add_argument("--notes")
+
+    p = sub.add_parser("export-persona")
+    p.add_argument("persona_id")
+    p.add_argument("--format", choices=["json", "md"], default="json")
+    p.add_argument("--out")
+
+    p = sub.add_parser("export-logs")
+    p.add_argument("persona_id")
+    p.add_argument("--start")
+    p.add_argument("--end")
+    p.add_argument("--format", choices=["json", "csv", "md"], default="json")
+    p.add_argument("--out")
+
+    p = sub.add_parser("logs")
+    p.add_argument("persona_id")
+    p.add_argument("--start")
+    p.add_argument("--end")
+    p.add_argument("--format", choices=["json", "csv", "md"], default="md")
+    p.add_argument("--out")
+
+    p = sub.add_parser("export-council")
+    p.add_argument("session_id")
+    p.add_argument("--format", choices=["json", "md"], default="json")
+    p.add_argument("--out")
+
+    # ---- memory & multi-resolution loop ----
+    p = sub.add_parser("recall")
+    p.add_argument("persona_id")
+    p.add_argument("query")
+    p.add_argument("--as-of")
+    p.add_argument("--k", type=int, default=8)
+
+    p = sub.add_parser("projects")
+    p.add_argument("persona_id")
+
+    p = sub.add_parser("project")
+    p.add_argument("persona_id")
+    p.add_argument("entity_id")
+    p.add_argument("--as-of")
+
+    p = sub.add_parser("state-at")
+    p.add_argument("persona_id")
+    p.add_argument("as_of")
+
+    p = sub.add_parser("timeline")
+    p.add_argument("persona_id")
+    p.add_argument("--start")
+    p.add_argument("--end")
+    p.add_argument("--entity")
+
+    p = sub.add_parser("entities")
+    p.add_argument("persona_id")
+    p.add_argument("--kind")
+    p.add_argument("--name")
+
+    p = sub.add_parser("loops")
+    p.add_argument("persona_id")
+    p.add_argument("--status", default="open")
+
+    p = sub.add_parser("memory")
+    p.add_argument("persona_id")
+
+    p = sub.add_parser("digests")
+    p.add_argument("persona_id")
+    p.add_argument("--scope")
+
+    p = sub.add_parser("plans")
+    p.add_argument("persona_id")
+    p.add_argument("--scope")
+
+    p = sub.add_parser("evaluate")
+    p.add_argument("--persona")
+    p.add_argument("--start")
+    p.add_argument("--end")
+
+    p = sub.add_parser("anomalies")
+    p.add_argument("--persona")
+
+    p = sub.add_parser("backfill-embeddings")
+    p.add_argument("--persona")
+
+    p = sub.add_parser("prune-memory")
+    p.add_argument("persona_id")
+    p.add_argument("--keep-days", type=int, default=120)
+    p.add_argument("--as-of")
+
+    p = sub.add_parser("world-get")
+    p.add_argument("--as-of")
+
+    p = sub.add_parser("world-set")
+    p.add_argument("file", help="JSON file: list of {category, fact, valid_from, valid_to?, relevance_tags?}")
+
+    # brief_* (gather → print instructions+frame for authoring)
+    for name in ["brief-day", "brief-consolidation", "brief-digest", "brief-period", "brief-revision"]:
+        bp = sub.add_parser(name)
+        bp.add_argument("persona_id")
+        if name in ("brief-digest", "brief-period"):
+            bp.add_argument("scope")
+        bp.add_argument("--date")
+
+    # record/put (read authored JSON from file → persist)
+    p = sub.add_parser("put-day-plan")
+    p.add_argument("persona_id"); p.add_argument("date"); p.add_argument("file")
+    p = sub.add_parser("put-period-plan")
+    p.add_argument("persona_id"); p.add_argument("scope"); p.add_argument("date"); p.add_argument("file")
+    p = sub.add_parser("record-deltas")
+    p.add_argument("persona_id"); p.add_argument("date"); p.add_argument("file")
+    p = sub.add_parser("put-digest")
+    p.add_argument("persona_id"); p.add_argument("scope"); p.add_argument("date"); p.add_argument("file")
+    p = sub.add_parser("record-revision")
+    p.add_argument("persona_id"); p.add_argument("file")
+
+    # F2 critic / F3 driver / F5 evidence
+    p = sub.add_parser("brief-critic")
+    p.add_argument("persona_id"); p.add_argument("--start"); p.add_argument("--end"); p.add_argument("--k", type=int, default=12)
+    p = sub.add_parser("record-critic")
+    p.add_argument("persona_id"); p.add_argument("file"); p.add_argument("--start"); p.add_argument("--end")
+    p = sub.add_parser("evaluate-full")
+    p.add_argument("persona_id"); p.add_argument("--start"); p.add_argument("--end")
+    p = sub.add_parser("brief-month")
+    p.add_argument("persona_id"); p.add_argument("month")
+    p = sub.add_parser("record-month")
+    p.add_argument("persona_id"); p.add_argument("month"); p.add_argument("file")
+    p = sub.add_parser("brief-evidence")
+    p.add_argument("persona_id")
+    p = sub.add_parser("record-evidence")
+    p.add_argument("persona_id"); p.add_argument("file")
+    p = sub.add_parser("export-snapshot")
+    p.add_argument("--out")
+    p = sub.add_parser("import-snapshot")
+    p.add_argument("--in", dest="in_dir")
+    p.add_argument("--no-embed", action="store_true")
+    p = sub.add_parser("brief-synthesis")
+    p.add_argument("council_ids", nargs="+")
+    p.add_argument("--title"); p.add_argument("--start"); p.add_argument("--goal")
+    p = sub.add_parser("record-synthesis")
+    p.add_argument("title"); p.add_argument("file")
+    p.add_argument("--start", default=""); p.add_argument("--council", action="append", dest="councils", required=True)
+    p.add_argument("--goal", default=""); p.add_argument("--id", dest="synthesis_id")
+    p = sub.add_parser("record-council")
+    p.add_argument("file", help="JSON: {prompt, persona_ids, turns, votes?, proposal?, summary?, exec_summary?, selection_reason?}")
+    p = sub.add_parser("councils")
+    p = sub.add_parser("council")
+    p.add_argument("session_id"); p.add_argument("--format", choices=["json", "md"], default="json"); p.add_argument("--out")
+    p = sub.add_parser("syntheses")
+    p = sub.add_parser("synthesis")
+    p.add_argument("synthesis_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    load_env()
+    args = build_parser().parse_args(argv)
+    try:
+        if args.command == "persona-create":
+            _print(services.create_persona(args.description, args.segment, args.evidence, args.avatar))
+        elif args.command == "persona-bulk":
+            _print(services.bulk_create_personas(_read_descriptions(args.file), args.segment, args.avatar))
+        elif args.command == "persona-list":
+            _print(services.list_personas({"q": args.filter} if args.filter else None))
+        elif args.command == "persona-get":
+            _print(services.get_persona(args.persona_id))
+        elif args.command == "persona-soul":
+            soul = services.get_persona_soul(args.persona_id)
+            _print(soul["path"] if args.path_only else soul["content"], as_json=False)
+        elif args.command == "persona-context":
+            ctx = services.prepare_persona_agent_context(args.persona_id, args.task, args.recent_events)
+            _print(ctx["agent_context"] if args.text else ctx, as_json=not args.text)
+        elif args.command == "persona-update":
+            _print(services.update_persona(args.persona_id, json.loads(args.patch_json), args.reason))
+        elif args.command == "persona-refresh":
+            _print(services.refresh_persona_from_source(args.persona_id))
+        elif args.command == "avatar-generate":
+            _print(generate_persona_avatar(args.persona_id, args.style))
+        elif args.command == "simulate-day":
+            _print(services.simulate_day(args.persona_id, args.date, seed=args.seed))
+        elif args.command == "simulate-range":
+            _print(services.simulate_range(args.persona_id, args.start_date, args.end_date, "all-days" if args.all_days else None, args.seed))
+        elif args.command == "simulate-continue":
+            _print(services.continue_simulation(None if args.all else args.persona, args.days))
+        elif args.command == "simulate-clear":
+            _print(services.clear_simulations())
+        elif args.command == "purge-runtime-data":
+            _print(services.purge_runtime_data(remove_files=not args.keep_files))
+        elif args.command == "state":
+            _print(services.get_current_state(args.persona_id))
+        elif args.command == "calendar":
+            if args.view == "day":
+                _print(services.get_calendar(args.persona_id, args.date))
+            else:
+                _print(services.get_calendar_period(args.persona_id, args.date, args.view))
+        elif args.command == "activity":
+            _print(services.get_activity(args.activity_id))
+        elif args.command == "summary":
+            _print(services.summarize_persona_period(args.persona_id, args.start, args.end))
+        elif args.command == "pain-points":
+            _print(services.extract_pain_points(args.persona_id, args.start, args.end))
+        elif args.command == "council-run":
+            _print(services.run_council(args.prompt, args.personas, rounds=args.rounds))
+        elif args.command == "ask":
+            _print(services.ask_persona(args.persona_id, args.question))
+        elif args.command == "compare":
+            _print(services.compare_personas(args.prompt, args.personas))
+        elif args.command == "evidence-attach":
+            _print(services.attach_evidence(args.persona_id, args.source_type, args.content_or_path, args.notes))
+        elif args.command == "export-persona":
+            content = services.export_persona(args.persona_id, args.format)
+            _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out))
+        elif args.command == "export-logs":
+            content = services.export_logs(args.persona_id, args.start, args.end, args.format)
+            _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out))
+        elif args.command == "logs":
+            content = services.export_logs(args.persona_id, args.start, args.end, args.format)
+            _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out))
+        elif args.command == "export-council":
+            content = services.export_council_session(args.session_id, args.format)
+            _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out))
+        elif args.command == "recall":
+            _print(services.recall_memory(args.persona_id, args.query, args.as_of, args.k))
+        elif args.command == "projects":
+            _print(services.list_active_projects(args.persona_id))
+        elif args.command == "project":
+            _print(services.get_project(args.persona_id, args.entity_id, args.as_of))
+        elif args.command == "state-at":
+            _print(services.get_state_at(args.persona_id, args.as_of))
+        elif args.command == "timeline":
+            _print(services.get_timeline(args.persona_id, args.start, args.end, args.entity))
+        elif args.command == "entities":
+            _print(services.search_entities(args.persona_id, args.kind, args.name))
+        elif args.command == "loops":
+            _print(services.get_open_loops(args.persona_id, args.status))
+        elif args.command == "memory":
+            _print(services.get_persona_memory(args.persona_id)["content"], as_json=False)
+        elif args.command == "digests":
+            _print(services.list_digests(args.persona_id, args.scope))
+        elif args.command == "plans":
+            _print(services.list_period_plans(args.persona_id, args.scope))
+        elif args.command == "evaluate":
+            _print(services.evaluate_simulation(args.persona, args.start, args.end))
+        elif args.command == "anomalies":
+            _print(services.list_memory_anomalies(args.persona))
+        elif args.command == "backfill-embeddings":
+            _print(services.backfill_embeddings(args.persona))
+        elif args.command == "prune-memory":
+            _print(services.prune_memory(args.persona_id, args.keep_days, args.as_of))
+        elif args.command == "world-get":
+            _print(services.get_world_context(args.as_of))
+        elif args.command == "world-set":
+            _print(services.set_world_context(json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "brief-day":
+            _print(services.brief_day(args.persona_id, args.date))
+        elif args.command == "brief-consolidation":
+            _print(services.brief_consolidation(args.persona_id, args.date))
+        elif args.command == "brief-digest":
+            _print(services.brief_digest(args.persona_id, args.scope, args.date))
+        elif args.command == "brief-period":
+            _print(services.brief_period(args.persona_id, args.scope, args.date))
+        elif args.command == "brief-revision":
+            _print(services.brief_persona_revision(args.persona_id, args.date))
+        elif args.command == "put-day-plan":
+            _print(services.put_day_plan(args.persona_id, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "put-period-plan":
+            _print(services.put_period_plan(args.persona_id, args.scope, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "record-deltas":
+            _print(services.record_memory_deltas(args.persona_id, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "put-digest":
+            _print(services.put_digest(args.persona_id, args.scope, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "record-revision":
+            _print(services.record_persona_revision(args.persona_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "brief-critic":
+            _print(services.brief_eval_critic(args.persona_id, args.start, args.end, args.k))
+        elif args.command == "record-critic":
+            _print(services.record_eval_critic(args.persona_id, json.loads(Path(args.file).read_text(encoding="utf-8")), args.start, args.end))
+        elif args.command == "evaluate-full":
+            _print(services.evaluate_simulation_full(args.persona_id, args.start, args.end))
+        elif args.command == "brief-month":
+            _print(services.brief_month(args.persona_id, args.month))
+        elif args.command == "record-month":
+            _print(services.record_month_bundle(args.persona_id, args.month, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "brief-evidence":
+            _print(services.brief_evidence_check(args.persona_id))
+        elif args.command == "record-evidence":
+            _print(services.record_evidence_check(args.persona_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "export-snapshot":
+            _print(services.export_snapshot(args.out))
+        elif args.command == "import-snapshot":
+            _print(services.import_snapshot(args.in_dir, embed=not args.no_embed))
+        elif args.command == "brief-synthesis":
+            _print(services.brief_synthesis(args.council_ids, args.title, args.start, args.goal))
+        elif args.command == "record-synthesis":
+            _print(services.record_synthesis(args.title, args.start, args.councils, json.loads(Path(args.file).read_text(encoding="utf-8")), args.goal, args.synthesis_id))
+        elif args.command == "record-council":
+            _print(services.record_council(**json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "councils":
+            _print(services.list_councils())
+        elif args.command == "council":
+            content = services.export_council_session(args.session_id, args.format) if args.format == "md" else services.get_council(args.session_id)
+            _print({"path": services.write_export(content, args.out)} if args.out and args.format == "md" else content, as_json=not (args.out and args.format=="md"))
+        elif args.command == "syntheses":
+            _print(services.list_syntheses())
+        elif args.command == "synthesis":
+            content = services.export_synthesis(args.synthesis_id, args.format)
+            _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
+        return 0
+    except Exception as exc:
+        print(f"{type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

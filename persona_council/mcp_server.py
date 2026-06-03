@@ -1,0 +1,548 @@
+from __future__ import annotations
+
+import time
+from typing import Any
+
+from .config import MEMORY_SCHEMA_VERSION, load_env
+from . import services
+from .avatar import generate_persona_avatar
+
+SERVER_VERSION = "0.2.0"
+
+# Implicit decision DAG: each tool hints the natural next
+# step so the host agent can route the simulate -> consolidate -> digest loop.
+_NEXT: dict[str, dict[str, Any]] = {
+    "create_persona": {"name": "brief_day", "reason": "plan the persona's first day before simulating"},
+    "bulk_create_personas": {"name": "list_personas", "reason": "review the created personas"},
+    "brief_day": {"name": "put_day_plan", "reason": "persist the day plan you authored from this briefing"},
+    "put_day_plan": {"name": "simulate_day", "reason": "simulate the planned day"},
+    "simulate_day": {"name": "brief_consolidation", "reason": "consolidate the day into memory"},
+    "brief_consolidation": {"name": "record_memory_deltas", "reason": "persist the entities/facts/threads you extracted"},
+    "record_memory_deltas": {"name": "evaluate_simulation", "reason": "check quality, or brief_digest to roll up"},
+    "brief_period": {"name": "put_period_plan", "reason": "persist the period plan + its sample_days"},
+    "put_period_plan": {"name": "simulate_day", "reason": "simulate the chosen sample_days, then consolidate each"},
+    "brief_digest": {"name": "put_digest", "reason": "persist the digest you authored"},
+    "brief_persona_revision": {"name": "record_persona_revision", "reason": "persist the (usually small) identity drift"},
+    "recall_memory": {"name": "get_project", "reason": "open the timeline of a project a hit pointed to"},
+    "list_active_projects": {"name": "get_project", "reason": "open one project's full timeline"},
+    "get_persona": {"name": "get_persona_memory", "reason": "see the rendered memory (active projects, threads)"},
+    "brief_eval_critic": {"name": "record_eval_critic", "reason": "persist the semantic verdict you authored"},
+    "record_eval_critic": {"name": "evaluate_simulation_full", "reason": "combined structural+semantic top verdict"},
+    "brief_month": {"name": "record_month_bundle", "reason": "persist the authored month bundle through the loop"},
+    "record_month_bundle": {"name": "brief_month", "reason": "continue with the next month"},
+    "brief_evidence_check": {"name": "record_evidence_check", "reason": "persist provenance verdict (confirmed/contradicted)"},
+    "brief_synthesis": {"name": "record_synthesis", "reason": "persist the cross-council synthesis you authored"},
+    "record_synthesis": {"name": "export_synthesis", "reason": "render the stakeholder report"},
+    "run_council": {"name": "brief_synthesis", "reason": "chain councils into a synthesis once you have several"},
+    "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
+}
+
+
+def _env(tool: str, data: Any, started: float) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "data": data,
+        "next_recommended_tool": _NEXT.get(tool),
+        "_meta": {
+            "tool": tool,
+            "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+            "server_version": SERVER_VERSION,
+            "schema_version": MEMORY_SCHEMA_VERSION,
+        },
+    }
+
+
+def build_server():
+    from mcp.server.fastmcp import FastMCP
+
+    mcp = FastMCP("persona-council")
+
+    # ================= Persona / identity =================
+    @mcp.tool()
+    def create_persona(description: str, segment_hint: str | None = None, evidence: str | None = None, generate_avatar: bool = False) -> dict[str, Any]:
+        """Create one persona from a source description. Profile text is host-authored."""
+        t = time.perf_counter()
+        return _env("create_persona", services.create_persona(description, segment_hint, evidence, generate_avatar), t)
+
+    @mcp.tool()
+    def bulk_create_personas(descriptions: list[str], segment_strategy: str | None = None, generate_avatars: bool = False) -> dict[str, Any]:
+        """Create many personas at once from a list of source descriptions."""
+        t = time.perf_counter()
+        return _env("bulk_create_personas", services.bulk_create_personas(descriptions, segment_strategy, generate_avatars), t)
+
+    @mcp.tool()
+    def get_persona(persona_id: str) -> dict[str, Any]:
+        """Full persona record + recent calendar/experience/pain points."""
+        t = time.perf_counter()
+        return _env("get_persona", services.get_persona(persona_id), t)
+
+    @mcp.tool()
+    def list_personas(filters: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Compact list of all personas (overview before drilling in)."""
+        t = time.perf_counter()
+        return _env("list_personas", services.list_personas(filters), t)
+
+    @mcp.tool()
+    def get_persona_soul(persona_id: str) -> dict[str, Any]:
+        """The persona's SOUL.md (authoritative identity + grown drift)."""
+        t = time.perf_counter()
+        return _env("get_persona_soul", services.get_persona_soul(persona_id), t)
+
+    @mcp.tool()
+    def prepare_persona_agent_context(persona_id: str, task: str | None = None, recent_events: int = 8) -> dict[str, Any]:
+        """Build the launch context for a persona subagent (SOUL + state + recent events)."""
+        t = time.perf_counter()
+        return _env("prepare_persona_agent_context", services.prepare_persona_agent_context(persona_id, task, recent_events), t)
+
+    @mcp.tool()
+    def update_persona(persona_id: str, patch: dict[str, Any], reason: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("update_persona", services.update_persona(persona_id, patch, reason), t)
+
+    @mcp.tool()
+    def refresh_persona_from_source(persona_id: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("refresh_persona_from_source", services.refresh_persona_from_source(persona_id), t)
+
+    @mcp.tool()
+    def generate_avatar(persona_id: str, style: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("generate_avatar", generate_persona_avatar(persona_id, style), t)
+
+    # ================= Planning (Phase A, multi-resolution) =================
+    @mcp.tool()
+    def brief_day(persona_id: str, date: str | None = None) -> dict[str, Any]:
+        """GATHER context for planning ONE day (active projects, open threads, recall,
+        world). Returns instructions for you to author a day plan; then put_day_plan."""
+        t = time.perf_counter()
+        return _env("brief_day", services.brief_day(persona_id, date), t)
+
+    @mcp.tool()
+    def put_day_plan(persona_id: str, date: str, plan: dict[str, Any]) -> dict[str, Any]:
+        """Persist the day plan you authored from brief_day."""
+        t = time.perf_counter()
+        return _env("put_day_plan", services.put_day_plan(persona_id, date, plan), t)
+
+    @mcp.tool()
+    def get_day_plan(persona_id: str, date: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_day_plan", services.get_day_plan(persona_id, date), t)
+
+    @mcp.tool()
+    def brief_period(persona_id: str, scope: str, date: str | None = None) -> dict[str, Any]:
+        """GATHER context for a week|month|quarter|year plan, incl. candidate sample days.
+        Author a period plan (with sample_days) then put_period_plan. Trends over long
+        spans come from period plans + sampled days, not from simulating every day."""
+        t = time.perf_counter()
+        return _env("brief_period", services.brief_period(persona_id, scope, date), t)
+
+    @mcp.tool()
+    def put_period_plan(persona_id: str, scope: str, date: str, plan: dict[str, Any]) -> dict[str, Any]:
+        """Persist a period plan (its sample_days drive which days you simulate concretely)."""
+        t = time.perf_counter()
+        return _env("put_period_plan", services.put_period_plan(persona_id, scope, date, plan), t)
+
+    @mcp.tool()
+    def get_period_plan(persona_id: str, scope: str, date: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_period_plan", services.get_period_plan(persona_id, scope, date), t)
+
+    @mcp.tool()
+    def list_period_plans(persona_id: str, scope: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("list_period_plans", services.list_period_plans(persona_id, scope), t)
+
+    # ================= Simulation (Phase B) =================
+    @mcp.tool()
+    def simulate_day(persona_id: str, date: str | None = None, timezone: str | None = None, seed: str | None = None, constraints: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Simulate one workday (plan/memory-aware). Day text is host-authored. Then consolidate."""
+        t = time.perf_counter()
+        return _env("simulate_day", services.simulate_day(persona_id, date, timezone, seed, constraints), t)
+
+    @mcp.tool()
+    def simulate_range(persona_id: str, start_date: str, end_date: str, cadence: str | None = None, seed: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("simulate_range", services.simulate_range(persona_id, start_date, end_date, cadence, seed), t)
+
+    @mcp.tool()
+    def continue_simulation(persona_id: str | None = None, days: int = 1) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("continue_simulation", services.continue_simulation(persona_id, days), t)
+
+    @mcp.tool()
+    def clear_simulations() -> dict[str, Any]:
+        """Delete all generated simulation + memory state (personas kept)."""
+        t = time.perf_counter()
+        return _env("clear_simulations", services.clear_simulations(), t)
+
+    @mcp.tool()
+    def purge_runtime_data(remove_files: bool = True) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("purge_runtime_data", services.purge_runtime_data(remove_files), t)
+
+    # ================= Consolidation (Phase C) =================
+    @mcp.tool()
+    def brief_consolidation(persona_id: str, date: str | None = None) -> dict[str, Any]:
+        """GATHER a simulated day + known entities. Returns instructions for you to author
+        memory_deltas (entities/facts/threads/event_links); then record_memory_deltas."""
+        t = time.perf_counter()
+        return _env("brief_consolidation", services.brief_consolidation(persona_id, date), t)
+
+    @mcp.tool()
+    def record_memory_deltas(persona_id: str, date: str, deltas: dict[str, Any]) -> dict[str, Any]:
+        """Persist host-authored memory deltas: resolves/dedupes entities, writes bi-temporal
+        facts (invalidating superseded status), opens/resolves threads, links events, embeds."""
+        t = time.perf_counter()
+        return _env("record_memory_deltas", services.record_memory_deltas(persona_id, date, deltas), t)
+
+    # ================= Digests (Phase D) =================
+    @mcp.tool()
+    def brief_digest(persona_id: str, scope: str, date: str | None = None) -> dict[str, Any]:
+        """GATHER a period for a consolidated digest (replaces hardcoded reflections)."""
+        t = time.perf_counter()
+        return _env("brief_digest", services.brief_digest(persona_id, scope, date), t)
+
+    @mcp.tool()
+    def put_digest(persona_id: str, scope: str, date: str, digest: dict[str, Any]) -> dict[str, Any]:
+        """Persist + embed the digest you authored from brief_digest."""
+        t = time.perf_counter()
+        return _env("put_digest", services.put_digest(persona_id, scope, date, digest), t)
+
+    @mcp.tool()
+    def list_digests(persona_id: str, scope: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("list_digests", services.list_digests(persona_id, scope), t)
+
+    # ================= Memory retrieval (the "check history" surface) =================
+    @mcp.tool()
+    def recall_memory(persona_id: str, query: str, as_of: str | None = None, k: int = 8) -> dict[str, Any]:
+        """Hybrid (semantic + keyword/entity + recency + importance) recall over episodes,
+        facts, digests, threads. USE when you want to check if the past has something relevant.
+        `as_of` respects bi-temporal validity for time-travel."""
+        t = time.perf_counter()
+        return _env("recall_memory", services.recall_memory(persona_id, query, as_of, k), t)
+
+    @mcp.tool()
+    def list_active_projects(persona_id: str) -> dict[str, Any]:
+        """Compact list of the persona's open projects with status + open-loop counts."""
+        t = time.perf_counter()
+        return _env("list_active_projects", services.list_active_projects(persona_id), t)
+
+    @mcp.tool()
+    def get_project(persona_id: str, entity_id: str, as_of: str | None = None) -> dict[str, Any]:
+        """Full fact/status timeline of one project (use `as_of` for how it looked then)."""
+        t = time.perf_counter()
+        return _env("get_project", services.get_project(persona_id, entity_id, as_of), t)
+
+    @mcp.tool()
+    def get_state_at(persona_id: str, as_of: str) -> dict[str, Any]:
+        """Time-travel: entities + facts + open threads + world valid at a given date."""
+        t = time.perf_counter()
+        return _env("get_state_at", services.get_state_at(persona_id, as_of), t)
+
+    @mcp.tool()
+    def get_timeline(persona_id: str, start: str | None = None, end: str | None = None, entity_id: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_timeline", services.get_timeline(persona_id, start, end, entity_id), t)
+
+    @mcp.tool()
+    def search_entities(persona_id: str, kind: str | None = None, name: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("search_entities", services.search_entities(persona_id, kind, name), t)
+
+    @mcp.tool()
+    def get_open_loops(persona_id: str, status: str | None = "open") -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_open_loops", services.get_open_loops(persona_id, status), t)
+
+    @mcp.tool()
+    def resolve_entity(persona_id: str, mention: str, kind: str | None = None) -> dict[str, Any]:
+        """Resolve a free-text mention to an existing entity (dedup), or null if new."""
+        t = time.perf_counter()
+        return _env("resolve_entity", services.resolve_entity(persona_id, mention, kind), t)
+
+    @mcp.tool()
+    def get_persona_memory(persona_id: str) -> dict[str, Any]:
+        """Render + return MEMORY.md: active projects (timelines), open threads, digests."""
+        t = time.perf_counter()
+        return _env("get_persona_memory", services.get_persona_memory(persona_id), t)
+
+    # ================= World, evolution, anomalies, eval =================
+    @mcp.tool()
+    def set_world_context(items: list[dict[str, Any]]) -> dict[str, Any]:
+        """Set exogenous backdrop facts (season, regulation, market...). Not shared persona knowledge."""
+        t = time.perf_counter()
+        return _env("set_world_context", services.set_world_context(items), t)
+
+    @mcp.tool()
+    def get_world_context(as_of: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_world_context", services.get_world_context(as_of), t)
+
+    @mcp.tool()
+    def brief_persona_revision(persona_id: str, date: str | None = None) -> dict[str, Any]:
+        """GATHER evidence (digests/facts) to propose SLOW identity drift. Change is the exception."""
+        t = time.perf_counter()
+        return _env("brief_persona_revision", services.brief_persona_revision(persona_id, date), t)
+
+    @mcp.tool()
+    def record_persona_revision(persona_id: str, revision: dict[str, Any]) -> dict[str, Any]:
+        """Persist evidence-backed identity drift (re-renders SOUL); source identity preserved."""
+        t = time.perf_counter()
+        return _env("record_persona_revision", services.record_persona_revision(persona_id, revision), t)
+
+    @mcp.tool()
+    def list_persona_revisions(persona_id: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("list_persona_revisions", services.list_persona_revisions(persona_id), t)
+
+    @mcp.tool()
+    def list_memory_anomalies(persona_id: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("list_memory_anomalies", services.list_memory_anomalies(persona_id), t)
+
+    @mcp.tool()
+    def evaluate_simulation(persona_id: str | None = None, start: str | None = None, end: str | None = None) -> dict[str, Any]:
+        """Run the quality harness (uniformity, repetition, continuity, project movement,
+        consistency, anti-steering). Returns green/warn/red — the measurable 'top' bar."""
+        t = time.perf_counter()
+        return _env("evaluate_simulation", services.evaluate_simulation(persona_id, start, end), t)
+
+    # ----- F2 LLM critic (semantic eval) -----
+    @mcp.tool()
+    def brief_eval_critic(persona_id: str, start: str | None = None, end: str | None = None, sample_k: int = 12) -> dict[str, Any]:
+        """GATHER source+SOUL+sampled activities+arcs for a semantic critique. Author a
+        verdict (anti_steering/in_character/dialogue/arc/mundane 0-5 + flags) then record."""
+        t = time.perf_counter()
+        return _env("brief_eval_critic", services.brief_eval_critic(persona_id, start, end, sample_k), t)
+
+    @mcp.tool()
+    def record_eval_critic(persona_id: str, verdict: dict[str, Any], start: str | None = None, end: str | None = None) -> dict[str, Any]:
+        """Persist the host-authored critic verdict; flags low dimensions + items as anomalies."""
+        t = time.perf_counter()
+        return _env("record_eval_critic", services.record_eval_critic(persona_id, verdict, start, end), t)
+
+    @mcp.tool()
+    def evaluate_simulation_full(persona_id: str, start: str | None = None, end: str | None = None) -> dict[str, Any]:
+        """Combined 'top' verdict: structural harness + latest LLM critic (definition v2)."""
+        t = time.perf_counter()
+        return _env("evaluate_simulation_full", services.evaluate_simulation_full(persona_id, start, end), t)
+
+    # ----- F3 autonomous loop driver -----
+    @mcp.tool()
+    def brief_month(persona_id: str, month: str) -> dict[str, Any]:
+        """GATHER context to author a whole month bundle (period plan + sample days + digest),
+        chained on the prior month. Then record_month_bundle."""
+        t = time.perf_counter()
+        return _env("brief_month", services.brief_month(persona_id, month), t)
+
+    @mcp.tool()
+    def record_month_bundle(persona_id: str, month: str, bundle: dict[str, Any]) -> dict[str, Any]:
+        """Persist a host-authored month bundle through the full loop (plan→sample days→
+        simulate→consolidate→digest→embed)."""
+        t = time.perf_counter()
+        return _env("record_month_bundle", services.record_month_bundle(persona_id, month, bundle), t)
+
+    # ----- F5 evidence integration -----
+    @mcp.tool()
+    def brief_evidence_check(persona_id: str) -> dict[str, Any]:
+        """GATHER profile claims + attached evidence to validate synthesis against reality."""
+        t = time.perf_counter()
+        return _env("brief_evidence_check", services.brief_evidence_check(persona_id), t)
+
+    @mcp.tool()
+    def record_evidence_check(persona_id: str, result: dict[str, Any]) -> dict[str, Any]:
+        """Persist provenance verdict: confirmed/contradicted/unsupported; flags contradictions."""
+        t = time.perf_counter()
+        return _env("record_evidence_check", services.record_evidence_check(persona_id, result), t)
+
+    @mcp.tool()
+    def backfill_embeddings(persona_id: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("backfill_embeddings", services.backfill_embeddings(persona_id), t)
+
+    @mcp.tool()
+    def prune_memory(persona_id: str, keep_days: int = 120, as_of: str | None = None) -> dict[str, Any]:
+        """Salience forgetting: drop embeddings of old, unlinked, loop-free episodes."""
+        t = time.perf_counter()
+        return _env("prune_memory", services.prune_memory(persona_id, keep_days, as_of), t)
+
+    # ================= Inspection (existing) =================
+    @mcp.tool()
+    def get_current_state(persona_id: str, at_time: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_current_state", services.get_current_state(persona_id, at_time), t)
+
+    @mcp.tool()
+    def get_calendar(persona_id: str, date: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_calendar", services.get_calendar(persona_id, date), t)
+
+    @mcp.tool()
+    def get_calendar_period(persona_id: str, date: str | None = None, view: str = "day") -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_calendar_period", services.get_calendar_period(persona_id, date, view), t)
+
+    @mcp.tool()
+    def get_activity(activity_id: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_activity", services.get_activity(activity_id), t)
+
+    @mcp.tool()
+    def summarize_persona_period(persona_id: str, start_date: str | None = None, end_date: str | None = None, lens: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("summarize_persona_period", services.summarize_persona_period(persona_id, start_date, end_date, lens), t)
+
+    @mcp.tool()
+    def extract_pain_points(persona_id: str, start_date: str | None = None, end_date: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("extract_pain_points", services.extract_pain_points(persona_id, start_date, end_date), t)
+
+    # ================= Council =================
+    @mcp.tool()
+    def select_council(prompt: str, filters: dict[str, Any] | None = None, count: int = 3, disagreement_goal: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("select_council", services.select_council(prompt, filters, count, disagreement_goal), t)
+
+    @mcp.tool()
+    def run_council(prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None, rounds: int = 3, context: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("run_council", services.run_council(prompt, persona_ids, filters, rounds, context), t)
+
+    @mcp.tool()
+    def ask_persona(persona_id: str, question: str, context: str | None = None) -> dict[str, Any]:
+        """Interview one persona. Grounded in SOUL + memory; it can recall on demand."""
+        t = time.perf_counter()
+        return _env("ask_persona", services.ask_persona(persona_id, question, context), t)
+
+    @mcp.tool()
+    def compare_personas(prompt: str, persona_ids: list[str], output_format: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("compare_personas", services.compare_personas(prompt, persona_ids, output_format), t)
+
+    @mcp.tool()
+    def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "") -> dict[str, Any]:
+        """Persist a host-authored council (openings/moderator/directed turns + votes +
+        exec_summary). Use from the run-council / synthesize skills instead of writing the DB."""
+        t = time.perf_counter()
+        return _env("record_council", services.record_council(prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason), t)
+
+    @mcp.tool()
+    def get_council(session_id: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_council", services.get_council(session_id), t)
+
+    @mcp.tool()
+    def list_councils() -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("list_councils", services.list_councils(), t)
+
+    # ================= Evidence / export =================
+    @mcp.tool()
+    def attach_evidence(persona_id: str, source_type: str, content_or_path: str, notes: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("attach_evidence", services.attach_evidence(persona_id, source_type, content_or_path, notes), t)
+
+    @mcp.tool()
+    def export_persona(persona_id: str, format: str = "json") -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("export_persona", services.export_persona(persona_id, format), t)
+
+    @mcp.tool()
+    def export_logs(persona_id: str, start_date: str | None = None, end_date: str | None = None, format: str = "json") -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("export_logs", services.export_logs(persona_id, start_date, end_date, format), t)
+
+    @mcp.tool()
+    def export_council_session(session_id: str, format: str = "json") -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("export_council_session", services.export_council_session(session_id, format), t)
+
+    @mcp.tool()
+    def export_snapshot(out_dir: str | None = None) -> dict[str, Any]:
+        """Write a portable snapshot of ALL generated state (profiles, SOUL/MEMORY,
+        events, memory graph, eval, avatars) to data/export/ — gitignored/local-only."""
+        t = time.perf_counter()
+        return _env("export_snapshot", services.export_snapshot(out_dir), t)
+
+    @mcp.tool()
+    def import_snapshot(in_dir: str | None = None, embed: bool = True) -> dict[str, Any]:
+        """Rebuild the runtime DB (+ avatars, SOUL/MEMORY) from data/export/. The portable
+        round-trip: clone + import_snapshot reproduces the exact state, no re-generation."""
+        t = time.perf_counter()
+        return _env("import_snapshot", services.import_snapshot(in_dir, embed=embed), t)
+
+    # ----- Synthesis (study arc over a chain of councils) -----
+    @mcp.tool()
+    def brief_synthesis(council_ids: list[str], title: str | None = None, start_input: str | None = None, goal: str | None = None) -> dict[str, Any]:
+        """GATHER an ordered chain of councils (their exec_summaries/votes) so you can author
+        a cross-council synthesis (arc, gesamtbild, recommendations, positioning, pain-solvers)."""
+        t = time.perf_counter()
+        return _env("brief_synthesis", services.brief_synthesis(council_ids, title, start_input, goal), t)
+
+    @mcp.tool()
+    def record_synthesis(title: str, start_input: str, council_ids: list[str], payload: dict[str, Any], goal: str = "", synthesis_id: str | None = None) -> dict[str, Any]:
+        """Persist/UPDATE the host-authored synthesis over a council chain. Pass the same
+        synthesis_id each iteration of the driver loop to grow one study arc in place."""
+        t = time.perf_counter()
+        return _env("record_synthesis", services.record_synthesis(title, start_input, council_ids, payload, goal, synthesis_id), t)
+
+    @mcp.tool()
+    def get_synthesis(synthesis_id: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_synthesis", services.get_synthesis(synthesis_id), t)
+
+    @mcp.tool()
+    def list_syntheses() -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("list_syntheses", services.list_syntheses(), t)
+
+    @mcp.tool()
+    def export_synthesis(synthesis_id: str, format: str = "md") -> dict[str, Any]:
+        """Render the synthesis as a stakeholder report (md|json), referencing each council."""
+        t = time.perf_counter()
+        return _env("export_synthesis", services.export_synthesis(synthesis_id, format), t)
+
+    # ================= Resources & prompts =================
+    @mcp.resource("persona-council://schema/memory")
+    def memory_schema() -> str:
+        """Read-only: the memory object model + the simulate->consolidate->digest loop."""
+        return (
+            "Persona Council memory model (schema v%d):\n"
+            "- entities(kind: project|person|org|building|authority|topic, status)\n"
+            "- entity_facts(fact, status, t_valid, t_invalid, importance)  # bi-temporal, time-travel\n"
+            "- threads(open loops with identity), event_entities(links), embeddings(semantic recall)\n"
+            "- plans(day|week|month|quarter|year), memory_digests, persona_revisions, world_context\n"
+            "Loop per day: brief_day -> put_day_plan -> simulate_day -> brief_consolidation -> "
+            "record_memory_deltas -> (brief_digest/put_digest periodically) -> evaluate_simulation.\n"
+            "Long horizons: brief_period -> put_period_plan (with sample_days) -> simulate only those days.\n"
+            "All text is authored by you (the MCP host). The server gathers context and persists."
+            % MEMORY_SCHEMA_VERSION
+        )
+
+    @mcp.prompt()
+    def simulate_persona_day(persona_id: str, date: str) -> str:
+        """Playbook: drive one persona-day through the full memory loop."""
+        return (
+            f"Simulate persona {persona_id} on {date} with memory:\n"
+            f"1. brief_day({persona_id}, {date}) -> author a day plan grounded in the briefing -> put_day_plan.\n"
+            f"2. simulate_day({persona_id}, {date}).\n"
+            f"3. brief_consolidation({persona_id}, {date}) -> author memory_deltas -> record_memory_deltas.\n"
+            f"4. Periodically brief_digest/put_digest; run evaluate_simulation to check quality.\n"
+            "Author all text yourself; ground it in SOUL + recalled memory; never steer toward a product thesis."
+        )
+
+    return mcp
+
+
+def main() -> None:
+    load_env()
+    try:
+        mcp = build_server()
+    except ImportError as exc:
+        raise SystemExit("Install MCP dependencies first: uv sync") from exc
+    mcp.run()
+
+
+if __name__ == "__main__":
+    main()
