@@ -38,7 +38,7 @@ def utc_now_iso() -> str:
 
 # --- Memory & simulation settings (spec/memory-and-simulation-architecture.md) ---
 
-MEMORY_SCHEMA_VERSION = 2
+MEMORY_SCHEMA_VERSION = 3
 
 
 def embedding_model() -> str:

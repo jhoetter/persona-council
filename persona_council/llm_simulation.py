@@ -871,6 +871,94 @@ def validate_evidence_check_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# --- Meta-Report: second-order synthesis over a whole project graph ----------
+# Two host-authored steps: derive an OUTLINE from the graph (topology + build
+# order), then author each SECTION grounded in its source studies (two-level
+# provenance: meta-section -> study -> council).
+
+def build_meta_outline_prompt(frame: dict[str, Any], language: str | None = None) -> str:
+    return f"""You are writing a META-REPORT over a whole research PROJECT: a graph of studies
+(each study = a council chain consolidated into a synthesis). Derive the report's OUTLINE
+from the graph — its themes and dependency edges — not from a fixed template.
+
+Return ONLY one JSON object with exactly these keys:
+build_order_narrative: string (how the understanding was BUILT over time — read the studies
+  in creation order and describe the trajectory: what was asked first, what each answer spawned)
+sections: array of objects {{heading:string, theme_tags:array of strings,
+  source_study_ids:array of strings (the study ids this section draws on — use ids from the frame),
+  intent:string (one line: what this section establishes)}}
+  Organize by THEME/logic (cluster studies by theme + dependency), NOT by chronology. Always
+  include three cross-cutting sections somewhere: one for how-understanding-was-built (trajectory),
+  one for tensions & deliberate non-targets, and one for the open frontier (unresolved questions).
+
+Rules:
+- Derive structure from the actual graph (themes, edges, build order in the frame). Different
+  graphs must yield different outlines.
+- Every section's source_study_ids must be real ids present in the frame.
+- {language_instruction(language)}
+
+Project graph frame (project, nodes with themes/sentiment, edges, build order, open questions,
+and each study's compact content):
+{json.dumps(frame, indent=2, ensure_ascii=False)}
+"""
+
+
+def validate_meta_outline_payload(payload: dict[str, Any], study_ids: list[str] | None = None) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("Meta outline must be a JSON object.")
+    allowed = set(study_ids or [])
+    sections = []
+    for i, s in enumerate(payload.get("sections", []) or []):
+        if not isinstance(s, dict) or not str(s.get("heading", "")).strip():
+            continue
+        srcs = [str(x).strip() for x in (s.get("source_study_ids", []) or []) if str(x).strip()]
+        if allowed:
+            srcs = [x for x in srcs if x in allowed]
+        sections.append({
+            "id": f"sec{i + 1}",
+            "heading": str(s["heading"]).strip()[:200],
+            "theme_tags": _strings(s.get("theme_tags", []) or [], 8, 40),
+            "source_study_ids": srcs[:50],
+            "intent": str(s.get("intent", "")).strip()[:400],
+        })
+    if not sections:
+        raise ValueError("Meta outline must contain at least one section with a heading.")
+    return {"build_order_narrative": str(payload.get("build_order_narrative", "")).strip()[:6000],
+            "sections": sections[:40]}
+
+
+def build_meta_section_prompt(frame: dict[str, Any], language: str | None = None) -> str:
+    return f"""You are authoring ONE section of a research meta-report. Write it grounded in the
+source studies provided — every load-bearing claim must cite a study (and, where possible, the
+council inside it).
+
+Return ONLY one JSON object with exactly these keys:
+markdown: string (the section body in Markdown; clear, concise, honest — preserve dissent and
+  non-targets where relevant; do not invent consensus)
+citations: array of objects {{study_id:string, council_id:string (may be empty), quote:string}}
+  (the provenance behind the section's claims; use study ids/council ids from the frame)
+
+Rules:
+- Ground every claim; a section with zero citations is wrong. Use only ids present in the frame.
+- {language_instruction(language)}
+
+Section frame (heading + intent + the full content of the source studies + their councils):
+{json.dumps(frame, indent=2, ensure_ascii=False)}
+"""
+
+
+def validate_meta_section_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("Meta section must be a JSON object.")
+    citations = []
+    for c in payload.get("citations", []) or []:
+        if isinstance(c, dict) and str(c.get("study_id", "")).strip():
+            citations.append({"study_id": str(c["study_id"]).strip()[:80],
+                              "council_id": str(c.get("council_id", "")).strip()[:80],
+                              "quote": str(c.get("quote", "")).strip()[:600]})
+    return {"markdown": str(payload.get("markdown", "")).strip()[:20000], "citations": citations[:50]}
+
+
 # ===================================================================== #
 # Synthesis — consolidate an ordered chain of councils into learnings.   #
 # ===================================================================== #

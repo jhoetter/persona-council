@@ -310,6 +310,25 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("syntheses")
     p = sub.add_parser("synthesis")
     p.add_argument("synthesis_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out")
+    # Research graph (Project container + edges + tags) + Meta-Report
+    p = sub.add_parser("research-create")
+    p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--persona", action="append", dest="personas")
+    p = sub.add_parser("research-list")
+    p = sub.add_parser("research-graph"); p.add_argument("project_id")
+    p = sub.add_parser("research-backfill")
+    p.add_argument("--title", default="Research"); p.add_argument("--synthesis", action="append", dest="synthesis_ids")
+    p = sub.add_parser("research-add-study"); p.add_argument("project_id"); p.add_argument("study_id")
+    p = sub.add_parser("research-tag")
+    p.add_argument("project_id"); p.add_argument("study_id"); p.add_argument("tags", nargs="+")
+    p = sub.add_parser("research-link")
+    p.add_argument("project_id"); p.add_argument("from_study"); p.add_argument("to_study"); p.add_argument("type"); p.add_argument("--rationale", default="")
+    p = sub.add_parser("research-frontier"); p.add_argument("project_id")
+    p = sub.add_parser("meta-brief"); p.add_argument("project_id")
+    p = sub.add_parser("meta-outline"); p.add_argument("project_id"); p.add_argument("file")
+    p = sub.add_parser("meta-section-brief"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("--report")
+    p = sub.add_parser("meta-section"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("file"); p.add_argument("--report")
+    p = sub.add_parser("meta-export")
+    p.add_argument("project_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out"); p.add_argument("--report")
     return parser
 
 
@@ -491,6 +510,33 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.list_syntheses())
         elif args.command == "synthesis":
             content = services.export_synthesis(args.synthesis_id, args.format)
+            _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
+        elif args.command == "research-create":
+            _print(services.create_research_project(args.title, args.goal, args.personas))
+        elif args.command == "research-list":
+            _print(services.list_research_projects())
+        elif args.command == "research-graph":
+            _print(services.get_project_graph(args.project_id))
+        elif args.command == "research-backfill":
+            _print(services.backfill_project_from_syntheses(args.title, args.synthesis_ids))
+        elif args.command == "research-add-study":
+            _print(services.add_study_to_project(args.project_id, args.study_id))
+        elif args.command == "research-tag":
+            _print(services.set_study_themes(args.project_id, args.study_id, args.tags))
+        elif args.command == "research-link":
+            _print(services.link_studies(args.project_id, args.from_study, args.to_study, args.type, args.rationale))
+        elif args.command == "research-frontier":
+            _print(services.get_research_frontier(args.project_id))
+        elif args.command == "meta-brief":
+            _print(services.brief_meta_report(args.project_id))
+        elif args.command == "meta-outline":
+            _print(services.record_meta_outline(args.project_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "meta-section-brief":
+            _print(services.brief_meta_section(args.project_id, args.section_id, args.report))
+        elif args.command == "meta-section":
+            _print(services.record_meta_section(args.project_id, args.section_id, json.loads(Path(args.file).read_text(encoding="utf-8")), args.report))
+        elif args.command == "meta-export":
+            content = services.export_meta_report(args.project_id, args.report, args.format)
             _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
         return 0
     except Exception as exc:

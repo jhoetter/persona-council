@@ -1,6 +1,15 @@
 # Research Graph & Meta-Report — Specification
 
-> **Status:** Vision spec / design proposal (not yet built). Authored 2026-06-03.
+> **Status:** R1–R4 + graph view **IMPLEMENTED** 2026-06-03 (R5 guardrails / R6 continuous
+> operation still open). Authored 2026-06-03.
+> **Built:** `ResearchProject`/`StudyEdge`/`OpenQuestion`/`MetaReport` (models + storage tables,
+> schema v3); services `create_research_project`/`get_project_graph`/`add_study_to_project`/
+> `set_study_themes`/`link_studies`/`record_open_questions`/`resolve_open_question`/
+> `get_research_frontier`/`backfill_project_from_syntheses` and the meta-report chain
+> `brief_meta_report`→`record_meta_outline`→`brief_meta_section`→`record_meta_section`→
+> `export_meta_report`; CLI `research-*` + `meta-*`; MCP tools (same names); a read-only
+> **graph view** at `/projects` + `/projects/{id}` (SVG, build-order nodes, typed edges) and a
+> meta-report view at `/projects/{id}/meta`. Tests in `tests/test_research_graph.py`.
 > **Scope:** Generalize Persona Council from *single study arcs* into a **persistent,
 > themed research graph per project**, navigable and extendable entirely via MCP, with
 > a **second-order Meta-Report** that synthesizes the whole graph into one document.
@@ -408,20 +417,20 @@ runs continuous research on a project and reports on the whole.**
 - **R0 — Foundations (today, done):** Council, Study(=Synthesis with arc/voices/
   recommendations), the `synthesize` loop with `next_council_question`. *We already have the
   node and the in-arc edge.*
-- **R1 — Project container + persona library reuse:** `Project` entity, `create_project`,
+- **R1 ✅ — Project container + persona library reuse:** `Project` entity, `create_project`,
   attach existing studies, shared persona references. Studies gain `project_id`. Migration.
-- **R2 — Explicit graph:** `Edge` table + types, `link_studies`, `get_project_graph`,
+- **R2 ✅ — Explicit graph:** `Edge` table + types, `link_studies`, `get_project_graph`,
   promote `offene_fragen` → `open_questions` nodes, `answers` edges. The in-arc
   `next_council_question` is lifted to cross-study edges.
-- **R3 — LLM theme tagging + frontier:** `set_study_themes` (LLM-assigned, vocabulary
+- **R3 ✅ — LLM theme tagging + frontier:** `set_study_themes` (LLM-assigned, vocabulary
   grows), `get_research_frontier` with effort/value scoring + duplication detection,
   `brief_followup_study`/`record_study`. *This is where "pain → UX → pricing" becomes a
   first-class, navigable derivation.*
-- **R4 — Meta-Report:** the §7 protocol end-to-end (`brief_meta_report` → outline →
+- **R4 ✅ — Meta-Report:** the §7 protocol end-to-end (`brief_meta_report` → outline →
   sections → `export_meta_report`), two-level provenance enforced.
 - **R5 — Guardrails hardened:** frontier review, `exhausted`/`duplicates` handling, project
   budgets, mandatory dissent/non-target nodes + report section; `contrasts` nudge.
-- **R6 — UI & continuous operation:** graph view + build-order playback + meta-report view;
+- **R6 (graph view ✅, rest open) — UI & continuous operation:** graph view + build-order playback + meta-report view;
   optional scheduled/continuous research drivers (a project keeps researching its frontier
   on a cadence, host-authored, within budget).
 

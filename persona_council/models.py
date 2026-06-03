@@ -179,6 +179,74 @@ class Synthesis:
 
 
 @dataclass
+class ResearchProject:
+    """A research container: a themed GRAPH of studies (syntheses) plus the
+    personas in scope. Distinct from a persona's memory `project` entity."""
+    id: str
+    slug: str
+    title: str
+    goal: str
+    description: str
+    persona_ids: list[str]
+    study_ids: list[str]
+    study_tags: Json            # {study_id: [theme tag, ...]} (LLM-assigned, not fixed)
+    themes: list[str]           # the theme vocabulary that emerged
+    status: str
+    created_at: str
+    updated_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class StudyEdge:
+    """A typed relation between two studies in a project graph."""
+    id: str
+    project_id: str
+    from_study: str
+    to_study: str
+    type: str                   # spawned_from|refines|contrasts|depends_on|duplicates|answers
+    rationale: str
+    created_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class OpenQuestion:
+    """A promotable open question raised by a study — a first-class graph node
+    that a later study can `answers`."""
+    id: str
+    project_id: str
+    study_id: str | None
+    text: str
+    status: str                 # open|being_studied|answered|dropped
+    answered_by_study_id: str | None
+    created_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class MetaReport:
+    """Second-order synthesis over a whole project graph (the Gesamtreport)."""
+    id: str
+    project_id: str
+    title: str
+    outline: list[Json]         # [{id, heading, theme_tags, source_study_ids, intent}]
+    sections: list[Json]        # [{section_id, markdown, citations:[{study_id, council_id, quote}]}]
+    build_order_narrative: str
+    graph_snapshot: Json
+    created_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
 class Evidence:
     id: str
     persona_id: str

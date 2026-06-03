@@ -33,6 +33,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "personas_lead": "{n} synthetische Kundenprofile.",
         "councils_lead": "Memory-geerdete Persona-Debatten.",
         "syntheses_lead": "Studien-Bögen über Council-Ketten — die Reports.",
+        "projects": "Projekte",
+        "projects_lead": "Forschungs-Graphen: Studien (Synthesen) als Knoten, getaggt und verkettet.",
+        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen",
+        "no_projects": "Noch keine Projekte. Lege eines an oder backfille deine Synthesen (CLI: research-backfill).",
+        "source_studies": "Quell-Studien", "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
         "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Synthese.",
         "export_pdf": "Export PDF",
         # generic / not-found
@@ -152,6 +157,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "personas_lead": "{n} synthetic customer profiles.",
         "councils_lead": "Memory-grounded persona debates.",
         "syntheses_lead": "Study arcs across council chains — the reports.",
+        "projects": "Projects",
+        "projects_lead": "Research graphs: studies (syntheses) as nodes, tagged and linked.",
+        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Open questions",
+        "no_projects": "No projects yet. Create one or backfill your syntheses (CLI: research-backfill).",
+        "source_studies": "Source studies", "themes_h": "Themes", "build_order_h": "Build order",
         "no_councils": "No councils yet.", "no_synthesis": "No synthesis yet.",
         "export_pdf": "Export PDF",
         # generic / not-found
@@ -574,6 +584,7 @@ ICONS = {
     "personas": '<svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6"/><path d="M17.5 19a5.5 5.5 0 0 0-3-4.9"/></svg>',
     "councils": '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L4 20l1-4.5A8.5 8.5 0 1 1 21 11.5z"/></svg>',
     "syntheses": '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
+    "projects": '<svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7l8 0M7 8l4 8M17 8l-4 8"/></svg>',
     "memory": '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-4 4 3.5 3.5 0 0 0-1 6.8V17a3 3 0 0 0 5 2 3 3 0 0 0 5-2v-3.2A3.5 3.5 0 0 0 16 7a4 4 0 0 0-4-4z"/></svg>',
     "panel": '<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>',
     "sun": '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>',
@@ -713,7 +724,8 @@ APP_JS = """
 
 def _nav(active: str, store: Store) -> str:
     items = [("/", "overview", t("overview")), ("/personas", "personas", t("personas")),
-             ("/councils", "councils", t("councils")), ("/syntheses", "syntheses", t("syntheses"))]
+             ("/councils", "councils", t("councils")), ("/syntheses", "syntheses", t("syntheses")),
+             ("/projects", "projects", t("projects"))]
     nav = "".join(
         f'<a href="{href}" class="{"active" if key == active else ""}">{_icon(key)}<span>{label}</span></a>'
         for href, key, label in items
@@ -761,6 +773,67 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 
 def _empty_state(title: str, message: str) -> str:
     return f'<div class="page"><div class="card"><h2>{_esc(title)}</h2><p class="muted">{_esc(message)}</p><p><a class="btn" href="/">{_icon("back")} {t("back_to_overview")}</a></p></div></div>'
+
+
+_EDGE_COLORS = {"spawned_from": "#6b7cff", "refines": "#34a853", "contrasts": "#ea4335",
+                "depends_on": "#a142f4", "duplicates": "#9aa0a6", "answers": "#f29900"}
+_THEME_PALETTE = ["#6b7cff", "#34a853", "#f29900", "#a142f4", "#ea4335", "#00897b", "#5f6368", "#d81b60"]
+
+
+def _theme_color(theme: str, vocab: list[str]) -> str:
+    try:
+        return _THEME_PALETTE[vocab.index(theme) % len(_THEME_PALETTE)]
+    except ValueError:
+        return "#9aa0a6"
+
+
+def _graph_svg(graph: dict) -> str:
+    """Read-only SVG of the project graph: study nodes laid out in build order
+    (top→bottom), typed edges as colored right-side arcs. Nodes link to the synthesis."""
+    nodes = graph["nodes"]
+    if not nodes:
+        return f'<p class="muted">{_esc(t("no_synthesis"))}</p>'
+    vocab = graph["project"].get("themes", [])
+    idx = {n["study_id"]: i for i, n in enumerate(nodes)}
+    NW, NH, X0, ROW = 380, 60, 24, 92
+    XR = X0 + NW
+    H = 24 + len(nodes) * ROW
+    W = XR + 120
+    parts = [f'<svg viewBox="0 0 {W} {H}" width="100%" style="max-width:{W}px" '
+             f'xmlns="http://www.w3.org/2000/svg" font-family="inherit">',
+             '<defs>']
+    for typ, col in _EDGE_COLORS.items():
+        parts.append(f'<marker id="ah-{typ}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" '
+                     f'markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="{col}"/></marker>')
+    parts.append('</defs>')
+    # edges (drawn first, behind nodes)
+    for e in graph["edges"]:
+        if e["from_study"] not in idx or e["to_study"] not in idx:
+            continue
+        fi, ti = idx[e["from_study"]], idx[e["to_study"]]
+        col = _EDGE_COLORS.get(e["type"], "#9aa0a6")
+        y1 = 24 + fi * ROW + NH / 2
+        y2 = 24 + ti * ROW + NH / 2
+        bulge = XR + 24 + 10 * abs(ti - fi)
+        parts.append(f'<path d="M{XR} {y1:.0f} C {bulge:.0f} {y1:.0f}, {bulge:.0f} {y2:.0f}, {XR} {y2:.0f}" '
+                     f'fill="none" stroke="{col}" stroke-width="1.6" marker-end="url(#ah-{e["type"]})" opacity="0.85"/>')
+    # nodes
+    for i, n in enumerate(nodes):
+        y = 24 + i * ROW
+        tags = n.get("theme_tags", [])
+        bar = _theme_color(tags[0], vocab) if tags else "#c9cdd6"
+        sent = max(n.get("sentiment", {}).items(), key=lambda kv: kv[1])[0] if n.get("sentiment") else "—"
+        title = _esc(n["title"][:46] + ("…" if len(n["title"]) > 46 else ""))
+        sub = _esc(f'{n.get("council_count", 0)} councils · {sent} · ' + (", ".join(tags[:3]) or "—"))
+        parts.append(
+            f'<a href="/syntheses/{_esc(n["study_id"])}">'
+            f'<rect x="{X0}" y="{y}" width="{NW}" height="{NH}" rx="9" fill="var(--panel)" stroke="var(--line)"/>'
+            f'<rect x="{X0}" y="{y}" width="5" height="{NH}" rx="2.5" fill="{bar}"/>'
+            f'<text x="{X0 + 16}" y="{y + 24}" font-size="13.5" font-weight="600" fill="var(--ink)">{title}</text>'
+            f'<text x="{X0 + 16}" y="{y + 43}" font-size="11.5" fill="var(--muted)">{sub}</text>'
+            f'</a>')
+    parts.append('</svg>')
+    return "".join(parts)
 
 
 def _pills(items: list[str]) -> str:
@@ -1671,6 +1744,73 @@ def create_app():
                    + f'<button class="btn" onclick="window.print()">{t("export_pdf")}</button>')
         return _layout(syn["title"], _synthesis_html(store, syn), store,
                        crumbs=[(t("syntheses"), "/syntheses"), (syn["title"], None)], active="syntheses", actions=actions)
+
+    @app.get("/projects", response_class=HTMLResponse)
+    def projects() -> str:
+        store = Store()
+        rows = []
+        for p in services.list_research_projects(store=store):
+            rows.append(f'<a class="row" href="/projects/{_esc(p["id"])}">{_icon("projects")}'
+                        f'<span class="title">{_esc(p["title"])}</span>'
+                        f'<span class="right"><span>{p["studies"]} {t("syntheses")}</span>'
+                        f'<span>{p["edges"]} {t("build_order_h")}</span>'
+                        f'<span>{len(p.get("themes", []))} {t("themes_h")}</span></span></a>')
+        rows_html = "".join(rows) or f'<div class="row muted">{t("no_projects")}</div>'
+        body = f'<div class="page"><h1 class="h1">{t("projects")}</h1><p class="lead">{t("projects_lead")}</p><div class="rows">{rows_html}</div></div>'
+        return _layout(t("projects"), body, store, crumbs=[(t("projects"), None)], active="projects")
+
+    @app.get("/projects/{project_id}", response_class=HTMLResponse)
+    def project_detail(project_id: str) -> str:
+        store = Store()
+        try:
+            graph = services.get_project_graph(project_id, store=store)
+        except KeyError:
+            return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared")), store, active="projects")
+        proj = graph["project"]
+        c = graph["counts"]
+        stats = (f'<div class="stat"><b>{c["studies"]}</b><span>{t("syntheses")}</span></div>'
+                 f'<div class="stat"><b>{c["edges"]}</b><span>{t("build_order_h")}</span></div>'
+                 f'<div class="stat"><b>{c["themes"]}</b><span>{t("themes_h")}</span></div>'
+                 f'<div class="stat"><b>{c["open_questions"]}</b><span>{t("open_questions_h")}</span></div>')
+        # legends
+        theme_leg = "".join(
+            f'<span class="pill" style="border-color:{_theme_color(th, proj["themes"])}">{_esc(th)}</span>'
+            for th in proj["themes"]) or f'<span class="muted small">—</span>'
+        used_types = sorted({e["type"] for e in graph["edges"]})
+        edge_leg = "".join(
+            f'<span class="pill" style="border-color:{_EDGE_COLORS.get(ty, "#9aa0a6")}">{_esc(ty)}</span>'
+            for ty in used_types) or f'<span class="muted small">—</span>'
+        oqs = [o for o in graph["open_questions"] if o.get("status") == "open"]
+        oq_html = "".join(f'<li>{_esc(o["text"])}</li>' for o in oqs[:30]) or f'<li class="muted">—</li>'
+        reports = store.list_meta_reports(proj["id"])
+        meta_btn = (f'<a class="btn" href="/projects/{_esc(proj["id"])}/meta">{_icon("syntheses")} {t("meta_report")}</a>'
+                    if reports else f'<span class="muted small">{t("meta_report")}: —</span>')
+        body = (
+            f'<div class="page"><h1 class="h1">{_esc(proj["title"])}</h1>'
+            f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
+            f'<div class="stats">{stats}</div>'
+            f'<div class="card"><div class="vline1" style="margin-bottom:8px">{_icon("projects")} <b>{t("graph")}</b>'
+            f'<span class="spacer"></span>{meta_btn}</div>{_graph_svg(graph)}</div>'
+            f'<div class="card"><b>{t("themes_h")}</b><div class="pills" style="margin-top:6px">{theme_leg}</div>'
+            f'<div style="margin-top:10px"><b>{t("build_order_h")}</b> <span class="muted small">(edges)</span>'
+            f'<div class="pills" style="margin-top:6px">{edge_leg}</div></div></div>'
+            f'<div class="card"><b>{t("open_questions_h")}</b><ul style="margin:6px 0 0 18px">{oq_html}</ul></div>'
+            f'</div>')
+        return _layout(proj["title"], body, store, crumbs=[(t("projects"), "/projects"), (proj["title"], None)], active="projects")
+
+    @app.get("/projects/{project_id}/meta", response_class=HTMLResponse)
+    def project_meta(project_id: str) -> str:
+        store = Store()
+        try:
+            md = services.export_meta_report(project_id, format="md", store=store)
+            proj = services.get_research_project(project_id, store=store)
+        except KeyError:
+            return _layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared")), store, active="projects")
+        body = f'<div class="page"><div class="doc">{_md(md)}</div></div>'
+        actions = f'<button class="btn" onclick="window.print()">{t("export_pdf")}</button>'
+        return _layout(proj["title"] + " — " + t("meta_report"), body, store,
+                       crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)],
+                       active="projects", actions=actions)
 
     # ---------------- JSON API (unchanged surface) ----------------
     @app.get("/api/personas")

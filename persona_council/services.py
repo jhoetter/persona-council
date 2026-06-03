@@ -20,10 +20,14 @@ from .models import (
     DailySummary,
     Evidence,
     ExperienceEvent,
+    MetaReport,
+    OpenQuestion,
     PainPointObservation,
     Persona,
     Reflection,
+    ResearchProject,
     SimulationResult,
+    StudyEdge,
     Synthesis,
 )
 from .storage import Store
@@ -33,6 +37,10 @@ from . import evaluation as evaluation_mod
 from .llm_simulation import (
     build_cohort_critic_prompt,
     build_consolidation_prompt,
+    build_meta_outline_prompt,
+    build_meta_section_prompt,
+    validate_meta_outline_payload,
+    validate_meta_section_payload,
     build_digest_prompt,
     build_eval_critic_prompt,
     build_evidence_check_prompt,
@@ -2472,3 +2480,378 @@ def list_councils(store: Store | None = None) -> list[dict[str, Any]]:
              "personas": len(c.get("persona_ids", [])), "turns": len(c.get("turns", [])),
              "votes": {v: sum(1 for x in c.get("votes", []) if x.get("vote") == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}}
             for c in store.list_council_sessions()]
+
+
+# ===================================================================== #
+# Research graph: Project container + typed study edges + theme tags +   #
+# open questions + frontier. A Study(=Synthesis) is a node; councils sit  #
+# inside a node. See spec/research-graph-and-meta-report.md.              #
+# ===================================================================== #
+
+EDGE_TYPES = {"spawned_from", "refines", "contrasts", "depends_on", "duplicates", "answers"}
+OQ_STATUSES = {"open", "being_studied", "answered", "dropped"}
+
+
+def _require_research_project(store: Store, project_id: str) -> dict[str, Any]:
+    p = store.get_research_project(project_id)
+    if not p:
+        raise KeyError(f"Unknown research project: {project_id}")
+    return p
+
+
+def create_research_project(title: str, goal: str = "", persona_ids: list[str] | None = None,
+                            description: str = "", store: Store | None = None) -> dict[str, Any]:
+    store = store or Store()
+    now = utc_now_iso()
+    pid = stable_id("rproject", title, now)
+    base = slugify(title)
+    slug, n = base, 2
+    while store.get_research_project(slug) is not None:
+        slug, n = f"{base}-{n}", n + 1
+    project = ResearchProject(
+        id=pid, slug=slug, title=title, goal=goal, description=description,
+        persona_ids=persona_ids or [], study_ids=[], study_tags={}, themes=[],
+        status="active", created_at=now, updated_at=now,
+    ).to_dict()
+    store.upsert_research_project(project)
+    return project
+
+
+def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
+    store = store or Store()
+    out = []
+    for p in store.list_research_projects():
+        out.append({"id": p["id"], "slug": p["slug"], "title": p["title"], "goal": p.get("goal", ""),
+                    "status": p.get("status", "active"), "studies": len(p.get("study_ids", [])),
+                    "edges": len(store.list_study_edges(p["id"])), "themes": p.get("themes", [])})
+    return out
+
+
+def get_research_project(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    store = store or Store()
+    return _require_research_project(store, project_id)
+
+
+def add_study_to_project(project_id: str, study_id: str, theme_tags: list[str] | None = None,
+                         store: Store | None = None) -> dict[str, Any]:
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    if not store.get_synthesis(study_id):
+        raise KeyError(f"Unknown study (synthesis): {study_id}")
+    if study_id not in project["study_ids"]:
+        project["study_ids"].append(study_id)
+    if theme_tags:
+        _apply_themes(project, study_id, theme_tags)
+    project["updated_at"] = utc_now_iso()
+    store.upsert_research_project(project)
+    return project
+
+
+def _apply_themes(project: dict[str, Any], study_id: str, tags: list[str]) -> None:
+    clean = [str(t).strip().lower() for t in tags if str(t).strip()][:10]
+    project.setdefault("study_tags", {})[study_id] = clean
+    vocab = project.setdefault("themes", [])
+    for t in clean:
+        if t not in vocab:
+            vocab.append(t)
+
+
+def set_study_themes(project_id: str, study_id: str, tags: list[str], store: Store | None = None) -> dict[str, Any]:
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    if study_id not in project["study_ids"]:
+        raise KeyError(f"Study {study_id} is not in project {project_id}")
+    _apply_themes(project, study_id, tags)
+    project["updated_at"] = utc_now_iso()
+    store.upsert_research_project(project)
+    return project
+
+
+def link_studies(project_id: str, from_study_id: str, to_study_id: str, type: str,
+                 rationale: str = "", store: Store | None = None) -> dict[str, Any]:
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    if type not in EDGE_TYPES:
+        raise ValueError(f"Edge type must be one of {sorted(EDGE_TYPES)}")
+    for sid in (from_study_id, to_study_id):
+        if sid not in project["study_ids"]:
+            raise KeyError(f"Study {sid} is not in project {project_id}")
+    now = utc_now_iso()
+    edge = StudyEdge(id=stable_id("edge", project_id, from_study_id, to_study_id, type),
+                     project_id=project["id"], from_study=from_study_id, to_study=to_study_id,
+                     type=type, rationale=rationale, created_at=now).to_dict()
+    store.insert_study_edge(edge)
+    return edge
+
+
+def record_open_questions(project_id: str, questions: list[str], study_id: str | None = None,
+                          store: Store | None = None) -> list[dict[str, Any]]:
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    now = utc_now_iso()
+    out = []
+    for q in questions:
+        text = str(q).strip()
+        if not text:
+            continue
+        oq = OpenQuestion(id=stable_id("oq", project["id"], text), project_id=project["id"],
+                          study_id=study_id, text=text[:600], status="open",
+                          answered_by_study_id=None, created_at=now).to_dict()
+        store.upsert_open_question(oq)
+        out.append(oq)
+    return out
+
+
+def resolve_open_question(project_id: str, question_id: str, answered_by_study_id: str,
+                          store: Store | None = None) -> dict[str, Any]:
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    oqs = {o["id"]: o for o in store.list_open_questions(project["id"])}
+    if question_id not in oqs:
+        raise KeyError(f"Unknown open question: {question_id}")
+    oq = oqs[question_id]
+    oq["status"] = "answered"
+    oq["answered_by_study_id"] = answered_by_study_id
+    store.upsert_open_question(oq)
+    # also record the graph edge: the answering study answers the raising study
+    if oq.get("study_id") and answered_by_study_id in project["study_ids"] and oq["study_id"] in project["study_ids"]:
+        try:
+            link_studies(project["id"], answered_by_study_id, oq["study_id"], "answers",
+                         f"answers: {oq['text'][:120]}", store=store)
+        except (ValueError, KeyError):
+            pass
+    return oq
+
+
+def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
+    syn = store.get_synthesis(study_id)
+    if not syn:
+        return None
+    sentiment: dict[str, int] = {}
+    for v in syn.get("voices", []) or []:
+        s = v.get("sentiment", "neutral")
+        sentiment[s] = sentiment.get(s, 0) + 1
+    return {
+        "study_id": study_id, "title": syn.get("title", study_id),
+        "status": syn.get("status", "done"), "created_at": syn.get("created_at", ""),
+        "goal": syn.get("goal", ""), "council_count": len(syn.get("council_ids", [])),
+        "voices": sum(sentiment.values()), "sentiment": sentiment,
+        "recommendations": len(syn.get("handlungsempfehlungen", [])),
+    }
+
+
+def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """The core navigation call: nodes (studies + tags/sentiment), typed edges,
+    themes, build order, and open questions for one research project."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    tags = project.get("study_tags", {})
+    nodes = []
+    for sid in project["study_ids"]:
+        node = _study_node(store, sid)
+        if node:
+            node["theme_tags"] = tags.get(sid, [])
+            nodes.append(node)
+    nodes.sort(key=lambda n: n["created_at"])  # build order
+    edges = [{"from_study": e["from_study"], "to_study": e["to_study"], "type": e["type"],
+              "rationale": e.get("rationale", "")} for e in store.list_study_edges(project["id"])]
+    oqs = store.list_open_questions(project["id"])
+    return {
+        "project": {"id": project["id"], "slug": project["slug"], "title": project["title"],
+                    "goal": project.get("goal", ""), "status": project.get("status", "active"),
+                    "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", [])},
+        "nodes": nodes,
+        "edges": edges,
+        "open_questions": oqs,
+        "build_order": [n["study_id"] for n in nodes],
+        "counts": {"studies": len(nodes), "edges": len(edges),
+                   "open_questions": sum(1 for o in oqs if o.get("status") == "open"),
+                   "themes": len(project.get("themes", []))},
+    }
+
+
+def get_research_frontier(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """The anti-explosion surface: the project's still-open questions, plus a flag
+    when the graph has no edges yet (studies not connected)."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    open_qs = [o for o in store.list_open_questions(project["id"]) if o.get("status") == "open"]
+    edges = store.list_study_edges(project["id"])
+    notes = []
+    if project["study_ids"] and not edges:
+        notes.append("studies present but unconnected — add edges (link_studies) or they read as isolated.")
+    if not open_qs:
+        notes.append("no open questions tracked — the frontier looks closed (or unrecorded).")
+    return {"project_id": project["id"], "open_questions": open_qs,
+            "open_question_count": len(open_qs), "notes": notes}
+
+
+def backfill_project_from_syntheses(title: str = "Research", synthesis_ids: list[str] | None = None,
+                                    store: Store | None = None) -> dict[str, Any]:
+    """Group existing syntheses into ONE project as graph nodes, ordered by creation
+    time, with chronological `spawned_from` edges (rationale marks them as backfilled
+    so they can be re-linked properly later). Returns the project graph."""
+    store = store or Store()
+    if synthesis_ids:
+        studies = [store.get_synthesis(s) for s in synthesis_ids]
+    else:
+        studies = store.list_syntheses()
+    studies = [s for s in studies if s]
+    studies.sort(key=lambda s: s.get("created_at", ""))
+    project = create_research_project(title, goal="Backfilled from existing syntheses.", store=store)
+    pid = project["id"]
+    for s in studies:
+        add_study_to_project(pid, s["id"], store=store)
+    ordered = [s["id"] for s in studies]
+    for prev, cur in zip(ordered, ordered[1:]):
+        link_studies(pid, prev, cur, "spawned_from", "backfilled by creation order (edit later)", store=store)
+    # promote each study's open questions into the project frontier
+    for s in studies:
+        oq = s.get("offene_fragen") or []
+        if oq:
+            record_open_questions(pid, oq[:5], study_id=s["id"], store=store)
+    return get_project_graph(pid, store=store)
+
+
+# ===================================================================== #
+# Meta-Report: second-order synthesis over a whole project graph.        #
+# gather graph -> author OUTLINE -> author each SECTION (grounded) ->     #
+# export. Two-level provenance: meta-section -> study -> council.         #
+# ===================================================================== #
+
+def _study_compact(store: Store, study_id: str, tags: list[str]) -> dict[str, Any]:
+    syn = store.get_synthesis(study_id) or {}
+    return {"study_id": study_id, "title": syn.get("title", study_id), "goal": syn.get("goal", ""),
+            "theme_tags": tags, "gesamtbild": syn.get("gesamtbild", ""),
+            "positionierung": syn.get("positionierung", ""),
+            "top_recommendations": [r.get("text") if isinstance(r, dict) else str(r)
+                                    for r in (syn.get("handlungsempfehlungen", []) or [])[:3]],
+            "created_at": syn.get("created_at", "")}
+
+
+def _study_full(store: Store, study_id: str) -> dict[str, Any]:
+    syn = store.get_synthesis(study_id) or {}
+    councils = []
+    for cid in syn.get("council_ids", []) or []:
+        c = store.get_council_session(cid) or {}
+        councils.append({"council_id": cid, "prompt": c.get("prompt", ""), "exec_summary": c.get("exec_summary", "")})
+    return {"study_id": study_id, "title": syn.get("title", study_id), "goal": syn.get("goal", ""),
+            "arc_narrative": syn.get("arc_narrative", ""), "gesamtbild": syn.get("gesamtbild", ""),
+            "positionierung": syn.get("positionierung", ""), "pain_solvers": syn.get("pain_solvers", []),
+            "handlungsempfehlungen": syn.get("handlungsempfehlungen", []), "segmente": syn.get("segmente", []),
+            "voices": [{"persona_name": v.get("persona_name"), "sentiment": v.get("sentiment"),
+                        "key_argument": v.get("key_argument")} for v in (syn.get("voices", []) or [])],
+            "offene_fragen": syn.get("offene_fragen", []), "councils": councils}
+
+
+def brief_meta_report(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """GATHER the whole project graph + each study's compact content so the host can
+    author the meta-report OUTLINE (then author sections)."""
+    store = store or Store()
+    graph = get_project_graph(project_id, store=store)
+    tags = _require_research_project(store, project_id).get("study_tags", {})
+    frame = {
+        "project": graph["project"], "build_order": graph["build_order"],
+        "edges": graph["edges"], "open_questions": [o for o in graph["open_questions"] if o.get("status") == "open"],
+        "studies": [_study_compact(store, sid, tags.get(sid, [])) for sid in graph["build_order"]],
+    }
+    return {"project_id": graph["project"]["id"], "schema": "meta_outline",
+            "study_ids": graph["build_order"], "instructions": build_meta_outline_prompt(frame), "frame": frame}
+
+
+def record_meta_outline(project_id: str, outline: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
+    """Persist the host-authored outline as a new MetaReport (sections to be authored next)."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    data = validate_meta_outline_payload(outline, study_ids=project["study_ids"])
+    now = utc_now_iso()
+    report = MetaReport(
+        id=stable_id("metareport", project["id"], now), project_id=project["id"],
+        title=f"{project['title']} — Meta-Report", outline=data["sections"], sections=[],
+        build_order_narrative=data["build_order_narrative"],
+        graph_snapshot=get_project_graph(project["id"], store=store), created_at=now,
+    ).to_dict()
+    store.upsert_meta_report(report)
+    return report
+
+
+def _latest_meta_report(store: Store, project_id: str, report_id: str | None) -> dict[str, Any]:
+    if report_id:
+        r = store.get_meta_report(report_id)
+        if not r:
+            raise KeyError(f"Unknown meta-report: {report_id}")
+        return r
+    reports = store.list_meta_reports(project_id)
+    if not reports:
+        raise KeyError(f"No meta-report for project {project_id} — run brief_meta_report -> record_meta_outline first.")
+    return reports[0]
+
+
+def brief_meta_section(project_id: str, section_id: str, report_id: str | None = None,
+                       store: Store | None = None) -> dict[str, Any]:
+    """GATHER the full content of a section's source studies (+ their councils) so the
+    host can author that section grounded with citations."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    report = _latest_meta_report(store, project["id"], report_id)
+    section = next((s for s in report["outline"] if s["id"] == section_id), None)
+    if not section:
+        raise KeyError(f"Unknown section {section_id} in meta-report {report['id']}")
+    frame = {"heading": section["heading"], "intent": section["intent"], "theme_tags": section["theme_tags"],
+             "studies": [_study_full(store, sid) for sid in section["source_study_ids"]]}
+    return {"project_id": project["id"], "report_id": report["id"], "section_id": section_id,
+            "schema": "meta_section", "instructions": build_meta_section_prompt(frame), "frame": frame}
+
+
+def record_meta_section(project_id: str, section_id: str, content: dict[str, Any],
+                        report_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
+    """Persist one authored section (markdown + citations) into the meta-report."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    report = _latest_meta_report(store, project["id"], report_id)
+    if not any(s["id"] == section_id for s in report["outline"]):
+        raise KeyError(f"Unknown section {section_id} in meta-report {report['id']}")
+    data = validate_meta_section_payload(content)
+    entry = {"section_id": section_id, "markdown": data["markdown"], "citations": data["citations"]}
+    report["sections"] = [s for s in report.get("sections", []) if s.get("section_id") != section_id] + [entry]
+    store.upsert_meta_report(report)
+    return report
+
+
+def export_meta_report(project_id: str, report_id: str | None = None, format: str = "md",
+                       store: Store | None = None) -> str:
+    """Assemble the meta-report (outline + authored sections) into a stakeholder document."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    report = _latest_meta_report(store, project["id"], report_id)
+    if format == "json":
+        return json.dumps(report, indent=2, ensure_ascii=False)
+    de = content_language() == "de"
+    authored = {s["section_id"]: s for s in report.get("sections", [])}
+    lines = [f"# {report['title']}", "",
+             f"*{'Meta-Synthese' if de else 'Meta-synthesis'} · {len(report['outline'])} "
+             f"{'Abschnitte' if de else 'sections'} · {len(project['study_ids'])} "
+             f"{'Studien' if de else 'studies'} · {report['created_at']}*", ""]
+    if report.get("build_order_narrative"):
+        lines += [f"## {'Wie dieses Verständnis entstand' if de else 'How this understanding was built'}",
+                  report["build_order_narrative"], ""]
+    titles = {sid: (store.get_synthesis(sid) or {}).get("title", sid) for sid in project["study_ids"]}
+    for sec in report["outline"]:
+        lines += [f"## {sec['heading']}"]
+        body = authored.get(sec["id"])
+        if body and body.get("markdown"):
+            lines += [body["markdown"]]
+            if body.get("citations"):
+                lines += ["", f"*{'Belege' if de else 'Citations'}:*"]
+                for c in body["citations"]:
+                    src = titles.get(c["study_id"], c["study_id"])
+                    cc = f" / {c['council_id']}" if c.get("council_id") else ""
+                    q = f" — „{c['quote']}“" if c.get("quote") else ""
+                    lines.append(f"- {src}{cc}{q}")
+        else:
+            lines += [f"_({'Abschnitt noch nicht verfasst' if de else 'section not yet authored'})_"]
+        if sec.get("source_study_ids"):
+            lines += ["", "_" + ("Quellen-Studien" if de else "Source studies") + ": " +
+                      ", ".join(titles.get(x, x) for x in sec["source_study_ids"]) + "_"]
+        lines += [""]
+    return "\n".join(lines) + "\n"

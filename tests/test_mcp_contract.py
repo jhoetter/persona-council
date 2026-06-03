@@ -40,6 +40,12 @@ def test_expected_tools_registered():
         "brief_eval_critic", "record_eval_critic", "evaluate_simulation_full",
         # the tracker's new tools:
         "evaluate_cohort_diversity", "brief_cohort_critic", "record_cohort_critic",
+        # research graph + meta-report:
+        "create_research_project", "list_research_projects", "get_project_graph",
+        "add_study_to_project", "set_study_themes", "link_studies",
+        "backfill_project_from_syntheses",
+        "brief_meta_report", "record_meta_outline", "brief_meta_section",
+        "record_meta_section", "export_meta_report",
     }
     missing = expected - names
     assert not missing, f"MCP tools missing: {sorted(missing)}"

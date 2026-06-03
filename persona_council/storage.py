@@ -230,6 +230,48 @@ CREATE TABLE IF NOT EXISTS eval_reports (
   data TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+-- Research graph: a Project groups studies (syntheses) into a themed graph,
+-- with typed edges between studies, promotable open questions, and meta-reports.
+-- (Distinct from the memory "project" entity, which is a persona's own work project.)
+CREATE TABLE IF NOT EXISTS research_projects (
+  id TEXT PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS study_edges (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  from_study TEXT NOT NULL,
+  to_study TEXT NOT NULL,
+  type TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_study_edges_project ON study_edges(project_id);
+
+CREATE TABLE IF NOT EXISTS research_open_questions (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  study_id TEXT,
+  status TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_roq_project ON research_open_questions(project_id);
+
+CREATE TABLE IF NOT EXISTS meta_reports (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_meta_reports_project ON meta_reports(project_id);
 """
 
 
@@ -431,6 +473,65 @@ class Store:
 
     def list_syntheses(self) -> list[dict[str, Any]]:
         rows = self.conn.execute("SELECT data FROM syntheses ORDER BY created_at DESC").fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
+    # ---- Research graph: projects / edges / open questions / meta-reports ----
+    def upsert_research_project(self, project: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT INTO research_projects (id, slug, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET slug=excluded.slug, title=excluded.title, data=excluded.data, updated_at=excluded.updated_at",
+            (project["id"], project["slug"], project["title"], json.dumps(project, ensure_ascii=False),
+             project["created_at"], project.get("updated_at", project["created_at"])),
+        )
+        self.conn.commit()
+
+    def get_research_project(self, project_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT data FROM research_projects WHERE id=? OR slug=?", (project_id, project_id)).fetchone()
+        return json.loads(row["data"]) if row else None
+
+    def list_research_projects(self) -> list[dict[str, Any]]:
+        rows = self.conn.execute("SELECT data FROM research_projects ORDER BY created_at DESC").fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
+    def insert_study_edge(self, edge: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT OR REPLACE INTO study_edges (id, project_id, from_study, to_study, type, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (edge["id"], edge["project_id"], edge["from_study"], edge["to_study"], edge["type"],
+             json.dumps(edge, ensure_ascii=False), edge["created_at"]))
+        self.conn.commit()
+
+    def list_study_edges(self, project_id: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT data FROM study_edges WHERE project_id=? ORDER BY created_at", (project_id,)).fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
+    def upsert_open_question(self, oq: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT INTO research_open_questions (id, project_id, study_id, status, data, created_at) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET status=excluded.status, study_id=excluded.study_id, data=excluded.data",
+            (oq["id"], oq["project_id"], oq.get("study_id"), oq["status"],
+             json.dumps(oq, ensure_ascii=False), oq["created_at"]))
+        self.conn.commit()
+
+    def list_open_questions(self, project_id: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT data FROM research_open_questions WHERE project_id=? ORDER BY created_at", (project_id,)).fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
+    def upsert_meta_report(self, report: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT OR REPLACE INTO meta_reports (id, project_id, title, data, created_at) VALUES (?, ?, ?, ?, ?)",
+            (report["id"], report["project_id"], report["title"], json.dumps(report, ensure_ascii=False), report["created_at"]))
+        self.conn.commit()
+
+    def get_meta_report(self, report_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute("SELECT data FROM meta_reports WHERE id=?", (report_id,)).fetchone()
+        return json.loads(row["data"]) if row else None
+
+    def list_meta_reports(self, project_id: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT data FROM meta_reports WHERE project_id=? ORDER BY created_at DESC", (project_id,)).fetchall()
         return [json.loads(r["data"]) for r in rows]
 
     # ---- Memory layer: entities ---------------------------------------
