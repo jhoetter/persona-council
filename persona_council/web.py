@@ -418,15 +418,6 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .proj-graph #rg{height:100%}
 .oqpanel{position:fixed;right:26px;bottom:26px;width:380px;max-width:calc(100vw - 320px);max-height:62vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 44px rgba(0,0,0,.22);padding:14px 16px;z-index:60}
 .oqp-h{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.mstrip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;font-size:12.5px}
-.mstrip .mname{font-weight:600;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--panel-2)}
-.mstrip .msep{color:var(--muted)}
-.mphase{border:1px solid var(--line);border-radius:7px;padding:2px 9px;background:var(--panel);color:var(--muted)}
-.mphase.active{border-color:var(--accent);color:var(--accent);background:var(--accent-weak);font-weight:600}
-.mphase.done{border-color:var(--green);color:var(--green)}
-.mphase b{color:var(--ink)}
-.mphase .mcap{font-size:10px;text-transform:uppercase;letter-spacing:.04em;opacity:.7;margin-left:3px}
-.mstrip .mstate{font-size:12px;color:var(--muted)}
 
 /* ---- generic ---- */
 h1,h2,h3,h4{color:var(--ink)}
@@ -1104,6 +1095,41 @@ def _artifact_present(pr: dict) -> dict:
     return {"label": tp["label"], "color": tp["color"], "glyph": tp["glyph"], "icon": tp["icon"], "disc": disc}
 
 
+def _convex_hull(points: list[tuple]) -> list[tuple]:
+    """Andrew's monotone chain — the convex hull of a point set (CCW), no shape assumed."""
+    pts = sorted(set(points))
+    if len(pts) <= 2:
+        return pts
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    lower = []
+    for p in pts:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper = []
+    for p in reversed(pts):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return lower[:-1] + upper[:-1]
+
+
+def _expand_hull(hull: list[tuple], margin: float) -> list[list]:
+    """Push each hull vertex outward from the centroid by `margin` (a faint surrounding envelope)."""
+    import math
+    cx = sum(p[0] for p in hull) / len(hull)
+    cy = sum(p[1] for p in hull) / len(hull)
+    out = []
+    for x, y in hull:
+        dx, dy = x - cx, y - cy
+        d = math.hypot(dx, dy) or 1.0
+        out.append([x + dx / d * margin, y + dy / d * margin])
+    return out
+
+
 def _methodology_layout(graph: dict) -> dict | None:
     """Generic DAG layout (spec/methodology-constellations.md §5): x = longest-path depth over
     `consumes`; a step's nodes fan vertically when it has >1 (diverge), sit on the axis when 1
@@ -1150,8 +1176,10 @@ def _methodology_layout(graph: dict) -> dict | None:
     for n in graph["nodes"]:
         if n["study_id"] not in pos:
             pos[n["study_id"]] = (extra_x, AXIS + j * ROWH); j += 1
-    # one faint diamond silhouette per fan step (left = a consumed step's col, right = a consumer's)
-    cy = AXIS + _NH / 2
+    # Faint silhouette per fan step = the CONVEX HULL of the fan's own nodes plus its bracketing
+    # waist nodes (the single-node steps it consumes / that consume it). This is purely structural:
+    # it becomes a diamond when a fan sits between two waists, a wedge for a root/terminal fan, and a
+    # correct polygon for branches — it never fabricates a "diamond" where the DAG isn't diamond-shaped.
     consumers: dict[str, list[str]] = {s["key"]: [] for s in steps}
     for s in steps:
         for c in s.get("consumes", []):
@@ -1161,13 +1189,23 @@ def _methodology_layout(graph: dict) -> dict | None:
         sk = s["key"]
         if not is_fan.get(sk):
             continue
-        cx = col_x[sk] + _NW / 2
-        half = max(ROWH * 0.95, fan_half[sk] + 26)
-        cons = s.get("consumes", [])
-        outs = consumers.get(sk, [])
-        leftX = (col_x[cons[0]] if cons else col_x[sk] - COLW * 0.6) + _NW / 2
-        rightX = (col_x[outs[0]] if outs else col_x[sk] + COLW * 0.6) + _NW / 2
-        diamonds.append([[leftX, cy], [cx, cy - half], [rightX, cy], [cx, cy + half]])
+        node_ids = [n["study_id"] for n in by_step.get(sk, [])]
+        if not node_ids:
+            continue
+        anchors: list[str] = []
+        for c in s.get("consumes", []):                       # bracket: upstream WAIST steps
+            if not is_fan.get(c):
+                anchors += [n["study_id"] for n in by_step.get(c, [])]
+        for o in consumers.get(sk, []):                       # bracket: downstream WAIST steps
+            if not is_fan.get(o):
+                anchors += [n["study_id"] for n in by_step.get(o, [])]
+        pts = []
+        for sid in node_ids + anchors:
+            x, y = pos[sid]
+            pts += [(x, y), (x + _NW, y), (x, y + _NH), (x + _NW, y + _NH)]
+        hull = _convex_hull(pts)
+        if len(hull) >= 3:
+            diamonds.append(_expand_hull(hull, 18))
 
     def _match(name: str, step_key: str):
         cands = by_step.get(step_key, [])
@@ -2317,28 +2355,8 @@ def create_app():
         left = (f'<span class="ptlabel">{_icon("search")}{t("filter")}</span>{chips}'
                 f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if chips else ""
         oqbtn = f'<button class="btn" id="oqbtn">{t("legend")} · {t("open_questions_h")} ({len(oqs)})</button>'
-        # Methodology strip: constellation steps with fan(◇)/waist(◆) shape (derived) + open tags.
-        ms = graph.get("methodology_state")
-        mstrip = ""
-        if ms:
-            chips = []
-            for ph in (ms.get("steps") or ms.get("phases") or []):
-                state = ph["status"]
-                cls = "done" if state == "converged" else ("active" if ph["key"] == ms.get("phase") else "pend")
-                # glyph from the STRUCTURAL fan/waist boolean (or a data override) — not a value lookup.
-                shape = _pres.step_glyph(ph.get("is_fan", True), ph.get("presentation"))
-                count = (f' <b>{ph["exploration_count"]}</b>'
-                         if ph.get("is_fan") and ph["exploration_count"] else "")
-                tags = ph.get("tags") or []
-                tg = ", ".join(tags)
-                # the label is just the step's FIRST tag — no hardcoded tag vocabulary in the UI.
-                captxt = f' <span class="mcap">{_esc(tags[0])}</span>' if tags else ""
-                chips.append(f'<span class="mphase {cls}" title="{tg or ph["mode"]} · {state}">'
-                             f'{shape} {_esc(ph["name"])}{captxt}{count}</span>')
-            state_txt = "✓" if ms.get("complete") else f'@ {_esc(ms.get("phase") or "—")}'
-            mstrip = (f'<div class="mstrip"><span class="mname">{_esc(ms["methodology"])}</span>'
-                      + '<span class="msep">→</span>'.join(chips)
-                      + f'<span class="spacer"></span><span class="mstate">{state_txt}</span></div>')
+        # (No bespoke methodology strip: the graph itself — columns, emergent silhouettes, and the
+        # tag filter — conveys the constellation. A linear step strip would mis-imply a sequence.)
         toolbar = f'<div class="ptoolbar">{left}<span class="spacer"></span>{oqbtn}{meta_btn}</div>'
         # Artifact viewer: artifacts + recorded persona sessions (read-only).
         protos = graph.get("prototypes") or []
@@ -2380,7 +2398,7 @@ def create_app():
             f'<div class="proj">'
             f'<div class="proj-head"><h1 class="h1">{_esc(proj["title"])}</h1>'
             f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
-            f'{mstrip}{toolbar}</div>'
+            f'{toolbar}</div>'
             f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>'
             f'{panel}{oq_js}'
             f'</div>')
