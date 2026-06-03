@@ -484,7 +484,10 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     app_js = APP_JS.replace("__FAV_ICONS__", _FAV_ICONS_JSON)
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{_esc(title)} · Persona Council</title>{HEAD_JS}<style>{CSS}</style></head>
+<title>{_esc(title)} · Persona Council</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+{HEAD_JS}<style>{CSS}</style></head>
 <body><div class="app" id="app">
   <aside class="sidebar">
     <div class="brand"><span class="mark"></span><a href="/">Persona&nbsp;Council</a></div>
