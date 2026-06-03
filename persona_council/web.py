@@ -2295,13 +2295,14 @@ def create_app():
             for ph in (ms.get("steps") or ms.get("phases") or []):
                 state = ph["status"]
                 cls = "done" if state == "converged" else ("active" if ph["key"] == ms.get("phase") else "pend")
+                # shape is the only fixed visual convention: a waist (single, derived) vs a fan.
                 shape = "◆" if ph["mode"] == "converge" else "◇"
                 count = (f' <b>{ph["exploration_count"]}</b>'
                          if ph["mode"] == "diverge" and ph["exploration_count"] else "")
-                tg = ", ".join(ph.get("tags") or [])
-                cap = next((x for x in (ph.get("tags") or []) if x in
-                            ("explore", "cluster", "decide", "build", "test", "synthesize")), "")
-                captxt = f' <span class="mcap">{_esc(cap)}</span>' if cap else ""
+                tags = ph.get("tags") or []
+                tg = ", ".join(tags)
+                # the label is just the step's FIRST tag — no hardcoded tag vocabulary in the UI.
+                captxt = f' <span class="mcap">{_esc(tags[0])}</span>' if tags else ""
                 chips.append(f'<span class="mphase {cls}" title="{tg or ph["mode"]} · {state}">'
                              f'{shape} {_esc(ph["name"])}{captxt}{count}</span>')
             state_txt = "✓" if ms.get("complete") else f'@ {_esc(ms.get("phase") or "—")}'
