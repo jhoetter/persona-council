@@ -116,6 +116,17 @@ Memory & multi-resolution simulation (gather → author → write-back):
   Stimmen panel and the self-contained `export_synthesis` (md/json) for downstream agents.
 - Portability: `export_snapshot`/`import_snapshot` (data/export is the one
   portable artifact; it is gitignored/local-only, as is the SQLite DB runtime)
+- Methodology engine (data-driven, structure-enforcing + LLM-judged): `list_methodologies`/
+  `get_methodology`/`start_methodology_project`/`set_project_methodology`, the phase loop
+  `brief_phase`→`record_exploration`→`record_judgment`(divergence_complete)→`record_convergence`→
+  `advance_phase`, and `get_methodology_state`. The engine guarantees the diamond's SHAPE
+  (≥2 explorations + an evidence-backed `divergence_complete` before converging; refines edges
+  from the fan) but never hardcodes dynamics. Autonomous loop: `run_methodology`.
+- Prototypes (real, minimal, local apps agents can use): `scaffold_prototype` (concept→clickable
+  SPA), `register_prototype`, `list_prototypes`, `run_prototype`/`stop_prototype`; the Playwright
+  harness `proto_open`/`proto_act`/`proto_read`/`proto_close` lets a persona drive the REAL app,
+  and `brief_prototype_session`/`record_prototype_session` fold the grounded reaction into memory.
+  Install with `make playwright` (optional; degrades gracefully without chromium).
 
 Every tool returns an envelope `{ok, data, next_recommended_tool, _meta}`; the
 `next_recommended_tool` hints the decision DAG (simulate → consolidate → digest;
@@ -127,6 +138,11 @@ Run `make skills` once (symlinks `claude-skills/*` into gitignored
 `.claude/skills/`). Skills are thin orchestration playbooks; the methodology
 lives in `spec/`.
 
+- `methodology-run` — facilitate a data-driven methodology (Double Diamond, d.school
+  micro-cycle, Lean/JTBD, …) over the graph: genuinely diverge (fan out explorations)
+  then converge (cluster with an evidence-backed gate), incl. a prototype phase where
+  personas USE a real app via Playwright. The engine enforces the shape; you author the
+  text. Autonomous variant: `run_methodology`. Spec: `methodology-engine-and-prototyping.md`.
 - `simulate-cohort` — run the day/period loop for personas over months (sampling).
 - `run-council` — memory-grounded council; judicious self-research (recall only
   when it sharpens the answer); optional moderated back-and-forth with mediator

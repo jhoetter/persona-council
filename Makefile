@@ -3,7 +3,7 @@ FORWARDED_WEB_PORT ?= 18787
 
 UV ?= uv
 
-.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports
+.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright
 
 # Symlink version-controlled skills into .claude/skills/ so Claude Code discovers
 # them (.claude/skills is gitignored). Run once after clone.
@@ -44,6 +44,12 @@ test-smoke:
 	$(UV) run python -m compileall persona_council
 	$(UV) run persona-council persona-list >/dev/null
 	$(UV) run python -c "from persona_council.web import create_app; app=create_app(); print(app.title)"
+
+# Prototype harness (spec/methodology-engine-and-prototyping.md §7): install Playwright +
+# chromium so persona-agents can drive real apps. Optional — the harness degrades without it.
+playwright:
+	$(UV) pip install 'playwright>=1.40.0'
+	$(UV) run playwright install chromium
 
 kill-ports:
 	@for p in $(WEB_PORT); do \

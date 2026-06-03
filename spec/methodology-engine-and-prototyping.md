@@ -1,6 +1,14 @@
 # Methodology Engine, Orchestration Runtime & Agent-Usable Prototyping — Specification
 
-> **Status:** DESIGN — **build-ready (rev.3, 2026-06-03).** Implement M1–M5 in order (§12).
+> **Status:** **IMPLEMENTED — M1–M5 shipped 2026-06-03** (rev.3 design below).
+> **Built:** `methodology.py` (engine + registry; built-ins double_diamond/dschool_micro/
+> lean_jtbd), `prototypes.py` (scaffold/registry/runner), `browser.py` (Playwright harness),
+> `runtime.py` (autonomous loop + LLM/Stub AuthoringBackend); storage v4 tables; MCP tools
+> (§8) + CLI mirrors (§8.5); read-only UI (methodology strip + diamond view + prototype
+> viewer); `make playwright`; the `methodology-run` skill. Tests: `test_methodology_engine`,
+> `test_prototypes`, `test_browser_harness` (live + graceful), `test_runtime`, and the MCP
+> contract. A live autonomous run produces a real wide→narrow→wide→narrow diamond with a real
+> prototype + a real Playwright session.
 > **Supersedes** `spec/design-thinking-methodology.md` (history only; see §1).
 > rev.3 closes the five gaps that blocked a cold start: runtime two-mode mechanics (§5),
 > Playwright session/ref model (§7), the normative methodology schema (§4), the prototype

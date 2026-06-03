@@ -49,6 +49,15 @@ def test_expected_tools_registered():
         # deletes (CRUD complete via MCP):
         "delete_research_project", "remove_study_from_project", "unlink_studies",
         "delete_synthesis", "delete_council", "delete_persona",
+        # methodology engine (data-driven, structure+LLM-judged):
+        "list_methodologies", "get_methodology", "start_methodology_project",
+        "set_project_methodology", "brief_phase", "record_exploration", "record_judgment",
+        "record_convergence", "advance_phase", "get_methodology_state",
+        # prototypes + Playwright harness:
+        "scaffold_prototype", "register_prototype", "list_prototypes", "get_prototype",
+        "run_prototype", "stop_prototype", "delete_prototype",
+        "proto_open", "proto_act", "proto_read", "proto_close", "list_proto_sessions",
+        "brief_prototype_session", "record_prototype_session",
     }
     missing = expected - names
     assert not missing, f"MCP tools missing: {sorted(missing)}"
