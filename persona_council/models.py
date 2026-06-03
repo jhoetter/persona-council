@@ -174,9 +174,9 @@ class Synthesis:
     # each voice: {persona_id, persona_name, segment, sentiment, relevance,
     #              key_argument, shift:{from,to,trigger,council_id}|None, evidence:[{council_id,quote}]}
     # --- methodology-engine metadata (spec/methodology-engine-and-prototyping.md) ---
-    phase: str = ""          # which methodology phase produced this node (e.g. "discover")
-    mode: str = ""           # "diverge" (one of a fan) | "converge" (the waist)
-    role: str = ""           # light artifact tag (see methodology ROLES)
+    phase: str = ""          # which constellation step produced this node (step id, e.g. "discover")
+    mode: str = ""           # display label: "diverge" (one of a fan) | "converge" (the waist)
+    role: str = ""           # free role tag (= the step's produces.role)
     methodology: str = ""    # methodology key this node belongs to
     # converge-node enrichments (spec/deep-design-thinking-and-diamond.md §4):
     clusters: list[Json] = field(default_factory=list)   # [{label, member_node_ids, insight}]
@@ -206,9 +206,10 @@ class ResearchProject:
     updated_at: str
     # --- methodology-engine binding (spec/methodology-engine-and-prototyping.md) ---
     methodology: str = ""       # methodology key, "" = freeform project
-    phase: str = ""             # current phase key
+    phase: str = ""             # primary ready step id (display), or "__complete__"
     phase_log: Json = field(default_factory=dict)
-    # phase_log: {phase_key: {status, exploration_node_ids:[], convergence_node_id?, decided_at?}}
+    # phase_log: {step_id: {status, node_ids:[], decision_node_id?, decided_at?}}
+    #   (tag-driven constellation; spec/methodology-constellations.md)
 
     def to_dict(self) -> Json:
         return asdict(self)
@@ -268,8 +269,8 @@ class MethodologyJudgment:
     never dictates its content or a number."""
     id: str
     project_id: str
-    phase_key: str
-    kind: str                   # divergence_complete|core_problem_chosen|spec_ready|loop_back
+    phase_key: str              # the step id the judgment is recorded against
+    kind: str                   # the gate_tag — a FREE tag (e.g. divergence_complete, loop_back, …)
     decided: bool
     rationale: str
     evidence_refs: list[str]    # council_id | synthesis_id | session_id
