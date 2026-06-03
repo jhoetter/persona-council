@@ -10,7 +10,7 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 
-from .config import ROOT, utc_now_iso
+from .config import ROOT, utc_now_iso, content_language, ensure_content_language, language_instruction
 from .models import (
     CalendarEvent,
     CouncilSession,
@@ -34,20 +34,18 @@ from .llm_simulation import (
     build_evidence_check_prompt,
     build_persona_revision_prompt,
     build_plan_prompt,
+    build_profile_prompt,
     build_synthesis_prompt,
     generate_activity,
-    generate_council_selection_with_llm,
-    generate_council_synthesis_with_llm,
-    generate_council_turn_with_llm,
     generate_day_plan_with_llm,
-    generate_persona_answer_with_llm,
-    generate_profile_with_llm,
+    validate_activity_payload,
     validate_digest_payload,
     validate_eval_critic_payload,
     validate_evidence_check_payload,
     validate_memory_deltas_payload,
     validate_persona_revision_payload,
     validate_plan_payload,
+    validate_profile_payload,
     validate_synthesis_payload,
 )
 
@@ -148,8 +146,8 @@ Speak as a practical customer under real delivery pressure. Refer to concrete ca
 ## Recent Reflections
 {recent_reflections}
 
-## Gewachsene Identität (Revisionen)
-{chr(10).join(f"- {r['effective_on']}: {r.get('rationale','')[:200]}" for r in revisions) or "- Keine; Kern-Identität unverändert."}
+## Grown Identity (Revisions)
+{chr(10).join(f"- {r['effective_on']}: {r.get('rationale','')[:200]}" for r in revisions) or "- None; core identity unchanged."}
 """
 
 
@@ -188,22 +186,14 @@ def ensure_persona_runtime_fields(persona: dict[str, Any], store: Store | None =
         or "tool_ids" not in persona
         or "tools" not in persona
     ):
-        profile = generate_profile_with_llm(
-            persona["source_description"],
-            persona.get("segment", {}).get("customer_type"),
-            None,
+        # Profile fields are host-authored; we never regenerate them server-side.
+        # A persona missing them is malformed — point the host at the repair path
+        # instead of crashing every read with the generic "generation disabled".
+        raise ValueError(
+            f"Persona {persona['id']} is missing host-authored profile fields "
+            "(identity_traits/tools/tool_ids). Re-author it via brief_persona -> "
+            "record_persona to repair it."
         )
-        refreshed = _profile_to_persona_dict(
-            persona["source_description"],
-            profile,
-            persona.get("segment", {}).get("customer_type"),
-            None,
-            utc_now_iso(),
-            persona_id=persona["id"],
-            previous=persona,
-        )
-        persona.update(refreshed)
-        changed = True
     if "soul" not in persona or not persona.get("soul"):
         persona["soul"] = write_soul(persona, store)
         changed = True
@@ -261,19 +251,51 @@ def _profile_to_persona_dict(
     ).to_dict()
 
 
-def create_persona(
+_PERSONA_AUTHORING_HINT = (
+    "Persona profiles are host-authored (no server-side text generation). "
+    "Gather with brief_persona(description[, segment_hint, evidence]) -> author the "
+    "profile JSON it asks for -> persist with record_persona(description, profile)."
+)
+
+
+def brief_persona(description: str, segment_hint: str | None = None, evidence: str | None = None,
+                  store: Store | None = None) -> dict[str, Any]:
+    """Gather the prompt + frame for authoring ONE synthetic persona profile.
+
+    The host (Claude Code / Codex) writes the profile JSON from `instructions`,
+    then calls record_persona. Detects + persists the content language from the
+    source description the first time (so later runs/UI stay consistent)."""
+    description = (description or "").strip()
+    if not description:
+        raise ValueError("brief_persona needs a non-empty source description.")
+    language = ensure_content_language(" ".join(filter(None, [description, segment_hint, evidence])))
+    return {
+        "schema": "profile",
+        "language": language,
+        "description": description,
+        "segment_hint": segment_hint,
+        "has_evidence": bool(evidence),
+        "instructions": build_profile_prompt(description, segment_hint, evidence, language),
+        "frame": {"description": description, "segment_hint": segment_hint, "evidence": evidence},
+    }
+
+
+def record_persona(
     description: str,
+    profile: dict[str, Any],
     segment_hint: str | None = None,
     evidence: str | None = None,
     generate_avatar: bool = False,
     store: Store | None = None,
 ) -> dict[str, Any]:
+    """Validate + persist a host-authored persona profile (the JSON authored from
+    brief_persona). This is the create path; nothing is generated server-side."""
     store = store or Store()
     now = utc_now_iso()
-    profile = generate_profile_with_llm(description, segment_hint, evidence)
-    persona = _profile_to_persona_dict(description, profile, segment_hint, evidence, now)
+    validated = validate_profile_payload(profile)
+    persona = _profile_to_persona_dict(description, validated, segment_hint, evidence, now)
     persona["soul"] = write_soul(persona, store)
-    store.upsert_persona(persona, reason="create_persona")
+    store.upsert_persona(persona, reason="record_persona (host-authored)")
     if evidence:
         attach_evidence(persona["id"], "user_note", evidence, "Initial persona evidence", store)
     if generate_avatar:
@@ -286,40 +308,22 @@ def create_persona(
     return persona
 
 
-def refresh_persona_from_source(persona_id: str, store: Store | None = None) -> dict[str, Any]:
-    store = store or Store()
-    previous = store.get_persona(persona_id)
-    if not previous:
-        raise KeyError(f"Unknown persona: {persona_id}")
-    evidence = None
-    segment_hint = previous.get("segment", {}).get("customer_type")
-    profile = generate_profile_with_llm(previous["source_description"], segment_hint, evidence)
-    persona = _profile_to_persona_dict(
-        previous["source_description"],
-        profile,
-        segment_hint,
-        evidence,
-        utc_now_iso(),
-        persona_id=previous["id"],
-        previous=previous,
+def create_persona(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+    raise NotImplementedError(_PERSONA_AUTHORING_HINT)
+
+
+def bulk_create_personas(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+    raise NotImplementedError(
+        "Bulk creation is host-authored: brief_persona per description, author each "
+        "profile, then record_persona for each. " + _PERSONA_AUTHORING_HINT
     )
-    persona["soul"] = write_soul(persona, store)
-    store.upsert_persona(persona, reason="refresh persona from source with LLM")
-    return persona
 
 
-def bulk_create_personas(
-    descriptions: list[str],
-    segment_strategy: str | None = None,
-    generate_avatars: bool = False,
-    store: Store | None = None,
-) -> list[dict[str, Any]]:
-    store = store or Store()
-    return [
-        create_persona(d.strip(), segment_strategy, generate_avatar=generate_avatars, store=store)
-        for d in descriptions
-        if d.strip()
-    ]
+def refresh_persona_from_source(persona_id: str, store: Store | None = None) -> dict[str, Any]:
+    raise NotImplementedError(
+        "Refreshing a profile re-authors it: brief_persona(persona.source_description) "
+        "-> author -> record_persona. " + _PERSONA_AUTHORING_HINT
+    )
 
 
 def get_persona(persona_id: str, store: Store | None = None) -> dict[str, Any]:
@@ -926,168 +930,109 @@ def extract_pain_points(persona_id: str, start_date: str | None = None, end_date
     return observations
 
 
-def select_council(prompt: str, filters: dict[str, Any] | None = None, count: int = 3, disagreement_goal: str | None = None, store: Store | None = None) -> dict[str, Any]:
-    personas = list_personas(filters, store)
-    if not personas:
-        return {"persona_ids": [], "reasoning": "No profiles available."}
-    candidates = [
-        {
-            "persona_id": p["id"],
-            "display_name": p["display_name"],
-            "source_description": p["source_description"],
-            "role": p.get("role", {}),
-            "company_context": p.get("company_context", {}),
-            "goals": p.get("goals", []),
-            "constraints": p.get("constraints", []),
-            "tools": p.get("tools", []),
-            "relationships": p.get("relationships", []),
-            "pain_points": p.get("pain_points", []),
-            "success_criteria": p.get("success_criteria", []),
-        }
-        for p in personas
-    ]
-    return generate_council_selection_with_llm(
-        {
-            "prompt": prompt,
-            "filters": filters,
-            "count": min(max(1, count), len(candidates)),
-            "disagreement_goal": disagreement_goal,
-            "candidate_personas": candidates,
-        }
-    )
+def brief_council(prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None,
+                  count: int = 3, context: str | None = None, store: Store | None = None) -> dict[str, Any]:
+    """Gather everything needed to run a host-authored council and persist it with
+    record_council. Returns candidate personas (to select from) OR, when persona_ids
+    are given, each participant's loaded agent context to author turns against.
 
-
-def run_council(
-    prompt: str,
-    persona_ids: list[str] | None = None,
-    filters: dict[str, Any] | None = None,
-    rounds: int = 3,
-    context: str | None = None,
-    store: Store | None = None,
-) -> dict[str, Any]:
+    Methodology lives in the run-council skill: load each persona's SOUL + memory,
+    react in character (support/skepticism/indifference/rejection all valid), then
+    author proposal/votes/exec_summary and call record_council."""
     store = store or Store()
+    language = ensure_content_language(" ".join(filter(None, [prompt, context])))
     if not persona_ids:
-        selection = select_council(prompt, filters, count=3, store=store)
-        persona_ids = selection["persona_ids"]
-        reasoning = selection["reasoning"]
-    else:
-        reasoning = "Personas were explicitly provided."
-    personas = [store.get_persona(pid) for pid in persona_ids]
-    personas = [p for p in personas if p]
-    turns: list[dict[str, Any]] = []
-    contexts: list[dict[str, Any]] = []
-    for round_no in range(rounds):
-        for p in personas:
-            ctx = prepare_persona_agent_context(
-                p["id"],
-                f"Council prompt: {prompt}\nExternal context: {context or 'none'}",
-                store=store,
-            )
-            if round_no == 0:
-                contexts.append(
-                    {
-                        "persona_id": p["id"],
-                        "display_name": p["display_name"],
-                        "soul_path": ctx["soul_path"],
-                        "current_state": ctx["current_state"],
-                        "recent_event_ids": ctx["recent_event_ids"],
-                    }
-                )
-            generated = generate_council_turn_with_llm(
-                {
-                    "prompt": prompt,
-                    "external_context": context,
-                    "round": round_no + 1,
-                    "speaker": p["display_name"],
-                    "persona_agent_context": ctx["agent_context"],
-                    "previous_turns": turns[-8:],
-                }
-            )
-            turns.append(
-                {
-                    "round": round_no + 1,
-                    "speaker": p["display_name"],
-                    "persona_id": p["id"],
-                    "content": generated["content"],
-                    "stance": generated["stance"],
-                    "questions_or_pushback": generated["questions_or_pushback"],
-                    "memory_refs": [ctx["soul_path"], *generated["memory_refs"]],
-                    "soul_loaded": ctx["soul_loaded"],
-                    "soul_path": ctx["soul_path"],
-                }
-            )
-    synthesis = generate_council_synthesis_with_llm(
-        {
-            "prompt": prompt,
-            "external_context": context,
-            "selection_reason": reasoning,
-            "personas": contexts,
-            "turns": turns,
+        personas = list_personas(filters, store)
+        candidates = [
+            {"persona_id": p["id"], "display_name": p["display_name"],
+             "source_description": p["source_description"], "role": p.get("role", {}),
+             "company_context": p.get("company_context", {}), "goals": p.get("goals", []),
+             "constraints": p.get("constraints", []), "tools": p.get("tools", []),
+             "pain_points": p.get("pain_points", []), "success_criteria": p.get("success_criteria", [])}
+            for p in personas
+        ]
+        return {
+            "schema": "council_selection", "language": language, "prompt": prompt,
+            "count": min(max(1, count), len(candidates)) if candidates else 0,
+            "candidate_personas": candidates,
+            "instructions": (
+                "Select the personas whose lived contexts produce useful, honest contrast on this "
+                "prompt (never bias toward support; do not invent IDs). Then call brief_council again "
+                f"with persona_ids=[...] to get each participant's context. {language_instruction(language)}"
+                if candidates else "No personas exist yet. Create some via brief_persona/record_persona first."
+            ),
         }
+    participants = []
+    for pid in persona_ids:
+        p = store.get_persona(pid)
+        if not p:
+            continue
+        ctx = prepare_persona_agent_context(
+            p["id"], f"Council prompt: {prompt}\nExternal context: {context or 'none'}", store=store)
+        participants.append({
+            "persona_id": p["id"], "display_name": p["display_name"],
+            "soul_path": ctx["soul_path"], "agent_context": ctx["agent_context"],
+        })
+    return {
+        "schema": "council", "language": language, "prompt": prompt, "external_context": context,
+        "participants": participants,
+        "instructions": (
+            "Author one or more turns per participant grounded in their agent_context (SOUL + memory), "
+            "honest and anti-steering. Then author proposal, votes (SUPPORT/MAYBE/ABSTAIN/OPPOSE), a "
+            "short summary, and a rich Markdown exec_summary. Persist via record_council(prompt, "
+            f"persona_ids, turns, votes, proposal, summary, exec_summary). {language_instruction(language)}"
+        ),
+    }
+
+
+def select_council(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+    raise NotImplementedError(
+        "Council selection is host-authored: brief_council(prompt) returns candidates; "
+        "you pick. See the run-council skill."
     )
-    session = CouncilSession(
-        id=stable_id("council", prompt, utc_now_iso()),
-        prompt=prompt,
-        persona_ids=[p["id"] for p in personas],
-        selection_reason=reasoning,
-        turns=turns,
-        proposal=synthesis["proposal"],
-        votes=synthesis["votes"],
-        summary=synthesis["summary"],
-        exec_summary=synthesis.get("exec_summary", ""),
-        created_at=utc_now_iso(),
-    ).to_dict()
-    store.insert_council_session(session)
-    return session
 
 
-def ask_persona(persona_id: str, question: str, context: str | None = None, store: Store | None = None) -> dict[str, Any]:
+def run_council(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+    raise NotImplementedError(
+        "Councils are host-authored: brief_council(prompt) -> pick personas -> "
+        "brief_council(prompt, persona_ids) -> author turns + synthesis -> record_council(...). "
+        "See the run-council skill."
+    )
+
+
+def brief_ask(persona_id: str, question: str, context: str | None = None, store: Store | None = None) -> dict[str, Any]:
+    """Gather one persona's loaded agent context to author an honest answer to a
+    question. The host writes the answer from the returned agent_context (the
+    persona's SOUL + recent events + task-keyed memory)."""
     store = store or Store()
     persona = store.get_persona(persona_id)
     if not persona:
         raise KeyError(f"Unknown persona: {persona_id}")
+    language = ensure_content_language(" ".join(filter(None, [question, context])))
     agent_ctx = prepare_persona_agent_context(persona_id, question, store=store)
-    generated = generate_persona_answer_with_llm(
-        {
-            "question": question,
-            "external_context": context,
-            "persona_agent_context": agent_ctx["agent_context"],
-        }
-    )
     return {
-        "persona_id": persona["id"],
-        "display_name": persona["display_name"],
-        "question": question,
-        "answer": generated["answer"],
-        "referenced_moments": generated["referenced_moments"],
-        "uncertainties": generated["uncertainties"],
-        "context_used": context,
-        "soul_loaded": agent_ctx["soul_loaded"],
-        "soul_path": agent_ctx["soul_path"],
-        "recent_event_ids": agent_ctx["recent_event_ids"],
-        "synthetic_notice": "This is a simulated interview answer.",
+        "schema": "persona_answer", "language": language, "persona_id": persona["id"],
+        "display_name": persona["display_name"], "question": question, "external_context": context,
+        "soul_path": agent_ctx["soul_path"], "agent_context": agent_ctx["agent_context"],
+        "instructions": (
+            "Answer AS this persona, grounded in the agent_context — do not force support; "
+            "say what is uncertain if the record is thin. " + language_instruction(language)
+        ),
     }
 
 
-def compare_personas(prompt: str, persona_ids: list[str], output_format: str | None = None, store: Store | None = None) -> dict[str, Any]:
-    store = store or Store()
-    rows = []
-    for pid in persona_ids:
-        persona = store.get_persona(pid)
-        if persona:
-            answer = ask_persona(persona["id"], prompt, store=store)
-            rows.append(
-                {
-                    "persona_id": persona["id"],
-                    "display_name": persona["display_name"],
-                    "comment": answer["answer"],
-                    "referenced_moments": answer["referenced_moments"],
-                    "uncertainties": answer["uncertainties"],
-                    "soul_loaded": True,
-                    "soul_path": get_persona_soul(persona["id"], store)["path"],
-                }
-            )
-    return {"prompt": prompt, "format": output_format or "json", "comparisons": rows}
+def ask_persona(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+    raise NotImplementedError(
+        "Persona answers are host-authored: brief_ask(persona_id, question) returns the "
+        "persona's loaded context; you write the answer in character."
+    )
+
+
+def compare_personas(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+    raise NotImplementedError(
+        "Compare is host-authored: brief_ask per persona on the same question, then author "
+        "each answer and contrast them."
+    )
 
 
 def attach_evidence(persona_id: str, source_type: str, content_or_path: str, notes: str | None = None, store: Store | None = None) -> dict[str, Any]:
@@ -1150,13 +1095,19 @@ def export_council_session(session_id: str, format: str = "json", store: Store |
     if not session:
         raise KeyError(f"Unknown council session: {session_id}")
     if format == "md":
-        lines = [f"# Council Session", "", f"**Prompt:** {session['prompt']}", "", "## Turns"]
-        for t in session["turns"]:
-            lines.append(f"- **{t['speaker']}**: {t['content']}")
-        lines.extend(["", "## Proposal", session["proposal"], "", "## Votes"])
+        de = content_language() == "de"
+        h_session = "Council-Sitzung" if de else "Council Session"
+        h_turns = "Wortbeiträge" if de else "Turns"
+        h_proposal = "Vorschlag" if de else "Proposal"
+        h_votes = "Stimmen" if de else "Votes"
+        h_summary = "Zusammenfassung" if de else "Summary"
+        lines = [f"# {h_session}", "", f"**Prompt:** {session['prompt']}", "", f"## {h_turns}"]
+        for turn in session["turns"]:
+            lines.append(f"- **{turn['speaker']}**: {turn['content']}")
+        lines.extend(["", f"## {h_proposal}", session["proposal"], "", f"## {h_votes}"])
         for v in session["votes"]:
-            lines.append(f"- **{v['speaker']}**: {v['vote']} - {v['reason']}")
-        lines.extend(["", "## Summary", session["summary"]])
+            lines.append(f"- **{v.get('speaker') or v.get('persona_id', '')}**: {v.get('vote', '')} - {v.get('reason', '')}")
+        lines.extend(["", f"## {h_summary}", session["summary"]])
         return "\n".join(lines) + "\n"
     return json.dumps(session, indent=2, ensure_ascii=False)
 
@@ -1423,9 +1374,63 @@ def brief_day(persona_id: str, date_value: str | None = None, store: Store | Non
     day = _parse_date(date_value).isoformat()
     frame = {"persona_name": persona["display_name"], "persona_id": persona["id"], "scope": "day",
              "date": day, "soul": get_persona_soul(persona["id"], store)["content"],
-             "memory": _day_memory_context(store, persona, day), "anti_steering": _ANTI_STEERING}
+             "memory": _day_memory_context(store, persona, day), "anti_steering": _ANTI_STEERING,
+             "allowed_tools": persona["tools"], "allowed_tool_ids": persona.get("tool_ids", []),
+             "allowed_pain_points": persona["pain_points"]}
+    day_bundle_hint = (
+        "To simulate this ONE day end-to-end, author a day bundle and call "
+        "record_day(persona_id, date, day_plan, plan, activities[, deltas]): "
+        "`plan` = this analysis (validate_plan_payload schema); `day_plan` = "
+        "{mood_forecast, blocks:[{title, event_type, duration_minutes, collaboration_mode, "
+        "participants, tool(from allowed_tools), why_it_happens}]} (>=5 blocks); `activities` = "
+        "an object keyed by each block title -> {what_happened, conversation, key_quotes, "
+        "actions_done, artifacts_touched, persona_thought, decision, open_loops, mood, "
+        "energy_delta(-3..2), pain_points(from allowed_pain_points)}; `deltas` = optional "
+        "consolidation (see brief_consolidation). " + language_instruction(content_language())
+    )
     return {"persona_id": persona["id"], "date": day, "scope": "day", "schema": "plan",
-            "instructions": build_plan_prompt(frame), "frame": frame}
+            "instructions": build_plan_prompt(frame), "day_bundle_hint": day_bundle_hint, "frame": frame}
+
+
+def record_day(persona_id: str, date_value: str, day_plan: dict[str, Any], plan: dict[str, Any],
+               activities: dict[str, Any], deltas: dict[str, Any] | None = None,
+               workday_start_hour: int | None = None, seed: str | None = None,
+               store: Store | None = None) -> dict[str, Any]:
+    """Persist a host-authored single day: put_day_plan -> simulate the authored
+    blocks/activities -> optional record_memory_deltas. Mirrors one day of a month
+    bundle, for when you want detail on a single date rather than a whole month."""
+    store = store or Store()
+    persona = _require_persona(store, persona_id)
+    pid = persona["id"]
+    day = _parse_date(date_value).isoformat()
+    from . import llm_simulation as _llm
+
+    put_day_plan(pid, day, plan, store=store)
+    saved_plan = globals()["generate_day_plan_with_llm"]
+    saved_act = globals()["generate_activity"]
+    globals()["generate_day_plan_with_llm"] = lambda frame, _p=day_plan: _llm.validate_day_plan_payload(_p, frame)
+
+    def _act(frame, _a=activities):
+        if frame["title"] not in _a:
+            raise ValueError(f"record_day: no authored activity for block '{frame['title']}'.")
+        out = _llm.validate_activity_payload(_a[frame["title"]], frame)
+        out["generation_mode"] = "host_authored"
+        out["llm_error"] = None
+        return out
+
+    globals()["generate_activity"] = _act
+    try:
+        cons = {"workday_start": int(workday_start_hour)} if workday_start_hour is not None else None
+        sim = simulate_day(pid, day, seed=seed, constraints=cons, store=store)
+    finally:
+        globals()["generate_day_plan_with_llm"] = saved_plan
+        globals()["generate_activity"] = saved_act
+    result = {"persona_id": pid, "date": day, "activities": len(sim["experience_events"])}
+    if deltas:
+        rec = record_memory_deltas(pid, day, deltas, store=store)
+        result["entities"] = rec.get("entities_created")
+        result["facts"] = rec.get("facts")
+    return result
 
 
 def put_day_plan(persona_id: str, date_value: str, plan: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
@@ -2217,6 +2222,36 @@ def list_syntheses(store: Store | None = None) -> list[dict[str, Any]]:
     return store.list_syntheses()
 
 
+# Stakeholder-report headers follow the CONTENT language (de|en) so a German
+# project gets a German report and an English project an English one.
+_SYNTHESIS_EXPORT_LABELS = {
+    "de": {
+        "report_title": "Synthese-Report",
+        "arc_line": "Studien-Bogen aus {n} Councils · Status: {status} · erzeugt {date}.",
+        "goal": "Ziel", "next_council": "Vorgeschlagener nächster Council (self-contained)",
+        "stop_reason": "Abschlussgrund", "start": "Ausgangspunkt", "arc": "Bogen / Verlauf",
+        "big_picture": "Gesamtbild", "recommendations": "Handlungsempfehlungen",
+        "effort": "Aufwand", "value": "Nutzen", "positioning": "Positionierung",
+        "pain_solvers": "Validierte Pain-Solver / Delight-Engines", "segments": "Segmente",
+        "voices": "Stimmen (pro Persona)", "relevance": "Relevanz", "argument": "Argument",
+        "shift": "Wandel", "open_questions": "Offene Fragen / Nächste Studie",
+        "sources": "Quellen (Councils in Reihenfolge)",
+    },
+    "en": {
+        "report_title": "Synthesis report",
+        "arc_line": "Study arc across {n} councils · status: {status} · generated {date}.",
+        "goal": "Goal", "next_council": "Proposed next council (self-contained)",
+        "stop_reason": "Stop reason", "start": "Starting point", "arc": "Arc / trajectory",
+        "big_picture": "Overall picture", "recommendations": "Recommendations",
+        "effort": "Effort", "value": "Value", "positioning": "Positioning",
+        "pain_solvers": "Validated pain-solvers / delight-engines", "segments": "Segments",
+        "voices": "Voices (per persona)", "relevance": "Relevance", "argument": "Argument",
+        "shift": "Shift", "open_questions": "Open questions / Next study",
+        "sources": "Sources (councils in order)",
+    },
+}
+
+
 def export_synthesis(synthesis_id: str, format: str = "md", store: Store | None = None) -> str:
     """Render the synthesis as a stakeholder report (Markdown), referencing each council."""
     store = store or Store()
@@ -2225,49 +2260,50 @@ def export_synthesis(synthesis_id: str, format: str = "md", store: Store | None 
         return json.dumps(syn, indent=2, ensure_ascii=False)
     role = {r["council_id"]: r.get("role", "") for r in syn.get("references", [])}
     status = syn.get("status", "done")
-    lines = [f"# Synthese-Report: {syn['title']}", "",
-             f"*Studien-Bogen aus {len(syn['council_ids'])} Councils · Status: {status} · erzeugt {syn['created_at']}.*", ""]
+    L = _SYNTHESIS_EXPORT_LABELS[content_language()]
+    lines = [f"# {L['report_title']}: {syn['title']}", "",
+             f"*{L['arc_line'].format(n=len(syn['council_ids']), status=status, date=syn['created_at'])}*", ""]
     if syn.get("goal"):
-        lines += ["## Ziel", syn["goal"], ""]
+        lines += [f"## {L['goal']}", syn["goal"], ""]
     if status == "in_progress" and syn.get("next_council_question"):
-        lines += ["## Vorgeschlagener nächster Council (self-contained)", syn["next_council_question"], ""]
+        lines += [f"## {L['next_council']}", syn["next_council_question"], ""]
     if status == "done" and syn.get("stop_reason"):
-        lines += ["## Abschlussgrund", syn["stop_reason"], ""]
-    lines += ["## Ausgangspunkt", syn.get("start_input", ""), "",
-             "## Bogen / Verlauf", syn.get("arc_narrative", ""), "",
-             "## Gesamtbild", syn.get("gesamtbild", ""), "",
-             "## Handlungsempfehlungen"]
+        lines += [f"## {L['stop_reason']}", syn["stop_reason"], ""]
+    lines += [f"## {L['start']}", syn.get("start_input", ""), "",
+             f"## {L['arc']}", syn.get("arc_narrative", ""), "",
+             f"## {L['big_picture']}", syn.get("gesamtbild", ""), "",
+             f"## {L['recommendations']}"]
     def _rec_md(x: Any) -> str:
         if isinstance(x, dict):
-            t = x.get("text", ""); a, n = x.get("aufwand"), x.get("nutzen")
-            return f"{t} _(Aufwand {a}/5 · Nutzen {n}/5)_" if a and n else str(t)
+            txt = x.get("text", ""); a, n = x.get("aufwand"), x.get("nutzen")
+            return f"{txt} _({L['effort']} {a}/5 · {L['value']} {n}/5)_" if a and n else str(txt)
         return str(x)
     lines += [f"{i}. {_rec_md(x)}" for i, x in enumerate(syn.get("handlungsempfehlungen", []), 1)] or ["—"]
-    lines += ["", "## Positionierung", syn.get("positionierung", ""), "",
-              "## Validierte Pain-Solver / Delight-Engines"]
+    lines += ["", f"## {L['positioning']}", syn.get("positionierung", ""), "",
+              f"## {L['pain_solvers']}"]
     lines += [f"- {x}" for x in syn.get("pain_solvers", [])] or ["—"]
-    lines += ["", "## Segmente"]
+    lines += ["", f"## {L['segments']}"]
     lines += [f"- **{s['segment']}** ({s.get('stance','')}): {s.get('why','')}" for s in syn.get("segmente", [])] or ["—"]
     voices = syn.get("voices", [])
     if voices:
-        lines += ["", "## Stimmen (pro Persona)"]
+        lines += ["", f"## {L['voices']}"]
         order = {"positiv": 0, "bedingt": 1, "neutral": 2, "skeptisch": 3, "ablehnend": 4}
         for v in sorted(voices, key=lambda x: order.get(x.get("sentiment", "neutral"), 2)):
             name = v.get("persona_name") or v.get("persona_id")
-            head = f"- **{name}** — {v.get('sentiment','')} · Relevanz: {v.get('relevance','')}"
+            head = f"- **{name}** — {v.get('sentiment','')} · {L['relevance']}: {v.get('relevance','')}"
             if v.get("segment"):
                 head += f" · {v['segment']}"
             lines.append(head)
             if v.get("key_argument"):
-                lines.append(f"  - Argument: {v['key_argument']}")
+                lines.append(f"  - {L['argument']}: {v['key_argument']}")
             sh = v.get("shift")
             if sh and (sh.get("trigger") or sh.get("to")):
-                lines.append(f"  - Wandel: {sh.get('from','')}→{sh.get('to','')} — {sh.get('trigger','')}")
+                lines.append(f"  - {L['shift']}: {sh.get('from','')}→{sh.get('to','')} — {sh.get('trigger','')}")
             for e in v.get("evidence", []):
                 lines.append(f"  - „{e.get('quote','')}“ [{e.get('council_id','')}]")
-    lines += ["", "## Offene Fragen / Nächste Studie"]
+    lines += ["", f"## {L['open_questions']}"]
     lines += [f"- {x}" for x in syn.get("offene_fragen", [])] or ["—"]
-    lines += ["", "## Quellen (Councils in Reihenfolge)"]
+    lines += ["", f"## {L['sources']}"]
     for cid in syn["council_ids"]:
         c = store.get_council_session(cid)
         prompt = (c.get("prompt") if c else cid)

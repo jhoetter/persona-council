@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextvars
 import html
 import json
 import re
@@ -7,8 +8,282 @@ from collections import Counter, defaultdict
 from datetime import date, timedelta
 
 from . import services
-from .config import DATA_DIR, load_env
+from .config import DATA_DIR, load_env, ui_language, set_ui_language, SUPPORTED_LANGUAGES
 from .storage import Store
+
+
+# ===================================================================== #
+# i18n: the inspector chrome is bilingual (de/en). The active UI language #
+# is resolved per request (?lang= -> cookie -> persisted setting) and    #
+# held in a contextvar so the module-level render helpers can read it     #
+# without threading it through every function. Generated CONTENT keeps    #
+# its own content_language; this only switches the surrounding UI.        #
+# ===================================================================== #
+
+_UI_LANG: contextvars.ContextVar[str | None] = contextvars.ContextVar("ui_lang", default=None)
+
+STRINGS: dict[str, dict[str, str]] = {
+    "de": {
+        "overview": "Übersicht", "personas": "Personas", "councils": "Councils",
+        "syntheses": "Synthesen", "favorites": "Favoriten", "mark_with_star": "Mit Stern markieren",
+        "theme_toggle": "Theme wechseln", "sidebar": "Sidebar", "repo": "Repo",
+        "lang_toggle": "Sprache: Deutsch (zu English wechseln)", "lang_short": "EN",
+        "back_to_overview": "Zur Übersicht",
+        "overview_lead": "Synthetische Kundenpersonas, ihre simulierten Arbeitstage, Councils und Synthese-Reports.",
+        "personas_lead": "{n} synthetische Kundenprofile.",
+        "councils_lead": "Memory-geerdete Persona-Debatten.",
+        "syntheses_lead": "Studien-Bögen über Council-Ketten — die Reports.",
+        "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Synthese.",
+        "export_pdf": "Export PDF",
+        # generic / not-found
+        "not_found": "Nicht gefunden",
+        "no_personas": "Noch keine Personas.",
+        "runtime_maybe_cleared": "Runtime-Daten evtl. geleert.",
+        "profile_not_found": "Profil nicht gefunden",
+        "persona_runtime_cleared": "Die Runtime-Daten wurden evtl. geleert.",
+        "council_not_found": "Council nicht gefunden",
+        "synthesis_not_found": "Synthese nicht gefunden",
+        "activity_not_found": "Aktivität nicht gefunden",
+        # star
+        "favorite": "Favorit", "mark_as_favorite": "Als Favorit markieren",
+        # recommendations / effort-impact
+        "effort_value": "Aufwand {a}/5 · Nutzen {n}/5",
+        "ei_high_leverage": "hoher Hebel", "ei_worthwhile": "lohnend",
+        "ei_neutral": "neutral", "ei_critical": "kritisch prüfen",
+        "ei_quick_wins": "Quick Wins", "ei_big_bets": "Big Bets",
+        "ei_fill_ins": "Lückenfüller", "ei_time_sinks": "Zeitfresser",
+        "ei_effort_axis": "Aufwand →", "ei_value_axis": "Nutzen →",
+        "no_data": "Keine Daten.",
+        # vote labels
+        "vote_support": "Befürwortend", "vote_maybe": "Bedingt",
+        "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
+        # stance buckets
+        "stance_positive": "Positiv / begeistert", "stance_skeptical": "Skeptisch / ablehnend",
+        "stance_neutral": "Neutral", "stance_conditional": "Bedingt / teils",
+        "stance_other": "Sonstige",
+        # sentiment section
+        "sentiment_block": "Stimmungsbild",
+        "sentiment_scope_chain": "die Council-Kette", "sentiment_scope_session": "diese Sitzung",
+        "sentiment_intro": "Stimmen über {scope} — wer befürwortet, wer ist skeptisch.",
+        "per_council": "Pro Council",
+        "personas_by_sentiment": "Personas nach Stimmung — Begeisterungs-Score (Befürwortung − Ablehnung)",
+        "stance_of_contributions": "Haltung der Wortbeiträge",
+        "sentiment_label": "Sentiment", "relevance_label": "Relevanz",
+        "name_label": "Name",
+        "relevance_tooltip": "Relevanz / tangiert: {rel}",
+        "voices_count": "Stimmen ({n})",
+        "voices_intro": "Pro Persona: Sentiment, Relevanz (tangiert), Schlüssel-Argument und Wandel — "
+                        "filtern, sortieren, aufklappen für Belege.",
+        "search_arg_name": "Suche Argument / Name…",
+        "sort_by_sentiment": "Sortieren: Sentiment", "sort_relevance": "Relevanz",
+        "sort_shift_first": "Wandel zuerst",
+        "segment": "Segment",
+        "to_council": "→ Council",
+        "shift_label": "Wandel {a} → {b}:",
+        "voices_n_of_m": "{n} von {m} Stimmen",
+        "voices_in_analyses": "Stimmen in Analysen",
+        # synthesis report
+        "answer_exec_summary": "Antwort · Executive Summary",
+        "question": "Frage",
+        "councils_overview": "Councils im Überblick",
+        "jump_into_council": "In den Council springen →",
+        "recommendations": "Handlungsempfehlungen",
+        "positioning": "Positionierung",
+        "voices": "Stimmen",
+        "sentiment_over_chain": "Stimmungsbild über die Council-Kette",
+        "segments": "Segmente",
+        "validated_pain_solvers": "Validierte Pain-Solver",
+        "open_questions": "Offene Fragen",
+        "open_questions_next_study": "Offene Fragen / Nächste Studie",
+        "course": "Verlauf", "arc_course": "Bogen / Verlauf",
+        "sections": "Abschnitte",
+        "exec_summary_marker": "Exec-Summary",
+        "completed": "Abgeschlossen", "running": "läuft",
+        "iterations": "Iterationen",
+        "voices_meta": "Stimmen: {s}",
+        # council detail
+        "sentiment_this_council": "Stimmungsbild dieses Councils",
+        "voices_in_detail": "Stimmen im Detail ({n})",
+        "proposal_short_summary": "Proposal &amp; Kurz-Summary",
+        "proposal": "Proposal", "summary": "Summary",
+        "vote": "Abstimmung", "created": "Erzeugt", "done": "done",
+        # persona detail
+        "activity_over_time": "Aktivität über Zeit",
+        "activities_per_day": "Simulierte Aktivitäten pro Tag ({n} gesamt).",
+        "current_state": "Aktueller Zustand",
+        "goals": "Ziele", "pain_points": "Pain Points", "relationships": "Beziehungen",
+        "calendar": "Kalender", "no_days_yet": "Noch keine Tage.",
+        "properties": "Eigenschaften", "role": "Rolle", "industry": "Branche",
+        "size": "Größe", "tools": "Tools", "memory": "Memory", "open": "öffnen",
+        "n_projects": "{n} Projekte", "n_open": "{n} offen",
+        "not_simulated_yet": "noch nicht simuliert",
+        "simulated_activities": "simulierte Aktivitäten",
+        "latest_synthesis": "Neueste Synthese · {n} Councils",
+        # activity detail
+        "what_happened": "Was geschah", "thought": "Gedanke",
+        "conversation": "Konversation", "none_f": "Keine.",
+        "actions": "Aktionen", "artifacts": "Artefakte", "open_loops": "Offene Loops",
+        "persona": "Persona", "tool": "Tool", "mood": "Mood",
+        "participants": "Beteiligte", "alone": "allein", "decision": "Entscheidung",
+        # calendar
+        "tab_day": "Tag", "tab_week": "Woche", "tab_month": "Monat", "tab_year": "Jahr",
+        "n_events": "{n} Events",
+        # memory
+        "memory_title": "Memory — {name}",
+        "memory_sub": "Projekt-Timelines, Time-Travel und Recall.",
+        "quality": "Qualität", "structure": "Struktur", "critic": "Kritiker",
+        "time_travel": "Time-Travel", "show_state": "Stand zeigen",
+        "recall": "Recall", "search": "Suchen",
+        "recall_placeholder": "z.B. Brandschutz",
+        "active_projects": "Aktive Projekte", "open_threads": "Offene Fäden",
+        "digests": "Digests", "none": "keine", "nothing": "nichts",
+        "state_at": "Stand am {date}", "nothing_valid": "nichts gültig",
+        "open_threads_count": "Offene Fäden: {n}",
+        "no_critic_run": "noch kein Kritiker-Lauf",
+        "outdated": "überholt", "since": "seit",
+    },
+    "en": {
+        "overview": "Overview", "personas": "Personas", "councils": "Councils",
+        "syntheses": "Syntheses", "favorites": "Favorites", "mark_with_star": "Mark with a star",
+        "theme_toggle": "Toggle theme", "sidebar": "Sidebar", "repo": "Repo",
+        "lang_toggle": "Language: English (switch to German)", "lang_short": "DE",
+        "back_to_overview": "Back to overview",
+        "overview_lead": "Synthetic customer personas, their simulated workdays, councils and synthesis reports.",
+        "personas_lead": "{n} synthetic customer profiles.",
+        "councils_lead": "Memory-grounded persona debates.",
+        "syntheses_lead": "Study arcs across council chains — the reports.",
+        "no_councils": "No councils yet.", "no_synthesis": "No synthesis yet.",
+        "export_pdf": "Export PDF",
+        # generic / not-found
+        "not_found": "Not found",
+        "no_personas": "No personas yet.",
+        "runtime_maybe_cleared": "Runtime data may have been cleared.",
+        "profile_not_found": "Profile not found",
+        "persona_runtime_cleared": "The runtime data may have been cleared.",
+        "council_not_found": "Council not found",
+        "synthesis_not_found": "Synthesis not found",
+        "activity_not_found": "Activity not found",
+        # star
+        "favorite": "Favorite", "mark_as_favorite": "Mark as favorite",
+        # recommendations / effort-impact
+        "effort_value": "Effort {a}/5 · Value {n}/5",
+        "ei_high_leverage": "high leverage", "ei_worthwhile": "worthwhile",
+        "ei_neutral": "neutral", "ei_critical": "review critically",
+        "ei_quick_wins": "Quick Wins", "ei_big_bets": "Big Bets",
+        "ei_fill_ins": "Fill-ins", "ei_time_sinks": "Time sinks",
+        "ei_effort_axis": "Effort →", "ei_value_axis": "Value →",
+        "no_data": "No data.",
+        # vote labels
+        "vote_support": "For", "vote_maybe": "Conditional",
+        "vote_abstain": "Abstain", "vote_oppose": "Against",
+        # stance buckets
+        "stance_positive": "Positive / enthusiastic", "stance_skeptical": "Skeptical / opposed",
+        "stance_neutral": "Neutral", "stance_conditional": "Conditional / partly",
+        "stance_other": "Other",
+        # sentiment section
+        "sentiment_block": "Sentiment",
+        "sentiment_scope_chain": "the council chain", "sentiment_scope_session": "this session",
+        "sentiment_intro": "Voices across {scope} — who supports, who is skeptical.",
+        "per_council": "Per council",
+        "personas_by_sentiment": "Personas by sentiment — enthusiasm score (support − opposition)",
+        "stance_of_contributions": "Stance of the contributions",
+        "sentiment_label": "Sentiment", "relevance_label": "Relevance",
+        "name_label": "Name",
+        "relevance_tooltip": "Relevance / affected: {rel}",
+        "voices_count": "Voices ({n})",
+        "voices_intro": "Per persona: sentiment, relevance (affected), key argument and shift — "
+                        "filter, sort, expand for evidence.",
+        "search_arg_name": "Search argument / name…",
+        "sort_by_sentiment": "Sort: sentiment", "sort_relevance": "Relevance",
+        "sort_shift_first": "Shift first",
+        "segment": "Segment",
+        "to_council": "→ Council",
+        "shift_label": "Shift {a} → {b}:",
+        "voices_n_of_m": "{n} of {m} voices",
+        "voices_in_analyses": "Voices in analyses",
+        # synthesis report
+        "answer_exec_summary": "Answer · Executive Summary",
+        "question": "Question",
+        "councils_overview": "Councils overview",
+        "jump_into_council": "Jump into the council →",
+        "recommendations": "Recommendations",
+        "positioning": "Positioning",
+        "voices": "Voices",
+        "sentiment_over_chain": "Sentiment across the council chain",
+        "segments": "Segments",
+        "validated_pain_solvers": "Validated pain solvers",
+        "open_questions": "Open questions",
+        "open_questions_next_study": "Open questions / Next study",
+        "course": "Course", "arc_course": "Arc / Course",
+        "sections": "Sections",
+        "exec_summary_marker": "Exec summary",
+        "completed": "Completed", "running": "running",
+        "iterations": "Iterations",
+        "voices_meta": "Voices: {s}",
+        # council detail
+        "sentiment_this_council": "Sentiment of this council",
+        "voices_in_detail": "Voices in detail ({n})",
+        "proposal_short_summary": "Proposal &amp; brief summary",
+        "proposal": "Proposal", "summary": "Summary",
+        "vote": "Vote", "created": "Created", "done": "done",
+        # persona detail
+        "activity_over_time": "Activity over time",
+        "activities_per_day": "Simulated activities per day ({n} total).",
+        "current_state": "Current state",
+        "goals": "Goals", "pain_points": "Pain points", "relationships": "Relationships",
+        "calendar": "Calendar", "no_days_yet": "No days yet.",
+        "properties": "Properties", "role": "Role", "industry": "Industry",
+        "size": "Size", "tools": "Tools", "memory": "Memory", "open": "open",
+        "n_projects": "{n} projects", "n_open": "{n} open",
+        "not_simulated_yet": "not simulated yet",
+        "simulated_activities": "simulated activities",
+        "latest_synthesis": "Latest synthesis · {n} councils",
+        # activity detail
+        "what_happened": "What happened", "thought": "Thought",
+        "conversation": "Conversation", "none_f": "None.",
+        "actions": "Actions", "artifacts": "Artifacts", "open_loops": "Open loops",
+        "persona": "Persona", "tool": "Tool", "mood": "Mood",
+        "participants": "Participants", "alone": "alone", "decision": "Decision",
+        # calendar
+        "tab_day": "Day", "tab_week": "Week", "tab_month": "Month", "tab_year": "Year",
+        "n_events": "{n} events",
+        # memory
+        "memory_title": "Memory — {name}",
+        "memory_sub": "Project timelines, time travel and recall.",
+        "quality": "Quality", "structure": "Structure", "critic": "Critic",
+        "time_travel": "Time travel", "show_state": "Show state",
+        "recall": "Recall", "search": "Search",
+        "recall_placeholder": "e.g. fire safety",
+        "active_projects": "Active projects", "open_threads": "Open threads",
+        "digests": "Digests", "none": "none", "nothing": "nothing",
+        "state_at": "State at {date}", "nothing_valid": "nothing valid",
+        "open_threads_count": "Open threads: {n}",
+        "no_critic_run": "no critic run yet",
+        "outdated": "outdated", "since": "since",
+    },
+}
+
+
+def _lang() -> str:
+    return _UI_LANG.get() or ui_language()
+
+
+def t(key: str, **kw: object) -> str:
+    lang = _lang() if _lang() in STRINGS else "en"
+    value = STRINGS[lang].get(key) or STRINGS["en"].get(key, key)
+    return value.format(**kw) if kw else value
+
+
+def _resolve_request_language(query_lang: str | None, cookie_lang: str | None) -> tuple[str, bool]:
+    """Resolve the UI language for a request and whether it should be persisted.
+    Precedence: explicit ?lang= (persist) -> cookie -> stored setting."""
+    q = (query_lang or "").strip().lower()[:2]
+    if q in SUPPORTED_LANGUAGES:
+        return q, True
+    c = (cookie_lang or "").strip().lower()[:2]
+    if c in SUPPORTED_LANGUAGES:
+        return c, False
+    return ui_language(), False
 
 
 # ===================================================================== #
@@ -437,21 +712,21 @@ APP_JS = """
 
 
 def _nav(active: str, store: Store) -> str:
-    items = [("/", "overview", "Overview"), ("/personas", "personas", "Personas"),
-             ("/councils", "councils", "Councils"), ("/syntheses", "syntheses", "Synthesen")]
+    items = [("/", "overview", t("overview")), ("/personas", "personas", t("personas")),
+             ("/councils", "councils", t("councils")), ("/syntheses", "syntheses", t("syntheses"))]
     nav = "".join(
         f'<a href="{href}" class="{"active" if key == active else ""}">{_icon(key)}<span>{label}</span></a>'
         for href, key, label in items
     )
     # Favorites are stored client-side (localStorage); this container is filled by JS.
-    favs = ('<div class="navhead">Favoriten</div>'
-            '<div class="sb-quick" id="favs"><span class="muted small" style="padding:5px 9px;display:block">Mit Stern markieren</span></div>')
+    favs = (f'<div class="navhead">{t("favorites")}</div>'
+            f'<div class="sb-quick" id="favs"><span class="muted small" style="padding:5px 9px;display:block">{t("mark_with_star")}</span></div>')
     return f'<nav class="nav">{nav}</nav>{favs}'
 
 
 def _star(kind: str, ident: str, label: str, href: str) -> str:
     return (f'<button class="starbtn" data-star="{_esc(kind)}:{_esc(ident)}" data-href="{_esc(href)}" '
-            f'data-label="{_esc(label)}" data-type="{_esc(kind)}" title="Favorit" aria-label="Als Favorit markieren">'
+            f'data-label="{_esc(label)}" data-type="{_esc(kind)}" title="{_esc(t("favorite"))}" aria-label="{_esc(t("mark_as_favorite"))}">'
             f'{_icon("star")}</button>')
 
 
@@ -461,28 +736,31 @@ _FAV_ICONS_JSON = json.dumps({"persona": ICONS["personas"], "council": ICONS["co
 def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
             active: str = "", actions: str = "") -> str:
     crumbs = crumbs or [(title, None)]
-    theme_btn = '<button class="iconbtn" id="thm" title="Theme wechseln" aria-label="Theme">' + _icon("sun") + "</button>"
+    theme_btn = f'<button class="iconbtn" id="thm" title="{t("theme_toggle")}" aria-label="Theme">' + _icon("sun") + "</button>"
+    other = "en" if _lang() == "de" else "de"
+    lang_btn = (f'<a class="iconbtn" id="lang" href="?lang={other}" title="{_esc(t("lang_toggle"))}" '
+                f'aria-label="Language" style="font-size:11px;font-weight:600;text-decoration:none">{t("lang_short")}</a>')
     app_js = APP_JS.replace("__FAV_ICONS__", _FAV_ICONS_JSON)
     return f"""<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_esc(title)} · Persona Council</title>{HEAD_JS}<style>{CSS}</style></head>
 <body><div class="app" id="app">
   <aside class="sidebar">
     <div class="brand"><span class="mark"></span><a href="/">Persona&nbsp;Council</a></div>
     <div class="sb-scroll">{_nav(active, store)}</div>
-    <div class="sb-foot"><a href="/syntheses">Synthesen</a> · <a href="https://github.com/jhoetter/persona-council">Repo</a></div>
+    <div class="sb-foot"><a href="/syntheses">{t("syntheses")}</a> · <a href="https://github.com/jhoetter/persona-council">{t("repo")}</a></div>
   </aside>
   <div class="resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
   <div class="main">
-    <header class="topbar"><button class="iconbtn" id="sbt" title="Sidebar ([)" aria-label="Sidebar">{_icon("panel")}</button>
-      {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}{theme_btn}</span></header>
+    <header class="topbar"><button class="iconbtn" id="sbt" title="{t("sidebar")} ([)" aria-label="Sidebar">{_icon("panel")}</button>
+      {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}{lang_btn}{theme_btn}</span></header>
     <section>{body}</section>
   </div>
 </div>{app_js}</body></html>"""
 
 
 def _empty_state(title: str, message: str) -> str:
-    return f'<div class="page"><div class="card"><h2>{_esc(title)}</h2><p class="muted">{_esc(message)}</p><p><a class="btn" href="/">{_icon("back")} Zur Übersicht</a></p></div></div>'
+    return f'<div class="page"><div class="card"><h2>{_esc(title)}</h2><p class="muted">{_esc(message)}</p><p><a class="btn" href="/">{_icon("back")} {t("back_to_overview")}</a></p></div></div>'
 
 
 def _pills(items: list[str]) -> str:
@@ -570,12 +848,12 @@ def _rec_item(x) -> tuple:
 
 
 def _rec_row_n(i: int, text: str, a, n) -> str:
-    ax = f'<span class="axchip">Aufwand {a}/5 · Nutzen {n}/5</span>' if (a and n) else ""
+    ax = f'<span class="axchip">{t("effort_value", a=a, n=n)}</span>' if (a and n) else ""
     return f'<div class="rec" id="rec-{i}"><span class="recnum">{i}</span><div>{_srcchips(_esc(text))}{ax}</div></div>'
 
 
-_EI_LEV = {"g": ("var(--green)", "hoher Hebel"), "a": ("var(--accent)", "lohnend"),
-           "m": ("var(--amber)", "neutral"), "r": ("var(--red)", "kritisch prüfen")}
+_EI_LEV = {"g": ("var(--green)", "ei_high_leverage"), "a": ("var(--accent)", "ei_worthwhile"),
+           "m": ("var(--amber)", "ei_neutral"), "r": ("var(--red)", "ei_critical")}
 _EI_OFFSETS = {
     1: [(0, 0)], 2: [(-17, 0), (17, 0)], 3: [(0, -18), (-17, 13), (17, 13)],
     4: [(-16, -16), (16, -16), (-16, 16), (16, 16)],
@@ -587,7 +865,7 @@ _EI_OFFSETS = {
 def _effort_impact(recs: list) -> str:
     """recs: [(text, aufwand, nutzen)] (1-based order = label). HTML Aufwand×Nutzen matrix
     with hover popovers — no list needed. Returns '' when nothing is scored."""
-    scored = [(i, t, a, n) for i, (t, a, n) in enumerate(recs, 1) if a and n]
+    scored = [(i, txt, a, n) for i, (txt, a, n) in enumerate(recs, 1) if a and n]
     if not scored:
         return ""
     W, H = 560, 420
@@ -605,12 +883,12 @@ def _effort_impact(recs: list) -> str:
         f'<line x1="{padL}" y1="{my:.0f}" x2="{W-padR}" y2="{my:.0f}" stroke="var(--line)" stroke-dasharray="3 4"/>',
         f'<line x1="{padL}" y1="{padT}" x2="{padL}" y2="{H-padB}" stroke="var(--line)"/>',
         f'<line x1="{padL}" y1="{H-padB}" x2="{W-padR}" y2="{H-padB}" stroke="var(--line)"/>',
-        f'<text x="{padL+8}" y="{padT+15}" {q}>Quick Wins</text>',
-        f'<text x="{W-padR-6}" y="{padT+15}" text-anchor="end" {q}>Big Bets</text>',
-        f'<text x="{padL+8}" y="{H-padB-9}" {q}>Lückenfüller</text>',
-        f'<text x="{W-padR-6}" y="{H-padB-9}" text-anchor="end" {q}>Zeitfresser</text>',
-        f'<text x="{(padL+W-padR)/2:.0f}" y="{H-9}" text-anchor="middle" font-size="12" fill="var(--ink)">Aufwand →</text>',
-        f'<text transform="translate(15,{(padT+H-padB)/2:.0f}) rotate(-90)" text-anchor="middle" font-size="12" fill="var(--ink)">Nutzen →</text>',
+        f'<text x="{padL+8}" y="{padT+15}" {q}>{t("ei_quick_wins")}</text>',
+        f'<text x="{W-padR-6}" y="{padT+15}" text-anchor="end" {q}>{t("ei_big_bets")}</text>',
+        f'<text x="{padL+8}" y="{H-padB-9}" {q}>{t("ei_fill_ins")}</text>',
+        f'<text x="{W-padR-6}" y="{H-padB-9}" text-anchor="end" {q}>{t("ei_time_sinks")}</text>',
+        f'<text x="{(padL+W-padR)/2:.0f}" y="{H-9}" text-anchor="middle" font-size="12" fill="var(--ink)">{t("ei_effort_axis")}</text>',
+        f'<text transform="translate(15,{(padT+H-padB)/2:.0f}) rotate(-90)" text-anchor="middle" font-size="12" fill="var(--ink)">{t("ei_value_axis")}</text>',
     ]
     svg = f'<svg class="ei-bg" viewBox="0 0 {W} {H}" aria-hidden="true">{"".join(bg)}</svg>'
     groups: dict = {}
@@ -620,8 +898,9 @@ def _effort_impact(recs: list) -> str:
     for (a, n), items in groups.items():
         offs = _EI_OFFSETS.get(len(items), [(0, 0)] * len(items))
         cx, cy = X(a), Y(n)
-        for off, (i, t, a2, n2) in zip(offs, items):
-            color, levlabel = _EI_LEV[lev(a2, n2)]
+        for off, (i, txt, a2, n2) in zip(offs, items):
+            color, levkey = _EI_LEV[lev(a2, n2)]
+            levlabel = t(levkey)
             lp = (cx + off[0]) / W * 100
             tp = (cy + off[1]) / H * 100
             cls = "ei-dot"
@@ -632,15 +911,15 @@ def _effort_impact(recs: list) -> str:
             elif lp <= 24:
                 cls += " algn-l"
             pop = (f'<span class="ei-pop"><span class="ei-pop-h" style="color:{color}">#{i} · {levlabel}</span>'
-                   f'<span class="ei-pop-t">{_srcchips(_esc(t))}</span>'
-                   f'<span class="ei-pop-m">Aufwand {a2}/5 · Nutzen {n2}/5</span></span>')
+                   f'<span class="ei-pop-t">{_srcchips(_esc(txt))}</span>'
+                   f'<span class="ei-pop-m">{t("effort_value", a=a2, n=n2)}</span></span>')
             dots.append(f'<span class="{cls}" tabindex="0" style="left:{lp:.2f}%;top:{tp:.2f}%;--c:{color}">'
                         f'<span class="ei-num">{i}</span>{pop}</span>')
     leg = ('<div class="ei-leg">'
-           '<span><i style="background:var(--green)"></i>hoher Hebel</span>'
-           '<span><i style="background:var(--accent)"></i>lohnend</span>'
-           '<span><i style="background:var(--amber)"></i>neutral</span>'
-           '<span><i style="background:var(--red)"></i>kritisch prüfen</span></div>')
+           f'<span><i style="background:var(--green)"></i>{t("ei_high_leverage")}</span>'
+           f'<span><i style="background:var(--accent)"></i>{t("ei_worthwhile")}</span>'
+           f'<span><i style="background:var(--amber)"></i>{t("ei_neutral")}</span>'
+           f'<span><i style="background:var(--red)"></i>{t("ei_critical")}</span></div>')
     return f'<div class="ei-wrap"><div class="ei-plot">{svg}{"".join(dots)}</div>{leg}</div>'
 
 
@@ -654,8 +933,11 @@ def _doc(main: str, toc: str = "", rail: str = "") -> str:
 # ----------------------------- chart primitives ----------------------------- #
 # Vanilla inline charts (CSS/conic-gradient/SVG) — no build step, dark-mode safe.
 _VOTE_ORDER = ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]
-_VOTE_LABEL = {"SUPPORT": "Befürwortend", "MAYBE": "Bedingt", "ABSTAIN": "Enthaltung", "OPPOSE": "Ablehnend"}
 _VOTE_COLOR = {"SUPPORT": "var(--green)", "MAYBE": "var(--amber)", "ABSTAIN": "var(--muted)", "OPPOSE": "var(--red)"}
+
+
+def _vote_label(k: str) -> str:
+    return t("vote_" + k.lower())
 
 
 def _stacked(parts: list[tuple], thin: bool = False) -> str:
@@ -695,7 +977,7 @@ def _hbars(rows: list[tuple], maxv: int | None = None) -> str:
 def _area(points: list[tuple], w: int = 560, h: int = 140) -> str:
     """points: [(label, value)]. Area + line chart (SVG, viewBox-scaled)."""
     if not points:
-        return '<p class="muted small">Keine Daten.</p>'
+        return f'<p class="muted small">{t("no_data")}</p>'
     n = len(points); mx = max(v for _, v in points) or 1
     pad = 6
     def x(i): return pad + (i * (w - 2 * pad) / (n - 1 if n > 1 else 1))
@@ -714,14 +996,14 @@ def _stance_bucket(s: str) -> tuple[str, str]:
     """Classify a free-text stance into (label, color) for distribution charts."""
     s = (s or "").lower()
     if any(k in s for k in ["begeist", "positiv", "stark", "support", "befürwort"]):
-        return ("Positiv / begeistert", "var(--green)")
+        return (t("stance_positive"), "var(--green)")
     if any(k in s for k in ["skept", "ableh", "oppose", "negativ", "kaum", "gar nicht"]):
-        return ("Skeptisch / ablehnend", "var(--red)")
+        return (t("stance_skeptical"), "var(--red)")
     if any(k in s for k in ["neutral", "abstain", "enthalt"]):
-        return ("Neutral", "var(--muted)")
+        return (t("stance_neutral"), "var(--muted)")
     if any(k in s for k in ["bedingt", "maybe", "teilweise", "passt", "tangiert", "hebel"]):
-        return ("Bedingt / teils", "var(--amber)")
-    return ("Sonstige", "var(--accent)")
+        return (t("stance_conditional"), "var(--amber)")
+    return (t("stance_other"), "var(--accent)")
 
 
 # --------------------- contextual analytics (council / synthesis) --------------------- #
@@ -731,7 +1013,7 @@ def _vote_parts(sessions: list[dict]) -> tuple[Counter, list[tuple]]:
     for s in sessions:
         for v in s.get("votes", []):
             tot[v.get("vote")] += 1
-    return tot, [(tot.get(k, 0), _VOTE_COLOR[k], _VOTE_LABEL[k]) for k in _VOTE_ORDER]
+    return tot, [(tot.get(k, 0), _VOTE_COLOR[k], _vote_label(k)) for k in _VOTE_ORDER]
 
 
 def _overview_html(parts: list[tuple]) -> str:
@@ -770,7 +1052,7 @@ def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
         p = personas.get(pid)
         name = p["display_name"] if p else pid
         av = _avatar(p, 22) if p else ""
-        _, parts = (None, [(cnt.get(k, 0), _VOTE_COLOR[k], _VOTE_LABEL[k]) for k in _VOTE_ORDER])
+        _, parts = (None, [(cnt.get(k, 0), _VOTE_COLOR[k], _vote_label(k)) for k in _VOTE_ORDER])
         pct = round(score * 100)
         col = _stance_color("positiv" if pct >= 33 else "skept" if pct < 0 else "bedingt")
         rows.append(
@@ -791,28 +1073,30 @@ def _stance_dist_html(sessions: list[dict]) -> str:
 
 
 def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment",
-                       title: str = "Stimmungsbild", per_council: bool = False) -> str | None:
+                       title: str | None = None, per_council: bool = False) -> str | None:
     """Reusable sentiment analytics block, embedded ON a council or synthesis."""
+    if title is None:
+        title = t("sentiment_block")
     sessions = [s for s in sessions if s]
     tot, parts = _vote_parts(sessions)
     nvotes = sum(v for v, _, _ in parts)
     has_turns = any(s.get("turns") for s in sessions)
     if not nvotes and not has_turns:
         return None
-    scope = "die Council-Kette" if per_council else "diese Sitzung"
-    blocks = [f'<p class="ihint">Stimmen über {scope} — wer befürwortet, wer ist skeptisch.</p>']
+    scope = t("sentiment_scope_chain") if per_council else t("sentiment_scope_session")
+    blocks = [f'<p class="ihint">{t("sentiment_intro", scope=scope)}</p>']
     if nvotes:
         blocks.append(_overview_html(parts))
     if per_council and len(sessions) > 1:
         pc = _per_council_html(sessions)
         if pc:
-            blocks.append('<p class="ihint" style="margin-top:18px">Pro Council</p>' + pc)
+            blocks.append(f'<p class="ihint" style="margin-top:18px">{t("per_council")}</p>' + pc)
     pbs = _personas_by_sentiment_html(store, sessions)
     if pbs:
-        blocks.append('<p class="ihint" style="margin-top:18px">Personas nach Stimmung — Begeisterungs-Score (Befürwortung − Ablehnung)</p>' + pbs)
+        blocks.append(f'<p class="ihint" style="margin-top:18px">{t("personas_by_sentiment")}</p>' + pbs)
     sd = _stance_dist_html(sessions)
     if sd:
-        blocks.append('<p class="ihint" style="margin-top:18px">Haltung der Wortbeiträge</p>' + sd)
+        blocks.append(f'<p class="ihint" style="margin-top:18px">{t("stance_of_contributions")}</p>' + sd)
     return f'<div class="sec" id="{_esc(sid)}"><h2>{_esc(title)}</h2>' + "".join(blocks) + "</div>"
 
 
@@ -831,7 +1115,7 @@ def _sent_color(s: str) -> str:
 def _relbar(rel: str) -> str:
     lvl = _REL_LEVEL.get(rel, 2)
     ticks = "".join(f'<i class="{"on" if i < lvl else ""}"></i>' for i in range(4))
-    return f'<span class="relbar" title="Relevanz / tangiert: {_esc(rel)}">{ticks}</span>'
+    return f'<span class="relbar" title="{_esc(t("relevance_tooltip", rel=rel))}">{ticks}</span>'
 
 
 VOICES_JS = """
@@ -854,8 +1138,8 @@ VOICES_JS = """
     var vis=[]; rows.forEach(function(r){var v=ok(r); r.classList.toggle('hide',!v); if(v)vis.push(r);});
     var cs={},cr={}; vis.forEach(function(r){cs[r.dataset.sentiment]=(cs[r.dataset.sentiment]||0)+1; cr[r.dataset.relevance]=(cr[r.dataset.relevance]||0)+1;});
     var tot=vis.length||1;
-    dist.innerHTML='<span class="dk">Sentiment</span>'+bar(SENT,SC,cs,tot)+'<span class="dk">Relevanz</span>'+bar(REL,RC,cr,tot);
-    count.textContent=vis.length+' von '+rows.length+' Stimmen';
+    dist.innerHTML='<span class="dk">__SENT_LABEL__</span>'+bar(SENT,SC,cs,tot)+'<span class="dk">__REL_LABEL__</span>'+bar(REL,RC,cr,tot);
+    count.textContent='__NOFM__'.replace('{n}',vis.length).replace('{m}',rows.length);
     var key=sortSel.value, so={positiv:0,bedingt:1,neutral:2,skeptisch:3,ablehnend:4}, ro={stark:0,teilweise:1,kaum:2,irrelevant:3};
     vis.sort(function(a,b){
       if(key==='name') return (a.dataset.name||'').localeCompare(b.dataset.name||'');
@@ -885,18 +1169,19 @@ def _voices_panel(store: Store, syn: dict) -> str | None:
         dot = f'<i style="background:{color}"></i>' if color else ""
         return f'<button class="vchip" data-facet="{facet}" data-val="{_esc(val)}">{_esc(val)}{dot}</button>'
 
-    filt = (f'<div class="fgroup"><span class="flabel">Sentiment</span>'
+    filt = (f'<div class="fgroup"><span class="flabel">{t("sentiment_label")}</span>'
             + "".join(chip("sentiment", s, _sent_color(s)) for s in _SENT_ORDER) + "</div>"
-            + '<div class="fgroup"><span class="flabel">Relevanz</span>'
+            + f'<div class="fgroup"><span class="flabel">{t("relevance_label")}</span>'
             + "".join(chip("relevance", r) for r in _REL_ORDER) + "</div>")
     if segments:
-        filt += ('<div class="fgroup"><span class="flabel">Segment</span>'
+        filt += (f'<div class="fgroup"><span class="flabel">{t("segment")}</span>'
                  + "".join(chip("segment", s) for s in segments) + "</div>")
+    ph_search = _esc(t("search_arg_name"))
     tools = (f'<div class="vtools"><div class="vfilters">{filt}</div>'
-             '<div class="vtools-right"><input class="vsearch" type="text" placeholder="Suche Argument / Name…">'
-             '<select class="vsort"><option value="sentiment">Sortieren: Sentiment</option>'
-             '<option value="relevance">Relevanz</option><option value="name">Name</option>'
-             '<option value="shift">Wandel zuerst</option></select></div></div>')
+             f'<div class="vtools-right"><input class="vsearch" type="text" placeholder="{ph_search}">'
+             f'<select class="vsort"><option value="sentiment">{t("sort_by_sentiment")}</option>'
+             f'<option value="relevance">{t("sort_relevance")}</option><option value="name">{t("name_label")}</option>'
+             f'<option value="shift">{t("sort_shift_first")}</option></select></div></div>')
 
     rows = []
     for v in voices:
@@ -912,11 +1197,12 @@ def _voices_panel(store: Store, syn: dict) -> str | None:
         exp = []
         if has_shift:
             cid = sh.get("council_id", "")
-            link = f' <a href="/councils/{_esc(cid)}">→ Council</a>' if cid else ""
-            exp.append(f'<div class="vshift"><strong>Wandel {_esc(sh.get("from",""))} → {_esc(sh.get("to",""))}:</strong> {_esc(sh.get("trigger",""))}{link}</div>')
+            link = f' <a href="/councils/{_esc(cid)}">{t("to_council")}</a>' if cid else ""
+            shift_lbl = _esc(t("shift_label", a=sh.get("from", ""), b=sh.get("to", "")))
+            exp.append(f'<div class="vshift"><strong>{shift_lbl}</strong> {_esc(sh.get("trigger",""))}{link}</div>')
         for e in v.get("evidence", []):
             cid = e.get("council_id", "")
-            link = f' <a href="/councils/{_esc(cid)}">→ Council</a>' if cid else ""
+            link = f' <a href="/councils/{_esc(cid)}">{t("to_council")}</a>' if cid else ""
             exp.append(f'<div class="vev">„{_esc(e.get("quote",""))}“{link}</div>')
         exp_html = f'<div class="vexp" hidden>{"".join(exp)}</div>' if exp else ""
         text = f'{name} {v.get("key_argument","")} {seg}'.lower()
@@ -929,11 +1215,13 @@ def _voices_panel(store: Store, syn: dict) -> str | None:
             f'<div class="vright">{segchip}{_star("persona", pid, name, f"/personas/{pid}")}<span class="vchev">▸</span></div>'
             f'</div>{exp_html}</div>'
         )
-    return (f'<div class="sec" id="stimmen"><h2>Stimmen ({len(voices)})</h2>'
-            '<p class="ihint">Pro Persona: Sentiment, Relevanz (tangiert), Schlüssel-Argument und Wandel — '
-            'filtern, sortieren, aufklappen für Belege.</p>'
+    js = (VOICES_JS.replace("__SENT_LABEL__", t("sentiment_label"))
+          .replace("__REL_LABEL__", t("relevance_label"))
+          .replace("__NOFM__", t("voices_n_of_m", n="{n}", m="{m}")))
+    return (f'<div class="sec" id="stimmen"><h2>{t("voices_count", n=len(voices))}</h2>'
+            f'<p class="ihint">{t("voices_intro")}</p>'
             f'<div class="voices" id="voices">{tools}<div class="vdist"></div><div class="vcount"></div>'
-            f'<div class="vrows">{"".join(rows)}</div></div></div>') + VOICES_JS
+            f'<div class="vrows">{"".join(rows)}</div></div></div>') + js
 
 
 def _persona_voices_html(store: Store, pid: str) -> str:
@@ -956,7 +1244,7 @@ def _persona_voices_html(store: Store, pid: str) -> str:
             break
     if not out:
         return ""
-    return f'<div class="sec" id="stimmen"><h2>Stimmen in Analysen</h2><div class="vrows">{"".join(out)}</div></div>'
+    return f'<div class="sec" id="stimmen"><h2>{t("voices_in_analyses")}</h2><div class="vrows">{"".join(out)}</div></div>'
 
 
 # --------------------------- synthesis report --------------------------- #
@@ -980,7 +1268,7 @@ _SYN_STYLE = r"""<style>
 .syn-main section{padding:0;overflow:visible}
 .syn-main .block{margin-top:40px;padding-top:26px}
 .qa-q{font-size:19px;line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 20px;padding-left:15px;border-left:3px solid var(--accent)}
-.qa-q::before{content:"Frage";display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
+.qa-q::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
 .cgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .ccard{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);display:flex;flex-direction:column;gap:9px}
 .cc-top{display:flex;align-items:center;gap:10px}
@@ -1050,9 +1338,9 @@ def _synthesis_html(store: Store, syn: dict) -> str:
     # 1) Executive Summary — large prose, no box
     if syn.get("gesamtbild"):
         question = _esc(syn.get("goal") or syn.get("start_input", ""))
-        sec.append(("exec", "Summary",
-            f'<div class="es" id="exec"><p class="qa-q">{question}</p>'
-            f'<div class="eyebrow">Antwort · Executive Summary</div>'
+        sec.append(("exec", t("summary"),
+            f'<div class="es" id="exec"><p class="qa-q" data-label="{_esc(t("question"))}">{question}</p>'
+            f'<div class="eyebrow">{t("answer_exec_summary")}</div>'
             f'<div class="es-prose">{_md(syn["gesamtbild"])}</div></div>'))
     # 2) Councils im Überblick — card per council: tally, takeaway, expand, jump
     cards = []
@@ -1074,11 +1362,11 @@ def _synthesis_html(store: Store, syn: dict) -> str:
             f'<p class="cc-take">{take}</p>'
             f'<div class="cc-chips">{chips}</div>'
             f'<details class="cc-more"><summary></summary><div class="cc-es">{_md(es)}</div></details>'
-            f'<a class="cc-jump" href="/councils/{_esc(cid)}">In den Council springen →</a>'
+            f'<a class="cc-jump" href="/councils/{_esc(cid)}">{t("jump_into_council")}</a>'
             f'</article>')
     if cards:
-        sec.append(("councils", "Councils",
-            f'<div class="block" id="councils"><h2 class="bh">Councils im Überblick <span class="cnt">{len(cards)}</span></h2>'
+        sec.append(("councils", t("councils"),
+            f'<div class="block" id="councils"><h2 class="bh">{t("councils_overview")} <span class="cnt">{len(cards)}</span></h2>'
             f'<div class="cgrid">{"".join(cards)}</div></div>'))
     rec_items = [_rec_item(x) for x in syn.get("handlungsempfehlungen", [])]
     chart = _effort_impact(rec_items)
@@ -1087,51 +1375,51 @@ def _synthesis_html(store: Store, syn: dict) -> str:
     else:
         rows = "".join(_rec_row_n(i, t, a, n) for i, (t, a, n) in enumerate(rec_items, 1)) or '<p class="muted">—</p>'
         body = f'<div class="reclist">{rows}</div>'
-    sec.append(("empfehlungen", "Empfehlungen",
-                f'<div class="block" id="empfehlungen"><h2 class="bh">Handlungsempfehlungen</h2>{body}</div>'))
+    sec.append(("empfehlungen", t("recommendations"),
+                f'<div class="block" id="empfehlungen"><h2 class="bh">{t("recommendations")}</h2>{body}</div>'))
     if syn.get("positionierung"):
-        sec.append(("positionierung", "Positionierung",
-                    f'<div class="block" id="positionierung"><h2 class="bh">Positionierung</h2><div class="es-prose sm">{_md(syn["positionierung"])}</div></div>'))
+        sec.append(("positionierung", t("positioning"),
+                    f'<div class="block" id="positionierung"><h2 class="bh">{t("positioning")}</h2><div class="es-prose sm">{_md(syn["positionierung"])}</div></div>'))
     # voices — who thinks what & why (filter/sort/shift/evidence)
     panel = _voices_panel(store, syn)
     if panel:
-        sec.append(("stimmen", "Stimmen", f'<div class="block" id="stimmen">{panel}</div>'))
+        sec.append(("stimmen", t("voices"), f'<div class="block" id="stimmen">{panel}</div>'))
     else:
         syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]
-        sent = _sentiment_section(store, syn_sessions, title="Stimmungsbild über die Council-Kette", per_council=True)
+        sent = _sentiment_section(store, syn_sessions, title=t("sentiment_over_chain"), per_council=True)
         if sent:
-            sec.append(("stimmen", "Stimmen", f'<div class="block" id="stimmen">{sent}</div>'))
+            sec.append(("stimmen", t("voices"), f'<div class="block" id="stimmen">{sent}</div>'))
     # supporting analysis
     segs = "".join(
         f'<div class="segrow"><div><strong>{_esc(s.get("segment",""))}</strong><br><span class="muted">{_esc(s.get("why",""))}</span></div>'
         f'{_label(s.get("stance",""), _stance_color(s.get("stance","")))}</div>' for s in syn.get("segmente", [])
     ) or '<p class="muted">—</p>'
-    sec.append(("segmente", "Segmente", f'<div class="block" id="segmente"><h2 class="bh">Segmente</h2>{segs}</div>'))
+    sec.append(("segmente", t("segments"), f'<div class="block" id="segmente"><h2 class="bh">{t("segments")}</h2>{segs}</div>'))
     ps = "".join(f'<div class="psolve">{_srcchips(_esc(x))}</div>' for x in syn.get("pain_solvers", [])) or '<p class="muted">—</p>'
-    sec.append(("painsolver", "Pain-Solver", f'<div class="block" id="painsolver"><h2 class="bh">Validierte Pain-Solver</h2>{ps}</div>'))
+    sec.append(("painsolver", "Pain-Solver", f'<div class="block" id="painsolver"><h2 class="bh">{t("validated_pain_solvers")}</h2>{ps}</div>'))
     if syn.get("offene_fragen"):
         of = "".join(f'<div class="psolve">{_esc(x)}</div>' for x in syn["offene_fragen"])
-        sec.append(("offene", "Offene Fragen", f'<div class="block" id="offene"><h2 class="bh">Offene Fragen / Nächste Studie</h2>{of}</div>'))
+        sec.append(("offene", t("open_questions"), f'<div class="block" id="offene"><h2 class="bh">{t("open_questions_next_study")}</h2>{of}</div>'))
     # arc (collapsed)
-    sec.append(("bogen", "Verlauf",
-                f'<details class="block" id="bogen"><summary class="bh" style="cursor:pointer">Bogen / Verlauf</summary><div class="es-prose sm">{_md(_srcchips(syn.get("arc_narrative","")))}</div></details>'))
+    sec.append(("bogen", t("course"),
+                f'<details class="block" id="bogen"><summary class="bh" style="cursor:pointer">{t("arc_course")}</summary><div class="es-prose sm">{_md(_srcchips(syn.get("arc_narrative","")))}</div></details>'))
 
     # ---- slim meta strip (replaces the old Eigenschaften rail) ----
     cs = Counter(v.get("sentiment", "neutral") for v in syn.get("voices", []))
     smeta = " · ".join(f"{cs[k]} {k}" for k in _SENT_ORDER if cs.get(k))
-    mchips = [_label("Abgeschlossen" if done else "läuft", "var(--green)" if done else "var(--amber)")]
-    mchips.append(f'<span class="mchip">{len(syn.get("council_ids", []))} Councils</span>')
+    mchips = [_label(t("completed") if done else t("running"), "var(--green)" if done else "var(--amber)")]
+    mchips.append(f'<span class="mchip">{len(syn.get("council_ids", []))} {t("councils")}</span>')
     if syn.get("iterations"):
-        mchips.append(f'<span class="mchip">{syn["iterations"]} Iterationen</span>')
+        mchips.append(f'<span class="mchip">{syn["iterations"]} {t("iterations")}</span>')
     if smeta:
-        mchips.append(f'<span class="mchip">Stimmen: {_esc(smeta)}</span>')
+        mchips.append(f'<span class="mchip">{t("voices_meta", s=_esc(smeta))}</span>')
     mchips.append(f'<span class="mchip">{_esc(syn["created_at"][:10])}</span>')
     head = (f'<header class="syn-head"><h1>{_esc(syn["title"])}</h1>'
             f'<div class="syn-meta">{"".join(mchips)}</div></header>')
 
     ticks = "".join(f'<a class="tick" href="#{sid}"><span class="tk-label">{_esc(lbl)}</span><span class="tk-bar"></span></a>'
                     for sid, lbl, _ in sec)
-    rail = f'<nav class="syn-rail" aria-label="Abschnitte">{ticks}</nav>'
+    rail = f'<nav class="syn-rail" aria-label="{_esc(t("sections"))}">{ticks}</nav>'
     main = head + "".join(h for _, _, h in sec)
     return _SYN_STYLE + f'<div class="syn-wrap"><div class="syn-main">{main}</div>{rail}</div>' + _SYN_SCRIPT
 
@@ -1149,6 +1437,22 @@ def create_app():
     app = FastAPI(title="Persona Council")
     app.mount("/data", StaticFiles(directory="data"), name="data")
 
+    @app.middleware("http")
+    async def _ui_language_middleware(request, call_next):
+        """Resolve the UI language per request (?lang= -> cookie -> setting), expose
+        it to the render helpers via the contextvar, and persist an explicit choice."""
+        lang, persist = _resolve_request_language(
+            request.query_params.get("lang"), request.cookies.get("ui_lang"))
+        token = _UI_LANG.set(lang)
+        try:
+            response = await call_next(request)
+        finally:
+            _UI_LANG.reset(token)
+        if persist:
+            response.set_cookie("ui_lang", lang, max_age=60 * 60 * 24 * 365, samesite="lax")
+            set_ui_language(lang)
+        return response
+
     # ---------- helpers that need the store ----------
     def _persona_card(p: dict, store: Store) -> str:
         pid = p["id"]
@@ -1158,12 +1462,12 @@ def create_app():
             proj = []
         loops = len(store.list_threads(pid, "open"))
         st = services.get_current_state(pid, store=store)
-        cur = st.get("current_activity") if st.get("current_activity") != "not simulated yet" else "noch nicht simuliert"
+        cur = st.get("current_activity") if st.get("current_activity") != "not simulated yet" else t("not_simulated_yet")
         meta = []
         if proj:
-            meta.append(_label(f"{len(proj)} Projekte", "var(--accent)"))
+            meta.append(_label(t("n_projects", n=len(proj)), "var(--accent)"))
         if loops:
-            meta.append(_label(f"{loops} offen", "var(--amber)"))
+            meta.append(_label(t("n_open", n=loops), "var(--amber)"))
         return (
             f'<a class="pcard" href="/personas/{_esc(pid)}">'
             f'{_star("persona", pid, p["display_name"], f"/personas/{pid}")}'
@@ -1179,29 +1483,30 @@ def create_app():
         councils = store.list_council_sessions()
         syns = store.list_syntheses()
         events = sum(len(store.list_experience_events(p["id"])) for p in personas)
+        acts_label = t("simulated_activities")
         stats = (
-            f'<div class="stat"><b>{len(personas)}</b><span>Personas</span></div>'
-            f'<div class="stat"><b>{len(councils)}</b><span>Councils</span></div>'
-            f'<div class="stat"><b>{len(syns)}</b><span>Synthesen</span></div>'
-            f'<div class="stat"><b>{events}</b><span>simulierte Aktivitäten</span></div>'
+            f'<div class="stat"><b>{len(personas)}</b><span>{t("personas")}</span></div>'
+            f'<div class="stat"><b>{len(councils)}</b><span>{t("councils")}</span></div>'
+            f'<div class="stat"><b>{len(syns)}</b><span>{t("syntheses")}</span></div>'
+            f'<div class="stat"><b>{events}</b><span>{acts_label}</span></div>'
         )
         latest = ""
         if syns:
             s = syns[0]
             latest = (f'<a class="callout" href="/syntheses/{_esc(s["id"])}" style="text-decoration:none">'
                       f'<span class="emj">{_icon("syntheses")}</span><div><strong>{_esc(s["title"])}</strong>'
-                      f'<br><span class="muted small">Neueste Synthese · {len(s.get("council_ids", []))} Councils</span></div></a>')
-        cards = "".join(_persona_card(p, store) for p in personas) or '<p class="muted">Noch keine Personas.</p>'
-        body = f'<div class="page"><h1 class="h1">Übersicht</h1><p class="lead">Synthetische Kundenpersonas, ihre simulierten Arbeitstage, Councils und Synthese-Reports.</p><div class="stats">{stats}</div>{latest}<h2 style="font-size:15px;margin:22px 0 12px">Personas</h2><div class="pgrid">{cards}</div></div>'
-        return _layout("Übersicht", body, store, crumbs=[("Übersicht", None)], active="overview")
+                      f'<br><span class="muted small">{t("latest_synthesis", n=len(s.get("council_ids", [])))}</span></div></a>')
+        cards = "".join(_persona_card(p, store) for p in personas) or f'<p class="muted">{t("no_personas")}</p>'
+        body = f'<div class="page"><h1 class="h1">{t("overview")}</h1><p class="lead">{t("overview_lead")}</p><div class="stats">{stats}</div>{latest}<h2 style="font-size:15px;margin:22px 0 12px">{t("personas")}</h2><div class="pgrid">{cards}</div></div>'
+        return _layout(t("overview"), body, store, crumbs=[(t("overview"), None)], active="overview")
 
     @app.get("/personas", response_class=HTMLResponse)
     def personas_list() -> str:
         store = Store()
         personas = services.list_personas(store=store)
-        cards = "".join(_persona_card(p, store) for p in personas) or '<p class="muted">Noch keine Personas.</p>'
-        body = f'<div class="page"><h1 class="h1">Personas</h1><p class="lead">{len(personas)} synthetische Kundenprofile.</p><div class="pgrid">{cards}</div></div>'
-        return _layout("Personas", body, store, crumbs=[("Personas", None)], active="personas")
+        cards = "".join(_persona_card(p, store) for p in personas) or f'<p class="muted">{t("no_personas")}</p>'
+        body = f'<div class="page"><h1 class="h1">{t("personas")}</h1><p class="lead">{t("personas_lead", n=len(personas))}</p><div class="pgrid">{cards}</div></div>'
+        return _layout(t("personas"), body, store, crumbs=[(t("personas"), None)], active="personas")
 
     @app.get("/personas/{persona_id}", response_class=HTMLResponse)
     def persona_detail(persona_id: str, date_value: str | None = Query(default=None, alias="date"), view: str = Query(default="day")) -> str:
@@ -1209,7 +1514,7 @@ def create_app():
         try:
             data = services.get_persona(persona_id, store)
         except KeyError:
-            return _layout("Nicht gefunden", _empty_state("Profil nicht gefunden", "Die Runtime-Daten wurden evtl. geleert."), store, active="personas")
+            return _layout(t("not_found"), _empty_state(t("profile_not_found"), t("persona_runtime_cleared")), store, active="personas")
         p = data["persona"]
         state = services.get_current_state(p["id"], store=store)
         selected_date = date_value or (data["daily_summaries"][-1]["date"] if data["daily_summaries"] else date.today().isoformat())
@@ -1225,39 +1530,39 @@ def create_app():
             if len(ts) >= 10:
                 daycount[ts[:10]] += 1
         act_pts = [(d[5:], daycount[d]) for d in sorted(daycount)]
-        activity = (f'<div class="sec" id="aktivitaet"><h2>Aktivität über Zeit</h2>'
-                    f'<p class="ihint">Simulierte Aktivitäten pro Tag ({sum(daycount.values())} gesamt).</p>{_area(act_pts)}</div>'
+        activity = (f'<div class="sec" id="aktivitaet"><h2>{t("activity_over_time")}</h2>'
+                    f'<p class="ihint">{t("activities_per_day", n=sum(daycount.values()))}</p>{_area(act_pts)}</div>'
                     if act_pts else "")
         voices = _persona_voices_html(store, p["id"])
         main = f"""
         <div class="hero"><h1>{_esc(p["display_name"])}</h1><p class="sub">{_esc(p["role"]["title"])} · {_esc(p["company_context"]["industry"])}</p></div>
         <div class="identity"><div>{avatar}</div><div>
-          <div class="card"><h3>Aktueller Zustand</h3><p><strong>{_esc(state["current_activity"])}</strong></p><p class="muted">{_esc(state["collaboration_mode"])}</p><p class="thought">{_esc(state["current_thought"])}</p></div>
+          <div class="card"><h3>{t("current_state")}</h3><p><strong>{_esc(state["current_activity"])}</strong></p><p class="muted">{_esc(state["collaboration_mode"])}</p><p class="thought">{_esc(state["current_thought"])}</p></div>
         </div></div>
         {voices}
         {activity}
-        <div class="sec" id="ziele"><h2>Ziele</h2>{_pills(p["goals"])}</div>
-        <div class="sec" id="pains"><h2>Pain Points</h2>{_pills([x["issue"] for x in data["pain_points"]] or p["pain_points"])}</div>
-        <div class="sec" id="bez"><h2>Beziehungen</h2>{''.join(f'<p><strong>{_esc(r["name"])}</strong> <span class="muted">— {_esc(r["type"])}: {_esc(r["friction"])}</span></p>' for r in p["relationships"])}</div>
-        <div class="sec" id="cal"><h2>Kalender</h2><p class="muted">{date_links or 'Noch keine Tage.'}</p>
+        <div class="sec" id="ziele"><h2>{t("goals")}</h2>{_pills(p["goals"])}</div>
+        <div class="sec" id="pains"><h2>{t("pain_points")}</h2>{_pills([x["issue"] for x in data["pain_points"]] or p["pain_points"])}</div>
+        <div class="sec" id="bez"><h2>{t("relationships")}</h2>{''.join(f'<p><strong>{_esc(r["name"])}</strong> <span class="muted">— {_esc(r["type"])}: {_esc(r["friction"])}</span></p>' for r in p["relationships"])}</div>
+        <div class="sec" id="cal"><h2>{t("calendar")}</h2><p class="muted">{date_links or t("no_days_yet")}</p>
         {_calendar_tabs(p["id"], selected_date, view)}{_period_calendar_html(p["id"], selected_date, view, period)}</div>
         """
-        rail = ('<h4>Eigenschaften</h4>'
-                f'<div class="prop"><span class="k">Rolle</span><span class="v">{_esc(p["role"]["title"])}</span></div>'
-                f'<div class="prop"><span class="k">Branche</span><span class="v">{_esc(p["company_context"]["industry"])}</span></div>'
-                f'<div class="prop"><span class="k">Größe</span><span class="v">{_esc(p["company_context"].get("size",""))}</span></div>'
-                f'<div class="prop"><span class="k">Tools</span><span class="v">{_pills(p["tools"])}</span></div>'
-                f'<div class="prop"><span class="k">Memory</span><span class="v"><a class="bc-link" href="/personas/{_esc(p["id"])}/memory">{_icon("memory")} öffnen</a></span></div>')
+        rail = (f'<h4>{t("properties")}</h4>'
+                f'<div class="prop"><span class="k">{t("role")}</span><span class="v">{_esc(p["role"]["title"])}</span></div>'
+                f'<div class="prop"><span class="k">{t("industry")}</span><span class="v">{_esc(p["company_context"]["industry"])}</span></div>'
+                f'<div class="prop"><span class="k">{t("size")}</span><span class="v">{_esc(p["company_context"].get("size",""))}</span></div>'
+                f'<div class="prop"><span class="k">{t("tools")}</span><span class="v">{_pills(p["tools"])}</span></div>'
+                f'<div class="prop"><span class="k">{t("memory")}</span><span class="v"><a class="bc-link" href="/personas/{_esc(p["id"])}/memory">{_icon("memory")} {t("open")}</a></span></div>')
         return _layout(p["display_name"], _doc(main, rail=rail), store,
-                       crumbs=[("Personas", "/personas"), (p["display_name"], None)], active="personas",
+                       crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
                        actions=_star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}'))
 
     @app.get("/personas/{persona_id}/memory", response_class=HTMLResponse)
     def persona_memory(persona_id: str, as_of: str | None = Query(default=None), q: str | None = Query(default=None)) -> str:
         store = Store()
         pm = store.get_persona(persona_id)
-        cr = [("Personas", "/personas"), (pm["display_name"] if pm else persona_id, f"/personas/{persona_id}"), ("Memory", None)]
-        return _layout("Memory", _memory_html(store, persona_id, as_of, q), store, crumbs=cr, active="personas")
+        cr = [(t("personas"), "/personas"), (pm["display_name"] if pm else persona_id, f"/personas/{persona_id}"), (t("memory"), None)]
+        return _layout(t("memory"), _memory_html(store, persona_id, as_of, q), store, crumbs=cr, active="personas")
 
     @app.get("/activities/{activity_id}", response_class=HTMLResponse)
     def activity_detail(activity_id: str) -> str:
@@ -1265,26 +1570,27 @@ def create_app():
         try:
             data = services.get_activity(activity_id, store)
         except KeyError:
-            return _layout("Nicht gefunden", _empty_state("Aktivität nicht gefunden", "Runtime-Daten evtl. geleert."), store, active="personas")
+            return _layout(t("not_found"), _empty_state(t("activity_not_found"), t("runtime_maybe_cleared")), store, active="personas")
         p = data["persona"]; a = data["activity"]
+        alone_label = t("alone")
         main = f"""
         <div class="hero"><h1>{_esc(a["task"])}</h1><p class="sub">{_esc(a["timestamp"])} · {_esc(a["event_type"])} · {_esc(a.get("collaboration_mode","unknown"))}</p></div>
         <div class="grid two">
-          <div class="card"><h3>Was geschah</h3><p>{_esc(a.get("what_happened", a["summary"]))}</p></div>
-          <div class="card"><h3>Gedanke</h3><p class="thought">{_esc(a.get("persona_thought","—"))}</p></div></div>
-        <div class="sec"><h2>Konversation</h2>{''.join(f'<div class="quote"><strong>{_esc(c.get("speaker",""))}</strong><br>{_esc(c.get("text",""))}</div>' for c in a.get("conversation", [])) or '<p class="muted">Keine.</p>'}</div>
-        <div class="grid"><div class="card"><h3>Aktionen</h3>{_pills(a.get("actions_done", [])) or '—'}</div>
-          <div class="card"><h3>Artefakte</h3>{_pills(a.get("artifacts_touched", [])) or '—'}</div>
-          <div class="card"><h3>Offene Loops</h3>{_pills(a.get("open_loops", [])) or '—'}</div></div>
+          <div class="card"><h3>{t("what_happened")}</h3><p>{_esc(a.get("what_happened", a["summary"]))}</p></div>
+          <div class="card"><h3>{t("thought")}</h3><p class="thought">{_esc(a.get("persona_thought","—"))}</p></div></div>
+        <div class="sec"><h2>{t("conversation")}</h2>{''.join(f'<div class="quote"><strong>{_esc(c.get("speaker",""))}</strong><br>{_esc(c.get("text",""))}</div>' for c in a.get("conversation", [])) or f'<p class="muted">{t("none_f")}</p>'}</div>
+        <div class="grid"><div class="card"><h3>{t("actions")}</h3>{_pills(a.get("actions_done", [])) or '—'}</div>
+          <div class="card"><h3>{t("artifacts")}</h3>{_pills(a.get("artifacts_touched", [])) or '—'}</div>
+          <div class="card"><h3>{t("open_loops")}</h3>{_pills(a.get("open_loops", [])) or '—'}</div></div>
         """
-        rail = ('<h4>Eigenschaften</h4>'
-                f'<div class="prop"><span class="k">Persona</span><span class="v"><a class="bc-link" href="/personas/{_esc(p["id"])}">{_esc(p["display_name"])}</a></span></div>'
-                f'<div class="prop"><span class="k">Tool</span><span class="v">{_esc(a["tool"])}</span></div>'
-                f'<div class="prop"><span class="k">Mood</span><span class="v">{_esc(a["impact"]["mood"])}</span></div>'
-                f'<div class="prop"><span class="k">Beteiligte</span><span class="v">{_pills(a.get("participants", []) or ["allein"])}</span></div>'
-                f'<div class="prop"><span class="k">Entscheidung</span><span class="v muted">{_esc(a.get("decision") or "—")}</span></div>')
+        rail = (f'<h4>{t("properties")}</h4>'
+                f'<div class="prop"><span class="k">{t("persona")}</span><span class="v"><a class="bc-link" href="/personas/{_esc(p["id"])}">{_esc(p["display_name"])}</a></span></div>'
+                f'<div class="prop"><span class="k">{t("tool")}</span><span class="v">{_esc(a["tool"])}</span></div>'
+                f'<div class="prop"><span class="k">{t("mood")}</span><span class="v">{_esc(a["impact"]["mood"])}</span></div>'
+                f'<div class="prop"><span class="k">{t("participants")}</span><span class="v">{_pills(a.get("participants", []) or [alone_label])}</span></div>'
+                f'<div class="prop"><span class="k">{t("decision")}</span><span class="v muted">{_esc(a.get("decision") or "—")}</span></div>')
         return _layout(a["task"], _doc(main, rail=rail), store,
-                       crumbs=[("Personas", "/personas"), (p["display_name"], f'/personas/{p["id"]}'), (a["task"][:46], None)], active="personas")
+                       crumbs=[(t("personas"), "/personas"), (p["display_name"], f'/personas/{p["id"]}'), (a["task"][:46], None)], active="personas")
 
     @app.get("/councils", response_class=HTMLResponse)
     def councils() -> str:
@@ -1298,39 +1604,46 @@ def create_app():
                    f'<i style="width:{(v["OPPOSE"]+v["ABSTAIN"])/tot*100}%;background:var(--muted)"></i></span>')
             rows.append(f'<a class="row" href="/councils/{_esc(c["id"])}">{_icon("councils")}'
                         f'<span class="title">{_esc(c["prompt"])}</span>'
-                        f'<span class="right">{bar}<span>{c["personas"]} Personas</span><span>{_esc(c["created_at"][:10])}</span>'
+                        f'<span class="right">{bar}<span>{c["personas"]} {t("personas")}</span><span>{_esc(c["created_at"][:10])}</span>'
                         f'{_star("council", c["id"], c["prompt"][:60], f"/councils/{c['id']}")}</span></a>')
-        body = f'<div class="page"><h1 class="h1">Councils</h1><p class="lead">Memory-geerdete Persona-Debatten.</p><div class="rows">{"".join(rows) or "<div class=\'row muted\'>Noch keine Councils.</div>"}</div></div>'
-        return _layout("Councils", body, store, crumbs=[("Councils", None)], active="councils")
+        rows_html = "".join(rows) or f'<div class="row muted">{t("no_councils")}</div>'
+        body = f'<div class="page"><h1 class="h1">{t("councils")}</h1><p class="lead">{t("councils_lead")}</p><div class="rows">{rows_html}</div></div>'
+        return _layout(t("councils"), body, store, crumbs=[(t("councils"), None)], active="councils")
 
     @app.get("/councils/{session_id}", response_class=HTMLResponse)
     def council_detail(session_id: str) -> str:
         store = Store()
         session = store.get_council_session(session_id)
         if not session:
-            return _layout("Nicht gefunden", _empty_state("Council nicht gefunden", "Runtime-Daten evtl. geleert."), store, active="councils")
+            return _layout(t("not_found"), _empty_state(t("council_not_found"), t("runtime_maybe_cleared")), store, active="councils")
+        voices_detail_h = t("voices_in_detail", n=len(session["turns"]))
+        proposal_short_h = t("proposal_short_summary")
+        proposal_h = t("proposal"); summary_h = t("summary")
+        sentiment_title = t("sentiment_this_council")
+        vote_h = t("vote"); personas_h = t("personas"); created_h = t("created")
+        councils_crumb = t("councils"); council_title = t("councils")
         turns = []
-        for t in session["turns"]:
-            mod = " mod" if (t.get("speaker") == "Moderator" or t.get("stance") == "moderation") else ""
-            stance = _label(t["stance"], _stance_color(t.get("stance", ""))) if t.get("stance") else ""
-            concerns = "".join(f'<p class="muted small">• {_esc(q)}</p>' for q in t.get("questions_or_pushback", [])[:4])
-            mem = "".join(f'<p class="muted small">{_icon("search")} {_esc(m)}</p>' for m in t.get("memory_used", [])[:3])
-            turns.append(f'<div class="turn{mod}"><div class="hd"><b>{_esc(t["speaker"])}</b> {stance}</div><p>{_esc(t["content"])}</p>{concerns}{mem}</div>')
+        for tn in session["turns"]:
+            mod = " mod" if (tn.get("speaker") == "Moderator" or tn.get("stance") == "moderation") else ""
+            stance = _label(tn["stance"], _stance_color(tn.get("stance", ""))) if tn.get("stance") else ""
+            concerns = "".join(f'<p class="muted small">• {_esc(q)}</p>' for q in tn.get("questions_or_pushback", [])[:4])
+            mem = "".join(f'<p class="muted small">{_icon("search")} {_esc(m)}</p>' for m in tn.get("memory_used", [])[:3])
+            turns.append(f'<div class="turn{mod}"><div class="hd"><b>{_esc(tn["speaker"])}</b> {stance}</div><p>{_esc(tn["content"])}</p>{concerns}{mem}</div>')
         turns_html = '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>"
         exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
-        sentiment = _sentiment_section(store, [session], title="Stimmungsbild dieses Councils") or ""
+        sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         main = (f'<div class="hero"><h1>{_esc(session["prompt"])}</h1><p class="sub">{_esc(session["selection_reason"])}</p></div>'
                 f'<div class="callout"><span class="emj">{_icon("compass")}</span><div>{exec_html}</div></div>'
                 f'{sentiment}'
-                f'<div class="sec" id="stimmen"><h2>Stimmen im Detail ({len(session["turns"])})</h2>{turns_html}</div>'
-                f'<details class="sec"><summary>Proposal &amp; Kurz-Summary</summary><div class="card"><strong>Proposal</strong><p>{_esc(session["proposal"])}</p><strong>Summary</strong><p>{_esc(session["summary"])}</p></div></details>')
+                f'<div class="sec" id="stimmen"><h2>{voices_detail_h}</h2>{turns_html}</div>'
+                f'<details class="sec"><summary>{proposal_short_h}</summary><div class="card"><strong>{proposal_h}</strong><p>{_esc(session["proposal"])}</p><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
         vc = {v: sum(1 for x in session["votes"] if x.get("vote") == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
-        rail = ('<h4>Abstimmung</h4>'
-                + "".join(f'<div class="prop"><span class="k">{k}</span><span class="v">{vc[k]}</span></div>' for k in vc)
-                + f'<div class="prop"><span class="k">Personas</span><span class="v">{len(session.get("persona_ids", []))}</span></div>'
-                + f'<div class="prop"><span class="k">Erzeugt</span><span class="v">{_esc(session["created_at"][:10])}</span></div>')
-        return _layout("Council", _doc(main, rail=rail), store,
-                       crumbs=[("Councils", "/councils"), (session["prompt"][:60], None)], active="councils",
+        rail = (f'<h4>{vote_h}</h4>'
+                + "".join(f'<div class="prop"><span class="k">{_vote_label(k)}</span><span class="v">{vc[k]}</span></div>' for k in vc)
+                + f'<div class="prop"><span class="k">{personas_h}</span><span class="v">{len(session.get("persona_ids", []))}</span></div>'
+                + f'<div class="prop"><span class="k">{created_h}</span><span class="v">{_esc(session["created_at"][:10])}</span></div>')
+        return _layout(council_title, _doc(main, rail=rail), store,
+                       crumbs=[(councils_crumb, "/councils"), (session["prompt"][:60], None)], active="councils",
                        actions=_star("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))
 
     @app.get("/syntheses", response_class=HTMLResponse)
@@ -1341,22 +1654,23 @@ def create_app():
             done = s.get("status", "done") == "done"
             rows.append(f'<a class="row" href="/syntheses/{_esc(s["id"])}">{_icon("syntheses")}'
                         f'<span class="title">{_esc(s["title"])}</span>'
-                        f'<span class="right">{_label("done" if done else "läuft", "var(--green)" if done else "var(--amber)")}'
-                        f'<span>{len(s.get("council_ids", []))} Councils</span><span>{_esc(s["created_at"][:10])}</span>'
+                        f'<span class="right">{_label(t("done") if done else t("running"), "var(--green)" if done else "var(--amber)")}'
+                        f'<span>{len(s.get("council_ids", []))} {t("councils")}</span><span>{_esc(s["created_at"][:10])}</span>'
                         f'{_star("synthesis", s["id"], s["title"], f"/syntheses/{s['id']}")}</span></a>')
-        body = f'<div class="page"><h1 class="h1">Synthesen</h1><p class="lead">Studien-Bögen über Council-Ketten — die Reports.</p><div class="rows">{"".join(rows) or "<div class=\'row muted\'>Noch keine Synthese.</div>"}</div></div>'
-        return _layout("Synthesen", body, store, crumbs=[("Synthesen", None)], active="syntheses")
+        rows_html = "".join(rows) or f'<div class="row muted">{t("no_synthesis")}</div>'
+        body = f'<div class="page"><h1 class="h1">{t("syntheses")}</h1><p class="lead">{t("syntheses_lead")}</p><div class="rows">{rows_html}</div></div>'
+        return _layout(t("syntheses"), body, store, crumbs=[(t("syntheses"), None)], active="syntheses")
 
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:
         store = Store()
         syn = store.get_synthesis(synthesis_id)
         if not syn:
-            return _layout("Nicht gefunden", _empty_state("Synthese nicht gefunden", "Runtime-Daten evtl. geleert."), store, active="syntheses")
+            return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared")), store, active="syntheses")
         actions = (_star("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}")
-                   + '<button class="btn" onclick="window.print()">Export PDF</button>')
+                   + f'<button class="btn" onclick="window.print()">{t("export_pdf")}</button>')
         return _layout(syn["title"], _synthesis_html(store, syn), store,
-                       crumbs=[("Synthesen", "/syntheses"), (syn["title"], None)], active="syntheses", actions=actions)
+                       crumbs=[(t("syntheses"), "/syntheses"), (syn["title"], None)], active="syntheses", actions=actions)
 
     # ---------------- JSON API (unchanged surface) ----------------
     @app.get("/api/personas")
@@ -1466,8 +1780,9 @@ def _calendar_html(persona_id: str, day: str, blocks: list[dict]) -> str:
 
 
 def _calendar_tabs(persona_id: str, selected_date: str, view: str) -> str:
+    labels = {"day": t("tab_day"), "week": t("tab_week"), "month": t("tab_month"), "year": t("tab_year")}
     return '<div class="tabs">' + "".join(
-        f'<a class="{"active" if view == tab else ""}" href="/personas/{_esc(persona_id)}?date={_esc(selected_date)}&view={tab}">{tab.title()}</a>'
+        f'<a class="{"active" if view == tab else ""}" href="/personas/{_esc(persona_id)}?date={_esc(selected_date)}&view={tab}">{labels[tab]}</a>'
         for tab in ["day", "week", "month", "year"]) + "</div>"
 
 
@@ -1491,60 +1806,82 @@ def _period_calendar_html(persona_id: str, selected_date: str, view: str, period
         cells = []; current = start
         while current <= end:
             dk = current.isoformat(); evs = days.get(dk, []); chips = "".join(_event_chip(e) for e in evs[:3])
-            cells.append(f'<div class="daycell monthcell"><h4>{current.day}</h4><div class="count">{len(evs)} Events</div>{chips}</div>'); current += timedelta(days=1)
+            cells.append(f'<div class="daycell monthcell"><h4>{current.day}</h4><div class="count">{t("n_events", n=len(evs))}</div>{chips}</div>'); current += timedelta(days=1)
         return f'<div class="calendar-grid month">{"".join(cells)}</div>'
     cells = []
     for m in range(1, 13):
         me = [e for dk, evs in days.items() if date.fromisoformat(dk).month == m for e in evs]
-        cells.append(f'<div class="daycell"><h4>{start.year}-{m:02d}</h4><div class="count">{len(me)} Events</div>{"".join(_event_chip(e) for e in me[:2])}</div>')
+        cells.append(f'<div class="daycell"><h4>{start.year}-{m:02d}</h4><div class="count">{t("n_events", n=len(me))}</div>{"".join(_event_chip(e) for e in me[:2])}</div>')
     return f'<div class="calendar-grid year">{"".join(cells)}</div>'
 
 
 def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None) -> str:
     p = store.get_persona(persona_id)
     if not p:
-        return _empty_state("Profil nicht gefunden", "Runtime-Daten evtl. geleert.")
+        return _empty_state(t("profile_not_found"), t("runtime_maybe_cleared"))
     pid = p["id"]
+    outdated_label = _label(t("outdated"), "var(--muted)", "outline", False)
+    since_label = t("since")
+    none_html = f'<p class="muted">{t("none")}</p>'
     proj_cards = []
     for proj in services.list_active_projects(pid, store=store):
         tl = services.get_project(pid, proj["entity_id"], store=store)["facts"]
         rows = "".join(
             f'<p class="{"muted" if not f["valid"] else ""}">{_esc(f["t_valid"][:10])} · <strong>{_esc(f.get("status") or "—")}</strong> · {_esc(f["fact"])}'
-            f'{" " + _label("überholt", "var(--muted)", "outline", False) if not f["valid"] else ""}</p>' for f in tl[-8:])
+            f'{" " + outdated_label if not f["valid"] else ""}</p>' for f in tl[-8:])
         proj_cards.append(f'<div class="card"><h3>{_esc(proj["name"])} · <span class="muted">{_esc(proj.get("status") or "?")}</span></h3>{rows}</div>')
-    loops = "".join(f'<p>• {_esc(t["text"])} <span class="muted small">seit {_esc((t.get("opened_on") or "")[:10])}</span></p>' for t in store.list_threads(pid, "open")[:20])
+    loops = "".join(f'<p>• {_esc(t["text"])} <span class="muted small">{since_label} {_esc((t.get("opened_on") or "")[:10])}</span></p>' for t in store.list_threads(pid, "open")[:20])
     digests = "".join(f'<div class="card"><h3>{_esc(d["scope"])} · {_esc(d["period_start"][:10])}–{_esc(d["period_end"][:10])}</h3><p>{_esc(d.get("text",""))}</p></div>' for d in store.list_digests(pid)[-6:])
     struct = services.evaluate_simulation(pid, store=store, persist=False)
     crit = services.latest_critic_report(pid, store=store)
     struct_rows = "".join(_label(f'{c["name"]}: {c["status"]}', _stance_color(c["status"])) for c in struct["checks"])
-    crit_rows = ("".join(_label(f"{k}: {v}/5", "var(--green)" if v >= 4 else "var(--amber)") for k, v in crit["dimensions"].items()) if crit else '<span class="muted">noch kein Kritiker-Lauf</span>')
+    crit_rows = ("".join(_label(f"{k}: {v}/5", "var(--green)" if v >= 4 else "var(--amber)") for k, v in crit["dimensions"].items()) if crit else f'<span class="muted">{t("no_critic_run")}</span>')
     tt = ""
     if as_of:
         st = services.get_state_at(pid, as_of, store=store)
         ent_rows = "".join(f'<p><strong>{_esc(e["name"])}</strong> <span class="muted">({_esc(e["kind"])})</span> → {_esc(e.get("status_at") or "—")}</p>' for e in st["entities"] if e.get("status_at"))
-        tt = f'<div class="card"><h3>Stand am {_esc(as_of)}</h3>{ent_rows or "<p class=\"muted\">nichts gültig</p>"}<p class="muted small">Offene Fäden: {len(st.get("open_threads", []))}</p></div>'
+        nothing_valid_html = f'<p class="muted">{t("nothing_valid")}</p>'
+        tt = (f'<div class="card"><h3>{t("state_at", date=_esc(as_of))}</h3>{ent_rows or nothing_valid_html}'
+              f'<p class="muted small">{t("open_threads_count", n=len(st.get("open_threads", [])))}</p></div>')
     rc = ""
     if q:
         hits = services.recall_memory(pid, q, store=store, k=8)["hits"]
-        rc = '<div class="card"><h3>Recall</h3>' + ("".join(f'<p class="quote">[{_esc(h["obj_type"])}] {_esc(h.get("when") or "")} · score {_esc(h["score"])}<br>{_esc(h["text"])}</p>' for h in hits) or '<p class="muted">nichts</p>') + "</div>"
+        nothing_html = f'<p class="muted">{t("nothing")}</p>'
+        rc = f'<div class="card"><h3>{t("recall")}</h3>' + ("".join(f'<p class="quote">[{_esc(h["obj_type"])}] {_esc(h.get("when") or "")} · score {_esc(h["score"])}<br>{_esc(h["text"])}</p>' for h in hits) or nothing_html) + "</div>"
+    mem_title = t("memory_title", name=_esc(p["display_name"]))
+    recall_ph = _esc(t("recall_placeholder"))
     main = f"""
-    <div class="hero"><h1 style="display:flex;align-items:center;gap:9px">{_icon("memory")} Memory — {_esc(p["display_name"])}</h1><p class="sub">Projekt-Timelines, Time-Travel und Recall.</p></div>
-    <div class="card"><h3>Qualität</h3><p><strong>Struktur:</strong> {_esc(struct["verdict"])} · {struct_rows}</p><p><strong>Kritiker:</strong> {crit_rows}</p></div>
+    <div class="hero"><h1 style="display:flex;align-items:center;gap:9px">{_icon("memory")} {mem_title}</h1><p class="sub">{t("memory_sub")}</p></div>
+    <div class="card"><h3>{t("quality")}</h3><p><strong>{t("structure")}:</strong> {_esc(struct["verdict"])} · {struct_rows}</p><p><strong>{t("critic")}:</strong> {crit_rows}</p></div>
     <div class="grid two">
-      <form method="get" class="card"><h3>Time-Travel</h3><input type="date" name="as_of" value="{_esc(as_of or '')}"> <button class="btn">Stand zeigen</button></form>
-      <form method="get" class="card"><h3>Recall</h3><input type="text" name="q" value="{_esc(q or '')}" placeholder="z.B. Brandschutz" style="width:58%"> <button class="btn">Suchen</button></form>
+      <form method="get" class="card"><h3>{t("time_travel")}</h3><input type="date" name="as_of" value="{_esc(as_of or '')}"> <button class="btn">{t("show_state")}</button></form>
+      <form method="get" class="card"><h3>{t("recall")}</h3><input type="text" name="q" value="{_esc(q or '')}" placeholder="{recall_ph}" style="width:58%"> <button class="btn">{t("search")}</button></form>
     </div>{tt}{rc}
-    <div class="sec"><h2>Aktive Projekte</h2><div class="grid two">{''.join(proj_cards) or '<p class="muted">keine</p>'}</div></div>
-    <div class="sec"><h2>Offene Fäden</h2><div class="card">{loops or '<p class="muted">keine</p>'}</div></div>
-    <div class="sec"><h2>Digests</h2>{digests or '<p class="muted">keine</p>'}</div>
+    <div class="sec"><h2>{t("active_projects")}</h2><div class="grid two">{''.join(proj_cards) or none_html}</div></div>
+    <div class="sec"><h2>{t("open_threads")}</h2><div class="card">{loops or none_html}</div></div>
+    <div class="sec"><h2>{t("digests")}</h2>{digests or none_html}</div>
     """
     return _doc(main)
 
 
 def main() -> None:
+    import os
     import uvicorn
 
-    uvicorn.run(create_app(), host="127.0.0.1", port=8787)
+    host = os.getenv("PERSONA_COUNCIL_WEB_HOST", "127.0.0.1")
+    try:
+        port = int(os.getenv("PERSONA_COUNCIL_WEB_PORT", "8787"))
+    except ValueError:
+        port = 8787
+    url = f"http://{host}:{port}"
+    print(
+        "\n" + "─" * 56 + "\n"
+        "  Persona Council inspector is ready.\n"
+        f"  → Open {url} in your browser.\n"
+        + "─" * 56 + "\n",
+        flush=True,
+    )
+    uvicorn.run(create_app(), host=host, port=port)
 
 
 if __name__ == "__main__":

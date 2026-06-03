@@ -81,3 +81,121 @@ def default_sample_days_per_month() -> int:
     except (TypeError, ValueError):
         return 4
 
+
+# --- i18n: UI + generated-content language (German/English) -------------------
+# Two independent axes:
+#   - content_language: the language host-authored text (personas, days, councils,
+#     syntheses) is written in. Auto-detected from what the user writes the first
+#     time, then persisted so later runs and the web UI stay consistent.
+#   - ui_language: the language of the web inspector chrome. Defaults to the
+#     content language but can be toggled independently in the web UI.
+# Persisted in data/settings.json (a tiny local KV; the DB stays the runtime).
+
+SUPPORTED_LANGUAGES = ("de", "en")
+DEFAULT_LANGUAGE = "en"
+
+_SETTINGS_PATH = DATA_DIR / "settings.json"
+
+# Common German function words / markers used for a cheap, dependency-free guess.
+_GERMAN_MARKERS = {
+    "der", "die", "das", "und", "ich", "nicht", "ist", "mit", "für", "auf", "ein",
+    "eine", "einen", "wir", "sie", "ihr", "auch", "noch", "wenn", "aber", "oder",
+    "soll", "sollen", "möchte", "wollen", "machen", "bitte", "wie", "was", "warum",
+    "über", "bei", "von", "zum", "zur", "dass", "sind", "haben", "kann", "können",
+}
+
+
+def _read_settings() -> dict[str, str]:
+    import json
+
+    if not _SETTINGS_PATH.exists():
+        return {}
+    try:
+        data = json.loads(_SETTINGS_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (ValueError, OSError):
+        return {}
+
+
+def _write_settings(settings: dict[str, str]) -> None:
+    import json
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    _SETTINGS_PATH.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def get_setting(key: str, default: str | None = None) -> str | None:
+    env = os.getenv(f"PERSONA_COUNCIL_{key.upper()}")
+    if env:
+        return env
+    return _read_settings().get(key, default)
+
+
+def set_setting(key: str, value: str) -> None:
+    settings = _read_settings()
+    settings[key] = value
+    _write_settings(settings)
+
+
+def _normalize_language(value: str | None) -> str | None:
+    if not value:
+        return None
+    v = value.strip().lower()[:2]
+    return v if v in SUPPORTED_LANGUAGES else None
+
+
+def detect_language(text: str | None) -> str:
+    """Cheap, dependency-free German/English guess from free text.
+
+    Used to honor "answer in the language the user writes in". Falls back to the
+    default language when the signal is weak or the text is empty.
+    """
+    if not text or not text.strip():
+        return DEFAULT_LANGUAGE
+    lowered = text.lower()
+    if any(ch in lowered for ch in "äöüß"):
+        return "de"
+    words = [w.strip(".,;:!?()[]\"'«»") for w in lowered.split()]
+    hits = sum(1 for w in words if w in _GERMAN_MARKERS)
+    if hits >= 2 or (words and hits / max(1, len(words)) > 0.12):
+        return "de"
+    return DEFAULT_LANGUAGE
+
+
+def content_language() -> str:
+    return _normalize_language(get_setting("content_language")) or DEFAULT_LANGUAGE
+
+
+def ui_language() -> str:
+    return _normalize_language(get_setting("ui_language")) or content_language()
+
+
+def set_content_language(language: str, *, also_ui: bool = True) -> str:
+    lang = _normalize_language(language) or DEFAULT_LANGUAGE
+    set_setting("content_language", lang)
+    if also_ui and _normalize_language(_read_settings().get("ui_language")) is None:
+        set_setting("ui_language", lang)
+    return lang
+
+
+def set_ui_language(language: str) -> str:
+    lang = _normalize_language(language) or DEFAULT_LANGUAGE
+    set_setting("ui_language", lang)
+    return lang
+
+
+def ensure_content_language(sample_text: str | None) -> str:
+    """Persist a detected content language the first time the user writes, then
+    keep it stable. Returns the active content language."""
+    existing = _normalize_language(get_setting("content_language"))
+    if existing:
+        return existing
+    return set_content_language(detect_language(sample_text))
+
+
+def language_instruction(language: str | None = None) -> str:
+    lang = _normalize_language(language) or content_language()
+    if lang == "de":
+        return "Write ALL generated content in German (Deutsch)."
+    return "Write ALL generated content in English."
+

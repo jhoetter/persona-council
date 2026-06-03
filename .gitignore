@@ -82,6 +82,8 @@ __pycache__/
 data/persona-council.db
 data/persona-council.db-shm
 data/persona-council.db-wal
+# Local UI/content language choice (auto-detected per user) — local-only.
+data/settings.json
 data/avatars/
 data/personas/
 # Export snapshot (your personas / councils / syntheses) — keep private.

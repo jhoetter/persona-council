@@ -71,8 +71,8 @@ all text** (gather → author → write-back). No server-side text LLM calls.
 
 ```mermaid
 flowchart TD
-  SRC["Source prompts - spec/persona-source-prompts.md"] -->|create_persona| P["Persona + SOUL.md"]
-  P -->|brief_day then simulate_day| D["Workday: calendar, activities, inner thoughts"]
+  SRC["Source prompts - spec/persona-source-prompts.md"] -->|brief_persona then record_persona| P["Persona + SOUL.md"]
+  P -->|brief_day then record_day| D["Workday: calendar, activities, inner thoughts"]
   D -->|brief_consolidation then record_memory_deltas| M[("Memory graph: entities, bi-temporal facts, threads")]
   M -->|brief_digest then put_digest| DG["Digests: week / month / quarter / year"]
   M -.->|recall_memory and get_state_at time-travel| P
@@ -163,13 +163,18 @@ keyword-only until that backfill completes.
 ## Running
 
 ```bash
-make dev            # web inspector on :8787
+make dev            # web inspector on :8787 (prints → http://127.0.0.1:8787 when ready)
 make dev-forwarded  # web inspector on :18787 (SSH tunnel friendly)
 make mcp            # MCP server (stdio)
 make skills         # symlink claude-skills/* into .claude/skills/ (Claude Code skill discovery)
 make snapshot       # write private, local-only data/export/
 make restore        # rebuild runtime DB from data/export/
 ```
+
+The inspector and all generated text are bilingual (German/English). The
+**content** language is auto-detected from the language you write in and then
+persisted; the **UI** language has its own toggle in the top bar (`?lang=de|en`,
+or `persona-council set-language`). Default is English until you write German.
 
 The web UI is a Linear/Notion-grade inspector (`Overview · Personas · Councils ·
 Synthesen` in a navigation-only sidebar; a personas card-grid home; Linear-style
@@ -222,7 +227,8 @@ Add Persona Council as an MCP server in Claude Desktop or any Claude MCP client:
 ```
 
 Claude should use MCP tools such as `prepare_persona_agent_context`,
-`simulate_day`, `run_council`, and `ask_persona`; persona-facing work must load
+`brief_persona`/`record_persona`, `brief_day`/`record_day`, and
+`brief_council`/`record_council`; persona-facing work must load
 `SOUL.md` through `prepare_persona_agent_context`. The host agent authors text
 content directly and submits structured JSON through MCP. `OPENAI_API_KEY` is
 only needed for non-text helpers: `generate_avatar` and embeddings for semantic
