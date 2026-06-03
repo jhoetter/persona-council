@@ -2657,6 +2657,7 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
         "goal": syn.get("goal", ""), "council_count": len(syn.get("council_ids", [])),
         "voices": sum(sentiment.values()), "sentiment": sentiment,
         "recommendations": len(syn.get("handlungsempfehlungen", [])),
+        "phase": syn.get("phase", ""), "mode": syn.get("mode", ""), "role": syn.get("role", ""),
     }
 
 
@@ -2676,10 +2677,19 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
     edges = [{"from_study": e["from_study"], "to_study": e["to_study"], "type": e["type"],
               "rationale": e.get("rationale", "")} for e in store.list_study_edges(project["id"])]
     oqs = store.list_open_questions(project["id"])
+    methodology_state = None
+    if project.get("methodology"):
+        try:
+            methodology_state = get_methodology_state(project["id"], store=store)
+        except Exception:
+            methodology_state = None
     return {
         "project": {"id": project["id"], "slug": project["slug"], "title": project["title"],
                     "goal": project.get("goal", ""), "status": project.get("status", "active"),
-                    "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", [])},
+                    "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", []),
+                    "methodology": project.get("methodology", ""), "phase": project.get("phase", "")},
+        "methodology_state": methodology_state,
+        "prototypes": list_prototypes_artifacts(project["id"], store=store),
         "nodes": nodes,
         "edges": edges,
         "open_questions": oqs,

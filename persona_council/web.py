@@ -35,7 +35,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "syntheses_lead": "Studien-Bögen über Council-Ketten — die Reports.",
         "projects": "Projekte",
         "projects_lead": "Forschungs-Graphen: Studien (Synthesen) als Knoten, getaggt und verkettet.",
-        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen",
+        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen", "prototypes_h": "Prototypen",
         "no_projects": "Noch keine Projekte. Lege eines an oder backfille deine Synthesen (CLI: research-backfill).",
         "source_studies": "Quell-Studien", "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
         "filter": "Filter", "clear_filter": "zurücksetzen", "legend": "Legende",
@@ -160,7 +160,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "syntheses_lead": "Study arcs across council chains — the reports.",
         "projects": "Projects",
         "projects_lead": "Research graphs: studies (syntheses) as nodes, tagged and linked.",
-        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Open questions",
+        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Open questions", "prototypes_h": "Prototypes",
         "no_projects": "No projects yet. Create one or backfill your syntheses (CLI: research-backfill).",
         "source_studies": "Source studies", "themes_h": "Themes", "build_order_h": "Build order",
         "filter": "Filter", "clear_filter": "clear", "legend": "Legend",
@@ -414,6 +414,14 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .proj-graph #rg{height:100%}
 .oqpanel{position:fixed;right:26px;bottom:26px;width:380px;max-width:calc(100vw - 320px);max-height:62vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 44px rgba(0,0,0,.22);padding:14px 16px;z-index:60}
 .oqp-h{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.mstrip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;font-size:12.5px}
+.mstrip .mname{font-weight:600;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--panel-2)}
+.mstrip .msep{color:var(--muted)}
+.mphase{border:1px solid var(--line);border-radius:7px;padding:2px 9px;background:var(--panel);color:var(--muted)}
+.mphase.active{border-color:var(--accent);color:var(--accent);background:var(--accent-weak);font-weight:600}
+.mphase.done{border-color:var(--green);color:var(--green)}
+.mphase b{color:var(--ink)}
+.mstrip .mstate{font-size:12px;color:var(--muted)}
 
 /* ---- generic ---- */
 h1,h2,h3,h4{color:var(--ink)}
@@ -2092,14 +2100,50 @@ def create_app():
         left = (f'<span class="ptlabel">{_icon("search")}{t("filter")}</span>{chips}'
                 f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if chips else ""
         oqbtn = f'<button class="btn" id="oqbtn">{t("legend")} · {t("open_questions_h")} ({len(oqs)})</button>'
+        # Methodology strip: the Double-Diamond phases with diverge(◇)/converge(◆) + status.
+        ms = graph.get("methodology_state")
+        mstrip = ""
+        if ms:
+            chips = []
+            for ph in ms["phases"]:
+                state = ph["status"]
+                cls = "done" if state == "converged" else ("active" if ph["key"] == ms.get("phase") else "pend")
+                shape = "◆" if ph["mode"] == "converge" else "◇"
+                count = (f' <b>{ph["exploration_count"]}</b>'
+                         if ph["mode"] == "diverge" and ph["exploration_count"] else "")
+                chips.append(f'<span class="mphase {cls}" title="{ph["mode"]} · {state}">{shape} {_esc(ph["name"])}{count}</span>')
+            state_txt = "✓" if ms.get("complete") else f'@ {_esc(ms.get("phase") or "—")}'
+            mstrip = (f'<div class="mstrip"><span class="mname">{_esc(ms["methodology"])}</span>'
+                      + '<span class="msep">→</span>'.join(chips)
+                      + f'<span class="spacer"></span><span class="mstate">{state_txt}</span></div>')
         toolbar = f'<div class="ptoolbar">{left}<span class="spacer"></span>{oqbtn}{meta_btn}</div>'
-        # Open questions + legend live in a floating panel so the graph keeps the full canvas.
+        # Prototype viewer: artifacts + recorded persona sessions (read-only).
+        protos = graph.get("prototypes") or []
+        proto_html = ""
+        if protos:
+            rows = []
+            for p in protos:
+                sess = store.list_prototype_sessions(prototype_id=p["id"])
+                run_badge = ('<span class="pill" style="border-color:#3d7b5f">running</span>'
+                             + f' <a href="{_esc(p["url"])}" target="_blank">open ↗</a>' if p.get("running") and p.get("url") else "")
+                sl = []
+                for s in sess[:6]:
+                    r = s.get("reaction", {})
+                    gv = "✓" if s.get("grounded_verified") else "○"
+                    sl.append(f'<li>{_esc(s.get("persona_id",""))}: {_esc(str(r.get("verdict") or r.get("summary","")))[:80]} '
+                              f'<span class="muted small">{gv} grounded</span></li>')
+                sl_html = ("<ul style='margin:4px 0 0 18px'>" + "".join(sl) + "</ul>") if sl else '<div class="muted small">— keine Sessions —</div>'
+                rows.append(f'<div class="strow"><b>{_esc(p["name"])}</b> <span class="muted small">{_esc(p.get("version",""))} · {_esc(p["slug"])}</span> {run_badge}{sl_html}</div>')
+            proto_html = (f'<div class="oqp-h" style="margin-top:14px">{t("prototypes_h")} ({len(protos)})</div>'
+                          + "".join(rows))
+        # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
         panel = (
             f'<div class="oqpanel" id="oqpanel" hidden>'
             f'<div class="oqp-h">{t("build_order_h")} (edges)</div>'
             f'<div class="pills" style="margin:6px 0 14px">{edge_leg}</div>'
             f'<div class="oqp-h">{t("open_questions_h")}</div>'
-            f'<ul style="margin:6px 0 0 18px">{oq_html}</ul></div>')
+            f'<ul style="margin:6px 0 0 18px">{oq_html}</ul>'
+            f'{proto_html}</div>')
         oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"
                  "p=document.getElementById('oqpanel');if(!b||!p)return;"
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
@@ -2109,7 +2153,7 @@ def create_app():
             f'<div class="proj">'
             f'<div class="proj-head"><h1 class="h1">{_esc(proj["title"])}</h1>'
             f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
-            f'{toolbar}</div>'
+            f'{mstrip}{toolbar}</div>'
             f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>'
             f'{panel}{oq_js}'
             f'</div>')

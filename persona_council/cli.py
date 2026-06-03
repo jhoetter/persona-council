@@ -329,6 +329,41 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("meta-section"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("file"); p.add_argument("--report")
     p = sub.add_parser("meta-export")
     p.add_argument("project_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out"); p.add_argument("--report")
+    # Methodology engine (data-driven, structure+LLM-judged)
+    p = sub.add_parser("methodology-list")
+    p = sub.add_parser("methodology-get"); p.add_argument("key")
+    p = sub.add_parser("methodology-start")
+    p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--methodology", required=True)
+    p.add_argument("--persona", action="append", dest="personas"); p.add_argument("--description", default="")
+    p = sub.add_parser("phase-brief"); p.add_argument("project_id")
+    p = sub.add_parser("phase-explore"); p.add_argument("project_id"); p.add_argument("title"); p.add_argument("file")
+    p = sub.add_parser("phase-judge")
+    p.add_argument("project_id"); p.add_argument("phase_key"); p.add_argument("kind")
+    p.add_argument("--decided", default="true"); p.add_argument("--rationale", default=""); p.add_argument("--ref", action="append", dest="refs")
+    p = sub.add_parser("phase-converge"); p.add_argument("project_id"); p.add_argument("title"); p.add_argument("file")
+    p = sub.add_parser("phase-advance"); p.add_argument("project_id")
+    p = sub.add_parser("methodology-state"); p.add_argument("project_id")
+    # Prototypes + Playwright harness
+    p = sub.add_parser("prototype-scaffold")
+    p.add_argument("slug"); p.add_argument("name"); p.add_argument("file"); p.add_argument("--project")
+    p = sub.add_parser("prototype-register")
+    p.add_argument("slug"); p.add_argument("name"); p.add_argument("path"); p.add_argument("--entry", default="index.html")
+    p.add_argument("--run", default="static"); p.add_argument("--run-cmd", dest="run_cmd"); p.add_argument("--version", default="v0.1")
+    p.add_argument("--project"); p.add_argument("--notes", default="")
+    p = sub.add_parser("prototype-list"); p.add_argument("--project")
+    p = sub.add_parser("prototype-get"); p.add_argument("prototype_id")
+    p = sub.add_parser("prototype-run"); p.add_argument("prototype_id")
+    p = sub.add_parser("prototype-stop"); p.add_argument("prototype_id")
+    p = sub.add_parser("prototype-delete"); p.add_argument("prototype_id")
+    p = sub.add_parser("proto-open"); p.add_argument("--prototype"); p.add_argument("--url"); p.add_argument("--persona")
+    p = sub.add_parser("proto-act"); p.add_argument("session_id"); p.add_argument("action")
+    p = sub.add_parser("proto-read"); p.add_argument("session_id")
+    p = sub.add_parser("proto-close"); p.add_argument("session_id")
+    p = sub.add_parser("proto-sessions")
+    p = sub.add_parser("session-brief"); p.add_argument("persona_id"); p.add_argument("prototype_id")
+    p = sub.add_parser("session-record")
+    p.add_argument("persona_id"); p.add_argument("prototype_id"); p.add_argument("session_id"); p.add_argument("date"); p.add_argument("file")
+    p = sub.add_parser("run-methodology"); p.add_argument("project_id"); p.add_argument("--max-steps", type=int, default=40)
     # Deletes (CRUD: delete via CLI/MCP only)
     p = sub.add_parser("research-delete"); p.add_argument("project_id")
     p = sub.add_parser("research-remove-study"); p.add_argument("project_id"); p.add_argument("study_id")
@@ -545,6 +580,60 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "meta-export":
             content = services.export_meta_report(args.project_id, args.report, args.format)
             _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
+        elif args.command == "methodology-list":
+            _print(services.list_methodologies())
+        elif args.command == "methodology-get":
+            _print(services.get_methodology(args.key))
+        elif args.command == "methodology-start":
+            _print(services.start_methodology_project(args.title, args.goal, args.methodology, args.personas, args.description))
+        elif args.command == "phase-brief":
+            _print(services.brief_phase(args.project_id))
+        elif args.command == "phase-explore":
+            d = json.loads(Path(args.file).read_text(encoding="utf-8"))
+            _print(services.record_exploration(args.project_id, args.title, d["council_ids"], d["payload"], d.get("start_input", "")))
+        elif args.command == "phase-judge":
+            _print(services.record_judgment(args.project_id, args.phase_key, args.kind,
+                                            args.decided.lower() == "true", args.rationale, args.refs))
+        elif args.command == "phase-converge":
+            d = json.loads(Path(args.file).read_text(encoding="utf-8"))
+            _print(services.record_convergence(args.project_id, args.title, d["from_node_ids"], d["payload"], d.get("start_input", "")))
+        elif args.command == "phase-advance":
+            _print(services.advance_phase(args.project_id))
+        elif args.command == "methodology-state":
+            _print(services.get_methodology_state(args.project_id))
+        elif args.command == "prototype-scaffold":
+            _print(services.scaffold_prototype(args.slug, args.name, json.loads(Path(args.file).read_text(encoding="utf-8")), project_id=args.project))
+        elif args.command == "prototype-register":
+            _print(services.register_prototype(args.slug, args.name, args.path, args.entry, args.run, args.run_cmd, args.version, args.project, args.notes))
+        elif args.command == "prototype-list":
+            _print(services.list_prototypes_artifacts(args.project))
+        elif args.command == "prototype-get":
+            _print(services.get_prototype_artifact(args.prototype_id))
+        elif args.command == "prototype-run":
+            _print(services.run_prototype(args.prototype_id))
+        elif args.command == "prototype-stop":
+            _print(services.stop_prototype(args.prototype_id))
+        elif args.command == "prototype-delete":
+            _print(services.delete_prototype_artifact(args.prototype_id))
+        elif args.command == "proto-open":
+            _print(services.proto_open(args.prototype, args.url, args.persona))
+        elif args.command == "proto-act":
+            _print(services.proto_act(args.session_id, json.loads(args.action)))
+        elif args.command == "proto-read":
+            _print(services.proto_read(args.session_id))
+        elif args.command == "proto-close":
+            _print(services.proto_close(args.session_id))
+        elif args.command == "proto-sessions":
+            _print(services.list_proto_sessions())
+        elif args.command == "session-brief":
+            _print(services.brief_prototype_session(args.persona_id, args.prototype_id))
+        elif args.command == "session-record":
+            _print(services.record_prototype_session(args.persona_id, args.prototype_id, args.session_id, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "run-methodology":
+            from . import runtime as _rt
+            from .config import llm_api_key
+            backend = None if llm_api_key() else _rt.StubAuthoringBackend()
+            _print(_rt.run_methodology(args.project_id, backend=backend, max_steps=args.max_steps))
         elif args.command == "research-delete":
             _print(services.delete_research_project(args.project_id))
         elif args.command == "research-remove-study":
