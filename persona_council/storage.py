@@ -790,6 +790,10 @@ class Store:
             "persona_revisions",
             "memory_anomalies",
             "eval_reports",
+            "research_projects",
+            "study_edges",
+            "research_open_questions",
+            "meta_reports",
         ]
         deleted: dict[str, int] = {}
         for table in tables:
@@ -821,6 +825,10 @@ class Store:
             "world_context",
             "memory_anomalies",
             "eval_reports",
+            "research_projects",
+            "study_edges",
+            "research_open_questions",
+            "meta_reports",
             "personas",
             "audit_log",
         ]

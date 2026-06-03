@@ -74,6 +74,19 @@ def test_meta_report_round_trip(store):
     assert ("not yet authored" in md) or ("noch nicht verfasst" in md)
 
 
+def test_purge_clears_research_graph(store):
+    _seed_studies(store, 2)
+    graph = services.backfill_project_from_syntheses("Wipe me", store=store)
+    pid = graph["project"]["id"]
+    assert services.list_research_projects(store=store)
+    assert store.list_study_edges(pid)
+    services.purge_runtime_data(remove_files=False, store=store)
+    assert services.list_research_projects(store=store) == []
+    assert store.list_study_edges(pid) == []
+    assert store.list_meta_reports(pid) == []
+    assert store.list_open_questions(pid) == []
+
+
 def test_invalid_outline_rejected(store):
     _seed_studies(store, 1)
     graph = services.backfill_project_from_syntheses("X", store=store)
