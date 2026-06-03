@@ -370,6 +370,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgmini{position:absolute;right:12px;bottom:12px;width:172px;height:118px;background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:9px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);backdrop-filter:blur(2px)}
 .rgmini .mn{fill:var(--muted);opacity:.5}
 #rgmvp{fill:color-mix(in srgb,var(--accent) 15%,transparent);stroke:var(--accent);stroke-width:1.3}
+.rgdiamond{fill:var(--accent);opacity:.055;stroke:var(--accent);stroke-opacity:.16;stroke-width:1.2}
 .strow{padding:9px 0;border-bottom:1px solid var(--line)}.strow:last-child{border-bottom:0}
 .strow a{text-decoration:none}.strow .ic{vertical-align:-3px;margin-right:5px}
 .ptoolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 10px}
@@ -894,6 +895,11 @@ _RGRAPH_JS = """<script>
     if(bgp) bgp.setAttribute('patternTransform','translate('+tx+' '+ty+') scale('+scale+')');
     if(zl) zl.textContent=Math.round(scale*100)+'%'; drawMini(); }
 
+  // ---- diamond silhouettes (methodology layout) ----
+  var gD=document.getElementById('rgdia');
+  if(gD && D.diamonds){ D.diamonds.forEach(function(poly){
+    gD.appendChild(el('polygon',{points: poly.map(function(p){return p[0]+','+p[1];}).join(' '),'class':'rgdiamond'})); }); }
+
   // ---- edges (bezier, depth-aware) ----
   var edgeEls=[];
   D.edges.forEach(function(ed){ var p=el('path',{fill:'none',stroke:ed.color,'stroke-width':'2','marker-end':'url(#rgah-'+ed.mid+')','class':'rge'}); gE.appendChild(p); edgeEls.push({ed:ed,p:p}); });
@@ -1056,6 +1062,53 @@ def _graph_layout(graph: dict) -> dict:
     return pos
 
 
+# node box dimensions (must match _RGRAPH_JS NW/NH)
+_NW, _NH = 250, 58
+
+
+def _methodology_layout(graph: dict) -> dict | None:
+    """Diamond layout: x by phase column; diverge phases fan vertically symmetric around the
+    axis (wide), converge phases sit on the axis (waist). Returns {pos, diamonds} or None when
+    the project has no methodology. (spec/deep-design-thinking-and-diamond.md §6)"""
+    ms = graph.get("methodology_state") or {}
+    phases = ms.get("phases") or []
+    if not phases:
+        return None
+    order = [p["key"] for p in phases]
+    modes = {p["key"]: p["mode"] for p in phases}
+    COLW, ROWH, X0, AXIS = 360, 118, 40, 340
+    by_phase: dict[str, list] = {}
+    for n in graph["nodes"]:
+        by_phase.setdefault(n.get("phase", ""), []).append(n)
+    pos: dict[str, tuple] = {}
+    col_x: dict[str, float] = {}
+    fan_half: dict[str, float] = {}
+    for idx, pk in enumerate(order):
+        x = X0 + idx * COLW
+        col_x[pk] = x
+        ns = sorted(by_phase.get(pk, []), key=lambda n: n.get("created_at", ""))
+        k = len(ns)
+        for i, n in enumerate(ns):
+            pos[n["study_id"]] = (x, AXIS + (i - (k - 1) / 2.0) * ROWH)
+        fan_half[pk] = (((k - 1) / 2.0) * ROWH + 64) if k else 64
+    extra_x, j = X0 + len(order) * COLW, 0
+    for n in graph["nodes"]:
+        if n["study_id"] not in pos:
+            pos[n["study_id"]] = (extra_x, AXIS + j * ROWH); j += 1
+    # one faint diamond silhouette per diverge phase (left waist → top → right waist → bottom)
+    cy = AXIS + _NH / 2
+    diamonds = []
+    for idx, pk in enumerate(order):
+        if modes.get(pk) != "diverge":
+            continue
+        cx = col_x[pk] + _NW / 2
+        half = max(ROWH * 0.95, fan_half[pk] + 26)
+        leftX = (col_x[order[idx - 1]] if idx - 1 >= 0 else col_x[pk] - COLW * 0.6) + _NW / 2
+        rightX = (col_x[order[idx + 1]] if idx + 1 < len(order) else col_x[pk] + COLW * 0.6) + _NW / 2
+        diamonds.append([[leftX, cy], [cx, cy - half], [rightX, cy], [cx, cy + half]])
+    return {"pos": pos, "diamonds": diamonds}
+
+
 def _graph_interactive(graph: dict) -> str:
     """Interactive, drag-and-drop graph (vanilla JS/SVG, no deps): drag nodes, pan the
     background, scroll to zoom; click a node to open its synthesis."""
@@ -1063,7 +1116,9 @@ def _graph_interactive(graph: dict) -> str:
     if not nodes:
         return f'<p class="muted">{_esc(t("no_synthesis"))}</p>'
     vocab = graph["project"].get("themes", [])
-    pos = _graph_layout(graph)
+    ml = _methodology_layout(graph)
+    pos = ml["pos"] if ml else _graph_layout(graph)
+    diamonds = ml["diamonds"] if ml else []
     jnodes = []
     for n in nodes:
         tags = n.get("theme_tags", [])
@@ -1081,7 +1136,7 @@ def _graph_interactive(graph: dict) -> str:
             col = _EDGE_COLORS.get(e["type"], "#9aa0a6")
             jedges.append({"from": e["from_study"], "to": e["to_study"], "color": col, "type": e["type"],
                            "mid": _colorlist.index(col) if col in _colorlist else 0})
-    data = json.dumps({"nodes": jnodes, "edges": jedges,
+    data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds,
                        "key": graph["project"].get("id", "x")}, ensure_ascii=False)
     de = _lang() == "de"
     hint = ("Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen"
@@ -1104,7 +1159,7 @@ def _graph_interactive(graph: dict) -> str:
           '<circle cx="1.2" cy="1.2" r="1.1" fill="var(--line-2)"/></pattern>'
         + '</defs>'
         + '<rect id="rgbg" x="0" y="0" width="100%" height="100%" fill="url(#rggrid)"/>'
-        + '<g id="rgroot"><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
+        + '<g id="rgroot"><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
         + f'<div class="rghint">{hint}</div>'
         + '<div class="rgctrls">'
           f'<div class="rgzl" id="rgzl">100%</div>'
