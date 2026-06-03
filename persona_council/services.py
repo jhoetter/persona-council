@@ -2995,6 +2995,34 @@ from .suggestions import (  # noqa: E402
 )
 
 
+# --- Research-plan engine (spec/research-plan-engine.md) -----------------------
+from . import plan as _plan  # noqa: E402
+from .plan import (  # noqa: E402
+    PlanError,
+    new_plan,
+    validate_plan,
+    ready_tasks,
+    is_complete,
+    render_plan_md,
+)
+
+
+def get_plan(project_id: str, store: Store | None = None) -> dict[str, Any] | None:
+    return _plan.get_plan(project_id, store=store)
+
+
+def save_plan(plan: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
+    return _plan.save_plan(plan, store=store)
+
+
+def export_plan_md(project_id: str, store: Store | None = None) -> str:
+    store = store or Store()
+    p = _plan.get_plan(project_id, store=store)
+    if not p:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    return _plan.render_plan_md(p)
+
+
 # --- Prototypes + Playwright harness seam (spec §6/§7) -------------------------
 from . import prototypes as _proto  # noqa: E402
 from . import browser as _browser   # noqa: E402

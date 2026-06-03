@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lebensmoment-Radar — Lo-Fi</title>
+<title>Trigger-Radar — Lo-Fi</title>
 <style>
   /* Lo-fi / sketch styling: monochrome, dashed, deliberately unpolished. */
   :root{--ink:#333;--muted:#888;--line:#bbb;--paper:#fafaf7;}
@@ -32,11 +32,11 @@
 </head>
 <body>
 <div class="lofi-banner">Lo-Fi Skizze · zum Testen, nicht final</div>
-<header><h1 id="apptitle">Lebensmoment-Radar</h1><div class="sub" id="appsummary">Du sagst uns deinen Lebensmoment – wir melden uns NUR dann, mit einer konkreten Zahl. Sonst Ruhe.</div></header>
+<header><h1 id="apptitle">Trigger-Radar</h1><div class="sub" id="appsummary">Erinnerung am echten Lebensereignis</div></header>
 <nav id="nav"></nav>
 <main id="screens"></main>
 <div id="toast"></div>
-<script id="concept" type="application/json">{"title": "Lebensmoment-Radar", "summary": "Du sagst uns deinen Lebensmoment – wir melden uns NUR dann, mit einer konkreten Zahl. Sonst Ruhe.", "start": "intro", "screens": [{"id": "intro", "title": "Start", "elements": [{"kind": "text", "id": "i", "label": "Wir verkaufen dir jetzt nichts. Sag uns, was bei dir ansteht – wir melden uns nur, wenn es wirklich zählt."}, {"kind": "button", "id": "go", "label": "Lebensmoment wählen", "goto": "pick"}]}, {"id": "pick", "title": "Was steht an?", "elements": [{"kind": "select", "id": "sel", "label": "Mein nächster Lebensmoment", "options": ["Hauskauf / Kredit", "Kind geplant", "Zusammenziehen", "Aktuell nichts"]}, {"kind": "button", "id": "n", "label": "Merken", "goto": "done"}]}, {"id": "done", "title": "Gemerkt", "elements": [{"kind": "text", "id": "d", "label": "Gemerkt. Wir melden uns NUR dann – mit einer konkreten Zahl, was es für dich bedeutet. Bis dahin: Ruhe."}, {"kind": "button", "id": "ok", "label": "Passt"}]}]}</script>
+<script id="concept" type="application/json">{"title": "Trigger-Radar", "summary": "Erinnerung am echten Lebensereignis", "start": "start", "screens": [{"id": "start", "title": "Wann sollen wir uns melden?", "elements": [{"kind": "text", "id": "t", "label": "Kein Pitch beim Auto. Wir erinnern dich erst beim echten Anlass."}, {"kind": "button", "id": "go", "label": "Anlass wählen", "goto": "set"}]}, {"id": "set", "title": "Anlass gesetzt", "elements": [{"kind": "text", "id": "p", "label": "Erinnerung gesetzt: bei Heirat / Hauskauf / Kind."}, {"kind": "button", "id": "done", "label": "Fertig", "goto": "start"}]}]}</script>
 <script>
 (function(){
   var C = JSON.parse(document.getElementById('concept').textContent);

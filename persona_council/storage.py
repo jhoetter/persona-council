@@ -293,6 +293,15 @@ CREATE TABLE IF NOT EXISTS methodology_judgments (
 );
 CREATE INDEX IF NOT EXISTS idx_mjudge_project ON methodology_judgments(project_id);
 
+-- Research plan (spec/research-plan-engine.md): one plan per project — the orchestrator's
+-- source of truth (analyze/act/verify task DAG + evidence refs), rendered to plan.md on demand.
+CREATE TABLE IF NOT EXISTS research_plans (
+  project_id TEXT PRIMARY KEY,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 -- Prototype artifacts (real, minimal, locally-runnable apps) + recorded persona use.
 CREATE TABLE IF NOT EXISTS prototypes (
   id TEXT PRIMARY KEY,
@@ -604,6 +613,20 @@ class Store:
         rows = self.conn.execute(
             "SELECT data FROM methodology_judgments WHERE project_id=? ORDER BY created_at", (project_id,)).fetchall()
         return [json.loads(r["data"]) for r in rows]
+
+    # ---- Research plan (one per project) ----
+    def upsert_research_plan(self, plan: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT INTO research_plans (project_id, data, created_at, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(project_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at",
+            (plan["project_id"], json.dumps(plan, ensure_ascii=False),
+             plan.get("created_at", ""), plan.get("updated_at", "")))
+        self.conn.commit()
+
+    def get_research_plan(self, project_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT data FROM research_plans WHERE project_id=?", (project_id,)).fetchone()
+        return json.loads(row["data"]) if row else None
 
     # ---- Prototype artifacts + recorded persona sessions ----
     def upsert_prototype(self, proto: dict[str, Any]) -> None:
@@ -984,6 +1007,7 @@ class Store:
             "memory_anomalies",
             "eval_reports",
             "research_projects",
+            "research_plans",
             "study_edges",
             "research_open_questions",
             "meta_reports",
@@ -1019,6 +1043,7 @@ class Store:
             "memory_anomalies",
             "eval_reports",
             "research_projects",
+            "research_plans",
             "study_edges",
             "research_open_questions",
             "meta_reports",

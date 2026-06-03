@@ -1,95 +1,39 @@
 {
-  "title": "Der ehrliche Check",
-  "summary": "Kein Verkauf. 3 Fragen. Wir sagen dir ehrlich, ob du gerade eine Lebensversicherung brauchst.",
-  "start": "intro",
+  "title": "Ehrlicher Check",
+  "summary": "60-Sek-Check beim KFZ-Abschluss",
+  "start": "start",
   "screens": [
     {
-      "id": "intro",
-      "title": "Start",
+      "id": "start",
+      "title": "Kurzer ehrlicher Check",
       "elements": [
         {
           "kind": "text",
-          "id": "i",
-          "label": "Kein Verkauf, kein Abschluss hier. 3 Fragen, dann sagen wir ehrlich: brauchst du das gerade?"
+          "id": "t",
+          "label": "3 Fragen — wir sagen dir EHRLICH, ob sich LV für dich jetzt lohnt."
         },
         {
           "kind": "button",
           "id": "go",
-          "label": "3 Fragen starten",
-          "goto": "q1"
+          "label": "Check starten",
+          "goto": "result"
         }
       ]
     },
     {
-      "id": "q1",
-      "title": "Frage 1",
+      "id": "result",
+      "title": "Ehrliches Ergebnis",
       "elements": [
         {
           "kind": "text",
-          "id": "q",
-          "label": "Hängt finanziell jemand von dir ab?"
+          "id": "r",
+          "label": "Für dich lohnt sich LV NOCH NICHT. Wir melden uns, wenn es passt."
         },
         {
           "kind": "button",
-          "id": "a1",
-          "label": "Nein, niemand",
-          "goto": "nope"
-        },
-        {
-          "kind": "button",
-          "id": "a2",
-          "label": "Partner/in oder Kind",
-          "goto": "yes"
-        }
-      ]
-    },
-    {
-      "id": "nope",
-      "title": "Ehrlich",
-      "elements": [
-        {
-          "kind": "text",
-          "id": "n",
-          "label": "Dann brauchst du gerade wahrscheinlich keine Lebensversicherung. Kein Grund, jetzt etwas abzuschließen."
-        },
-        {
-          "kind": "button",
-          "id": "m",
-          "label": "Erinnere mich, wenn sich das ändert",
-          "goto": "merk"
-        }
-      ]
-    },
-    {
-      "id": "yes",
-      "title": "Könnte relevant sein",
-      "elements": [
-        {
-          "kind": "text",
-          "id": "y",
-          "label": "Dann könnte es relevant sein – wenn dir etwas zustößt, schützt es die anderen. Kein Abschluss hier, nur ehrliche Info."
-        },
-        {
-          "kind": "button",
-          "id": "z",
-          "label": "Zeig mir unverbindlich was",
-          "goto": "merk"
-        }
-      ]
-    },
-    {
-      "id": "merk",
-      "title": "Merken",
-      "elements": [
-        {
-          "kind": "text",
-          "id": "k",
-          "label": "Wir melden uns nur, wenn dein Auslöser kommt – nicht vorher."
-        },
-        {
-          "kind": "button",
-          "id": "ok",
-          "label": "Verstanden"
+          "id": "remind",
+          "label": "Erinnert mich am richtigen Zeitpunkt",
+          "goto": "start"
         }
       ]
     }

@@ -1,61 +1,39 @@
 {
-  "title": "Lebensmoment-Radar",
-  "summary": "Du sagst uns deinen Lebensmoment – wir melden uns NUR dann, mit einer konkreten Zahl. Sonst Ruhe.",
-  "start": "intro",
+  "title": "Trigger-Radar",
+  "summary": "Erinnerung am echten Lebensereignis",
+  "start": "start",
   "screens": [
     {
-      "id": "intro",
-      "title": "Start",
+      "id": "start",
+      "title": "Wann sollen wir uns melden?",
       "elements": [
         {
           "kind": "text",
-          "id": "i",
-          "label": "Wir verkaufen dir jetzt nichts. Sag uns, was bei dir ansteht – wir melden uns nur, wenn es wirklich zählt."
+          "id": "t",
+          "label": "Kein Pitch beim Auto. Wir erinnern dich erst beim echten Anlass."
         },
         {
           "kind": "button",
           "id": "go",
-          "label": "Lebensmoment wählen",
-          "goto": "pick"
+          "label": "Anlass wählen",
+          "goto": "set"
         }
       ]
     },
     {
-      "id": "pick",
-      "title": "Was steht an?",
-      "elements": [
-        {
-          "kind": "select",
-          "id": "sel",
-          "label": "Mein nächster Lebensmoment",
-          "options": [
-            "Hauskauf / Kredit",
-            "Kind geplant",
-            "Zusammenziehen",
-            "Aktuell nichts"
-          ]
-        },
-        {
-          "kind": "button",
-          "id": "n",
-          "label": "Merken",
-          "goto": "done"
-        }
-      ]
-    },
-    {
-      "id": "done",
-      "title": "Gemerkt",
+      "id": "set",
+      "title": "Anlass gesetzt",
       "elements": [
         {
           "kind": "text",
-          "id": "d",
-          "label": "Gemerkt. Wir melden uns NUR dann – mit einer konkreten Zahl, was es für dich bedeutet. Bis dahin: Ruhe."
+          "id": "p",
+          "label": "Erinnerung gesetzt: bei Heirat / Hauskauf / Kind."
         },
         {
           "kind": "button",
-          "id": "ok",
-          "label": "Passt"
+          "id": "done",
+          "label": "Fertig",
+          "goto": "start"
         }
       ]
     }

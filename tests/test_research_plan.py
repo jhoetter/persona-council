@@ -1,0 +1,84 @@
+"""R1 — research-plan model + storage + plan.md render (spec/research-plan-engine.md §9 R1).
+
+A hand-authored plan persists, round-trips, and renders a bucketed plan.md; buckets/capabilities
+are validated by REFERENCE (no closed enum in code).
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from persona_council import plan as P
+from persona_council import services
+
+
+def _plan(pid="proj1"):
+    return P.new_plan(pid, goal="How might we test the plan?", methodology="double_diamond_deep", tasks=[
+        {"id": "frame1", "title": "Frame the inquiry", "bucket": "analyze", "capability": "frame",
+         "intent": "understand before concluding", "plan_note": "read persona memory first"},
+        {"id": "c1", "title": "Pain council", "bucket": "act", "capability": "explore",
+         "consumes": ["frame1"], "produces": [{"kind": "council", "id": "council_abc"}]},
+        {"id": "c2", "title": "Provider council", "bucket": "act", "capability": "explore",
+         "consumes": ["frame1"], "produces": [{"kind": "council", "id": "council_def"}]},
+        {"id": "v1", "title": "Key problems", "bucket": "verify", "capability": "synthesize",
+         "consumes": ["c1", "c2"], "requires": {"min_inputs": 2, "gate_tag": "divergence_complete"}},
+    ])
+
+
+def test_plan_roundtrips_through_store(store):
+    p = _plan()
+    P.save_plan(p, store=store)
+    got = P.get_plan("proj1", store=store)
+    assert got is not None
+    assert got["goal"] == "How might we test the plan?"
+    assert [t["id"] for t in got["tasks"]] == ["frame1", "c1", "c2", "v1"]
+    assert got["tasks"][1]["produces"][0] == {"kind": "council", "id": "council_abc"}
+    # the verify task carries its gate
+    v1 = next(t for t in got["tasks"] if t["id"] == "v1")
+    assert v1["requires"]["min_inputs"] == 2 and v1["requires"]["gate_tag"] == "divergence_complete"
+
+
+def test_ready_frontier_and_completion(store):
+    p = _plan()
+    ready = {t["id"] for t in P.ready_tasks(p)}
+    assert ready == {"frame1"}                      # only the root frame is ready
+    P.task(p, "frame1")["status"] = "done"
+    assert {t["id"] for t in P.ready_tasks(p)} == {"c1", "c2"}   # both act councils unlock (branch)
+    for t in p["tasks"]:
+        t["status"] = "done"
+    assert P.is_complete(p)
+
+
+def test_render_plan_md_is_bucketed(store):
+    md = P.render_plan_md(_plan())
+    assert "# Research plan — How might we test the plan?" in md
+    assert "## Next (ready)" in md
+    for section in ("## Analyze", "## Act", "## Verify"):
+        assert section in md, section
+    assert "council:council_abc" in md          # evidence ref rendered
+    assert "gate=divergence_complete" in md       # gate rendered
+    # export via services
+    services.save_plan(_plan(), store=store)
+    assert "## Analyze" in services.export_plan_md("proj1", store=store)
+
+
+def test_bad_plan_rejected(store):
+    with pytest.raises(P.PlanError):                # missing bucket tag
+        P.validate_plan({"project_id": "x", "tasks": [{"id": "a", "title": "A"}]})
+    with pytest.raises(P.PlanError):                # consumes unknown
+        P.validate_plan({"project_id": "x", "tasks": [
+            {"id": "a", "bucket": "act"}, {"id": "b", "bucket": "act", "consumes": ["ghost"]}]})
+    with pytest.raises(P.PlanError):                # cycle
+        P.validate_plan({"project_id": "x", "tasks": [
+            {"id": "a", "bucket": "act", "consumes": ["b"]}, {"id": "b", "bucket": "act", "consumes": ["a"]}]})
+
+
+def test_no_hardcoded_bucket_or_capability_set():
+    """R1 acceptance: the plan engine must not encode a closed bucket/capability/kind vocabulary."""
+    src = Path(P.__file__).read_text()
+    for banned in ("BUCKETS =", "CAPABILITIES =", "KINDS =", "ALLOWED_BUCKETS", "VALID_CAPABILITIES"):
+        assert banned not in src, banned
+    # an invented bucket + capability + evidence kind validate fine
+    P.validate_plan({"project_id": "x", "tasks": [
+        {"id": "a", "bucket": "ponder", "capability": "divine", "produces": [{"kind": "omen", "id": "o1"}]}]})
