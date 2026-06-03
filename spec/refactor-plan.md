@@ -61,5 +61,26 @@ Longest functions: `mcp_server.build_server` (996), `web.create_app` (464), `cli
   `test_web_smoke` added in Q-exec).
 - MCP tool-list + CLI `--help` snapshot stable (tool/command names unchanged).
 
-## 5. Scoped exceptions log (filled during Q-exec)
-- _(to be appended: any target deferred for safety, with the reason + the follow-up.)_
+## 5. Scoped exceptions log (Q-exec outcome)
+**Done (committed, suite green + render smoke):**
+- **Target 1 (partial) — web assets extracted.** `CSS`, `HEAD_JS`, `_RGRAPH_JS`, `_SYN_STYLE`,
+  `_SYN_SCRIPT` (≈591 LOC of pure constants) moved to `web_assets.py`, imported back. **web.py
+  2683 → 2094 LOC.** Behaviour identical (61 tests + a `test_web_smoke` render check green).
+
+**Deferred (documented, not half-done) — reason: overnight risk budget shared with the Linear
+restyle (L) + the extensive showcase (S); a broken split would sink the showcase. Each is a clean,
+self-contained follow-up using the plan above:**
+- **Target 4 — `services/` package split.** Highest value but MEDIUM risk: cross-domain calls
+  (`simulate_day`→`record_memory_deltas`, shared `_require_*` helpers) need careful acyclic layering;
+  not safe to land the same night as L+S. Plan fully specified in §3.4. Follow-up: extract
+  `simulation` + `memory` + `research` modules first (most separable), re-export from
+  `services/__init__.py`, characterize per route.
+- **Target 2 — `mcp_server.build_server` → registrars.** Mechanical but 996 LOC of tool defs; the
+  FILE size is unchanged by the split (only the function shrinks), so low ROI for the risk tonight.
+- **Target 3 — `cli` per-domain split** and **web routes/graph split** (Target 1 remainder):
+  deferred with Target 4 (graph functions share `_esc`/`_theme_color`/`_icon`/`t` with web.py →
+  need a `web_common` seam to avoid a cycle; do it in the focused follow-up).
+
+**Net Q outcome tonight:** the single biggest practical win (web.py asset bloat) is removed and
+locked; the remaining god-file splits are precisely specified and queued, with the public surface
+and the suite fully green throughout. No half-finished refactor is left in the tree.
