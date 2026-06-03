@@ -973,7 +973,7 @@ _RGRAPH_JS = """<script>
   },{passive:false});
 
   // ---- keyboard ----
-  window.addEventListener('keydown',function(e){ var ae=document.activeElement; if(ae&&/input|textarea|select/i.test(ae.tagName)) return; var r=svg.getBoundingClientRect();
+  window.addEventListener('keydown',function(e){ if(e.metaKey||e.ctrlKey||e.altKey) return; var ae=document.activeElement; if(ae&&/input|textarea|select/i.test(ae.tagName)) return; var r=svg.getBoundingClientRect();
     if(e.key==='+'||e.key==='=') zoomAt(r.width/2,r.height/2,1.25);
     else if(e.key==='-'||e.key==='_') zoomAt(r.width/2,r.height/2,0.8);
     else if(e.key==='0'||e.key==='f'||e.key==='F') fit(true);
@@ -2066,15 +2066,7 @@ def create_app():
         except KeyError:
             return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared")), store, active="projects")
         proj = graph["project"]
-        c = graph["counts"]
-        stats = (f'<div class="stat"><b>{c["studies"]}</b><span>{t("syntheses")}</span></div>'
-                 f'<div class="stat"><b>{c["edges"]}</b><span>{t("build_order_h")}</span></div>'
-                 f'<div class="stat"><b>{c["themes"]}</b><span>{t("themes_h")}</span></div>'
-                 f'<div class="stat"><b>{c["open_questions"]}</b><span>{t("open_questions_h")}</span></div>')
-        # legends
-        theme_leg = "".join(
-            f'<span class="pill" style="border-color:{_theme_color(th, proj["themes"])}">{_esc(th)}</span>'
-            for th in proj["themes"]) or f'<span class="muted small">—</span>'
+        # edge legend (shown in the floating open-questions panel)
         used_types = sorted({e["type"] for e in graph["edges"]})
         edge_leg = "".join(
             f'<span class="pill" style="border-color:{_EDGE_COLORS.get(ty, "#9aa0a6")}">{_esc(ty)}</span>'
@@ -2108,7 +2100,6 @@ def create_app():
             f'<div class="proj">'
             f'<div class="proj-head"><h1 class="h1">{_esc(proj["title"])}</h1>'
             f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
-            f'<div class="stats">{stats}</div>'
             f'{toolbar}</div>'
             f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>'
             f'{panel}{oq_js}'
