@@ -116,12 +116,20 @@ Memory & multi-resolution simulation (gather → author → write-back):
   Stimmen panel and the self-contained `export_synthesis` (md/json) for downstream agents.
 - Portability: `export_snapshot`/`import_snapshot` (data/export is the one
   portable artifact; it is gitignored/local-only, as is the SQLite DB runtime)
-- Methodology engine (data-driven, structure-enforcing + LLM-judged): `list_methodologies`/
-  `get_methodology`/`start_methodology_project`/`set_project_methodology`, the phase loop
-  `brief_phase`→`record_exploration`→`record_judgment`(divergence_complete)→`record_convergence`→
-  `advance_phase`, and `get_methodology_state`. The engine guarantees the diamond's SHAPE
-  (≥2 explorations + an evidence-backed `divergence_complete` before converging; refines edges
-  from the fan) but never hardcodes dynamics. Autonomous loop: `run_methodology`.
+- Methodology engine — tag-driven CONSTELLATIONS (structure-enforcing + LLM-judged; ZERO
+  hardcoded vocabularies): a methodology is a DAG of steps carrying OPEN TAGS (capability/role/
+  artifact-type/gate are free strings). `list_methodologies`/`get_methodology`/
+  `start_methodology_project`/`set_project_methodology`, the frontier loop
+  `brief_next`→`record_node`→`record_judgment`(free `gate_tag`)→`record_decision`→`advance`, and
+  `get_methodology_state`. The engine is tag-agnostic: it enforces only the DAG (`consumes`),
+  integer `min_inputs`, tag-equality references, and evidence-backed judgment PRESENCE — never tag
+  membership. Shape (diverge/converge/diamonds/branches/loops) is DERIVED from structure + node
+  counts. Common building blocks are SUGGESTED as data via `suggest_capabilities`/`suggest_roles`/
+  `suggest_artifact_types`/`suggest_methodologies` — recommendations, not constraints; adopt, tweak,
+  or invent your own tags. Legacy `phases` specs + old tool names (brief_phase/record_exploration/
+  record_convergence/advance_phase) still work as aliases. Autonomous loop: `run_methodology`.
+  Spec: `spec/methodology-constellations.md`. Authoring a new methodology = author a constellation
+  of tagged steps in JSON (no code).
 - Prototypes (real, minimal, local apps agents can use): `scaffold_prototype` (concept→clickable
   SPA), `register_prototype`, `list_prototypes`, `run_prototype`/`stop_prototype`; the Playwright
   harness `proto_open`/`proto_act`/`proto_read`/`proto_close` lets a persona drive the REAL app,
@@ -138,11 +146,11 @@ Run `make skills` once (symlinks `claude-skills/*` into gitignored
 `.claude/skills/`). Skills are thin orchestration playbooks; the methodology
 lives in `spec/`.
 
-- `methodology-run` — facilitate a data-driven methodology (Double Diamond, d.school
-  micro-cycle, Lean/JTBD, …) over the graph: genuinely diverge (fan out explorations)
-  then converge (cluster with an evidence-backed gate), incl. a prototype phase where
+- `methodology-run` — facilitate a tag-driven methodology constellation (Double Diamond, d.school
+  micro-cycle, Lean/JTBD, … or any you author) over the graph: genuinely fan out (`record_node`)
+  then decide behind an evidence-backed gate (`record_decision`), incl. build/test steps where
   personas USE a real app via Playwright. The engine enforces the shape; you author the
-  text. Autonomous variant: `run_methodology`. Spec: `methodology-engine-and-prototyping.md`.
+  text. Autonomous variant: `run_methodology`. Spec: `methodology-constellations.md`.
 - `simulate-cohort` — run the day/period loop for personas over months (sampling).
 - `run-council` — memory-grounded council; judicious self-research (recall only
   when it sharpens the answer); optional moderated back-and-forth with mediator

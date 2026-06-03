@@ -1,39 +1,34 @@
 {
   "key": "lean_jtbd",
   "name": "Lean / Jobs-to-be-Done",
-  "description": "Problem-explore (diverge) -> Problem-pick (converge) -> Solution-explore (diverge) -> Validate (converge). Lean-startup framing around the customer's job-to-be-done.",
+  "description": "Problem-explore (fan) -> Problem-pick (waist) -> Solution-explore (fan + prototype) -> Validate (waist). Lean-startup framing around the customer's job-to-be-done.",
   "when_to_use": "When you want to anchor on the customer's job, find the highest-value problem, then validate a minimal solution.",
-  "phases": [
+  "steps": [
     {
-      "key": "problem_explore", "name": "Problem Explore", "mode": "diverge",
+      "id": "problem_explore", "name": "Problem Explore", "tags": ["explore", "problem-landscape"],
       "intent": "Explore the jobs-to-be-done and the problems blocking them, broadly across customers.",
-      "council_strategy": "pain-discovery",
-      "diverge_by": "angle",
-      "produces_role": "problem-landscape"
+      "strategy": "pain-discovery", "diverge_by": "angle",
+      "produces": {"role": "problem-landscape"}
     },
     {
-      "key": "problem_pick", "name": "Problem Pick", "mode": "converge",
+      "id": "problem_pick", "name": "Problem Pick", "tags": ["decide", "point-of-view"],
       "intent": "Pick the single highest-value, most-underserved problem/job to solve first.",
-      "council_strategy": "goal",
-      "consumes": "problem_explore",
-      "produces_role": "point-of-view"
+      "strategy": "goal", "consumes": ["problem_explore"],
+      "requires": {"min_inputs": 2, "gate_tag": "divergence_complete"},
+      "produces": {"role": "point-of-view"}
     },
     {
-      "key": "solution_explore", "name": "Solution Explore", "mode": "diverge",
+      "id": "solution_explore", "name": "Solution Explore", "tags": ["explore", "build", "solution-options"],
       "intent": "Explore solution/MVP candidates and build a minimal prototype.",
-      "council_strategy": "positive-deepdive",
-      "consumes": "problem_pick",
-      "diverge_by": "solution_candidate",
-      "requires_artifacts": ["prototype"],
-      "produces_role": "solution-options"
+      "strategy": "positive-deepdive", "consumes": ["problem_pick"], "diverge_by": "solution_candidate",
+      "produces": {"role": "solution-options", "artifact_type": "prototype"}
     },
     {
-      "key": "validate", "name": "Validate", "mode": "converge",
+      "id": "validate", "name": "Validate", "tags": ["decide", "test", "spec"],
       "intent": "Personas use the MVP; validate the value proposition and converge to a buildable spec.",
-      "council_strategy": "tension",
-      "consumes": "solution_explore",
-      "requires_artifacts": ["prototype_session"],
-      "produces_role": "spec",
+      "strategy": "tension", "consumes": ["solution_explore"],
+      "requires": {"min_inputs": 2, "gate_tag": "divergence_complete", "session_of_tags": ["prototype"]},
+      "produces": {"role": "spec"},
       "loop_back": "solution_explore"
     }
   ]

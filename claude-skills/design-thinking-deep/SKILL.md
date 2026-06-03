@@ -5,10 +5,11 @@ description: Run the FULL deep design-thinking process (double_diamond_deep) at 
 
 # design-thinking-deep
 
-The deep variant of `methodology-run`, on the `double_diamond_deep` methodology (three linked
-diamonds). The engine enforces the SHAPE; **I (the host) and my subagents author every word** via
-MCP — **never call an LLM API for text** (OpenAI = embeddings + images only). "At scale" =
-**parallel subagent fan-out**, not a server-side loop. Spec: `spec/deep-design-thinking-and-diamond.md`.
+The deep variant of `methodology-run`, on the `double_diamond_deep` **constellation** (three linked
+diamonds, expressed as a DAG of tagged steps). The engine enforces the SHAPE and is tag-agnostic;
+**I (the host) and my subagents author every word** via MCP — **never call an LLM API for text**
+(OpenAI = embeddings + images only). "At scale" = **parallel subagent fan-out**, not a server-side
+loop. Specs: `spec/methodology-constellations.md` (the model) + `spec/deep-design-thinking-and-diamond.md`.
 
 ## Setup — a real cohort
 Author **12–16 segmented personas** (record_persona; host-authored) spanning age × life-stage ×
@@ -17,29 +18,30 @@ attitude × channel × region + 2–3 provider-side roles. Then:
 start_methodology_project "<title>" "<HMW>" double_diamond_deep --persona … (all of them)
 ```
 
-## The loop (brief_phase drives it; one Synthesis per node; six phases)
-For each phase, `brief_phase`; then:
+## The loop (brief_next drives it; one Synthesis per node; six steps)
+For each ready step, `brief_next`; then:
 
-**Diverge phases — FAN OUT WIDE (this is the diamond):**
+**Fan steps (explore) — FAN OUT WIDE (this is the diamond):**
 - `discover`: spawn **one subagent per persona** (in parallel batches), each loads its own
-  `persona-context` and reacts (pain-discovery) → `record_exploration` per persona. 12–16 nodes.
-- `ideate`: spawn **one subagent per solution idea** → `record_exploration` per idea; build
+  `persona-context` and reacts (pain-discovery) → `record_node` per persona. 12–16 nodes.
+- `ideate`: spawn **one subagent per solution idea** → `record_node` per idea; build
   **several lo-fi prototypes** (`scaffold_prototype --template spa-sketch`, fidelity=lofi).
 - `refine`: build **mid-fi** prototype(s) of the shortlist (`--template spa-min`, fidelity=midfi);
-  one exploration per refinement angle.
-- Then a host `record_judgment(divergence_complete, evidence_refs=[council_ids])` and `advance_phase`.
+  one node per refinement angle.
+- Then a host `record_judgment(<step>, "divergence_complete", evidence_refs=[council_ids])` and `advance`.
 - Stop fanning out by your own judgment (evidence-backed) — never a fixed count.
 
-**Converge phases — cluster / decide:**
+**Decide steps — cluster / decide (record_decision):**
 - `define`: **affinity-cluster** the discover fan into themes; author payload with
-  `clusters:[{label, member_node_ids, insight}]` + `key_problems:[…]`; `record_convergence` (role
+  `clusters:[{label, member_node_ids, insight}]` + `key_problems:[…]`; `record_decision` (role
   key-problems).
 - `lofi_select`: personas **USE each lo-fi prototype** via Playwright (`run_prototype` →
   `brief_prototype_session` → `proto_open`/`proto_act` → `record_prototype_session`); then
-  down-select: author `ranking:[{prototype_id, score_rationale}]` + `shortlist:[…]`; `record_convergence`.
-- `deliver`: personas **USE the mid-fi** prototype; synthesize the **solution presentation**
-  (winning concept, who-wins + non-targets, validated pain-solvers, evidence trail, open risks, spec);
-  `record_convergence` (role solution-presentation), `advance_phase` → complete.
+  down-select: author `ranking:[{prototype_id, score_rationale}]` + `shortlist:[…]`; `record_decision`.
+  (Its `requires.session_of_tags:["lofi"]` is matched by tag-equality to the lo-fi prototypes.)
+- `deliver`: personas **USE the mid-fi** prototype (`session_of_tags:["midfi"]`); synthesize the
+  **solution presentation** (winning concept, who-wins + non-targets, validated pain-solvers,
+  evidence trail, open risks, spec); `record_decision` (role solution-presentation), `advance` → complete.
 
 ## Parallelism & cost (host judgment)
 - Fan out subagents in **parallel batches** (e.g. 4–6 at a time). Each subagent does its OWN

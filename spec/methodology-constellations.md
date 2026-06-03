@@ -1,6 +1,6 @@
 # Methodology Constellations — Specification
 
-> **Status:** DESIGN — build-ready (rev.2). Supersedes the phase-grammar of
+> **Status:** IMPLEMENTED (rev.2) — milestones C1–C5 landed; full suite green. Supersedes the phase-grammar of
 > `spec/methodology-engine-and-prototyping.md` §3–§4 and `deep-design-thinking-and-diamond.md` §4,
 > and **rev.1's "capability catalog in code"** (now a *suggestion*, see §2.3).
 > **Goal:** methodologies are **fully declarative and tag-driven — zero hardcoded vocabularies**.
@@ -49,7 +49,8 @@ Step:
   requires?   {                   ALL data — the engine reads these structurally, never by name:
                 min_inputs?: int       # >=N upstream nodes must exist before this step's node
                 gate_tag?:   string    # a judgment carrying this tag must be recorded (decided+evidence)
-                artifact_tags?: string[]   # an upstream step must have produced/tested these artifact tags
+                artifact_tags?:   string[]   # an upstream step must have PRODUCED an artifact carrying each tag
+                session_of_tags?: string[]   # a recorded SESSION of an artifact carrying each tag must exist
               }
   loop_back?  string              a prior step id to revisit (LLM-judged)
 ```
@@ -86,8 +87,10 @@ between tags, and evidence-backed judgment *presence*. It **never compares a tag
   evidence_ref) must exist upstream. The tag string is free; only its *presence* is required.
 - **INV-EDGES** a consolidating node's `from_node_ids ⊆ upstream nodes`; `refines` edges drawn.
 - **INV-ARTIFACT** for each `requires.artifact_tags[T]`: some upstream step must have produced an
-  artifact carrying tag T (and, where T denotes a *session* tag, ≥1 recorded session of T). Pure
-  tag-equality reference — no literal `"prototype"` in code.
+  artifact carrying tag T; for each `requires.session_of_tags[T]`: ≥1 recorded session of an
+  artifact carrying tag T. Pure tag-equality references (an artifact's tags = its type + any
+  discriminators, e.g. a fidelity tag) — no literal `"prototype"`/`"prototype_session"` in the
+  invariants (only the legacy `phases→steps` translator names old strings, as back-compat glue).
 - **INV-CITE** every node cites ≥1 council; every artifact claim cites a session-log state.
 
 A4 stands: "explored enough?", "which wins?", "ready?" are LLM judgments recorded with evidence;
