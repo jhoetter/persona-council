@@ -1,79 +1,66 @@
 ---
 name: methodology-run
-description: Drive a tag-driven methodology constellation (e.g. Double Diamond, d.school micro-cycle, Lean/JTBD, or any you author) over the council/synthesis graph — the host-stepped engine. Genuinely fan out (record_node) then decide behind an evidence-backed gate (record_decision), per the chosen constellation, until it produces a buildable spec. Use for "run design thinking / a double diamond / a methodology", or "take a How-Might-We to a tested spec".
+description: Drive a plan-based design-research project (any methodology constellation, e.g. Double Diamond, d.school, Lean/JTBD — or freeform) via the analyze→act→verify plan loop. Frame the inquiry first (understand before concluding), run a FEW real multi-persona councils, build & test prototypes, then consolidate behind evidence gates. Use for "run design thinking / a methodology / take a How-Might-We to a tested, evidence-backed answer".
 ---
 
 # methodology-run
 
-You facilitate a **tag-driven methodology constellation** — a DAG of steps carrying OPEN TAGS.
-The engine guarantees the SHAPE (fan out before deciding, real breadth, traceability) and is
-**tag-agnostic** (it never checks a tag against a fixed list); YOU author the text and make the
-gate judgments with evidence. This is the host-stepped path; `run_methodology` (runtime) is the
-autonomous variant. Spec: `spec/methodology-constellations.md`.
+You drive a **research PLAN** — the orchestrator's source of truth: a DAG of tasks bucketed
+**analyze / act / verify**. The engine enforces structure + gates; **you (host) + subagents author
+every word via MCP** — never an in-process LLM (OpenAI = embeddings + images only). Specs:
+`spec/research-plan-engine.md` (+ `methodology-constellations.md`, `methodology-presentation-from-data.md`).
+
+## The golden rule (read this)
+**Do NOT run one council per persona.** A council's value is *several personas reacting to each
+other from their lived memory*. Discover = **1 frame + a FEW real multi-persona councils + 1
+synthesis** — not 14 micro-interviews. Breadth = angles × persona diversity within real councils.
 
 ## Setup
 ```
-list_methodologies                              # pick: double_diamond | dschool_micro | lean_jtbd | …
-# (optional) browse building blocks — suggestions, NOT constraints:
-suggest_methodologies / suggest_capabilities / suggest_roles / suggest_artifact_types
-start_methodology_project <title> <goal=HMW> <methodology_key> [--persona …]
+start_project "<title>" "<HMW>" [--methodology double_diamond_deep] [--persona …]
+# methodology -> the plan is seeded analyze/act/verify per step; freeform -> one root frame task.
 ```
 
 ## The loop — repeat until brief_next says complete
 ```
-b = brief_next(project_id)         # the ready frontier: primary step (+ b.ready set), tags,
-if b.complete: break               # strategy, unmet `requires`, consumed nodes
+b = brief_next(project_id)        # the ready frontier: a task with bucket + capability + unmet gates
+if b.complete: break
 
-if b.mode == "diverge":            # a FAN step (no min_inputs)
-    # FAN OUT — genuinely go broad (this is what makes it a diamond, not a chain)
-    for each angle / persona subset (run-council with b.strategy):
-        record_node(project_id, title, council_ids, payload [, step_id=b.step])   # one node each
-    # decide for yourself, with evidence, when explored enough — NO fixed count. The gate_tag is
-    # whatever the downstream decide step requires (b tells you; usually "divergence_complete"):
-    record_judgment(project_id, b.step, "<gate_tag>", true, rationale, evidence_refs=[council_ids…])
-    advance(project_id, b.step)
+if b.bucket == "analyze":         # FRAME — understand before concluding
+    # read persona memory (their simulated days), prior evidence; author research questions.
+    record_frame(project_id, b.task, questions=[…], hypotheses=[…], memory_refs=[…])   # >=1 q + >=1 ref
 
-else:                              # a DECIDE step (has min_inputs / gate_tag / session reqs)
-    # if requires.session_of_tags is set, have personas USE the artifact first (see below)
-    record_decision(project_id, title, from_node_ids=[the nodes you consolidate], payload)
-    advance(project_id, b.step)
-```
-The engine REJECTS a decision with < `min_inputs` upstream nodes (`BREADTH_TOO_LOW`) or without
-the required decided `gate_tag` judgment (`MISSING_GATE_JUDGMENT`) — so you cannot produce a chain.
-Branches/parallel tracks: `b.ready` may list several steps at once — pass `step_id` to target one.
+elif b.bucket == "act":           # DO THE WORK (breadth = angles × persona diversity)
+    # add an act task per angle, run a REAL multi-persona council on a framed question,
+    # or scaffold_artifact / record_artifact_session (proband test). Then link + complete:
+    t = add_task(project_id, "act", "explore", "<angle>", consumes=[the frame task])
+    cid = run-council(framed question, several persona_ids)         # the run-council skill
+    link_evidence(project_id, t.id, "council", cid);  complete_task(project_id, t.id)
 
-## Build / test steps (artifacts)
-A fan step that declares `produces.artifact_type` BUILDS a real artifact:
+else:                             # VERIFY — consolidate + gate
+    # optionally synthesize the fan into key-problems / shortlist / solution-presentation:
+    syn = record_synthesis(title, council_ids=[the fan], payload)   # the synthesize skill
+    link_evidence(project_id, b.task, "synthesis", syn.id)
+    record_judgment(project_id, b.task, "divergence_complete", true, rationale, evidence_refs=[…])
+    assess_progress(project_id, b.task, rationale, evidence_refs, delta)   # progress toward the HMW
+    complete_task(project_id, b.task)            # rejected until breadth + gate + artifacts/sessions
 ```
-scaffold_prototype(slug, name, concept)         # concept = {title, summary, start, screens:[{id,title,elements}]}
-```
-A decide step with `requires.session_of_tags: ["<tag>"]` — personas actually USE the artifact
-carrying `<tag>` (e.g. "prototype", or a fidelity like "lofi"/"midfi"):
-```
-run_prototype(prototype_id)                      # local-only
-brief_prototype_session(persona_id, prototype_id)
-proto_open(prototype_id) -> proto_act(click/type on refs from the latest snapshot) -> observe REAL state
-record_prototype_session(persona_id, prototype_id, session_id, date, reaction)   # cite observed_state_refs
-```
-Reactions are grounded in the session log; ungrounded praise is rejected. The reaction enters the
-persona's memory, so the test/decide council surfaces the real use. Matching is by tag-EQUALITY
-(produces.artifact_type / more_tags on the build step ↔ requires.session_of_tags on the decide step).
+A verify task is **gated**: it cannot complete until its act fan has ≥`min_inputs` evidence, a
+decided `gate_tag` judgment exists, and any required artifacts/sessions exist. So you cannot skip
+the work or conclude early.
+
+## Build / test (artifacts)
+Build varied, real, clickable prototypes (NOT just forms): `scaffold_artifact(slug, name, concept,
+type="prototype", tags=["lofi"|"midfi"|"hifi"])`. Test them: `run_prototype` → `proto_open`/
+`proto_act` (Playwright) → `record_artifact_session` (grounded in the observed state) → `link_evidence`.
+A verify task with `session_of_tags:["lofi"]` needs a recorded session of a lofi artifact, etc.
 
 ## Output
-The step nodes wired fan→waist in the project graph (real diamonds emerge), real artifact(s) the
-user can open, and a decide `spec`/`solution-presentation` node. Then `meta-brief → meta-outline →
-meta-section → meta-export` for the dev-handover document. Watch progress with
-`get_methodology_state`; see it in the web inspector's methodology strip + diamond view.
+`export_plan_md(project_id)` renders the analyze/act/verify log. The project graph shows councils +
+syntheses as first-class nodes with diamonds emerging over act→verify; artifacts placed + routed.
+The final verify `assess_progress(delta="beantwortet")` is the evidence-backed answer to the HMW.
 
-## Authoring a NEW methodology (data only, no code)
-A methodology is JSON: `{key, name, description, when_to_use, steps:[…]}`. Each step:
-`{id, name, tags:[…], intent, consumes:[ids], strategy?, produces:{role?, artifact_type?, more_tags?},
-requires:{min_inputs?, gate_tag?, artifact_tags?, session_of_tags?}, loop_back?}`. Draw on
-`suggest_*` for common tags or invent your own — the engine treats them all identically. Register
-via `register_methodology` (DB) or drop a file in `persona_council/methodologies/`.
-
-## Autonomous variant
-`run_methodology(project_id)` walks the whole frontier unattended via a deterministic stub (NO
-in-process LLM text-generation — host/subagents author all text). It calls the same engine, so all
-invariants and anti-steering gates still hold.
-```
+## Hard rules
+No LLM text-generation, ever (host/subagents author all text via MCP). No one-council-per-persona.
+Understand before concluding (the frame is never silently skipped). Honest uncertainty raises an
+open question instead of fabricating progress.

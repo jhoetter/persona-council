@@ -354,6 +354,27 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("project_id"); p.add_argument("step_id"); p.add_argument("gate_tag")
     p.add_argument("--decided", default="true"); p.add_argument("--rationale", default=""); p.add_argument("--ref", action="append", dest="refs")
     p = sub.add_parser("methodology-state"); p.add_argument("project_id")
+    # Research-plan engine (plan-driven analyze/act/verify)
+    p = sub.add_parser("project-start")
+    p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--methodology")
+    p.add_argument("--persona", action="append", dest="personas"); p.add_argument("--description", default="")
+    p = sub.add_parser("plan-get"); p.add_argument("project_id")
+    p = sub.add_parser("plan-md"); p.add_argument("project_id")
+    p = sub.add_parser("plan-brief"); p.add_argument("project_id")
+    p = sub.add_parser("plan-task-add")
+    p.add_argument("project_id"); p.add_argument("bucket"); p.add_argument("capability"); p.add_argument("title")
+    p.add_argument("--intent", default=""); p.add_argument("--consume", action="append", dest="consumes")
+    p.add_argument("--step", default=""); p.add_argument("--note", default="")
+    p = sub.add_parser("plan-frame")
+    p.add_argument("project_id"); p.add_argument("task_id"); p.add_argument("file")  # file = {questions,hypotheses,memory_refs}
+    p = sub.add_parser("plan-link")
+    p.add_argument("project_id"); p.add_argument("task_id"); p.add_argument("kind"); p.add_argument("evidence_id")
+    p = sub.add_parser("plan-judge")
+    p.add_argument("project_id"); p.add_argument("task_id"); p.add_argument("gate_tag")
+    p.add_argument("--decided", default="true"); p.add_argument("--rationale", default=""); p.add_argument("--ref", action="append", dest="refs")
+    p = sub.add_parser("plan-complete"); p.add_argument("project_id"); p.add_argument("task_id")
+    p = sub.add_parser("plan-progress")
+    p.add_argument("project_id"); p.add_argument("task_id"); p.add_argument("--rationale", default=""); p.add_argument("--delta", default=""); p.add_argument("--ref", action="append", dest="refs")
     # Prototypes + Playwright harness
     p = sub.add_parser("prototype-scaffold")
     p.add_argument("slug"); p.add_argument("name"); p.add_argument("file"); p.add_argument("--project")
@@ -623,6 +644,30 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.advance(args.project_id, getattr(args, "step", None)))
         elif args.command == "methodology-state":
             _print(services.get_methodology_state(args.project_id))
+        elif args.command == "project-start":
+            _print(services.start_project(args.title, args.goal, args.methodology, args.personas, args.description))
+        elif args.command == "plan-get":
+            _print(services.get_plan(args.project_id))
+        elif args.command == "plan-md":
+            print(services.export_plan_md(args.project_id))
+        elif args.command == "plan-brief":
+            _print(services.brief_next(args.project_id))
+        elif args.command == "plan-task-add":
+            _print(services.add_task(args.project_id, args.bucket, args.capability, args.title,
+                                     intent=args.intent, consumes=args.consumes, step=args.step, plan_note=args.note))
+        elif args.command == "plan-frame":
+            d = json.loads(Path(args.file).read_text(encoding="utf-8"))
+            _print(services.record_frame(args.project_id, args.task_id, d.get("questions", []),
+                                         d.get("hypotheses"), d.get("memory_refs")))
+        elif args.command == "plan-link":
+            _print(services.link_evidence(args.project_id, args.task_id, {"kind": args.kind, "id": args.evidence_id}))
+        elif args.command == "plan-judge":
+            _print(services.record_judgment(args.project_id, args.task_id, args.gate_tag,
+                                            args.decided.lower() == "true", args.rationale, args.refs))
+        elif args.command == "plan-complete":
+            _print(services.complete_task(args.project_id, args.task_id))
+        elif args.command == "plan-progress":
+            _print(services.assess_progress(args.project_id, args.task_id, args.rationale, args.refs or [], args.delta))
         elif args.command == "prototype-scaffold":
             _print(services.scaffold_prototype(args.slug, args.name, json.loads(Path(args.file).read_text(encoding="utf-8")),
                                                template=args.template, project_id=args.project, fidelity=args.fidelity))
