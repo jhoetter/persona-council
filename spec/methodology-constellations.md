@@ -1,193 +1,168 @@
 # Methodology Constellations — Specification
 
-> **Status:** DESIGN — build-ready. Supersedes the phase-grammar of
-> `spec/methodology-engine-and-prototyping.md` §3–§4 and `deep-design-thinking-and-diamond.md` §4.
-> **Goal:** make methodologies **fully declarative, non-hardcoded** — a methodology is a
-> **constellation: a DAG of typed steps, each bound to an MCP capability** — so any number of
-> methodologies (Double Diamond, d.school, Lean, Design Sprint, Jobs-to-be-Done, custom, …) are
-> *data*, interpreted by a generic engine + generic UI, with **zero double-diamond assumptions in
-> code**. **Locked with the user:** full capability-DAG model; spec-first.
-> **Leitsatz (unchanged):** capabilities via MCP; the host (Claude)/subagents author ALL text
-> (`brief_*→record_*`); **no in-process LLM text-generation**; OpenAI = embeddings + images only;
+> **Status:** DESIGN — build-ready (rev.2). Supersedes the phase-grammar of
+> `spec/methodology-engine-and-prototyping.md` §3–§4 and `deep-design-thinking-and-diamond.md` §4,
+> and **rev.1's "capability catalog in code"** (now a *suggestion*, see §2.3).
+> **Goal:** methodologies are **fully declarative and tag-driven — zero hardcoded vocabularies**.
+> A methodology is a **constellation: a DAG of steps carrying open tags**. The MCP *suggests*
+> building blocks (capabilities, roles, artifact-types, whole methodologies) as **data**, never as
+> enforced code enums. The engine is **tag-agnostic**: it enforces only graph mechanics, references,
+> and evidence — never tag membership. **Locked with the user:** capability-DAG model; **even
+> `explore`/`cluster`/… are generic tags suggested by the MCP, not enums**; spec-first.
+> **Leitsatz (unchanged):** capabilities via MCP; host/subagents author ALL text
+> (`brief_*→record_*`); **no in-process LLM text-gen**; OpenAI = embeddings + images only;
 > structure enforced by the engine, dynamics LLM-judged-by-the-host with evidence.
 
 ---
 
-## 1. What's hardcoded today (the actual problem)
-Phase *specs* are already data (`methodologies/*.json` in a registry). But the **grammar** is
-Double-Diamond-shaped — four baked-in assumptions:
+## 1. What's hardcoded today (the problem)
+Phase *specs* are data already, but the **grammar** is Double-Diamond-shaped. Four baked-in spots:
 
 | # | Hardcoded | Where | Blocks |
 |---|---|---|---|
-| 1 | phases must strictly alternate diverge,converge,… | `methodology.py:61` | branches, parallel tracks, 5-mode d.school, N-diamonds, loops |
-| 2 | closed enums (`ROLES`, `JUDGMENT_KINDS`, `FIDELITIES`) | `methodology.py:23-27` | new roles/gate-kinds/fidelities need code edits |
-| 3 | only `"prototype"`/`"prototype_session"` artifact types understood | `methodology.py:362,366` | surveys, journey-maps, canvases, A/B tests, … |
-| 4 | UI layout maps literal phase keys (`ideate`/`refine`/`lofi_select`/`deliver`) | `web.py:1126-1159` | any other methodology's artifacts won't place/route |
+| 1 | phases must alternate diverge,converge,… | `methodology.py:61` | branches, parallel tracks, N-diamonds, loops |
+| 2 | closed enums `ROLES`/`JUDGMENT_KINDS`/`FIDELITIES` | `methodology.py:23-27` | new roles/gates/fidelities |
+| 3 | only `"prototype"`/`"prototype_session"` artifact types | `methodology.py:362,366` | surveys, journey-maps, canvases, … |
+| 4 | UI maps literal phase keys (`ideate`/`refine`/…) | `web.py:1126-1159` | other methodologies' artifacts won't place |
 
-The fix removes all four by replacing the phase grammar with a generic step grammar.
+rev.2 removes **all enums/closed vocabularies from code** — including the capability set.
 
 ---
 
-## 2. The model — a constellation of capability steps
+## 2. The model — a tag-driven constellation
 
-A **Methodology** = `{key, name, description, when_to_use, steps: Step[]}`. The steps form a **DAG**
-via `consumes` (incoming edges). No linear ordering, no parity.
+A **Methodology** = `{key, name, description, when_to_use, steps: Step[]}`. Steps form a **DAG** via
+`consumes`. Every domain word a step uses (`capability`, `role`, `artifact_type`, `gate`, `strategy`)
+is a **free tag** — a plain string, like the existing theme tags. **No closed set anywhere.**
 
 ### 2.1 Step schema (normative; `?` = optional)
 ```
 Step:
-  id            string   required   unique within the methodology
-  name          string   required
-  capability    string   required   one of the CAPABILITY CATALOG (§2.2)
-  intent        string   required   prose for the author
-  consumes?     string[]            ids of upstream steps it depends on (DAG edges); [] for roots
-  breadth?      "fan" | "single"    default by capability (§2.2). fan = a diverge cloud of nodes;
-                                     single = one node consolidating its inputs
-  council_strategy? "pain-discovery"|"positive-deepdive"|"tension"|"goal"   (for explore/decide)
-  diverge_by?   string              free hint, e.g. "persona" | "idea" | "angle"
-  produces      { role: string, artifact_type?: string, fidelity?: string }   role/type are FREE strings
-  requires_artifacts? string[]      free artifact-type names that must exist upstream before this step
-  gate?         { kind: string }    the evidence-backed judgment required to leave a fan (free kind)
-  loop_back?    string              a prior step id to revisit (LLM-judged)
+  id          string   required   unique within the methodology
+  name        string   required
+  tags        string[] required   free tags, incl. a capability tag (e.g. "explore","cluster",
+                                   "decide","build","test","synthesize" — or anything you invent)
+  intent      string   required   prose for the host author
+  consumes?   string[]            ids of upstream steps (DAG edges); [] for roots
+  strategy?   string              free council-strategy tag (e.g. "pain-discovery")
+  produces?   { role?: string, artifact_type?: string, more_tags?: string[] }   all free strings
+  requires?   {                   ALL data — the engine reads these structurally, never by name:
+                min_inputs?: int       # >=N upstream nodes must exist before this step's node
+                gate_tag?:   string    # a judgment carrying this tag must be recorded (decided+evidence)
+                artifact_tags?: string[]   # an upstream step must have produced/tested these artifact tags
+              }
+  loop_back?  string              a prior step id to revisit (LLM-judged)
 ```
-**Open vocabularies.** `role`, `artifact_type`, `fidelity`, `gate.kind`, `diverge_by` are **free
-strings declared by the spec** — there are **no code enums**. Validation checks *references*
-(below), never membership in a hardcoded set.
+There is **no `capability` enum, no `mode`/`breadth` enum, no `role`/`fidelity` enum.** The
+capability is just one of the step's `tags`; the engine does not switch on it.
 
-### 2.2 Capability catalog (the only code-level extension point — added rarely)
-A small set of primitives, each a thin binding over MCP tools that already exist. A methodology
-*composes* these as data; a genuinely new capability is one new entry here.
+### 2.2 Shape is DERIVED from the data, not declared
+- A step is a **fan** ("diverge") when the host records **>1 node** against it; a **waist**
+  ("converge") when it records **1 node** consolidating its inputs. The UI/engine read this from the
+  *actual recorded node counts + the DAG* — there is no fan/single flag to set.
+- A "diamond" is any `fan → waist`. N diamonds, branches, parallel tracks, `loop_back` spirals are
+  all just DAG shapes. (Kills #1 — no alternation concept exists.)
 
-| capability | default breadth | what it does (MCP) |
-|---|---|---|
-| `explore` | fan | run council(s) per persona/idea/angle → exploration node(s) (`run-council`/`record_*`) |
-| `cluster` | single | affinity-cluster upstream exploration nodes → themes/`key-problems` |
-| `decide` | single | converge upstream into one decision node (POV/shortlist/spec/presentation) |
-| `build_artifact` | fan | scaffold real artifact(s) of `produces.artifact_type` (e.g. prototype, survey) |
-| `test_artifact` | fan | personas USE an artifact (real session, e.g. Playwright) → grounded reactions |
-| `synthesize` | single | second-order report / solution presentation (meta-report) |
-| `judge` | — | record an evidence-backed gate judgment (not a node; a decision record) |
-
-`build_artifact`/`test_artifact` may also be expressed **inline** on an `explore`/`decide` step
-(`produces.artifact_type` / `requires_artifacts`) when that reads cleaner — both compile to the
-same internal step graph.
-
-### 2.3 Shape is DERIVED, never asserted
-- "diverge" ⇔ a step whose effective breadth is `fan` (it emits multiple nodes).
-- "converge"/"waist" ⇔ a `single`-breadth step consuming a fan.
-- A "diamond" is simply `fan → single`. Two diamonds = `fan→single→fan→single`. Branches,
-  parallel tracks, triple diamonds, and `loop_back` spirals are all just DAG shapes. The engine
-  reads shape from `breadth` + `consumes` — **the alternation rule (#1) is deleted.**
+### 2.3 Suggestions registry (MCP-served **data**, never enforced)
+The common building blocks live as **editable data** under `persona_council/suggestions/`
+(`capabilities.json`, `roles.json`, `artifact_types.json`, plus methodology templates), and the MCP
+*offers* them so the host has good defaults and reuse — **as suggestions, not constraints**:
+- `suggest_capabilities()` → e.g. `[{tag:"explore", hint:"fan councils per persona/idea", typical_requires:{}}, {tag:"decide", hint:"consolidate a fan", typical_requires:{min_inputs:2, gate_tag:"divergence_complete"}}, …]`
+- `suggest_roles()` · `suggest_artifact_types()` · `suggest_methodologies()` (full constellation templates: double_diamond, dschool, lean, design_sprint, …).
+You may adopt a suggested tag, tweak it, or invent a brand-new one — the engine treats them all
+identically. Adding a suggestion = editing data; it never gates what's allowed. (Replaces rev.1's
+"capability catalog = the code extension point": there is no code extension point — only suggestions.)
 
 ---
 
-## 3. Generic structural invariants (from capability, not phase keys)
-Enforced by the engine for *any* constellation (replacing the DD-specific INV-*):
+## 3. Generic invariants — graph mechanics only, tag-agnostic
+The engine's **only** fixed concepts are: the DAG, an integer `min_inputs`, reference equality
+between tags, and evidence-backed judgment *presence*. It **never compares a tag to a list**.
 
-- **INV-DAG** `consumes` ids exist; the graph is acyclic except declared `loop_back` (logged).
-- **INV-READY** a step is recordable only when all `consumes` steps are `complete`.
-- **INV-BREADTH** a `single` step consuming a `fan` requires the fan to have **≥2 nodes**.
-- **INV-GATE** if the consumed fan declares a `gate`, an evidence-backed judgment of that
-  `gate.kind` (decided, rationale, ≥1 evidence_ref) must exist before the `single` step records.
-- **INV-EDGES** a `single` step's `from_node_ids ⊆ nodes(consumed fans)`; the engine draws
-  `refines` edges from each.
-- **INV-ARTIFACT** generic over type T: a step with `requires_artifacts:[T]` needs ≥1 artifact of
-  type T produced by an upstream `build_artifact` (and, for a `test_artifact`/`decide` that
-  requires a *session* type, ≥1 recorded session of T). No literal `"prototype"` strings.
+- **INV-DAG** `consumes` ids exist; acyclic except declared `loop_back` (logged).
+- **INV-READY** a step is recordable only when its `consumes` are all complete.
+- **INV-INPUTS** a step's consolidating node requires `>= requires.min_inputs` upstream nodes (when set).
+- **INV-GATE** if `requires.gate_tag` is set, a judgment carrying that tag (decided, rationale, ≥1
+  evidence_ref) must exist upstream. The tag string is free; only its *presence* is required.
+- **INV-EDGES** a consolidating node's `from_node_ids ⊆ upstream nodes`; `refines` edges drawn.
+- **INV-ARTIFACT** for each `requires.artifact_tags[T]`: some upstream step must have produced an
+  artifact carrying tag T (and, where T denotes a *session* tag, ≥1 recorded session of T). Pure
+  tag-equality reference — no literal `"prototype"` in code.
 - **INV-CITE** every node cites ≥1 council; every artifact claim cites a session-log state.
 
-A4 (no hardcoded dynamics) stands: "explored enough?", "which wins?", "ready?" are **LLM judgments
-recorded with evidence**; the engine requires the judgment's *presence*, never a count.
+A4 stands: "explored enough?", "which wins?", "ready?" are LLM judgments recorded with evidence;
+the engine requires the judgment's *presence* (by `gate_tag`), never a count or a tag whitelist.
 
 ---
 
-## 4. Engine — a generic DAG interpreter
-Replaces the linear phase cursor with a **topological frontier**.
-
-### 4.1 State (project)
-`methodology` (key), `step_log: {step_id: {status: pending|active|complete, node_ids:[],
-decision_node_id?, judgments:[], artifacts:[], decided_at?}}`. No `phase` cursor.
-
-### 4.2 Tool surface (generalized; old names kept as thin aliases for back-compat)
-- `list_methodologies` · `get_methodology(key)` · `start_methodology_project(title, goal, key, persona_ids)`
-- `brief_next(project_id)` → the **ready frontier**: the step(s) whose `consumes` are complete, each
-  with capability, breadth, strategy, what's still unmet, consumed artifacts, instructions.
-  *(alias: `brief_phase` returns the single next step when the graph is linear.)*
-- `record_node(project_id, step_id, council_ids, payload)` → one node for a `fan`/`explore` step.
-  *(alias: `record_exploration`.)*
-- `record_judgment(project_id, step_id, kind, decided, rationale, evidence_refs)` → any gate kind.
-- `record_decision(project_id, step_id, from_node_ids, payload)` → the `single` step's node + edges,
-  validates INV-*. *(alias: `record_convergence`.)*
-- `record_artifact_session(...)` → grounded artifact use (generalizes `record_prototype_session`).
-- `advance(project_id, step_id)` → marks a step complete, recomputes the frontier; handles `loop_back`.
-- `get_methodology_state(project_id)` → per-step status, counts, judgments, the DAG.
-
-`Synthesis` nodes keep `step` (was `phase`), `breadth` (was `mode`), `role`, `methodology`, and the
-converge enrichments (`clusters`/`key_problems`/`ranking`/`shortlist`). Artifacts gain `step` (the
-build step that produced them) for generic placement.
+## 4. Engine — generic, tag-agnostic DAG interpreter
+- **State (project):** `methodology` (key) + `step_log: {step_id:{status, node_ids:[], decision_node_id?,
+  judgments:[], artifacts:[]}}`. No phase cursor, no shape flags.
+- **Tools** (old names kept as thin aliases): `list_methodologies` · `get_methodology` ·
+  `start_methodology_project` · `brief_next(project_id)` (the ready frontier + each step's tags,
+  unmet `requires`, consumed artifacts, instructions) · `record_node(project_id, step_id,
+  council_ids, payload)` · `record_judgment(project_id, step_id, gate_tag, decided, rationale,
+  evidence_refs)` · `record_decision(project_id, step_id, from_node_ids, payload)` ·
+  `record_artifact_session(...)` · `advance(project_id, step_id)` · `get_methodology_state`.
+- **Suggestion tools** (§2.3): `suggest_capabilities` / `suggest_roles` / `suggest_artifact_types` /
+  `suggest_methodologies` — read-only, data-backed.
+- `Synthesis` nodes carry `step`, `tags` (incl. role/capability), `methodology`, + converge
+  enrichments. Artifacts carry `tags` + the `step` that built them.
 
 ---
 
-## 5. Generic UI layout (from the DAG, no phase keys)
-Replace `_methodology_layout`'s literal maps (#4) with a **graph-derived** layout:
-- **x = longest-path depth** over `consumes` (topological columns).
-- **fan steps** spread their nodes vertically symmetric around the axis; **single steps** sit on the
-  axis → diamonds emerge wherever `fan→single` occurs (any number, any arrangement).
-- **artifacts** are placed in the column of their **producing `build_artifact` step** (read from
-  `artifact.step`), with a **solid** edge from that step and a **dashed** edge to the **first
-  downstream step that consumes/tests that artifact type** — both found by walking the graph, not
-  by `{lofi:ideate}` literals. (Generalizes the current prototype placement + edge-suppression.)
-- faint diamond silhouettes drawn for every `fan→single` pair. Layout-version invalidation (`lv`)
-  unchanged.
+## 5. Generic UI — derived from the graph + tags
+- **Layout:** x = longest-path depth over `consumes`; a step's nodes spread vertically when it has
+  >1 (fan), sit on the axis when 1 (waist) → diamonds emerge for any `fan→waist`. No phase-key maps.
+- **Artifacts:** placed in their producing step's column (`artifact.step`); **solid** edge from that
+  step, **dashed** edge to the first downstream step whose `requires.artifact_tags` includes the
+  artifact's tag — all walked from the graph.
+- **Tags everywhere:** capability/role/artifact tags render as chips and feed the existing
+  Linear-style filter; the methodology strip shows steps by name + tags. Layout-version `lv` invalidation unchanged.
 
 ---
 
 ## 6. What stays vs changes
-**Stays:** the MCP primitives (councils, syntheses, prototypes, Playwright, embeddings, images),
-host-authoring, anti-steering, no-LLM-text-gen, the prototype fidelity ladder (now `fidelity` is a
-free string on `build_artifact`), the diamond *visual* (now emergent).
-
-**Changes / removed:** the alternation rule (#1), the `ROLES`/`JUDGMENT_KINDS`/`FIDELITIES` enums
-(#2), the literal `"prototype"`/`"prototype_session"` special-casing (#3 → generic over
-`artifact_type`), the phase-key layout maps (#4 → DAG layout). The `runtime.py` `StubAuthoringBackend`
-+ structural loop generalize to the step frontier (still no LLM).
+**Stays:** MCP primitives (councils, syntheses, prototypes, Playwright, embeddings, images),
+host-authoring, anti-steering, no-LLM-text-gen, the diamond *visual* (emergent), the prototype
+harness (prototypes are just artifacts whose `artifact_type` tag is e.g. `prototype`).
+**Removed from code:** the alternation rule (#1), the `ROLES`/`JUDGMENT_KINDS`/`FIDELITIES` enums
+(#2), the literal artifact strings (#3), the phase-key layout maps (#4), **and the rev.1 capability
+catalog** — all become open tags + MCP suggestions (data).
 
 ---
 
 ## 7. Migration & back-compat
-- Re-express the four built-ins as **constellations** (`steps`), e.g. `double_diamond` =
-  `discover(explore,fan) → define(decide) → develop(explore,fan,+build prototype) →
-  deliver(decide,+requires prototype_session)`; `double_diamond_deep` = the 6-step graph; d.school
-  and lean likewise.
-- **Legacy loader:** a spec with the old `phases` key is auto-translated to `steps`
-  (`mode:diverge→breadth:fan`, `converge→single`; `produces_role→produces.role`;
-  `requires_artifacts`/`fidelity` carried over; `consumes` from the preceding phase). So any
-  user-authored phase spec keeps working.
-- Tests `test_methodology_engine`/`test_runtime` updated to the step API (aliases keep old call
-  sites working during migration).
+- Re-express the four built-ins as **tag constellations** under `methodologies/*.json` (and seed the
+  same as templates under `suggestions/`).
+- **Legacy loader:** specs with the old `phases` key auto-translate to `steps` (`mode:diverge`→a
+  step the host records multiple nodes against; `converge`→`requires.min_inputs:2 + gate_tag` + a
+  single node; `produces_role`→`produces.role`; `requires_artifacts`→`requires.artifact_tags`;
+  `fidelity`→a tag). Existing user phase-specs keep working.
+- Engine/UI: delete the enums + parity rule + phase-key maps; replace with §3 invariants + §5 layout.
 
 ---
 
 ## 8. Milestones (each with a failure-proof acceptance test)
-- **C1 — Step model + registry:** Step schema + capability catalog + legacy translator; reference
-  validation (no enums). **Accept:** a 3-step *non-alternating* test methodology (e.g. a fan that
-  feeds two parallel decides) validates and loads — impossible under today's parity rule.
-- **C2 — Generic engine:** DAG frontier (`brief_next`/`record_node`/`record_decision`/`advance`) +
-  generic INV-* (incl. artifact-type-generic INV-ARTIFACT) + aliases. **Accept:** a methodology
-  declaring a **non-prototype** artifact type (e.g. `survey`/`survey_response`) enforces its
-  artifact gate with zero code changes; grep shows no literal `"prototype"` in engine invariants.
-- **C3 — Generic UI layout:** DAG topological layout + emergent diamonds + artifact attach/route
-  from the graph. **Accept:** `double_diamond_deep` renders identically to today, AND a different
-  methodology's artifacts place/route correctly — both with no phase-key literals (grep).
-- **C4 — Migrate built-ins:** all four methodologies re-expressed as constellations; full suite
-  green; the Pfefferminzia deep project still renders three diamonds.
-- **C5 — Docs/skills:** update the driver skills + AGENTS.md to the constellation vocabulary;
-  authoring guide for adding a methodology (data only).
+- **C1 — Tags + suggestions, zero enums:** step schema (all tags) + `suggestions/` data +
+  `suggest_*` tools + legacy translator. **Accept:** **grep proves no closed capability/role/
+  breadth/judgment/artifact set remains in code**; a step using an **invented capability tag** and
+  an **invented artifact_type tag** loads and validates.
+- **C2 — Tag-agnostic engine:** DAG frontier + INV-* by graph/`min_inputs`/`gate_tag`/tag-equality
+  only. **Accept:** a methodology with a **non-prototype** artifact (`survey`/`survey_response`) and
+  a **non-alternating** shape (a fan feeding two parallel decides) runs end-to-end; the engine has
+  **no** literal capability/artifact string in its invariants (grep).
+- **C3 — Generic UI:** DAG layout, emergent diamonds, artifact attach/route + tag chips/filter from
+  the graph. **Accept:** `double_diamond_deep` renders as today AND a different-shaped methodology
+  renders correctly — no phase-key/tag literals in layout (grep).
+- **C4 — Migrate built-ins** to tag constellations; full suite green; Pfefferminzia still 3 diamonds.
+- **C5 — Docs/skills:** driver skills + AGENTS.md use the tag/suggestion vocabulary; an authoring
+  guide ("add a methodology = author a constellation of tagged steps; draw on `suggest_*` or invent
+  your own tags").
 
 ---
 
 ## 9. Amendments to existing specs
-`methodology-engine-and-prototyping.md` and `deep-design-thinking-and-diamond.md`: the **phase
-grammar is superseded by the step/constellation grammar** here; their engines/invariants/layout
-are generalized as above. Built-ins move from `phases` to `steps` (legacy `phases` still loads).
-Everything else (host-authoring, no-LLM, prototype harness, fidelity ladder) is retained.
+The **phase grammar and the rev.1 code-level capability catalog are superseded** by this tag-driven
+constellation grammar. Built-ins move to `steps` (legacy `phases` still loads). Host-authoring,
+no-LLM, the prototype harness, and the fidelity concept (now a tag) are retained.
