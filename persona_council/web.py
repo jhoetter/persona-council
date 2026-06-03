@@ -1170,6 +1170,17 @@ def _graph_interactive(graph: dict) -> str:
     ml = _methodology_layout(graph)
     pos = ml["pos"] if ml else _graph_layout(graph)
     diamonds = ml["diamonds"] if ml else []
+    # If an idea has a prototype that feeds the convergence, route THROUGH the prototype:
+    # suppress the idea's direct edge to that convergence so there's one clear path.
+    suppress = set()
+    if ml:
+        src_of, conv_of = {}, {}
+        for a, b, dashed in ml.get("proto_edges", []):
+            (conv_of if dashed else src_of).__setitem__(a, b)  # dashed: proto→conv; solid: idea→proto
+        for proto, conv in conv_of.items():
+            idea = next((s for s, pr in src_of.items() if pr == proto), None)
+            if idea:
+                suppress.add((idea, conv))
     jnodes = []
     for n in nodes:
         tags = n.get("theme_tags", [])
@@ -1183,6 +1194,8 @@ def _graph_interactive(graph: dict) -> str:
     _colorlist = list(_EDGE_COLORS.values())
     jedges = []
     for e in graph["edges"]:
+        if (e["from_study"], e["to_study"]) in suppress:
+            continue  # routed through the prototype instead
         if e["from_study"] in pos and e["to_study"] in pos:
             col = _EDGE_COLORS.get(e["type"], "#9aa0a6")
             jedges.append({"from": e["from_study"], "to": e["to_study"], "color": col, "type": e["type"],
