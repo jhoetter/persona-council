@@ -346,6 +346,12 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .sb-quick a:hover{background:var(--hover);color:var(--ink)}
 .sb-foot{padding:10px 14px;border-top:1px solid var(--line);font-size:12px}
 .sb-foot a{color:var(--muted)}.sb-foot a:hover{color:var(--accent)}
+.rgwrap{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+#rg{display:block;touch-action:none;cursor:grab}
+.rghint{position:absolute;top:8px;right:10px;font-size:11px;color:var(--muted);pointer-events:none}
+.rgn{user-select:none}.rgn:hover rect:first-of-type{stroke:var(--accent)}
+.strow{padding:9px 0;border-bottom:1px solid var(--line)}.strow:last-child{border-bottom:0}
+.strow a{text-decoration:none}.strow .ic{vertical-align:-3px;margin-right:5px}
 .resize{width:8px;margin:0 -4px;flex-shrink:0;cursor:col-resize;position:relative;z-index:10}
 .app.collapsed .resize{display:none}
 .resize::after{content:"";position:absolute;inset:0 50%;width:2px;transform:translateX(-50%);background:var(--accent);opacity:0;transition:opacity 150ms}
@@ -671,7 +677,7 @@ APP_JS = """
     var tag=(e.target.tagName||'').toLowerCase(); if(tag==='input'||tag==='textarea'||tag==='select') return;
     if(e.key==='['){ toggle(); return; }
     if(e.key==='g'){ gmode=true; clearTimeout(gt); gt=setTimeout(function(){gmode=false;},800); return; }
-    if(gmode){ var m={o:'/',p:'/personas',c:'/councils',s:'/syntheses'}; if(m[e.key]) location.href=m[e.key]; gmode=false; }
+    if(gmode){ var m={o:'/projects',p:'/personas',r:'/projects'}; if(m[e.key]) location.href=m[e.key]; gmode=false; }
   });
   if(rz){
     var sx=0,sw=248,resizing=false,last=248;
@@ -723,9 +729,7 @@ APP_JS = """
 
 
 def _nav(active: str, store: Store) -> str:
-    items = [("/", "overview", t("overview")), ("/personas", "personas", t("personas")),
-             ("/councils", "councils", t("councils")), ("/syntheses", "syntheses", t("syntheses")),
-             ("/projects", "projects", t("projects"))]
+    items = [("/projects", "projects", t("projects")), ("/personas", "personas", t("personas"))]
     nav = "".join(
         f'<a href="{href}" class="{"active" if key == active else ""}">{_icon(key)}<span>{label}</span></a>'
         for href, key, label in items
@@ -760,7 +764,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
   <aside class="sidebar">
     <div class="brand"><span class="mark"></span><a href="/">Persona&nbsp;Council</a></div>
     <div class="sb-scroll">{_nav(active, store)}</div>
-    <div class="sb-foot"><a href="/syntheses">{t("syntheses")}</a> · <a href="https://github.com/jhoetter/persona-council">{t("repo")}</a></div>
+    <div class="sb-foot"><a href="/projects">{t("projects")}</a> · <a href="https://github.com/jhoetter/persona-council">{t("repo")}</a></div>
   </aside>
   <div class="resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
   <div class="main">
@@ -772,7 +776,22 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 
 
 def _empty_state(title: str, message: str) -> str:
-    return f'<div class="page"><div class="card"><h2>{_esc(title)}</h2><p class="muted">{_esc(message)}</p><p><a class="btn" href="/">{_icon("back")} {t("back_to_overview")}</a></p></div></div>'
+    return f'<div class="page"><div class="card"><h2>{_esc(title)}</h2><p class="muted">{_esc(message)}</p><p><a class="btn" href="/projects">{_icon("back")} {t("projects")}</a></p></div></div>'
+
+
+def _projects_page() -> str:
+    """The Projects list — the app's home (project-centric IA)."""
+    store = Store()
+    rows = []
+    for p in services.list_research_projects(store=store):
+        rows.append(f'<a class="row" href="/projects/{_esc(p["id"])}">{_icon("projects")}'
+                    f'<span class="title">{_esc(p["title"])}</span>'
+                    f'<span class="right"><span>{p["studies"]} {t("syntheses")}</span>'
+                    f'<span>{p["edges"]} {t("build_order_h")}</span>'
+                    f'<span>{len(p.get("themes", []))} {t("themes_h")}</span></span></a>')
+    rows_html = "".join(rows) or f'<div class="row muted">{t("no_projects")}</div>'
+    body = f'<div class="page"><h1 class="h1">{t("projects")}</h1><p class="lead">{t("projects_lead")}</p><div class="rows">{rows_html}</div></div>'
+    return _layout(t("projects"), body, store, crumbs=[(t("projects"), None)], active="projects")
 
 
 _EDGE_COLORS = {"spawned_from": "#6b7cff", "refines": "#34a853", "contrasts": "#ea4335",
@@ -785,6 +804,111 @@ def _theme_color(theme: str, vocab: list[str]) -> str:
         return _THEME_PALETTE[vocab.index(theme) % len(_THEME_PALETTE)]
     except ValueError:
         return "#9aa0a6"
+
+
+_RGRAPH_JS = """<script>
+(function(){
+  var dataEl=document.getElementById('rgdata'); if(!dataEl) return;
+  var D=JSON.parse(dataEl.textContent);
+  var svg=document.getElementById('rg'), root=document.getElementById('rgroot'),
+      gE=document.getElementById('rgedges'), gN=document.getElementById('rgnodes');
+  var NW=250, NH=58, NS='http://www.w3.org/2000/svg', tx=0, ty=0, scale=1;
+  function applyT(){ root.setAttribute('transform','translate('+tx+','+ty+') scale('+scale+')'); }
+  function el(tag,a){ var e=document.createElementNS(NS,tag); for(var k in a) e.setAttribute(k,a[k]); return e; }
+  var byId={}; D.nodes.forEach(function(n){ byId[n.id]=n; });
+  var edgeEls=[];
+  D.edges.forEach(function(ed){ var p=el('path',{fill:'none',stroke:ed.color,'stroke-width':'1.8','marker-end':'url(#rgah-'+ed.mid+')',opacity:'0.85'}); gE.appendChild(p); edgeEls.push({ed:ed,p:p}); });
+  function border(n,tX,tY){ var cx=n.x+NW/2, cy=n.y+NH/2, dx=tX-cx, dy=tY-cy; if(!dx&&!dy) return [cx,cy]; var s=Math.min((NW/2)/Math.abs(dx||1e-6),(NH/2)/Math.abs(dy||1e-6)); return [cx+dx*s, cy+dy*s]; }
+  function route(){ edgeEls.forEach(function(o){ var a=byId[o.ed.from], b=byId[o.ed.to]; if(!a||!b) return; var ac=[a.x+NW/2,a.y+NH/2], bc=[b.x+NW/2,b.y+NH/2]; var s=border(a,bc[0],bc[1]), t=border(b,ac[0],ac[1]); o.p.setAttribute('d','M'+s[0]+' '+s[1]+' L '+t[0]+' '+t[1]); }); }
+  D.nodes.forEach(function(n){
+    var g=el('g',{'class':'rgn',transform:'translate('+n.x+','+n.y+')'});
+    g.appendChild(el('rect',{width:NW,height:NH,rx:9,fill:'var(--panel)',stroke:'var(--line)'}));
+    g.appendChild(el('rect',{width:5,height:NH,rx:2.5,fill:n.color}));
+    var a=el('text',{x:16,y:24,'font-size':'13.5','font-weight':'600',fill:'var(--ink)'}); a.textContent=n.label; g.appendChild(a);
+    var b=el('text',{x:16,y:43,'font-size':'11.5',fill:'var(--muted)'}); b.textContent=n.sub; g.appendChild(b);
+    gN.appendChild(g);
+    var down=null,moved=false;
+    g.addEventListener('pointerdown',function(e){ e.stopPropagation(); down={x:e.clientX,y:e.clientY,nx:n.x,ny:n.y}; moved=false; try{g.setPointerCapture(e.pointerId);}catch(_){} });
+    g.addEventListener('pointermove',function(e){ if(!down) return; var dx=(e.clientX-down.x)/scale, dy=(e.clientY-down.y)/scale; if(Math.abs(dx)+Math.abs(dy)>3) moved=true; n.x=down.nx+dx; n.y=down.ny+dy; g.setAttribute('transform','translate('+n.x+','+n.y+')'); route(); });
+    g.addEventListener('pointerup',function(e){ if(down&&!moved) location.href=n.href; down=null; });
+  });
+  route(); applyT();
+  var pan=null;
+  svg.addEventListener('pointerdown',function(e){ if(e.target.closest('.rgn')) return; pan={x:e.clientX,y:e.clientY,tx:tx,ty:ty}; });
+  svg.addEventListener('pointermove',function(e){ if(!pan) return; tx=pan.tx+(e.clientX-pan.x); ty=pan.ty+(e.clientY-pan.y); applyT(); });
+  window.addEventListener('pointerup',function(){ pan=null; });
+  svg.addEventListener('wheel',function(e){ e.preventDefault(); var r=svg.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top, f=e.deltaY<0?1.1:0.9, ns=Math.max(0.3,Math.min(2.5,scale*f)); tx=mx-(mx-tx)*(ns/scale); ty=my-(my-ty)*(ns/scale); scale=ns; applyT(); },{passive:false});
+})();
+</script>"""
+
+
+def _graph_layout(graph: dict) -> dict:
+    """Deterministic initial layout: x by longest-path depth, y stacked within depth."""
+    nodes = graph["nodes"]
+    idx = {n["study_id"]: i for i, n in enumerate(nodes)}
+    incoming = {n["study_id"]: [] for n in nodes}
+    for e in graph["edges"]:
+        if e["from_study"] in incoming and e["to_study"] in incoming:
+            incoming[e["to_study"]].append(e["from_study"])
+    depth: dict[str, int] = {}
+
+    def d(sid, seen=()):
+        if sid in depth:
+            return depth[sid]
+        if sid in seen or not incoming[sid]:
+            depth[sid] = 0
+            return 0
+        depth[sid] = 1 + max(d(p, seen + (sid,)) for p in incoming[sid])
+        return depth[sid]
+
+    for n in nodes:
+        d(n["study_id"])
+    per_depth: dict[int, int] = {}
+    pos = {}
+    for n in sorted(nodes, key=lambda x: (depth[x["study_id"]], x["created_at"])):
+        de = depth[n["study_id"]]
+        row = per_depth.get(de, 0)
+        per_depth[de] = row + 1
+        pos[n["study_id"]] = (40 + de * 300, 30 + row * 104)
+    return pos
+
+
+def _graph_interactive(graph: dict) -> str:
+    """Interactive, drag-and-drop graph (vanilla JS/SVG, no deps): drag nodes, pan the
+    background, scroll to zoom; click a node to open its synthesis."""
+    nodes = graph["nodes"]
+    if not nodes:
+        return f'<p class="muted">{_esc(t("no_synthesis"))}</p>'
+    vocab = graph["project"].get("themes", [])
+    pos = _graph_layout(graph)
+    jnodes = []
+    for n in nodes:
+        tags = n.get("theme_tags", [])
+        x, y = pos[n["study_id"]]
+        sent = max(n.get("sentiment", {}).items(), key=lambda kv: kv[1])[0] if n.get("sentiment") else "—"
+        jnodes.append({"id": n["study_id"], "x": x, "y": y,
+                       "label": n["title"][:38] + ("…" if len(n["title"]) > 38 else ""),
+                       "sub": f'{n.get("council_count", 0)} {t("councils")} · {sent} · ' + (", ".join(tags[:3]) or "—"),
+                       "color": _theme_color(tags[0], vocab) if tags else "#9aa0a6",
+                       "href": f'/syntheses/{n["study_id"]}'})
+    _colorlist = list(_EDGE_COLORS.values())
+    jedges = []
+    for e in graph["edges"]:
+        if e["from_study"] in pos and e["to_study"] in pos:
+            col = _EDGE_COLORS.get(e["type"], "#9aa0a6")
+            jedges.append({"from": e["from_study"], "to": e["to_study"], "color": col, "type": e["type"],
+                           "mid": _colorlist.index(col) if col in _colorlist else 0})
+    data = json.dumps({"nodes": jnodes, "edges": jedges}, ensure_ascii=False)
+    hint = "Knoten ziehen · Hintergrund schieben · scrollen = Zoom" if _lang() == "de" else "drag nodes · pan background · scroll = zoom"
+    return (
+        '<div class="rgwrap">'
+        '<svg id="rg" width="100%" height="520"><defs>'
+        + "".join(f'<marker id="rgah-{i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+                  f'orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="{c}"/></marker>'
+                  for i, c in enumerate(_EDGE_COLORS.values()))
+        + '</defs><g id="rgroot"><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
+        f'<div class="rghint">{hint}</div></div>'
+        f'<script type="application/json" id="rgdata">{data}</script>{_RGRAPH_JS}')
 
 
 def _graph_svg(graph: dict) -> str:
@@ -1551,27 +1675,8 @@ def create_app():
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
-        store = Store()
-        personas = services.list_personas(store=store)
-        councils = store.list_council_sessions()
-        syns = store.list_syntheses()
-        events = sum(len(store.list_experience_events(p["id"])) for p in personas)
-        acts_label = t("simulated_activities")
-        stats = (
-            f'<div class="stat"><b>{len(personas)}</b><span>{t("personas")}</span></div>'
-            f'<div class="stat"><b>{len(councils)}</b><span>{t("councils")}</span></div>'
-            f'<div class="stat"><b>{len(syns)}</b><span>{t("syntheses")}</span></div>'
-            f'<div class="stat"><b>{events}</b><span>{acts_label}</span></div>'
-        )
-        latest = ""
-        if syns:
-            s = syns[0]
-            latest = (f'<a class="callout" href="/syntheses/{_esc(s["id"])}" style="text-decoration:none">'
-                      f'<span class="emj">{_icon("syntheses")}</span><div><strong>{_esc(s["title"])}</strong>'
-                      f'<br><span class="muted small">{t("latest_synthesis", n=len(s.get("council_ids", [])))}</span></div></a>')
-        cards = "".join(_persona_card(p, store) for p in personas) or f'<p class="muted">{t("no_personas")}</p>'
-        body = f'<div class="page"><h1 class="h1">{t("overview")}</h1><p class="lead">{t("overview_lead")}</p><div class="stats">{stats}</div>{latest}<h2 style="font-size:15px;margin:22px 0 12px">{t("personas")}</h2><div class="pgrid">{cards}</div></div>'
-        return _layout(t("overview"), body, store, crumbs=[(t("overview"), None)], active="overview")
+        # Home is the Projects list (project-centric IA; Overview removed).
+        return _projects_page()
 
     @app.get("/personas", response_class=HTMLResponse)
     def personas_list() -> str:
@@ -1747,17 +1852,7 @@ def create_app():
 
     @app.get("/projects", response_class=HTMLResponse)
     def projects() -> str:
-        store = Store()
-        rows = []
-        for p in services.list_research_projects(store=store):
-            rows.append(f'<a class="row" href="/projects/{_esc(p["id"])}">{_icon("projects")}'
-                        f'<span class="title">{_esc(p["title"])}</span>'
-                        f'<span class="right"><span>{p["studies"]} {t("syntheses")}</span>'
-                        f'<span>{p["edges"]} {t("build_order_h")}</span>'
-                        f'<span>{len(p.get("themes", []))} {t("themes_h")}</span></span></a>')
-        rows_html = "".join(rows) or f'<div class="row muted">{t("no_projects")}</div>'
-        body = f'<div class="page"><h1 class="h1">{t("projects")}</h1><p class="lead">{t("projects_lead")}</p><div class="rows">{rows_html}</div></div>'
-        return _layout(t("projects"), body, store, crumbs=[(t("projects"), None)], active="projects")
+        return _projects_page()
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
     def project_detail(project_id: str) -> str:
@@ -1785,12 +1880,31 @@ def create_app():
         reports = store.list_meta_reports(proj["id"])
         meta_btn = (f'<a class="btn" href="/projects/{_esc(proj["id"])}/meta">{_icon("syntheses")} {t("meta_report")}</a>'
                     if reports else f'<span class="muted small">{t("meta_report")}: —</span>')
+        # Studies (syntheses) + their councils live INSIDE the project.
+        tagmap = {n["study_id"]: n.get("theme_tags", []) for n in graph["nodes"]}
+        study_rows = []
+        for sid in graph["build_order"]:
+            syn = store.get_synthesis(sid)
+            if not syn:
+                continue
+            tags = " ".join(f'<span class="pill">{_esc(x)}</span>' for x in tagmap.get(sid, []))
+            cl = []
+            for cidx in syn.get("council_ids", []):
+                c = store.get_council_session(cidx) or {}
+                lbl = (c.get("prompt") or "Council")[:34]
+                cl.append(f'<a href="/councils/{_esc(cidx)}">{_icon("councils")}{_esc(lbl)}…</a>')
+            councils_line = (" · ".join(cl)) or f'<span class="muted">—</span>'
+            study_rows.append(
+                f'<div class="strow"><div class="vline1"><a href="/syntheses/{_esc(sid)}">{_icon("syntheses")}<b>{_esc(syn["title"])}</b></a> {tags}</div>'
+                f'<div class="muted small" style="margin-top:3px">{t("councils")}: {councils_line}</div></div>')
+        studies_html = "".join(study_rows) or f'<div class="muted">{t("no_synthesis")}</div>'
         body = (
             f'<div class="page"><h1 class="h1">{_esc(proj["title"])}</h1>'
             f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
             f'<div class="stats">{stats}</div>'
             f'<div class="card"><div class="vline1" style="margin-bottom:8px">{_icon("projects")} <b>{t("graph")}</b>'
-            f'<span class="spacer"></span>{meta_btn}</div>{_graph_svg(graph)}</div>'
+            f'<span class="spacer"></span>{meta_btn}</div>{_graph_interactive(graph)}</div>'
+            f'<div class="card"><b>{t("syntheses")} &amp; {t("councils")}</b><div style="margin-top:6px">{studies_html}</div></div>'
             f'<div class="card"><b>{t("themes_h")}</b><div class="pills" style="margin-top:6px">{theme_leg}</div>'
             f'<div style="margin-top:10px"><b>{t("build_order_h")}</b> <span class="muted small">(edges)</span>'
             f'<div class="pills" style="margin-top:6px">{edge_leg}</div></div></div>'
