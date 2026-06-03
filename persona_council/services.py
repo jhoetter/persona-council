@@ -3174,6 +3174,15 @@ def complete_task(project_id, task_id, store: Store | None = None) -> dict[str, 
     return _plan.complete_task(project_id, task_id, store=store)
 
 
+def assess_progress(project_id, task_id, rationale, evidence_refs, delta="",
+                    store: Store | None = None) -> dict[str, Any]:
+    return _plan.assess_progress(project_id, task_id, rationale, evidence_refs, delta, store=store)
+
+
+def plan_coverage(project_id, store: Store | None = None) -> dict[str, Any]:
+    return _plan.coverage_hint(project_id, store=store)
+
+
 # brief_next + record_judgment DISPATCH: plan-driven when the project has a plan, else the legacy
 # methodology engine. (These names were imported from .methodology above; redefined here to dispatch.)
 _m_brief_next = brief_next            # the methodology engine's router (legacy fallback)

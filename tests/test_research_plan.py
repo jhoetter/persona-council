@@ -229,3 +229,35 @@ def test_no_hardcoded_evidence_kind_literal_in_web():
     for lit in ('== "council"', '== "synthesis"', '== "frame"', '{"council"', '{"synthesis"',
                 '"kind": "council"', '"kind": "synthesis"'):
         assert lit not in src, f"web.py must not hardcode evidence-kind literal {lit}"
+
+
+# --------------------------------------------------------------------------- R6: progress
+
+def test_assess_progress_is_evidence_cited_no_metric(store):
+    proj = services.start_project("Deep", "Win young KFZ buyers for LV?", "double_diamond_deep",
+                                  persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__discover", ["q?"], memory_refs=["m1"], store=store)
+    _council(store, "cx1")
+    a = services.add_task(pid, "act", "explore", "Council", consumes=["frame__discover"], store=store)
+    services.link_evidence(pid, a["id"], {"kind": "council", "id": "cx1"}, store=store)
+    import pytest
+    with pytest.raises(services.PlanError):              # must cite evidence
+        services.assess_progress(pid, "verify__deliver", "we are closer", [], store=store)
+    rec = services.assess_progress(pid, "verify__deliver",
+                                   "Problem space framed; one pain council in. The surprising core "
+                                   "segment is emerging.", evidence_refs=["cx1"], delta="näher",
+                                   store=store)
+    assert rec["delta"] == "näher" and rec["evidence_refs"] == ["cx1"]
+    assert rec["coverage"]["evidence_by_kind"]["council"] == 1   # descriptive count, not a score
+    plan = services.get_plan(pid, store=store)
+    assert plan["progress"][0]["goal"] == "Win young KFZ buyers for LV?"
+
+
+def test_no_hardcoded_progress_metric_threshold():
+    from pathlib import Path
+    import re
+    src = Path(P.__file__).read_text()
+    # the coverage/progress code must not compare a count to a hardcoded score threshold
+    fn = src[src.index("def assess_progress"):src.index("def brief_next")]
+    assert not re.search(r">=\s*0\.\d|score\s*=", fn), "no hardcoded progress score/threshold allowed"

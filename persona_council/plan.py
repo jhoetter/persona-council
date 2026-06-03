@@ -344,6 +344,54 @@ def complete_task(project_id: str, task_id: str, store: Store | None = None) -> 
     return t
 
 
+def coverage_hint(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """A NON-binding, descriptive evidence-coverage snapshot (counts only — never a score or a
+    gate). Helps the host judge progress; it does not decide anything."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    refs = [r for t in (plan["tasks"] if plan else []) for r in t["produces"]]
+    kinds: dict[str, int] = {}
+    for r in refs:
+        kinds[r["kind"]] = kinds.get(r["kind"], 0) + 1
+    artifacts = store.list_prototypes(project_id)
+    sessions = [s for s in store.list_prototype_sessions()
+                if (store.get_prototype(s.get("prototype_id", "")) or {}).get("project_id") == project_id]
+    personas_touched = set()
+    for t in (plan["tasks"] if plan else []):
+        for r in t["produces"]:
+            if r["kind"] == "council":
+                for pid in (store.get_council_session(r["id"]) or {}).get("persona_ids", []):
+                    personas_touched.add(pid)
+    return {"evidence_by_kind": kinds, "artifacts": len(artifacts), "sessions": len(sessions),
+            "personas_touched": len(personas_touched),
+            "tasks_done": sum(1 for t in (plan["tasks"] if plan else []) if t["status"] == "done"),
+            "tasks_total": len(plan["tasks"]) if plan else 0}
+
+
+def assess_progress(project_id: str, task_id: str, rationale: str, evidence_refs: list[str],
+                    delta: str = "", store: Store | None = None) -> dict[str, Any]:
+    """Record an evidence-backed, LLM-judged assessment of progress toward the HMW goal. `delta` is a
+    FREE host judgment (e.g. 'näher', 'beantwortet', or prose) — never a hardcoded numeric metric.
+    A non-binding coverage snapshot is attached for context."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    if task(plan, task_id) is None:
+        raise PlanError("BAD_PROGRESS", f"unknown task '{task_id}'")
+    refs = [str(r) for r in (evidence_refs or []) if str(r).strip()]
+    if not rationale.strip():
+        raise PlanError("BAD_PROGRESS", "a progress assessment needs a rationale")
+    if not refs:
+        raise PlanError("BAD_PROGRESS", "a progress assessment must cite >= 1 evidence_ref")
+    rec = {"task_id": task_id, "goal": plan.get("goal", ""), "delta": str(delta),
+           "rationale": rationale.strip(), "evidence_refs": refs,
+           "coverage": coverage_hint(project_id, store=store), "created_at": utc_now_iso()}
+    plan.setdefault("progress", []).append(rec)
+    save_plan(plan, store=store)
+    return rec
+
+
 def brief_next(project_id: str, store: Store | None = None) -> dict[str, Any]:
     """Plan router: the ready task frontier + per-task instructions (bucket/capability aware)."""
     store = store or Store()
