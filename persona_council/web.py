@@ -904,7 +904,7 @@ _RGRAPH_JS = """<script>
 
   // ---- edges (bezier, depth-aware) ----
   var edgeEls=[];
-  D.edges.forEach(function(ed){ var p=el('path',{fill:'none',stroke:ed.color,'stroke-width':'2','marker-end':'url(#rgah-'+ed.mid+')','class':'rge'}); gE.appendChild(p); edgeEls.push({ed:ed,p:p}); });
+  D.edges.forEach(function(ed){ var a={fill:'none',stroke:ed.color,'stroke-width':'2','marker-end':'url(#rgah-'+ed.mid+')','class':'rge'}; if(ed.dashed){a['stroke-dasharray']='6 5'; a['stroke-width']='1.6';} var p=el('path',a); gE.appendChild(p); edgeEls.push({ed:ed,p:p}); });
   function route(){ edgeEls.forEach(function(o){ var a=byId[o.ed.from], b=byId[o.ed.to]; if(!a||!b) return;
     o.p.style.display=(a.hidden||b.hidden)?'none':'';
     var sx,sy,ex,ey,d;
@@ -938,8 +938,10 @@ _RGRAPH_JS = """<script>
 
   // ---- nodes ----
   D.nodes.forEach(function(n){
-    var g=el('g',{'class':'rgn',transform:'translate('+n.x+','+n.y+')'});
-    g.appendChild(el('rect',{width:NW,height:NH,rx:10,fill:'var(--panel)',stroke:'var(--line)','stroke-width':'1.4'}));
+    var g=el('g',{'class':'rgn'+(n.proto?' proto':''),transform:'translate('+n.x+','+n.y+')'});
+    var rectAttrs={width:NW,height:NH,rx:10,fill:'var(--panel)',stroke:(n.proto?n.color:'var(--line)'),'stroke-width':'1.4'};
+    if(n.proto){ rectAttrs['stroke-dasharray']='6 4'; }
+    g.appendChild(el('rect',rectAttrs));
     g.appendChild(el('rect',{width:5,height:NH,rx:2.5,fill:n.color}));
     var a=el('text',{x:16,y:24,'font-size':'13.5','font-weight':'600',fill:'var(--ink)'}); a.textContent=n.label; g.appendChild(a);
     var b=el('text',{x:16,y:43,'font-size':'11.5',fill:'var(--muted)'}); b.textContent=n.sub; g.appendChild(b);
@@ -1108,7 +1110,26 @@ def _methodology_layout(graph: dict) -> dict | None:
         leftX = (col_x[order[idx - 1]] if idx - 1 >= 0 else col_x[pk] - COLW * 0.6) + _NW / 2
         rightX = (col_x[order[idx + 1]] if idx + 1 < len(order) else col_x[pk] + COLW * 0.6) + _NW / 2
         diamonds.append([[leftX, cy], [cx, cy - half], [rightX, cy], [cx, cy + half]])
-    return {"pos": pos, "diamonds": diamonds}
+    # Prototypes as graph nodes, placed in the column of the phase that BUILT them
+    # (lo-fi → ideate, mid-fi → refine), with a dashed edge to where they were TESTED.
+    ms_phase = {p["key"]: p for p in phases}
+    build_col = {"lofi": "ideate", "midfi": "refine"}
+    test_conv = {"lofi": (ms_phase.get("lofi_select") or {}).get("convergence_node"),
+                 "midfi": (ms_phase.get("deliver") or {}).get("convergence_node")}
+    proto_pos, proto_edges = {}, []
+    by_fid: dict[str, list] = {}
+    for pr in (graph.get("prototypes") or []):
+        by_fid.setdefault(pr.get("fidelity", "midfi"), []).append(pr)
+    for fid, items in by_fid.items():
+        ck = build_col.get(fid)
+        if ck not in col_x:
+            continue
+        base_y = AXIS + fan_half.get(ck, 64) + 96
+        for i, pr in enumerate(items):
+            proto_pos[pr["id"]] = (col_x[ck], base_y + i * 96)
+            if test_conv.get(fid):
+                proto_edges.append((pr["id"], test_conv[fid]))
+    return {"pos": pos, "diamonds": diamonds, "proto_pos": proto_pos, "proto_edges": proto_edges}
 
 
 def _graph_interactive(graph: dict) -> str:
@@ -1138,6 +1159,20 @@ def _graph_interactive(graph: dict) -> str:
             col = _EDGE_COLORS.get(e["type"], "#9aa0a6")
             jedges.append({"from": e["from_study"], "to": e["to_study"], "color": col, "type": e["type"],
                            "mid": _colorlist.index(col) if col in _colorlist else 0})
+    # Prototype nodes (placed in their build phase) + dashed "tested-at" edges.
+    if ml:
+        ppos = ml.get("proto_pos", {})
+        for pr in (graph.get("prototypes") or []):
+            if pr["id"] not in ppos:
+                continue
+            x, y = ppos[pr["id"]]
+            fid = "lo-fi" if pr.get("fidelity") == "lofi" else "mid-fi"
+            jnodes.append({"id": pr["id"], "x": x, "y": y, "tags": [],
+                           "label": ("▢ " + pr["name"])[:38] + ("…" if len(pr["name"]) > 36 else ""),
+                           "sub": f"{fid} · Prototyp · ansehen ↗", "color": "#00897b",
+                           "href": f'/prototypes/{pr["slug"]}', "proto": True})
+        for a, b in ml.get("proto_edges", []):
+            jedges.append({"from": a, "to": b, "color": "#00897b", "type": "prototype", "mid": 0, "dashed": True})
     data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds,
                        "key": graph["project"].get("id", "x")}, ensure_ascii=False)
     de = _lang() == "de"
