@@ -2532,6 +2532,25 @@ def get_research_project(project_id: str, store: Store | None = None) -> dict[st
     return _require_research_project(store, project_id)
 
 
+def parent_project_of_study(study_id: str, store: Store | None = None) -> dict[str, Any] | None:
+    """Reverse lookup: which research project contains this synthesis (study)?
+    Powers the Project > Synthesis > Council hierarchy/breadcrumbs."""
+    store = store or Store()
+    for p in store.list_research_projects():
+        if study_id in (p.get("study_ids") or []):
+            return {"id": p["id"], "slug": p["slug"], "title": p["title"]}
+    return None
+
+
+def parent_study_of_council(council_id: str, store: Store | None = None) -> dict[str, Any] | None:
+    """Reverse lookup: which synthesis (study) folds in this council?"""
+    store = store or Store()
+    for s in store.list_syntheses():
+        if council_id in (s.get("council_ids") or []):
+            return {"id": s["id"], "title": s["title"]}
+    return None
+
+
 def add_study_to_project(project_id: str, study_id: str, theme_tags: list[str] | None = None,
                          store: Store | None = None) -> dict[str, Any]:
     store = store or Store()

@@ -1786,7 +1786,7 @@ def create_app():
                         f'{_star("council", c["id"], c["prompt"][:60], f"/councils/{c['id']}")}</span></a>')
         rows_html = "".join(rows) or f'<div class="row muted">{t("no_councils")}</div>'
         body = f'<div class="page"><h1 class="h1">{t("councils")}</h1><p class="lead">{t("councils_lead")}</p><div class="rows">{rows_html}</div></div>'
-        return _layout(t("councils"), body, store, crumbs=[(t("councils"), None)], active="councils")
+        return _layout(t("councils"), body, store, crumbs=[(t("projects"), "/projects"), (t("councils"), None)], active="projects")
 
     @app.get("/councils/{session_id}", response_class=HTMLResponse)
     def council_detail(session_id: str) -> str:
@@ -1820,8 +1820,16 @@ def create_app():
                 + "".join(f'<div class="prop"><span class="k">{_vote_label(k)}</span><span class="v">{vc[k]}</span></div>' for k in vc)
                 + f'<div class="prop"><span class="k">{personas_h}</span><span class="v">{len(session.get("persona_ids", []))}</span></div>'
                 + f'<div class="prop"><span class="k">{created_h}</span><span class="v">{_esc(session["created_at"][:10])}</span></div>')
+        crumbs = [(t("projects"), "/projects")]
+        parent_syn = services.parent_study_of_council(session_id, store)
+        if parent_syn:
+            proj = services.parent_project_of_study(parent_syn["id"], store)
+            if proj:
+                crumbs.append((proj["title"], f"/projects/{proj['id']}"))
+            crumbs.append((parent_syn["title"], f"/syntheses/{parent_syn['id']}"))
+        crumbs.append((session["prompt"][:50], None))
         return _layout(council_title, _doc(main, rail=rail), store,
-                       crumbs=[(councils_crumb, "/councils"), (session["prompt"][:60], None)], active="councils",
+                       crumbs=crumbs, active="projects",
                        actions=_star("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))
 
     @app.get("/syntheses", response_class=HTMLResponse)
@@ -1837,7 +1845,7 @@ def create_app():
                         f'{_star("synthesis", s["id"], s["title"], f"/syntheses/{s['id']}")}</span></a>')
         rows_html = "".join(rows) or f'<div class="row muted">{t("no_synthesis")}</div>'
         body = f'<div class="page"><h1 class="h1">{t("syntheses")}</h1><p class="lead">{t("syntheses_lead")}</p><div class="rows">{rows_html}</div></div>'
-        return _layout(t("syntheses"), body, store, crumbs=[(t("syntheses"), None)], active="syntheses")
+        return _layout(t("syntheses"), body, store, crumbs=[(t("projects"), "/projects"), (t("syntheses"), None)], active="projects")
 
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:
@@ -1847,8 +1855,13 @@ def create_app():
             return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared")), store, active="syntheses")
         actions = (_star("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}")
                    + f'<button class="btn" onclick="window.print()">{t("export_pdf")}</button>')
+        crumbs = [(t("projects"), "/projects")]
+        proj = services.parent_project_of_study(synthesis_id, store)
+        if proj:
+            crumbs.append((proj["title"], f"/projects/{proj['id']}"))
+        crumbs.append((syn["title"], None))
         return _layout(syn["title"], _synthesis_html(store, syn), store,
-                       crumbs=[(t("syntheses"), "/syntheses"), (syn["title"], None)], active="syntheses", actions=actions)
+                       crumbs=crumbs, active="projects", actions=actions)
 
     @app.get("/projects", response_class=HTMLResponse)
     def projects() -> str:

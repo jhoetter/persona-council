@@ -417,7 +417,8 @@ def build_server():
 
     @mcp.tool()
     def add_study_to_project(project_id: str, study_id: str, theme_tags: list[str] | None = None) -> dict[str, Any]:
-        """Attach an existing synthesis (study) as a node in the project graph."""
+        """Attach an EXISTING synthesis (study) as a node in an EXISTING project graph
+        (optionally with theme_tags). Use link_studies to connect it to other studies."""
         t = time.perf_counter()
         return _env("add_study_to_project", services.add_study_to_project(project_id, study_id, theme_tags), t)
 
@@ -633,7 +634,9 @@ def build_server():
     @mcp.tool()
     def record_synthesis(title: str, start_input: str, council_ids: list[str], payload: dict[str, Any], goal: str = "", synthesis_id: str | None = None) -> dict[str, Any]:
         """Persist/UPDATE the host-authored synthesis over a council chain. Pass the same
-        synthesis_id each iteration of the driver loop to grow one study arc in place."""
+        synthesis_id (and an EXTENDED council_ids list) to ADD more councils to an existing
+        synthesis — re-authoring the report over the longer chain. Then add_study_to_project
+        to place it in a project graph."""
         t = time.perf_counter()
         return _env("record_synthesis", services.record_synthesis(title, start_input, council_ids, payload, goal, synthesis_id), t)
 
@@ -668,6 +671,46 @@ def build_server():
             "Long horizons: brief_period -> put_period_plan (with sample_days) -> simulate only those days.\n"
             "All text is authored by you (the MCP host). The server gathers context and persists."
             % MEMORY_SCHEMA_VERSION
+        )
+
+    @mcp.resource("persona-council://guide/research")
+    def research_guide() -> str:
+        """Read-only: how the research graph fits together and how to drive it via MCP."""
+        return (
+            "Persona Council — research workflow (Project > Synthesis > Council).\n"
+            "\n"
+            "HIERARCHY (each level contains the next):\n"
+            "- Council  = one debate among personas (record_council). Lives INSIDE a synthesis.\n"
+            "- Synthesis (a.k.a. study) = a chain of councils consolidated into one report\n"
+            "  (brief_synthesis -> record_synthesis). Lives INSIDE a project.\n"
+            "- Project  = a themed GRAPH of syntheses with typed edges (create_research_project).\n"
+            "\n"
+            "RUN A STUDY (one node of the graph):\n"
+            "1. run_council/record_council  — author the turns+votes for a question.\n"
+            "2. brief_synthesis([council_ids]) -> author -> record_synthesis  — fold councils into a report.\n"
+            "3. add_study_to_project(project_id, synthesis_id, theme_tags=[...])  — place it in the graph.\n"
+            "4. link_studies(project_id, from, to, type)  — connect it (spawned_from|refines|contrasts|\n"
+            "   depends_on|duplicates|answers).\n"
+            "\n"
+            "ADD TO EXISTING THINGS:\n"
+            "- Add a synthesis to an existing project: add_study_to_project(project_id, synthesis_id).\n"
+            "- Add MORE councils to an existing synthesis: record the new council, then call\n"
+            "  record_synthesis again with the SAME synthesis_id and the EXTENDED council_ids list\n"
+            "  (re-authoring the report over the longer chain). This is the synthesize loop.\n"
+            "- Tag/retag a study: set_study_themes(project_id, study_id, tags).\n"
+            "- Promote/raise open questions: record_open_questions; close them with resolve_open_question.\n"
+            "\n"
+            "META-REPORT over the whole graph:\n"
+            "  brief_meta_report -> record_meta_outline -> (per section) brief_meta_section ->\n"
+            "  record_meta_section -> export_meta_report. Every section cites study_id/council_id.\n"
+            "\n"
+            "FRAMING TIPS:\n"
+            "- Personas are STATELESS across councils: every council question must STAND ALONE\n"
+            "  (include the essential briefing + the precise angle). They remember nothing of prior councils.\n"
+            "- Seed with pain-discovery (no solution pitched); let the answers spawn UX/pricing/etc. studies.\n"
+            "- Stay non-directional: do not nudge personas toward liking a product; rejection is valid.\n"
+            "- Keep provenance: syntheses carry citations; meta-report sections cite study+council.\n"
+            "- Inspect anytime: list_research_projects -> get_project_graph -> get_research_frontier."
         )
 
     @mcp.prompt()
