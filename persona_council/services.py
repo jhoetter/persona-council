@@ -3001,10 +3001,34 @@ from .plan import (  # noqa: E402
     PlanError,
     new_plan,
     validate_plan,
+    seed_plan_from_methodology,
     ready_tasks,
     is_complete,
     render_plan_md,
 )
+
+
+def start_project(title: str, goal: str, methodology: str | None = None,
+                  persona_ids: list[str] | None = None, description: str = "",
+                  store: Store | None = None) -> dict[str, Any]:
+    """Unified project entry: create a research project + seed its plan. With a methodology the plan
+    is seeded from the constellation (analyze/act/verify scaffolding); freeform seeds one root frame
+    task (analyze, dischargeable). The methodology engine binding is kept for back-compat."""
+    store = store or Store()
+    project = create_research_project(title, goal=goal, persona_ids=persona_ids,
+                                      description=description, store=store)
+    if methodology:
+        spec = get_methodology(methodology, store=store)
+        set_project_methodology(project["id"], methodology, store=store)   # phase_log (back-compat)
+        plan = _plan.seed_plan_from_methodology(project["id"], goal, spec)
+    else:
+        root = {"id": "frame__root", "title": "Frame the inquiry", "bucket": "analyze",
+                "capability": "frame", "consumes": [],
+                "intent": "Understand before concluding: read persona memory + author the research "
+                          "questions/hypotheses this inquiry needs before any council runs."}
+        plan = _plan.new_plan(project["id"], goal, "", [root])
+    _plan.save_plan(plan, store=store)
+    return store.get_research_project(project["id"])
 
 
 def get_plan(project_id: str, store: Store | None = None) -> dict[str, Any] | None:

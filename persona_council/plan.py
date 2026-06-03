@@ -107,6 +107,41 @@ def new_plan(project_id: str, goal: str = "", methodology: str = "",
                           "tasks": tasks or [], "created_at": now, "updated_at": now})
 
 
+def seed_plan_from_methodology(project_id: str, goal: str, spec: dict[str, Any]) -> dict[str, Any]:
+    """Expand a methodology constellation into a seed plan: a `frame` (analyze) task per fan step
+    and a `verify` task per decide step, wired along the step DAG and carrying the decide gates.
+    The orchestrator fills the `act` lane (councils/artifacts/sessions consuming each frame) at run
+    time. The first fan's frame is the root analyze task (dischargeable)."""
+    from . import methodology as M
+    steps = spec["steps"]
+    fan_frame = {s["id"]: f"frame__{s['id']}" for s in steps if not M._is_decide(s)}
+    decide_verify = {s["id"]: f"verify__{s['id']}" for s in steps if M._is_decide(s)}
+
+    def map_target(step_id: str) -> str:
+        return fan_frame.get(step_id) or decide_verify.get(step_id) or ""
+
+    tasks: list[dict[str, Any]] = []
+    for s in steps:
+        sid = s["id"]
+        cap = s["tags"][0] if s.get("tags") else ""
+        if M._is_decide(s):
+            cons = [fan_frame[c] for c in s["consumes"] if c in fan_frame]
+            tasks.append({
+                "id": decide_verify[sid], "title": f"Decide · {s['name']}", "bucket": "verify",
+                "capability": cap or "decide", "step": sid, "intent": s["intent"], "consumes": cons,
+                "requires": s["requires"], "loop_back": map_target(s.get("loop_back", "")),
+                "produces": [], "presentation": s.get("presentation") or {}})
+        else:
+            cons = [decide_verify[c] for c in s["consumes"] if c in decide_verify]
+            tasks.append({
+                "id": fan_frame[sid], "title": f"Frame · {s['name']}", "bucket": "analyze",
+                "capability": "frame", "step": sid, "consumes": cons,
+                "intent": f"Frame the questions/angles for '{s['name']}' before acting — read persona "
+                          f"memory + prior evidence; do not conclude early. {s['intent']}",
+                "produces": [], "presentation": s.get("presentation") or {}})
+    return new_plan(project_id, goal, spec["key"], tasks)
+
+
 def get_plan(project_id: str, store: Store | None = None) -> dict[str, Any] | None:
     store = store or Store()
     p = store.get_research_plan(project_id)

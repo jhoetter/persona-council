@@ -82,3 +82,35 @@ def test_no_hardcoded_bucket_or_capability_set():
     # an invented bucket + capability + evidence kind validate fine
     P.validate_plan({"project_id": "x", "tasks": [
         {"id": "a", "bucket": "ponder", "capability": "divine", "produces": [{"kind": "omen", "id": "o1"}]}]})
+
+
+# --------------------------------------------------------------------------- R2: seeding
+
+def test_methodology_seeds_plan_with_gated_verify_tasks(store):
+    proj = services.start_project("Deep", "How might we test seeding?", "double_diamond_deep",
+                                  persona_ids=["p1"], store=store)
+    plan = services.get_plan(proj["id"], store=store)
+    by = {t["id"]: t for t in plan["tasks"]}
+    # a frame (analyze) per fan step, a verify per decide step
+    assert by["frame__discover"]["bucket"] == "analyze" and by["frame__discover"]["consumes"] == []
+    assert by["verify__define"]["bucket"] == "verify"
+    assert by["verify__define"]["requires"]["min_inputs"] == 2
+    assert by["verify__define"]["requires"]["gate_tag"] == "divergence_complete"
+    # session gates carried from the constellation (lofi at lofi_select, midfi at deliver)
+    assert by["verify__lofi_select"]["requires"]["session_of_tags"] == ["lofi"]
+    assert by["verify__deliver"]["requires"]["session_of_tags"] == ["midfi"]
+    # the DAG threads frame -> verify -> frame -> ...
+    assert by["verify__define"]["consumes"] == ["frame__discover"]
+    assert by["frame__ideate"]["consumes"] == ["verify__define"]
+    # only the root frame is ready at the start
+    assert {t["id"] for t in services.ready_tasks(plan)} == {"frame__discover"}
+
+
+def test_freeform_seeds_single_root_frame(store):
+    proj = services.start_project("Freeform", "What do users want?", None,
+                                  persona_ids=["p1"], store=store)
+    plan = services.get_plan(proj["id"], store=store)
+    assert len(plan["tasks"]) == 1
+    t = plan["tasks"][0]
+    assert t["bucket"] == "analyze" and t["capability"] == "frame" and t["consumes"] == []
+    assert "## Analyze" in services.export_plan_md(proj["id"], store=store)
