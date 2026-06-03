@@ -2984,13 +2984,14 @@ from . import browser as _browser   # noqa: E402
 
 
 def scaffold_prototype(slug, name, concept, kind="web", template="spa-min",
-                       project_id=None, store: Store | None = None):
-    return _proto.scaffold_prototype(slug, name, concept, kind, template, project_id, store=store)
+                       project_id=None, fidelity=None, store: Store | None = None):
+    return _proto.scaffold_prototype(slug, name, concept, kind, template, project_id, fidelity=fidelity, store=store)
 
 
 def register_prototype(slug, name, path, entry="index.html", run="static", run_cmd=None,
-                       version="v0.1", project_id=None, notes="", store: Store | None = None):
-    return _proto.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes, store=store)
+                       version="v0.1", project_id=None, notes="", fidelity="midfi", store: Store | None = None):
+    return _proto.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes,
+                                     fidelity=fidelity, store=store)
 
 
 def list_prototypes_artifacts(project_id=None, store: Store | None = None):

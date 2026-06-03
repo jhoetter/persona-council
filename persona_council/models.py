@@ -176,8 +176,13 @@ class Synthesis:
     # --- methodology-engine metadata (spec/methodology-engine-and-prototyping.md) ---
     phase: str = ""          # which methodology phase produced this node (e.g. "discover")
     mode: str = ""           # "diverge" (one of a fan) | "converge" (the waist)
-    role: str = ""           # light artifact tag: problem-landscape|point-of-view|solution-options|spec
+    role: str = ""           # light artifact tag (see methodology ROLES)
     methodology: str = ""    # methodology key this node belongs to
+    # converge-node enrichments (spec/deep-design-thinking-and-diamond.md §4):
+    clusters: list[Json] = field(default_factory=list)   # [{label, member_node_ids, insight}]
+    key_problems: list[str] = field(default_factory=list)
+    ranking: list[Json] = field(default_factory=list)    # down-select: [{prototype_id, score_rationale}]
+    shortlist: list[str] = field(default_factory=list)   # prototype_ids carried to mid-fi
 
     def to_dict(self) -> Json:
         return asdict(self)
@@ -289,6 +294,7 @@ class Prototype:
     run_cmd: str | None
     notes: str
     created_at: str
+    fidelity: str = "midfi"     # lofi | midfi (spec §5)
 
     def to_dict(self) -> Json:
         return asdict(self)

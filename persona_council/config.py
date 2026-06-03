@@ -63,17 +63,9 @@ def max_browser_sessions() -> int:
     except (TypeError, ValueError):
         return 4
 
-
-def llm_provider() -> str:
-    return os.getenv("PERSONA_COUNCIL_LLM_PROVIDER", "anthropic")
-
-
-def llm_model() -> str:
-    return os.getenv("PERSONA_COUNCIL_LLM_MODEL", "claude-opus-4-8")
-
-
-def llm_api_key() -> str | None:
-    return os.getenv("PERSONA_COUNCIL_LLM_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+# NOTE: there is intentionally NO LLM-text-generation config. The host (Claude)/subagents
+# author all text via MCP; the OpenAI key is embeddings + image generation only.
+# (spec/deep-design-thinking-and-diamond.md §2 — locked principle.)
 
 
 def embedding_model() -> str:

@@ -54,8 +54,11 @@ def _validate_concept(concept: dict[str, Any]) -> dict[str, Any]:
     return concept
 
 
-def _render_spa(name: str, concept: dict[str, Any]) -> str:
-    tpl = (prototype_templates_dir() / "spa-min" / "index.html").read_text(encoding="utf-8")
+TEMPLATES = {"spa-min": "midfi", "spa-sketch": "lofi"}
+
+
+def _render_spa(name: str, concept: dict[str, Any], template: str = "spa-min") -> str:
+    tpl = (prototype_templates_dir() / template / "index.html").read_text(encoding="utf-8")
     return (tpl
             .replace("__TITLE__", _esc(concept.get("title") or name))
             .replace("__SUMMARY__", _esc(concept.get("summary", "")))
@@ -68,27 +71,28 @@ def _esc(s: str) -> str:
 
 def scaffold_prototype(slug: str, name: str, concept: dict[str, Any], kind: str = "web",
                        template: str = "spa-min", project_id: str | None = None,
-                       store: Store | None = None) -> dict[str, Any]:
+                       fidelity: str | None = None, store: Store | None = None) -> dict[str, Any]:
     store = store or Store()
-    if template != "spa-min":
-        raise PrototypeError("UNKNOWN_TEMPLATE", f"only 'spa-min' is supported (got {template})")
+    if template not in TEMPLATES:
+        raise PrototypeError("UNKNOWN_TEMPLATE", f"template must be one of {sorted(TEMPLATES)} (got {template})")
+    fidelity = fidelity or TEMPLATES[template]
     concept = _validate_concept(concept)
     out_dir = prototypes_dir() / slug
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "index.html").write_text(_render_spa(name, concept), encoding="utf-8")
+    (out_dir / "index.html").write_text(_render_spa(name, concept, template), encoding="utf-8")
     (out_dir / "concept.json").write_text(json.dumps(concept, ensure_ascii=False, indent=2), encoding="utf-8")
     try:
         stored_path = str(out_dir.relative_to(ROOT))
     except ValueError:
         stored_path = str(out_dir)
-    return register_prototype(slug, name, stored_path, entry="index.html",
-                              run="static", version="v0.1", project_id=project_id,
-                              notes=f"generated from spa-min ({len(concept['screens'])} screens)", store=store)
+    return register_prototype(slug, name, stored_path, entry="index.html", run="static", version="v0.1",
+                              project_id=project_id, fidelity=fidelity,
+                              notes=f"generated from {template} ({len(concept['screens'])} screens)", store=store)
 
 
 def register_prototype(slug: str, name: str, path: str, entry: str = "index.html", run: str = "static",
                        run_cmd: str | None = None, version: str = "v0.1", project_id: str | None = None,
-                       notes: str = "", store: Store | None = None) -> dict[str, Any]:
+                       notes: str = "", fidelity: str = "midfi", store: Store | None = None) -> dict[str, Any]:
     store = store or Store()
     from .services import stable_id
     now = utc_now_iso()
@@ -96,7 +100,8 @@ def register_prototype(slug: str, name: str, path: str, entry: str = "index.html
     pid = (existing or {}).get("id") or stable_id("prototype", slug, now)
     rec = Prototype(id=pid, slug=slug, project_id=project_id, name=name, version=version,
                     kind="web", path=path, entry=entry, run=run, run_cmd=run_cmd, notes=notes,
-                    created_at=(existing or {}).get("created_at", now)).to_dict()
+                    created_at=(existing or {}).get("created_at", now),
+                    fidelity=(fidelity if fidelity in ("lofi", "midfi") else "midfi")).to_dict()
     store.upsert_prototype(rec)
     return rec
 

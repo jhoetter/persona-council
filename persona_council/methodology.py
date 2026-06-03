@@ -18,9 +18,12 @@ from .models import MethodologyJudgment
 from .storage import Store
 
 MODES = {"diverge", "converge"}
-ROLES = {"problem-landscape", "point-of-view", "solution-options", "spec"}
+# Exploration (diverge) roles vs decision (converge) roles. Expanded for the deep
+# methodology (spec/deep-design-thinking-and-diamond.md §4.1).
 DIVERGE_ROLES = {"problem-landscape", "solution-options"}
-CONVERGE_ROLES = {"point-of-view", "spec"}
+CONVERGE_ROLES = {"key-problems", "point-of-view", "solution-shortlist", "solution-presentation", "spec"}
+ROLES = DIVERGE_ROLES | CONVERGE_ROLES
+FIDELITIES = {"lofi", "midfi"}
 JUDGMENT_KINDS = {"divergence_complete", "core_problem_chosen", "spec_ready", "loop_back"}
 COMPLETE = "__complete__"
 
@@ -69,6 +72,8 @@ def validate_methodology_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 raise MethodologyError("BAD_SPEC", f"converge phase {p['key']} must consume the preceding diverge phase")
         if not p.get("council_strategy"):
             raise MethodologyError("BAD_SPEC", f"phase {p.get('key')} needs a council_strategy")
+        if p.get("fidelity") and p["fidelity"] not in FIDELITIES:
+            raise MethodologyError("BAD_SPEC", f"phase {p.get('key')} fidelity must be lofi|midfi")
         lb = p.get("loop_back")
         if lb and lb not in keys:
             raise MethodologyError("BAD_SPEC", f"loop_back target '{lb}' is not a phase key")
@@ -252,6 +257,11 @@ def _node_payload(title: str, start_input: str, council_ids: list[str], payload:
     rec["mode"] = mode
     rec["role"] = phase["produces_role"]
     rec["methodology"] = project["methodology"]
+    # converge-node enrichments (affinity clusters, key problems, down-select ranking)
+    if isinstance(payload, dict):
+        for k in ("clusters", "key_problems", "ranking", "shortlist"):
+            if payload.get(k):
+                rec[k] = payload[k]
     store.upsert_synthesis(rec)
     return rec
 

@@ -574,21 +574,23 @@ def build_server():
     # ================= Prototypes (real, minimal, locally-runnable apps) =================
     @mcp.tool()
     def scaffold_prototype(slug: str, name: str, concept: dict[str, Any], kind: str = "web",
-                           template: str = "spa-min", project_id: str | None = None) -> dict[str, Any]:
+                           template: str = "spa-min", project_id: str | None = None,
+                           fidelity: str | None = None) -> dict[str, Any]:
         """Generate a real, minimal, runnable web app from a host-authored concept (screens +
-        elements) and register it. The app is genuinely clickable (real DOM) for Playwright."""
+        elements) and register it. The app is genuinely clickable (real DOM) for Playwright.
+        template: 'spa-min' (mid-fi, clean) or 'spa-sketch' (lo-fi). fidelity overrides default."""
         t = time.perf_counter()
         return _env("scaffold_prototype",
-                    services.scaffold_prototype(slug, name, concept, kind, template, project_id), t)
+                    services.scaffold_prototype(slug, name, concept, kind, template, project_id, fidelity), t)
 
     @mcp.tool()
     def register_prototype(slug: str, name: str, path: str, entry: str = "index.html", run: str = "static",
                            run_cmd: str | None = None, version: str = "v0.1", project_id: str | None = None,
-                           notes: str = "") -> dict[str, Any]:
-        """Register a hand-authored app under prototypes/ as a runnable artifact."""
+                           notes: str = "", fidelity: str = "midfi") -> dict[str, Any]:
+        """Register a hand-authored app under prototypes/ as a runnable artifact (fidelity: lofi|midfi)."""
         t = time.perf_counter()
         return _env("register_prototype",
-                    services.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes), t)
+                    services.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes, fidelity), t)
 
     @mcp.tool()
     def list_prototypes(project_id: str | None = None) -> dict[str, Any]:

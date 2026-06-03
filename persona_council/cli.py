@@ -346,6 +346,7 @@ def build_parser() -> argparse.ArgumentParser:
     # Prototypes + Playwright harness
     p = sub.add_parser("prototype-scaffold")
     p.add_argument("slug"); p.add_argument("name"); p.add_argument("file"); p.add_argument("--project")
+    p.add_argument("--template", default="spa-min", choices=["spa-min", "spa-sketch"]); p.add_argument("--fidelity")
     p = sub.add_parser("prototype-register")
     p.add_argument("slug"); p.add_argument("name"); p.add_argument("path"); p.add_argument("--entry", default="index.html")
     p.add_argument("--run", default="static"); p.add_argument("--run-cmd", dest="run_cmd"); p.add_argument("--version", default="v0.1")
@@ -602,7 +603,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "methodology-state":
             _print(services.get_methodology_state(args.project_id))
         elif args.command == "prototype-scaffold":
-            _print(services.scaffold_prototype(args.slug, args.name, json.loads(Path(args.file).read_text(encoding="utf-8")), project_id=args.project))
+            _print(services.scaffold_prototype(args.slug, args.name, json.loads(Path(args.file).read_text(encoding="utf-8")),
+                                               template=args.template, project_id=args.project, fidelity=args.fidelity))
         elif args.command == "prototype-register":
             _print(services.register_prototype(args.slug, args.name, args.path, args.entry, args.run, args.run_cmd, args.version, args.project, args.notes))
         elif args.command == "prototype-list":
@@ -630,10 +632,10 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "session-record":
             _print(services.record_prototype_session(args.persona_id, args.prototype_id, args.session_id, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
         elif args.command == "run-methodology":
+            # Structural/offline driver (deterministic stub). Real, grounded runs are host-driven
+            # via the design-thinking-deep / methodology-run skills (no in-process LLM authoring).
             from . import runtime as _rt
-            from .config import llm_api_key
-            backend = None if llm_api_key() else _rt.StubAuthoringBackend()
-            _print(_rt.run_methodology(args.project_id, backend=backend, max_steps=args.max_steps))
+            _print(_rt.run_methodology(args.project_id, backend=_rt.StubAuthoringBackend(), max_steps=args.max_steps))
         elif args.command == "research-delete":
             _print(services.delete_research_project(args.project_id))
         elif args.command == "research-remove-study":

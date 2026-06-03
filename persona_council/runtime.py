@@ -1,13 +1,16 @@
 """Orchestration runtime (spec/methodology-engine-and-prototyping.md §5).
 
-The engine (methodology.py) is always-present and host-stepped. This module adds the
-OPTIONAL autonomous loop: `run_methodology` drives a whole diamond unattended by delegating
-text authoring to a pluggable AuthoringBackend, while calling the SAME engine functions — so
-the structural invariants and gates apply identically to autonomous and interactive runs.
+The engine (methodology.py) is always-present and host-stepped. This module adds a STRUCTURAL
+orchestration loop: `run_methodology` steps a whole diamond by delegating text authoring to a
+pluggable AuthoringBackend, while calling the SAME engine functions — so the structural
+invariants and gates apply identically.
 
-Backends:
-- LLMAuthoringBackend — real; authors via the Anthropic API (config.llm_*). Used by default.
-- StubAuthoringBackend — deterministic; drives a full diamond offline (tests / no API key).
+IMPORTANT (spec/deep-design-thinking-and-diamond.md §2 — locked principle): there is NO
+in-process LLM text-generation backend. Real runs are driven by the HOST (Claude) or its
+subagents authoring text via the MCP `brief_*→record_*` contract (see the `design-thinking-deep`
+/ `methodology-run` skills). The only backend shipped here is `StubAuthoringBackend` —
+deterministic, for tests and as the AuthoringBackend reference. The OpenAI key is embeddings +
+image generation only; it is never used for authoring.
 """
 from __future__ import annotations
 
@@ -39,7 +42,7 @@ def run_methodology(project_id: str, backend: AuthoringBackend | None = None,
     """Autonomously step a methodology project to completion via `backend`."""
     store = store or Store()
     if backend is None:
-        backend = LLMAuthoringBackend()
+        backend = StubAuthoringBackend()
     project, spec = M._ensure_methodology_project(store, project_id)
     steps = 0
     while steps < max_steps:
@@ -181,80 +184,3 @@ class StubAuthoringBackend:
             except Exception:
                 pass
 
-
-# --------------------------------------------------------------------------- LLM backend
-
-class LLMAuthoringBackend:
-    """Real backend: authors via the Anthropic API (config.llm_provider/model/api_key).
-
-    Raises a clear error if the SDK or key is missing — pass StubAuthoringBackend for offline
-    runs, or set PERSONA_COUNCIL_LLM_API_KEY / ANTHROPIC_API_KEY for autonomous runs.
-    """
-
-    def __init__(self) -> None:
-        from .config import llm_api_key, llm_model, llm_provider
-        self.provider = llm_provider()
-        self.model = llm_model()
-        self.api_key = llm_api_key()
-        self._client = None
-
-    def _client_or_raise(self):
-        if self._client is not None:
-            return self._client
-        if not self.api_key:
-            raise RuntimeError(
-                "Autonomous mode needs an LLM key (PERSONA_COUNCIL_LLM_API_KEY/ANTHROPIC_API_KEY) "
-                "or pass a StubAuthoringBackend for offline runs.")
-        try:
-            import anthropic
-        except Exception as e:  # pragma: no cover
-            raise RuntimeError("Install the 'anthropic' SDK for autonomous mode, or pass a backend.") from e
-        self._client = anthropic.Anthropic(api_key=self.api_key)
-        return self._client
-
-    def _ask(self, system: str, prompt: str) -> str:  # pragma: no cover (needs network/key)
-        client = self._client_or_raise()
-        msg = client.messages.create(model=self.model, max_tokens=2000,
-                                     system=system, messages=[{"role": "user", "content": prompt}])
-        return "".join(getattr(b, "text", "") for b in msg.content)
-
-    def _json(self, system: str, prompt: str) -> dict:  # pragma: no cover
-        import json as _json
-        raw = self._ask(system, prompt)
-        start, end = raw.find("{"), raw.rfind("}")
-        return _json.loads(raw[start:end + 1]) if start >= 0 else {}
-
-    def author_exploration(self, project, phase, index, store):  # pragma: no cover
-        from . import services as svc
-        sys = ("You author one grounded, anti-steering council exploration for a design-research "
-               "methodology. Return JSON {turn, gesamtbild, arc_narrative}.")
-        out = self._json(sys, f"Goal: {project.get('goal')}\nPhase: {phase['name']} — {phase['intent']}\n"
-                              f"Strategy: {phase['council_strategy']}. Exploration #{index + 1}.")
-        cid = svc.record_council(
-            prompt=f"[{phase['key']}] {phase['intent']}",
-            persona_ids=(project.get("persona_ids") or ["p1"])[:1],
-            turns=[{"speaker": "Persona", "persona_id": "p1", "content": out.get("turn", phase["intent"])}],
-            votes=[], proposal="", summary="", exec_summary=out.get("gesamtbild", ""),
-            selection_reason="autonomous", store=store)["id"]
-        return {"title": f"{phase['name']} · option {index + 1}", "council_ids": [cid],
-                "payload": {"gesamtbild": out.get("gesamtbild", ""), "arc_narrative": out.get("arc_narrative", "")}}
-
-    def divergence_decision(self, project, phase, explorations, store):  # pragma: no cover
-        if len(explorations) < 2:
-            return {"decided": False, "rationale": "need more breadth", "evidence_refs": _all_councils(explorations)}
-        sys = "Decide if the space is explored enough. Return JSON {decided:bool, rationale}."
-        out = self._json(sys, f"Phase {phase['name']}. {len(explorations)} explorations so far. Enough?")
-        return {"decided": bool(out.get("decided")), "rationale": out.get("rationale", ""),
-                "evidence_refs": _all_councils(explorations)}
-
-    def before_converge(self, project, phase, store):  # pragma: no cover
-        # reuse the stub's prototype-session machinery (real Playwright use when available)
-        if "prototype_session" in (phase.get("requires_artifacts") or []):
-            StubAuthoringBackend()._record_session(project, store)
-
-    def author_convergence(self, project, phase, fan_node_ids, store):  # pragma: no cover
-        sys = "Author the convergence (decision) for this phase. Return JSON {gesamtbild, arc_narrative}."
-        out = self._json(sys, f"Goal: {project.get('goal')}\nConverge phase {phase['name']} "
-                              f"({phase['produces_role']}). Consolidate {len(fan_node_ids)} explorations.")
-        return {"title": f"{phase['name']} · {phase['produces_role']}", "from_node_ids": fan_node_ids,
-                "payload": {"gesamtbild": out.get("gesamtbild", ""), "arc_narrative": out.get("arc_narrative", "")}}

@@ -1,0 +1,170 @@
+{
+  "title": "Pfefferminzia · Der ehrliche Check",
+  "summary": "Kein Verkauf. 3 Fragen. Wir sagen dir ehrlich, ob eine Lebensversicherung für dich gerade Sinn macht — auch wenn die Antwort 'noch nicht' ist.",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "title": "Start",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "i1",
+          "label": "Kein Verkauf, kein Abschluss hier. 3 Fragen, dann sagen wir dir ehrlich, ob eine Lebensversicherung für dich gerade sinnvoll ist."
+        },
+        {
+          "kind": "button",
+          "id": "go",
+          "label": "Los geht's – 3 Fragen",
+          "goto": "frage1"
+        }
+      ]
+    },
+    {
+      "id": "frage1",
+      "title": "Frage 1",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "q1",
+          "label": "Hängt finanziell gerade jemand von dir ab?"
+        },
+        {
+          "kind": "button",
+          "id": "a1",
+          "label": "Nein, niemand",
+          "goto": "nochnicht"
+        },
+        {
+          "kind": "button",
+          "id": "a2",
+          "label": "Partner/in",
+          "goto": "frage2"
+        },
+        {
+          "kind": "button",
+          "id": "a3",
+          "label": "Kind oder Familie",
+          "goto": "relevant"
+        }
+      ]
+    },
+    {
+      "id": "frage2",
+      "title": "Frage 2",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "q2",
+          "label": "Plant ihr bald eine gemeinsame große Finanzierung – z.B. einen Hauskredit?"
+        },
+        {
+          "kind": "button",
+          "id": "b1",
+          "label": "Nein, aktuell nicht",
+          "goto": "nochnicht"
+        },
+        {
+          "kind": "button",
+          "id": "b2",
+          "label": "Ja, in nächster Zeit",
+          "goto": "relevant"
+        }
+      ]
+    },
+    {
+      "id": "nochnicht",
+      "title": "Ehrliches Ergebnis",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "n1",
+          "label": "Ehrlich? Gerade brauchst du wahrscheinlich keine Lebensversicherung. Es hängt finanziell niemand an dir – kein Grund, jetzt etwas abzuschließen."
+        },
+        {
+          "kind": "button",
+          "id": "n2",
+          "label": "Erinnere mich, wenn sich das ändert",
+          "goto": "erinnerung"
+        },
+        {
+          "kind": "link",
+          "id": "n3",
+          "label": "Warum ratet ihr mir ab?",
+          "goto": "warum"
+        }
+      ]
+    },
+    {
+      "id": "relevant",
+      "title": "Könnte relevant werden",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "r1",
+          "label": "Jetzt könnte es relevant werden: Wenn jemand von deinem Einkommen abhängt oder ihr eine Rate gemeinsam stemmt, schützt eine Lebensversicherung die anderen – falls dir etwas zustößt."
+        },
+        {
+          "kind": "text",
+          "id": "r2",
+          "label": "Kein Abschluss hier. Nur ein neutrales, verständliches Gespräch – wenn du willst."
+        },
+        {
+          "kind": "button",
+          "id": "r3",
+          "label": "Neutrales Gespräch anfragen (unverbindlich)"
+        },
+        {
+          "kind": "button",
+          "id": "r4",
+          "label": "Erstmal nur merken",
+          "goto": "erinnerung"
+        }
+      ]
+    },
+    {
+      "id": "erinnerung",
+      "title": "Merken",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "m1",
+          "label": "Wir melden uns nur, wenn dein Auslöser kommt – nicht vorher."
+        },
+        {
+          "kind": "select",
+          "id": "m2",
+          "label": "Womit sollen wir uns melden?",
+          "options": [
+            "Hauskauf / Kredit",
+            "Kind geplant",
+            "Zusammenziehen",
+            "Gar nicht – ich melde mich selbst"
+          ]
+        },
+        {
+          "kind": "button",
+          "id": "m3",
+          "label": "Auslöser merken"
+        }
+      ]
+    },
+    {
+      "id": "warum",
+      "title": "Warum wir abraten",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "w1",
+          "label": "Weil eine Versicherung, die du nicht brauchst, dein Geld kostet und unser Vertrauen. Wir verdienen lieber dein Vertrauen jetzt – und sind da, wenn es wirklich zählt."
+        },
+        {
+          "kind": "button",
+          "id": "w2",
+          "label": "Verstanden",
+          "goto": "nochnicht"
+        }
+      ]
+    }
+  ]
+}
