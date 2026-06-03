@@ -1768,6 +1768,8 @@ def create_app():
         reports = store.list_meta_reports(proj["id"])
         meta_btn = (f'<a class="btn" href="/projects/{_esc(proj["id"])}/meta">{_icon("syntheses")} {t("meta_report")}</a>'
                     if reports else "")
+        if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan view
+            meta_btn = f'<a class="btn" href="/projects/{_esc(proj["id"])}/plan">{_icon("projects")} Plan</a>' + meta_btn
         # Linear-style filter: EVERY tag present on a node is a toggleable chip — incl. the
         # methodology's open step tags (capability/role), not just LLM theme tags. No fixed vocab.
         node_tags = []
@@ -1844,6 +1846,22 @@ def create_app():
         return _layout(proj["title"] + " — " + t("meta_report"), body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)],
                        active="projects", actions=actions)
+
+    @app.get("/projects/{project_id}/plan", response_class=HTMLResponse)
+    def project_plan(project_id: str) -> str:
+        store = Store()
+        try:
+            proj = services.get_research_project(project_id, store=store)
+        except KeyError:
+            return _layout(t("not_found"), _empty_state("Plan", t("runtime_maybe_cleared")), store, active="projects")
+        plan = services.get_plan(project_id, store=store)
+        if not plan:
+            body = f'<div class="page">{_empty_state("Plan", "Dieses Projekt hat noch keinen Plan (Freiform/Legacy).")}</div>'
+        else:
+            body = f'<div class="page"><div class="doc">{_md(services.export_plan_md(project_id, store=store))}</div></div>'
+        return _layout(proj["title"] + " — Plan", body, store,
+                       crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), ("Plan", None)],
+                       active="projects")
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:
