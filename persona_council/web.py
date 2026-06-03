@@ -371,6 +371,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgmini .mn{fill:var(--muted);opacity:.5}
 #rgmvp{fill:color-mix(in srgb,var(--accent) 15%,transparent);stroke:var(--accent);stroke-width:1.3}
 .rgdiamond{fill:var(--accent);opacity:.055;stroke:var(--accent);stroke-opacity:.16;stroke-width:1.2}
+.protoframe{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);height:620px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.protoframe iframe{width:100%;height:100%;border:0;display:block}
 .strow{padding:9px 0;border-bottom:1px solid var(--line)}.strow:last-child{border-bottom:0}
 .strow a{text-decoration:none}.strow .ic{vertical-align:-3px;margin-right:5px}
 .ptoolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 10px}
@@ -1896,6 +1898,11 @@ def create_app():
     DATA_DIR.mkdir(exist_ok=True)
     app = FastAPI(title="Persona Council")
     app.mount("/data", StaticFiles(directory="data"), name="data")
+    # Serve prototype apps so they can be viewed directly in the inspector (read-only).
+    from .config import prototypes_dir as _proto_dir
+    _pd = _proto_dir()
+    _pd.mkdir(parents=True, exist_ok=True)
+    app.mount("/proto-files", StaticFiles(directory=str(_pd), html=True), name="proto-files")
 
     @app.middleware("http")
     async def _ui_language_middleware(request, call_next):
@@ -2188,7 +2195,10 @@ def create_app():
                     sl.append(f'<li>{_esc(s.get("persona_id",""))}: {_esc(str(r.get("verdict") or r.get("summary","")))[:80]} '
                               f'<span class="muted small">{gv} grounded</span></li>')
                 sl_html = ("<ul style='margin:4px 0 0 18px'>" + "".join(sl) + "</ul>") if sl else '<div class="muted small">— keine Sessions —</div>'
-                rows.append(f'<div class="strow"><b>{_esc(p["name"])}</b> <span class="muted small">{_esc(p.get("version",""))} · {_esc(p["slug"])}</span> {run_badge}{sl_html}</div>')
+                fid = "lo-fi" if p.get("fidelity") == "lofi" else "mid-fi"
+                rows.append(f'<div class="strow"><a href="/prototypes/{_esc(p["slug"])}">{_icon("projects")}<b>{_esc(p["name"])}</b></a> '
+                            f'<span class="pill">{fid}</span> <span class="muted small">{_esc(p.get("version",""))}</span> '
+                            f'<a class="btn" style="padding:2px 8px" href="/prototypes/{_esc(p["slug"])}">ansehen ↗</a>{sl_html}</div>')
             proto_html = (f'<div class="oqp-h" style="margin-top:14px">{t("prototypes_h")} ({len(protos)})</div>'
                           + "".join(rows))
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
@@ -2227,6 +2237,40 @@ def create_app():
         return _layout(proj["title"] + " — " + t("meta_report"), body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)],
                        active="projects", actions=actions)
+
+    @app.get("/prototypes/{slug}", response_class=HTMLResponse)
+    def prototype_view(slug: str) -> str:
+        store = Store()
+        try:
+            p = services.get_prototype_artifact(slug, store=store)
+        except Exception:
+            return _layout(t("not_found"), _empty_state(t("prototypes_h"), t("runtime_maybe_cleared")), store, active="projects")
+        crumbs = [(t("projects"), "/projects")]
+        proj = store.get_research_project(p["project_id"]) if p.get("project_id") else None
+        if proj:
+            crumbs.append((proj["title"], f"/projects/{proj['id']}"))
+        crumbs.append((p["name"], None))
+        fid = '<span class="pill">lo-fi</span>' if p.get("fidelity") == "lofi" else '<span class="pill">mid-fi</span>'
+        src = f'/proto-files/{_esc(slug)}/{_esc(p.get("entry", "index.html"))}'
+        sessions = store.list_prototype_sessions(prototype_id=p["id"])
+        sl = []
+        for s in sessions:
+            r = s.get("reaction", {})
+            gv = "✓ grounded" if s.get("grounded_verified") else "○ unbestätigt"
+            liked = "".join(f"<li>👍 {_esc(x)}</li>" for x in (r.get("liked") or [])[:3])
+            fric = "".join(f"<li>⚠ {_esc(x)}</li>" for x in (r.get("friction") or [])[:3])
+            sl.append(f'<div class="strow"><b>{_esc(s.get("persona_id",""))}</b> '
+                      f'<span class="muted small">{gv}</span><div class="small" style="margin-top:3px">'
+                      f'{_esc(str(r.get("verdict","")))}</div><ul class="small" style="margin:4px 0 0 16px">{liked}{fric}</ul></div>')
+        sessions_html = ("".join(sl)) or f'<div class="muted small">— {t("prototypes_h")}: keine Sessions —</div>'
+        body = (
+            f'<div class="page"><h1 class="h1">{_esc(p["name"])} {fid} '
+            f'<span class="muted small">{_esc(p.get("version",""))} · {_esc(slug)}</span></h1>'
+            f'<p class="lead"><a class="btn" href="{src}" target="_blank">{_icon("projects")} In neuem Tab öffnen ↗</a></p>'
+            f'<div class="protoframe"><iframe src="{src}" title="{_esc(p["name"])}" loading="lazy"></iframe></div>'
+            f'<div class="card" style="margin-top:16px"><b>{t("prototypes_h")} · Sessions ({len(sessions)})</b>'
+            f'<div style="margin-top:8px">{sessions_html}</div></div></div>')
+        return _layout(p["name"], body, store, crumbs=crumbs, active="projects")
 
     # ---------------- JSON API (unchanged surface) ----------------
     @app.get("/api/personas")
