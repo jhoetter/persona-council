@@ -1,0 +1,10 @@
+{
+  "kind": "evidence_kinds",
+  "note": "Presentation hints for the heterogeneous evidence node kinds in the project graph (spec/research-plan-engine.md R5). Rendered from data — web.py carries no kind literal. Invent a kind by adding an item.",
+  "items": [
+    {"tag": "frame", "presentation": {"label": "Frame", "short": "Frame", "color": "#8a8f98", "glyph": "◇"}},
+    {"tag": "council", "presentation": {"label": "Council", "short": "Council", "color": "#6b7cff", "glyph": "▢"}},
+    {"tag": "synthesis", "presentation": {"label": "Synthese", "short": "Synthese", "color": "#a142f4", "glyph": "◆"}},
+    {"tag": "artifact", "presentation": {"label": "Artefakt", "short": "Artefakt", "color": "#00897b", "glyph": "▢"}}
+  ]
+}

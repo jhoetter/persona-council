@@ -2663,8 +2663,13 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
 
 def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
     """The core navigation call: nodes (studies + tags/sentiment), typed edges,
-    themes, build order, and open questions for one research project."""
+    themes, build order, and open questions for one research project. When the project has a
+    research PLAN with recorded evidence, the graph is the heterogeneous plan-evidence graph
+    (councils/syntheses/artifacts/frames as first-class nodes)."""
     store = store or Store()
+    plan = _plan.get_plan(project_id, store=store)
+    if plan is not None and any(t.get("produces") for t in plan["tasks"]):
+        return plan_graph(project_id, store=store)
     project = _require_research_project(store, project_id)
     tags = project.get("study_tags", {})
     nodes = []
@@ -2704,6 +2709,117 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
         "counts": {"studies": len(nodes), "edges": len(edges),
                    "open_questions": sum(1 for o in oqs if o.get("status") == "open"),
                    "themes": len(project.get("themes", []))},
+    }
+
+
+def _plan_methodology_state(project: dict, plan: dict, store: Store) -> dict[str, Any] | None:
+    """A layout-ready step state derived from the plan's methodology constellation (no phase_log):
+    steps with key/name/mode/is_fan/tags/consumes so the graph lays out diamonds over act->verify."""
+    key = plan.get("methodology")
+    if not key:
+        return None
+    try:
+        spec = get_methodology(key, store=store)
+    except Exception:
+        return None
+    from . import methodology as M
+    steps = [{"key": s["id"], "name": s["name"], "mode": M._mode(s), "is_fan": not M._is_decide(s),
+              "role": s["produces"]["role"], "presentation": s.get("presentation") or {},
+              "tags": s["tags"], "consumes": s["consumes"], "produces": s["produces"],
+              "requires": s["requires"], "status": "pending", "exploration_count": 0,
+              "convergence_node": None, "judgments": []}
+             for s in spec["steps"]]
+    return {"project_id": project["id"], "methodology": key, "phase": "", "complete": False,
+            "steps": steps, "phases": steps}
+
+
+def _evidence_node(kind: str, eid: str, title: str, prod_task: dict, store: Store) -> dict[str, Any]:
+    """A heterogeneous graph node for one evidence item. Color/label come from data (present(kind))."""
+    from . import presentation as _pres
+    pres = _pres.present(kind)
+    step = prod_task.get("step", "")
+    created = ""
+    council_count = 0
+    if kind == "council":
+        c = store.get_council_session(eid) or {}
+        created = c.get("created_at", "")
+        council_count = 1
+    elif kind == "synthesis":
+        s = store.get_synthesis(eid) or {}
+        created = s.get("created_at", "")
+        council_count = len(s.get("council_ids", []))
+    href = {"council": f"/councils/{eid}", "synthesis": f"/syntheses/{eid}"}.get(kind, "")
+    tags = [kind] + list(prod_task.get("presentation", {}).get("tags") or [])
+    return {"study_id": f"{kind}:{eid}", "kind": kind, "title": title, "phase": step,
+            "bucket": prod_task.get("bucket", ""), "created_at": created, "council_count": council_count,
+            "voices": 0, "sentiment": {}, "recommendations": 0, "role": prod_task.get("capability", ""),
+            "mode": "", "theme_tags": tags, "color": pres["color"], "kind_label": pres["label"],
+            "href": href}
+
+
+def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Heterogeneous evidence graph for a plan-based project: councils/syntheses/frames as
+    first-class nodes (artifacts via the prototypes list), edges from the act fan to its verify
+    synthesis, diamonds laid out over act->verify via the plan's constellation."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    plan = _plan.get_plan(project_id, store=store)
+    nodes: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def _title(kind: str, eid: str, t: dict) -> str:
+        if kind == "council":
+            return (store.get_council_session(eid) or {}).get("prompt", eid)
+        if kind == "synthesis":
+            return (store.get_synthesis(eid) or {}).get("title", eid)
+        if kind == "frame":
+            return f"Frame · {t.get('title', eid)}"
+        return eid
+
+    for t in plan["tasks"]:
+        for r in t["produces"]:
+            kind, eid = r["kind"], r["id"]
+            if kind in ("artifact", "frame"):   # artifacts render via prototypes; frames stay plan-internal
+                continue
+            nid = f"{kind}:{eid}"
+            if nid in seen:
+                continue
+            seen.add(nid)
+            nodes.append(_evidence_node(kind, eid, _title(kind, eid, t), t, store))
+    nodes.sort(key=lambda n: n.get("created_at", ""))
+    # edges: each verify task's synthesis consolidates its act fan's councils (refines)
+    edges: list[dict[str, Any]] = []
+    for t in plan["tasks"]:
+        if t["bucket"] != "verify":
+            continue
+        syn_refs = [r for r in t["produces"] if r["kind"] == "synthesis"]
+        fan = _plan._fan_evidence(plan, t)
+        for syn in syn_refs:
+            for fr in fan:
+                if fr["kind"] in ("council", "synthesis"):
+                    edges.append({"from_study": f"{fr['kind']}:{fr['id']}",
+                                  "to_study": f"synthesis:{syn['id']}", "type": "refines", "rationale": ""})
+    ms = _plan_methodology_state(project, plan, store)
+    if ms:
+        step_tags = {s["key"]: list(s.get("tags") or []) for s in ms["steps"]}
+        for n in nodes:
+            extra = step_tags.get(n.get("phase", ""), [])
+            if extra:
+                n["theme_tags"] = list(dict.fromkeys((n.get("theme_tags") or []) + extra))
+    oqs = store.list_open_questions(project["id"])
+    return {
+        "project": {"id": project["id"], "slug": project["slug"], "title": project["title"],
+                    "goal": project.get("goal", ""), "status": project.get("status", "active"),
+                    "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", []),
+                    "methodology": plan.get("methodology", ""), "phase": ""},
+        "methodology_state": ms,
+        "prototypes": list_prototypes_artifacts(project["id"], store=store),
+        "nodes": nodes, "edges": edges, "open_questions": oqs,
+        "build_order": [n["study_id"] for n in nodes],
+        "counts": {"studies": len(nodes), "edges": len(edges),
+                   "open_questions": sum(1 for o in oqs if o.get("status") == "open"),
+                   "themes": len(project.get("themes", []))},
+        "plan": plan,
     }
 
 

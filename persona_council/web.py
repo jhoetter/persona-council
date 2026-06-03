@@ -1295,11 +1295,17 @@ def _graph_interactive(graph: dict) -> str:
         tags = n.get("theme_tags", [])
         x, y = pos[n["study_id"]]
         sent = max(n.get("sentiment", {}).items(), key=lambda kv: kv[1])[0] if n.get("sentiment") else "—"
+        if n.get("kind"):                         # heterogeneous evidence node (plan graph)
+            sub = f'{n.get("kind_label", "")} · ' + (", ".join(t for t in tags if t != n["kind"])[:48] or "—")
+            color = n.get("color") or "#9aa0a6"
+            href = n.get("href") or ""
+        else:                                     # legacy synthesis node
+            sub = f'{n.get("council_count", 0)} {t("councils")} · {sent} · ' + (", ".join(tags[:3]) or "—")
+            color = _theme_color(tags[0], vocab) if tags else "#9aa0a6"
+            href = f'/syntheses/{n["study_id"]}'
         jnodes.append({"id": n["study_id"], "x": x, "y": y, "tags": tags,
                        "label": n["title"][:38] + ("…" if len(n["title"]) > 38 else ""),
-                       "sub": f'{n.get("council_count", 0)} {t("councils")} · {sent} · ' + (", ".join(tags[:3]) or "—"),
-                       "color": _theme_color(tags[0], vocab) if tags else "#9aa0a6",
-                       "href": f'/syntheses/{n["study_id"]}'})
+                       "sub": sub, "color": color, "href": href})
     _colorlist = list(_EDGE_COLORS.values())
     jedges = []
     for e in graph["edges"]:

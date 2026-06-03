@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from persona_council import plan as P
-from persona_council import services
+from persona_council import services, web
 
 
 def _plan(pid="proj1"):
@@ -185,3 +185,47 @@ def test_brief_next_dispatches_to_plan(store):
     proj = services.start_project("F", "what?", None, persona_ids=["p1"], store=store)
     b = services.brief_next(proj["id"], store=store)
     assert b["task"] == "frame__root" and b["bucket"] == "analyze" and not b["complete"]
+
+
+# --------------------------------------------------------------------------- R5: evidence graph
+
+def _council(store, cid):
+    store.insert_council_session({"id": cid, "created_at": f"2026-06-0{cid[-1]}T00:00:00+00:00",
+        "prompt": f"Council {cid}", "persona_ids": ["p1"], "turns": [], "votes": [], "proposal": "",
+        "summary": "", "exec_summary": "e", "selection_reason": "x"})
+    return cid
+
+
+def test_heterogeneous_graph_councils_and_synthesis(store):
+    proj = services.start_project("Deep", "hmw?", "double_diamond_deep", persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__discover", ["q?"], memory_refs=["m1"], store=store)
+    # three real act councils as first-class evidence (NOT wrapped in syntheses)
+    for i in (1, 2, 3):
+        _council(store, f"cc{i}")
+        a = services.add_task(pid, "act", "explore", f"Council {i}", consumes=["frame__discover"], store=store)
+        services.link_evidence(pid, a["id"], {"kind": "council", "id": f"cc{i}"}, store=store)
+    # one optional verify synthesis consolidating them
+    syn = services.record_synthesis("Key problems", "hmw", ["cc1", "cc2", "cc3"],
+                                    {"gesamtbild": "clustered"}, store=store)
+    services.link_evidence(pid, "verify__define", {"kind": "synthesis", "id": syn["id"]}, store=store)
+
+    g = services.get_project_graph(pid, store=store)
+    kinds = sorted(n["kind"] for n in g["nodes"])
+    assert kinds == ["council", "council", "council", "synthesis"]   # 3 councils + 1 synthesis, not 3 wrappers
+    # the synthesis consolidates all three councils (refines edges)
+    refines = [(e["from_study"], e["to_study"]) for e in g["edges"] if e["type"] == "refines"]
+    assert (f"council:cc1", f"synthesis:{syn['id']}") in refines
+    assert len([e for e in refines if e[1] == f"synthesis:{syn['id']}"]) == 3
+    # colors come from data (present(kind)), not code
+    council_node = next(n for n in g["nodes"] if n["kind"] == "council")
+    assert council_node["color"] == "#6b7cff"          # from suggestions/evidence_kinds.json
+    assert "rgdata" in web._graph_interactive(g)        # renders
+
+
+def test_no_hardcoded_evidence_kind_literal_in_web():
+    from pathlib import Path
+    src = Path(web.__file__).read_text()
+    for lit in ('== "council"', '== "synthesis"', '== "frame"', '{"council"', '{"synthesis"',
+                '"kind": "council"', '"kind": "synthesis"'):
+        assert lit not in src, f"web.py must not hardcode evidence-kind literal {lit}"
