@@ -1,5 +1,11 @@
 # Design Thinking as a Facilitation Methodology — Specification
 
+> **⚠️ SUPERSEDED (2026-06-03) by `spec/methodology-engine-and-prototyping.md`.** The
+> facilitation-only framing below (one skill + phase tags, no engine, prose "prototype") proved
+> insufficient: a real run produced a *chain, not two diamonds*, and a prototype no agent ever
+> ran. Double Diamond is now **one data-driven methodology** in a real engine, and prototypes are
+> **real apps agents drive via Playwright**. Kept for history only.
+
 > **Status:** Methodology **DESIGN** (authored 2026-06-03). Implemented as a **facilitation
 > playbook over the existing research graph** — *no new engine, no new core tables*. The
 > council → synthesis → persona-experience loop is unchanged; this spec only defines **how a
