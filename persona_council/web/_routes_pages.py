@@ -526,6 +526,27 @@ def register_pages(app) -> None:
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
                        active="projects")
 
+    @app.get("/notes/{note_id}", response_class=HTMLResponse)
+    def note_view(note_id: str) -> str:
+        store = Store()
+        from .. import presentation as _pres
+        pr = _pres.present("note")           # label/color/glyph from data (no hardcoded vocab)
+        klabel = pr.get("label") or "note"
+        try:
+            data = services.get_note(note_id, store=store)
+        except KeyError:
+            return _layout(t("not_found"), _empty_state(klabel, t("runtime_maybe_cleared")), store, active="projects")
+        note, proj = data["note"], data["project"]
+        body = (f'<div class="page"><div class="card">'
+                f'<div style="margin-bottom:8px"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
+                f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(klabel)}</span></div>'
+                f'<h1 class="h1">{_esc(note.get("title",""))}</h1>'
+                f'<div class="es-prose" style="margin-top:10px">{_md(note.get("text",""))}</div>'
+                f'<div class="muted small" style="margin-top:14px">{_esc(note.get("created_at","")[:10])}</div></div></div>')
+        return _layout(note.get("title") or klabel, body, store,
+                       crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (klabel, None)],
+                       active="projects")
+
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:
         store = Store()

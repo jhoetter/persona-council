@@ -43,7 +43,7 @@ def _graph_layout(graph: dict) -> dict:
 
 
 # node box dimensions (must match _RGRAPH_JS NW/NH)
-_NW, _NH = 250, 58
+_NW, _NH = 288, 58
 # Saved drag-layouts in localStorage are keyed by this; bump on any layout-algorithm change.
 _LAYOUT_VERSION = 5
 
@@ -249,7 +249,7 @@ def _graph_interactive(graph: dict) -> str:
             color = _theme_color(tags[0], vocab) if tags else "#9aa0a6"
             href = f'/syntheses/{n["study_id"]}'
         jnodes.append({"id": n["study_id"], "x": x, "y": y, "tags": tags,
-                       "label": n["title"][:38] + ("…" if len(n["title"]) > 38 else ""),
+                       "label": n["title"][:46] + ("…" if len(n["title"]) > 46 else ""),
                        "sub": sub, "color": color, "href": href})
     _colorlist = list(_EDGE_COLORS.values())
     jedges = []

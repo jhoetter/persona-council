@@ -192,6 +192,16 @@ def list_notes(project_id: str, store=None) -> list[dict[str, Any]]:
     return list(_notes(_require_research_project(store, project_id)))  # noqa: F821
 
 
+def get_note(note_id: str, store=None) -> dict[str, Any]:
+    """Find a note (+ its project) by id across projects, for rendering/inspection."""
+    store = store or Store()  # noqa: F821
+    for project in store.list_research_projects():
+        for n in _notes(project):
+            if n.get("id") == note_id:
+                return {"note": n, "project": {"id": project["id"], "slug": project["slug"], "title": project["title"]}}
+    raise KeyError(f"Unknown note: {note_id}")
+
+
 def delete_note(project_id: str, note_id: str, store=None) -> dict[str, Any]:
     store = store or Store()  # noqa: F821
     project = _require_research_project(store, project_id)  # noqa: F821
@@ -218,8 +228,10 @@ def section_members(section_id: str, store=None) -> dict[str, Any]:
             out.append({"id": mid, "kind": "synthesis", "title": syn.get("title", mid),
                         "summary": syn.get("gesamtbild") or syn.get("positionierung", ""), "href": f"/syntheses/{mid.split(':',1)[1]}"})
         elif mid.startswith("note:"):
-            n = notes.get(mid.split(":", 1)[1], {})
-            out.append({"id": mid, "kind": "note", "title": n.get("title", mid), "summary": n.get("text", ""), "href": ""})
+            nnid = mid.split(":", 1)[1]
+            n = notes.get(nnid, {})
+            out.append({"id": mid, "kind": "note", "title": n.get("title", mid), "summary": n.get("text", ""),
+                        "href": f"/notes/{nnid}"})
         else:
             pr = store.get_prototype(mid) or {}
             out.append({"id": mid, "kind": "prototype", "title": pr.get("name", mid),
@@ -255,5 +267,6 @@ def note_graph_nodes(project: dict) -> list[dict[str, Any]]:
         out.append({"study_id": f"note:{n['id']}", "kind": "note", "title": title, "phase": "",
                     "bucket": "", "created_at": n.get("created_at", ""), "council_count": 0,
                     "voices": 0, "sentiment": {}, "recommendations": 0, "role": "", "mode": "",
-                    "theme_tags": ["note"], "color": pres["color"], "kind_label": pres["label"], "href": ""})
+                    "theme_tags": ["note"], "color": pres["color"], "kind_label": pres["label"],
+                    "href": f"/notes/{n['id']}"})
     return out

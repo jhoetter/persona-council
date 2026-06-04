@@ -72,7 +72,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgmini .mn{fill:var(--muted);opacity:.5}
 #rgmvp{fill:color-mix(in srgb,var(--accent) 15%,transparent);stroke:var(--accent);stroke-width:1.3}
 .rgdiamond{fill:var(--accent);opacity:.055;stroke:var(--accent);stroke-opacity:.16;stroke-width:1.2}
-.rgsection{fill-opacity:.05;stroke-opacity:.45;stroke-width:1.6;stroke-dasharray:7 5;rx:18}
+.rgsection{stroke-width:1.5}
+.rgsection-phase{fill-opacity:.05;stroke-opacity:.30;stroke-dasharray:none}
+.rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgsec-label{font-size:13px;font-weight:650;letter-spacing:.01em;opacity:.92}
 .rgsec-kind{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;fill:var(--muted);opacity:.8}
 .protoframe{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);height:620px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
@@ -351,7 +353,7 @@ _RGRAPH_JS = """<script>
   var D=JSON.parse(dataEl.textContent);
   var svg=document.getElementById('rg'), root=document.getElementById('rgroot'),
       gE=document.getElementById('rgedges'), gN=document.getElementById('rgnodes');
-  var NS='http://www.w3.org/2000/svg', NW=250, NH=58, MIN=0.25, MAX=2.6;
+  var NS='http://www.w3.org/2000/svg', NW=288, NH=58, MIN=0.25, MAX=2.6;
   var tx=0, ty=0, scale=1, KEY='rgstate:'+(D.key||'x');
   function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a) e.setAttribute(k,a[k]); return e; }
   var byId={}; D.nodes.forEach(function(n){ byId[n.id]=n; n.dx=n.x; n.dy=n.y; });
@@ -387,7 +389,8 @@ _RGRAPH_JS = """<script>
   var gS=document.getElementById('rgsections');
   if(gS && D.sections){ D.sections.forEach(function(s){
     var pts=s.poly.map(function(p){return p[0]+','+p[1];}).join(' ');
-    var poly=el('polygon',{points:pts,'class':'rgsection',style:'fill:'+s.color+';stroke:'+s.color});
+    var cls='rgsection '+(s.phase?'rgsection-phase':'rgsection-theme');
+    var poly=el('polygon',{points:pts,'class':cls,style:'fill:'+s.color+';stroke:'+s.color});
     poly.setAttribute('data-section', s.id); gS.appendChild(poly);
     var lab=el('text',{x:(s.lx+12),y:(s.ly+22),'class':'rgsec-label',style:'fill:'+s.color});
     lab.textContent=(s.glyph?s.glyph+'  ':'')+s.label; gS.appendChild(lab);
@@ -555,6 +558,12 @@ _SYN_STYLE = r"""<style>
 .qa-q{font-size:19px;line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 20px;padding-left:15px;border-left:3px solid var(--accent)}
 .qa-q::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
 .cgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ref-list{display:flex;flex-direction:column;gap:6px}
+.ref-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);text-decoration:none;color:var(--ink)}
+.ref-row:hover{border-color:var(--accent)}
+.ref-n{font-weight:700;color:var(--accent);font-size:12px;flex:none;width:26px}
+.ref-t{flex:1;font-size:13.5px;line-height:1.35;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ref-bar{flex:none;width:120px}.ref-go{flex:none;color:var(--muted)}
 .ccard{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);display:flex;flex-direction:column;gap:9px}
 .cc-top{display:flex;align-items:center;gap:10px}
 .cc-n{font-weight:740;color:var(--accent);font-size:12.5px;letter-spacing:.03em}

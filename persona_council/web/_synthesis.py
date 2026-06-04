@@ -341,32 +341,27 @@ def _synthesis_html(store: Store, syn: dict) -> str:
             f'<div class="es" id="exec"><p class="qa-q" data-label="{_esc(t("question"))}">{question}</p>'
             f'<div class="eyebrow">{t("answer_exec_summary")}</div>'
             f'<div class="es-prose">{_md(syn["gesamtbild"])}</div></div>'))
-    # 2) Councils im Überblick — card per council: tally, takeaway, expand, jump
-    cards = []
+    # 2) Cited evidence — councils are DECOUPLED: this synthesis is a standalone answer that may
+    # CITE councils (or none). Render them as a compact reference list, NOT as the synthesis body.
+    belege = None
+    ref_rows = []
     for i, cid in enumerate(syn.get("council_ids", []), 1):
         c = store.get_council_session(cid)
         if not c:
             continue
         tally = Counter(v.get("vote") for v in (c.get("votes") or []) if isinstance(v, dict))
         parts = [(tally.get(k, 0), _VOTE_COLOR[k], k) for k in _VOTE_ORDER]
-        chips = "".join(_label(f"{tally[k]} {k}", _VOTE_COLOR[k]) for k in _VOTE_ORDER if tally.get(k))
         prompt = c.get("prompt") or cid
-        summ = c.get("summary") or ""
-        take = _esc(summ[:165] + ("…" if len(summ) > 165 else ""))
-        es = c.get("exec_summary") or summ or c.get("proposal") or ""
-        cards.append(
-            f'<article class="ccard">'
-            f'<div class="cc-top"><span class="cc-n">C{i}</span><div class="cc-bar">{_stacked(parts, thin=True)}</div></div>'
-            f'<h3 class="cc-title"><a href="/councils/{_esc(cid)}">{_esc(prompt[:74])}</a></h3>'
-            f'<p class="cc-take">{take}</p>'
-            f'<div class="cc-chips">{chips}</div>'
-            f'<details class="cc-more"><summary></summary><div class="cc-es">{_md(es)}</div></details>'
-            f'<a class="cc-jump" href="/councils/{_esc(cid)}">{t("jump_into_council")}</a>'
-            f'</article>')
-    if cards:
-        sec.append(("councils", t("councils"),
-            f'<div class="block" id="councils"><h2 class="bh">{t("councils_overview")} <span class="cnt">{len(cards)}</span></h2>'
-            f'<div class="cgrid">{"".join(cards)}</div></div>'))
+        ref_rows.append(
+            f'<a class="ref-row" href="/councils/{_esc(cid)}"><span class="ref-n">C{i}</span>'
+            f'<span class="ref-t">{_esc(prompt[:96])}</span>'
+            f'<span class="ref-bar">{_stacked(parts, thin=True)}</span><span class="ref-go">→</span></a>')
+    if ref_rows:
+        belege = ("belege", t("councils"),
+                  f'<details class="block" id="belege"><summary class="bh" style="cursor:pointer">'
+                  f'{t("councils_overview")} <span class="cnt">{len(ref_rows)}</span></summary>'
+                  f'<p class="muted small" style="margin:6px 0 10px">{t("evidence_decoupled_note")}</p>'
+                  f'<div class="ref-list">{"".join(ref_rows)}</div></details>')
     rec_items = [_rec_item(x) for x in syn.get("handlungsempfehlungen", [])]
     chart = _effort_impact(rec_items)
     if chart:
@@ -399,6 +394,8 @@ def _synthesis_html(store: Store, syn: dict) -> str:
     if syn.get("offene_fragen"):
         of = "".join(f'<div class="psolve">{_esc(x)}</div>' for x in syn["offene_fragen"])
         sec.append(("offene", t("open_questions"), f'<div class="block" id="offene"><h2 class="bh">{t("open_questions_next_study")}</h2>{of}</div>'))
+    if belege:                       # cited evidence (councils) — demoted, near the end, collapsible
+        sec.append(belege)
     # arc (collapsed)
     sec.append(("bogen", t("course"),
                 f'<details class="block" id="bogen"><summary class="bh" style="cursor:pointer">{t("arc_course")}</summary><div class="es-prose sm">{_md(_srcchips(syn.get("arc_narrative","")))}</div></details>'))
