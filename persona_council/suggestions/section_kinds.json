@@ -1,0 +1,11 @@
+{
+  "kind": "section_kinds",
+  "note": "SUGGESTED section kinds + presentation — the DATA source of truth for how a Section's `kind` renders (label/short/color/glyph). Resolved via presentation.present(kind); NO section vocabulary is hardcoded in engine/UI. Invent a kind by adding an item — no code change. Spec: spec/sections-and-composable-graph.md.",
+  "items": [
+    {"tag": "theme", "presentation": {"label": "Thema", "short": "Thema", "color": "#5b6cff", "glyph": "◇", "fill": "soft"}},
+    {"tag": "phase", "presentation": {"label": "Phase", "short": "Phase", "color": "#0aa37f", "glyph": "▭", "fill": "outline"}},
+    {"tag": "research", "presentation": {"label": "Research", "short": "Research", "color": "#a142f4", "glyph": "⌕", "fill": "soft"}},
+    {"tag": "problem", "presentation": {"label": "Problemraum", "short": "Problem", "color": "#f29900", "glyph": "◆", "fill": "soft"}},
+    {"tag": "solution", "presentation": {"label": "Lösungsraum", "short": "Lösung", "color": "#00897b", "glyph": "▣", "fill": "soft"}}
+  ]
+}

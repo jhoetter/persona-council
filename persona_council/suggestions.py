@@ -37,6 +37,11 @@ def suggest_artifact_types() -> dict[str, Any]:
     return _load("artifact_types")
 
 
+def suggest_section_kinds() -> dict[str, Any]:
+    """Suggested Section kinds (theme/phase/research/problem/solution, …) + presentation."""
+    return _load("section_kinds")
+
+
 def suggest_methodologies(store: Store | None = None) -> dict[str, Any]:
     """Full constellation templates to start from — the registered methodologies themselves,
     plus any extra templates under suggestions/methodologies/*.json."""

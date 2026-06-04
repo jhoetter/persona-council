@@ -15,6 +15,7 @@ from ._tools_methodology import register_methodology
 from ._tools_plan import register_plan
 from ._tools_prototypes import register_prototypes
 from ._tools_council import register_council
+from ._tools_sections import register_sections
 
 
 def build_server():
@@ -30,6 +31,7 @@ def build_server():
     register_plan(mcp)
     register_prototypes(mcp)
     register_council(mcp)
+    register_sections(mcp)
 
     return mcp
 

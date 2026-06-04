@@ -323,6 +323,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("research-link")
     p.add_argument("project_id"); p.add_argument("from_study"); p.add_argument("to_study"); p.add_argument("type"); p.add_argument("--rationale", default="")
     p = sub.add_parser("research-frontier"); p.add_argument("project_id")
+    # Sections (methodology-independent overlay groupings of graph nodes)
+    p = sub.add_parser("section-list"); p.add_argument("project_id")
+    p = sub.add_parser("section-get"); p.add_argument("section_id")
+    p = sub.add_parser("section-create")
+    p.add_argument("project_id"); p.add_argument("title"); p.add_argument("--kind", default="theme")
+    p.add_argument("--member", action="append", dest="members"); p.add_argument("--parent"); p.add_argument("--note", default="")
+    p = sub.add_parser("section-update"); p.add_argument("section_id"); p.add_argument("file")  # JSON patch
+    p = sub.add_parser("section-add"); p.add_argument("section_id"); p.add_argument("--node", action="append", dest="nodes", required=True)
+    p = sub.add_parser("section-remove"); p.add_argument("section_id"); p.add_argument("--node", action="append", dest="nodes", required=True)
+    p = sub.add_parser("section-set"); p.add_argument("section_id"); p.add_argument("--node", action="append", dest="nodes", default=[])
+    p = sub.add_parser("section-reorder"); p.add_argument("project_id"); p.add_argument("--id", action="append", dest="ids", required=True)
+    p = sub.add_parser("section-delete"); p.add_argument("section_id")
+    p = sub.add_parser("section-kinds")
     p = sub.add_parser("meta-brief"); p.add_argument("project_id")
     p = sub.add_parser("meta-outline"); p.add_argument("project_id"); p.add_argument("file")
     p = sub.add_parser("meta-section-brief"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("--report")
@@ -602,6 +615,27 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.link_studies(args.project_id, args.from_study, args.to_study, args.type, args.rationale))
         elif args.command == "research-frontier":
             _print(services.get_research_frontier(args.project_id))
+        elif args.command == "section-list":
+            _print(services.list_sections(args.project_id))
+        elif args.command == "section-get":
+            _print(services.get_section(args.section_id))
+        elif args.command == "section-create":
+            _print(services.create_section(args.project_id, args.title, args.kind,
+                                           args.members or [], args.parent, note=args.note))
+        elif args.command == "section-update":
+            _print(services.update_section(args.section_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "section-add":
+            _print(services.add_to_section(args.section_id, args.nodes))
+        elif args.command == "section-remove":
+            _print(services.remove_from_section(args.section_id, args.nodes))
+        elif args.command == "section-set":
+            _print(services.set_section_members(args.section_id, args.nodes))
+        elif args.command == "section-reorder":
+            _print(services.reorder_sections(args.project_id, args.ids))
+        elif args.command == "section-delete":
+            _print(services.delete_section(args.section_id))
+        elif args.command == "section-kinds":
+            _print(services.suggest_section_kinds())
         elif args.command == "meta-brief":
             _print(services.brief_meta_report(args.project_id))
         elif args.command == "meta-outline":

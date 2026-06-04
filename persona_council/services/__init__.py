@@ -84,10 +84,11 @@ from . import _councils
 from . import _synthesis
 from . import _research
 from . import _engines
+from . import _sections
 
 _SUBMODULES = (
     _common, _personas, _simulation, _consolidation, _memory, _evaluation,
-    _snapshots, _councils, _synthesis, _research, _engines,
+    _snapshots, _councils, _synthesis, _research, _engines, _sections,
 )
 
 
@@ -133,7 +134,7 @@ for _eng_name in (
     "start_methodology_project", "set_project_methodology", "brief_phase", "record_node",
     "record_exploration", "record_decision", "record_convergence", "advance", "advance_phase",
     "get_methodology_state",
-    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_methodologies",
+    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_methodologies",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser", "_m_brief_next", "_m_record_judgment",
@@ -162,7 +163,7 @@ for _name in (
     "start_methodology_project", "set_project_methodology", "brief_phase", "record_node",
     "record_exploration", "record_decision", "record_convergence", "advance", "advance_phase",
     "get_methodology_state",
-    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_methodologies",
+    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_methodologies",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser",

@@ -210,6 +210,36 @@ class ResearchProject:
     phase_log: Json = field(default_factory=dict)
     # phase_log: {step_id: {status, node_ids:[], decision_node_id?, decided_at?}}
     #   (tag-driven constellation; spec/methodology-constellations.md)
+    # --- Sections: methodology-INDEPENDENT overlay groupings of graph nodes
+    #   (spec/sections-and-composable-graph.md). A list of Section dicts; pure views over
+    #   nodes (reference, not containment). Old projects default to [] on read. ---
+    sections: Json = field(default_factory=list)
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class Section:
+    """A methodology-independent, labeled overlay grouping a SET of graph nodes by id.
+
+    A Section is a VIEW, not a container: it references nodes by id and never owns/moves/mutates
+    them (reference, not containment). Membership is explicit + set-based (overlap allowed); the
+    on-canvas geometry is DERIVED from member node bounds at render time, never stored. `kind` is an
+    OPEN tag (e.g. "theme" | "phase" | invented) resolved for display via presentation/suggestions
+    — no hardcoded vocabulary. See spec/sections-and-composable-graph.md.
+    """
+    id: str
+    project_id: str
+    title: str
+    kind: str = "theme"
+    member_ids: list[str] = field(default_factory=list)
+    parent_id: str | None = None
+    order: int = 0
+    presentation: Json | None = None
+    note: str = ""
+    created_at: str = ""
+    updated_at: str = ""
 
     def to_dict(self) -> Json:
         return asdict(self)
