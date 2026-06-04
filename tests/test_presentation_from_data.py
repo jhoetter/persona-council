@@ -18,7 +18,7 @@ from persona_council import prototypes, services, web
 # --------------------------------------------------------------------------- P4: grep gate
 
 FORBIDDEN = {
-    "persona_council/web.py": [
+    "persona_council/web": [
         '"lofi"', '"midfi"', '"lo-fi"', '"mid-fi"', '"Prototyp"', '"▢"',
         '== "lofi"', '== "midfi"', '{"lofi"', '{"midfi"',
     ],
@@ -32,7 +32,11 @@ FORBIDDEN = {
 def test_no_hardcoded_methodology_values_in_ui():
     root = Path(__file__).resolve().parent.parent
     for rel, literals in FORBIDDEN.items():
-        src = (root / rel).read_text(encoding="utf-8")
+        target = root / rel
+        if target.is_dir():
+            src = "\n".join(f.read_text(encoding="utf-8") for f in sorted(target.glob("*.py")))
+        else:
+            src = target.read_text(encoding="utf-8")
         for lit in literals:
             assert lit not in src, f"{rel} must not contain hardcoded artifact literal {lit!r}"
 

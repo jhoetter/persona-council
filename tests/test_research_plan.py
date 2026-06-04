@@ -225,7 +225,7 @@ def test_heterogeneous_graph_councils_and_synthesis(store):
 
 def test_no_hardcoded_evidence_kind_literal_in_web():
     from pathlib import Path
-    src = Path(web.__file__).read_text()
+    src = "\n".join(f.read_text() for f in sorted(Path(web.__file__).parent.glob("*.py")))
     for lit in ('== "council"', '== "synthesis"', '== "frame"', '{"council"', '{"synthesis"',
                 '"kind": "council"', '"kind": "synthesis"'):
         assert lit not in src, f"web.py must not hardcode evidence-kind literal {lit}"
@@ -288,7 +288,7 @@ def test_grep_gate_no_hardcoded_bucket_kind_vocabulary():
     psrc = Path(P.__file__).read_text()
     for banned in ("BUCKETS =", "CAPABILITIES =", "KINDS ="):
         assert banned not in psrc, banned
-    wsrc = Path(web.__file__).read_text()
+    wsrc = "\n".join(f.read_text() for f in sorted(Path(web.__file__).parent.glob("*.py")))
     for lit in ('== "council"', '== "synthesis"', '{"council"', '{"synthesis"',
                 '"kind": "council"', '"kind": "synthesis"'):
         assert lit not in wsrc, f"web.py must not hardcode evidence-kind literal {lit}"

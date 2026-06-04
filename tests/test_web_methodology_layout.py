@@ -44,7 +44,7 @@ def test_other_shaped_methodology_renders(store, tmp_path):
 
 def test_layout_has_no_phase_key_literals():
     """grep: the layout must not hardcode any methodology's phase keys or fidelity vocab."""
-    src = Path(web.__file__).read_text()
+    src = Path(web._graph.__file__).read_text()
     lo = src[src.index("def _methodology_layout"):src.index("def _graph_interactive")]
     for lit in ('"ideate"', '"refine"', '"lofi_select"', '"deliver"', "build_col", "test_conv",
                 '"lofi"', '"midfi"'):
