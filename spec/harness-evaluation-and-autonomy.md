@@ -133,6 +133,43 @@ research", "Problem exploration", "Solution space" — wire the autonomous loop 
   add < N new themes (theme-novelty), or all open questions answered, or budget hit → converge.
   Feeds HX1/HX4.
 
+## 3b. The remaining ~30% — concrete path to the north star (updated 2026-06-04)
+
+Three things stand between "primitives + lean tools" and "drop an HMW, walk away, get a great
+50-iteration project":
+
+1. **Self-composition (the agent decides what to run).** ✅ addressed via the **`compose-research-plan`**
+   skill: from the prompt the agent classifies the inquiry, surveys `suggest_*` + the cohort, and
+   either adopts a preset methodology or **composes a bespoke freeform plan** (`add_task` any
+   analyze→act→verify shape with real gates), then hands off to `autonomous-research-run`. The engine
+   already supports arbitrary composition (open tags, free add_task) — this skill makes the *decision*
+   explicit and documented. Remaining polish: a tiny `plan_blueprint` convenience that returns a
+   starting constellation for a chosen inquiry-type (options only; the agent still decides).
+
+2. **HX3 — collapse the two engines.** The methodology-constellation engine (methodology.py +
+   runtime.py) and the research-plan engine (plan.py) model the same thing twice; the only autonomous
+   driver (`run_methodology`) is on the *unused* one, with a stub backend. **Plan: make plan.py
+   canonical** — methodologies are *only* plan seeds (`seed_plan_from_methodology`, already the path);
+   the autonomous loop is the `autonomous-research-run` skill over the plan engine (host/subagent —
+   the locked rule forbids an in-process backend); forward `run_methodology`/`record_node`/
+   `record_decision` to plan-engine equivalents and mark the constellation runtime legacy. This is the
+   biggest debt: it removes duplicate concepts (steps/diamonds vs frames/tasks/verifies), shrinks
+   context, and gives ONE loop. Medium-large refactor; gate with the full suite + characterization.
+
+3. **HX6 — resumable / replayable runs.** Evidence ids embed a timestamp, so a long run can't be
+   resumed cleanly and a project can't be replayed (the E2E needed id-remapping). **Plan:** optional
+   deterministic `key` on `record_council`/`record_synthesis`/`scaffold_artifact` (id =
+   stable_id(kind, key) when given) + idempotent upsert on that id, so re-running a step is a no-op
+   and an interrupted run resumes from `assess_project`. Bounded but needs careful upsert semantics.
+
+Plus quality-of-life from this session: ✅ synthesis is visibly decoupled (councils demoted to a
+collapsed "Belege"); ✅ notes render (`/notes/{id}`, clickable); ✅ graph readability (phase bands vs
+theme outlines, wider nodes, longer labels); ✅ project **Pulse** in the web.
+
+**Sequence to "done":** ship `compose-research-plan` + `autonomous-research-run` as the front door
+(done) → exercise a real autonomous long run end-to-end and fix what chafes → HX3 (one engine) → HX6
+(resumable) → then a 50+-iteration run from one prompt is routine and well-documented.
+
 ## 4. Are we getting there?
 **Yes on substance, not yet on autonomy.** The run demonstrates every primitive at quality and the
 new sections make it well-organized. To reach the north star, build HX1 + HX2 first (assessment +
