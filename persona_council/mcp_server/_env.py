@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+import time
+from typing import Any
+
+from ..config import MEMORY_SCHEMA_VERSION
+
+SERVER_VERSION = "0.2.0"
+
+# Implicit decision DAG: each tool hints the natural next
+# step so the host agent can route the simulate -> consolidate -> digest loop.
+_NEXT: dict[str, dict[str, Any]] = {
+    "brief_persona": {"name": "record_persona", "reason": "persist the profile JSON you authored"},
+    "record_persona": {"name": "brief_day", "reason": "plan the persona's first day before simulating"},
+    "brief_day": {"name": "record_day", "reason": "author day_plan + activities, then persist the whole day"},
+    "record_day": {"name": "brief_consolidation", "reason": "consolidate the day into memory"},
+    "put_day_plan": {"name": "simulate_day", "reason": "simulate the planned day"},
+    "simulate_day": {"name": "brief_consolidation", "reason": "consolidate the day into memory"},
+    "brief_consolidation": {"name": "record_memory_deltas", "reason": "persist the entities/facts/threads you extracted"},
+    "record_memory_deltas": {"name": "evaluate_simulation", "reason": "check quality, or brief_digest to roll up"},
+    "brief_period": {"name": "put_period_plan", "reason": "persist the period plan + its sample_days"},
+    "put_period_plan": {"name": "simulate_day", "reason": "simulate the chosen sample_days, then consolidate each"},
+    "brief_digest": {"name": "put_digest", "reason": "persist the digest you authored"},
+    "brief_persona_revision": {"name": "record_persona_revision", "reason": "persist the (usually small) identity drift"},
+    "recall_memory": {"name": "get_project", "reason": "open the timeline of a project a hit pointed to"},
+    "list_active_projects": {"name": "get_project", "reason": "open one project's full timeline"},
+    "get_persona": {"name": "get_persona_memory", "reason": "see the rendered memory (active projects, threads)"},
+    "brief_eval_critic": {"name": "record_eval_critic", "reason": "persist the semantic verdict you authored"},
+    "record_eval_critic": {"name": "evaluate_simulation_full", "reason": "combined structural+semantic top verdict"},
+    "brief_cohort_critic": {"name": "record_cohort_critic", "reason": "persist the cohort outlier verdict you authored"},
+    "backfill_project_from_syntheses": {"name": "get_project_graph", "reason": "inspect the freshly-built project graph"},
+    "create_research_project": {"name": "add_study_to_project", "reason": "attach studies as graph nodes"},
+    "brief_meta_report": {"name": "record_meta_outline", "reason": "persist the outline you derived from the graph"},
+    "record_meta_outline": {"name": "brief_meta_section", "reason": "author each section grounded in its source studies"},
+    "brief_meta_section": {"name": "record_meta_section", "reason": "persist the authored section + citations"},
+    "record_meta_section": {"name": "export_meta_report", "reason": "render the assembled meta-report"},
+    "brief_month": {"name": "record_month_bundle", "reason": "persist the authored month bundle through the loop"},
+    "record_month_bundle": {"name": "brief_month", "reason": "continue with the next month"},
+    "brief_evidence_check": {"name": "record_evidence_check", "reason": "persist provenance verdict (confirmed/contradicted)"},
+    "brief_synthesis": {"name": "record_synthesis", "reason": "persist the cross-council synthesis you authored"},
+    "record_synthesis": {"name": "export_synthesis", "reason": "render the stakeholder report"},
+    "brief_council": {"name": "record_council", "reason": "author the turns + synthesis, then persist the council"},
+    "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
+    # --- methodology engine: tag-driven constellations (spec/methodology-constellations.md) ---
+    "list_methodologies": {"name": "get_methodology", "reason": "inspect a constellation's steps before starting"},
+    "get_methodology": {"name": "start_methodology_project", "reason": "bind a project to this methodology"},
+    "start_methodology_project": {"name": "brief_next", "reason": "gather what the ready frontier needs"},
+    "set_project_methodology": {"name": "brief_next", "reason": "gather what the ready frontier needs"},
+    "brief_next": {"name": "record_node", "reason": "fan step: record_node each; decide step: record_decision"},
+    "record_node": {"name": "record_judgment", "reason": "more nodes, or judge the fan's gate_tag"},
+    "record_judgment": {"name": "advance", "reason": "advance the fan once its gate judgment is recorded"},
+    "record_decision": {"name": "advance", "reason": "advance to recompute the frontier"},
+    "advance": {"name": "brief_next", "reason": "gather what the next ready step needs"},
+    "suggest_capabilities": {"name": "suggest_methodologies", "reason": "browse suggested step/whole-methodology templates"},
+    # --- prototypes + harness ---
+    "scaffold_prototype": {"name": "run_prototype", "reason": "start the generated app locally"},
+    "run_prototype": {"name": "proto_open", "reason": "open the running app in a headless browser session"},
+    "proto_open": {"name": "proto_act", "reason": "act on the snapshot (click/type), or proto_read"},
+    "brief_prototype_session": {"name": "proto_open", "reason": "drive the app as the persona, then record the session"},
+    "record_prototype_session": {"name": "brief_council", "reason": "fold the grounded reaction into a test council"},
+}
+
+
+def _env(tool: str, data: Any, started: float) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "data": data,
+        "next_recommended_tool": _NEXT.get(tool),
+        "_meta": {
+            "tool": tool,
+            "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+            "server_version": SERVER_VERSION,
+            "schema_version": MEMORY_SCHEMA_VERSION,
+        },
+    }
