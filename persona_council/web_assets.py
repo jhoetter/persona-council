@@ -72,6 +72,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgmini .mn{fill:var(--muted);opacity:.5}
 #rgmvp{fill:color-mix(in srgb,var(--accent) 15%,transparent);stroke:var(--accent);stroke-width:1.3}
 .rgdiamond{fill:var(--accent);opacity:.055;stroke:var(--accent);stroke-opacity:.16;stroke-width:1.2}
+.rgsection{fill-opacity:.05;stroke-opacity:.45;stroke-width:1.6;stroke-dasharray:7 5;rx:18}
+.rgsec-label{font-size:13px;font-weight:650;letter-spacing:.01em;opacity:.92}
+.rgsec-kind{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;fill:var(--muted);opacity:.8}
 .protoframe{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);height:620px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
 .protoframe iframe{width:100%;height:100%;border:0;display:block}
 .strow{padding:9px 0;border-bottom:1px solid var(--line)}.strow:last-child{border-bottom:0}
@@ -379,6 +382,17 @@ _RGRAPH_JS = """<script>
   var gD=document.getElementById('rgdia');
   if(gD && D.diamonds){ D.diamonds.forEach(function(poly){
     gD.appendChild(el('polygon',{points: poly.map(function(p){return p[0]+','+p[1];}).join(' '),'class':'rgdiamond'})); }); }
+
+  // ---- section overlays (methodology-independent groupings) ----
+  var gS=document.getElementById('rgsections');
+  if(gS && D.sections){ D.sections.forEach(function(s){
+    var pts=s.poly.map(function(p){return p[0]+','+p[1];}).join(' ');
+    var poly=el('polygon',{points:pts,'class':'rgsection',style:'fill:'+s.color+';stroke:'+s.color});
+    poly.setAttribute('data-section', s.id); gS.appendChild(poly);
+    var lab=el('text',{x:(s.lx+12),y:(s.ly+22),'class':'rgsec-label',style:'fill:'+s.color});
+    lab.textContent=(s.glyph?s.glyph+'  ':'')+s.label; gS.appendChild(lab);
+    if(s.kind){ var k=el('text',{x:(s.lx+12),y:(s.ly+38),'class':'rgsec-kind'}); k.textContent=s.kind; gS.appendChild(k); }
+  }); }
 
   // ---- edges (bezier, depth-aware) ----
   var edgeEls=[];

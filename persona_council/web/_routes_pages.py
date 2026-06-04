@@ -418,12 +418,26 @@ def register_pages(app) -> None:
                             f'<a class="btn" style="padding:2px 8px" href="/prototypes/{_esc(p["slug"])}">ansehen ↗</a>{sl_html}</div>')
             proto_html = (f'<div class="oqp-h" style="margin-top:14px">{t("prototypes_h")} ({len(protos)})</div>'
                           + "".join(rows))
+        # Sections outline (methodology-independent groupings) — a navigable list in the panel.
+        from .. import presentation as _pres
+        secs = sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0))
+        sec_html = ""
+        if secs:
+            rows = []
+            for s in secs:
+                pr = _pres.present(s.get("kind", "theme"), s.get("presentation"))
+                rows.append(
+                    f'<div class="strow"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
+                    f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(s.get("title",""))}</span> '
+                    f'<span class="muted small">{_esc(pr.get("short", s.get("kind","")))} · {len(s.get("member_ids",[]))}</span></div>')
+            sec_html = (f'<div class="oqp-h" style="margin-top:14px">Sections ({len(secs)})</div>' + "".join(rows))
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
         panel = (
             f'<div class="oqpanel" id="oqpanel" hidden>'
             f'<div class="oqp-h">{t("build_order_h")} (edges)</div>'
             f'<div class="pills" style="margin:6px 0 14px">{edge_leg}</div>'
-            f'<div class="oqp-h">{t("open_questions_h")}</div>'
+            f'{sec_html}'
+            f'<div class="oqp-h" style="margin-top:14px">{t("open_questions_h")}</div>'
             f'<ul style="margin:6px 0 0 18px">{oq_html}</ul>'
             f'{proto_html}</div>')
         oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"

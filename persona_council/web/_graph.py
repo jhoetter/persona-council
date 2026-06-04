@@ -282,8 +282,29 @@ def _graph_interactive(graph: dict) -> str:
         for a, b, dashed in ml.get("proto_edges", []):
             col = acolor.get(a) or acolor.get(b) or "#9aa0a6"
             jedges.append({"from": a, "to": b, "color": col, "type": "artifact", "mid": 0, "dashed": bool(dashed)})
+    # Sections — methodology-INDEPENDENT overlay groupings (spec/sections-and-composable-graph.md).
+    # A PURE overlay: each section's hull is DERIVED from its member node bounds; sections never
+    # affect the layout. Label/color/glyph come from DATA via present(kind) (+ object override).
+    from .. import presentation as _pres
+    bounds = {jn["id"]: (jn["x"], jn["y"], jn.get("w", _NW), jn.get("h", _NH)) for jn in jnodes}
+    jsections = []
+    for sec in sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0)):
+        pts: list = []
+        present_ids = [m for m in sec.get("member_ids", []) if m in bounds]
+        for mid in present_ids:
+            x, y, w, h = bounds[mid]
+            pts += [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
+        if len(pts) < 3:
+            continue
+        poly = _expand_hull(_convex_hull(pts), 30)
+        pres = _pres.present(sec.get("kind", "theme"), sec.get("presentation"))
+        jsections.append({"id": sec["id"], "poly": poly, "label": sec.get("title", ""),
+                          "color": pres["color"], "glyph": pres.get("glyph", ""),
+                          "kind": pres.get("short", sec.get("kind", "")),
+                          "lx": min(p[0] for p in poly), "ly": min(p[1] for p in poly),
+                          "members": present_ids})
     # Bump _LAYOUT_VERSION whenever the layout algorithm changes → stale saved drags are dropped.
-    data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds,
+    data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds, "sections": jsections,
                        "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION}, ensure_ascii=False)
     de = _lang() == "de"
     hint = ("Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen"
@@ -306,7 +327,7 @@ def _graph_interactive(graph: dict) -> str:
           '<circle cx="1.2" cy="1.2" r="1.1" fill="var(--line-2)"/></pattern>'
         + '</defs>'
         + '<rect id="rgbg" x="0" y="0" width="100%" height="100%" fill="url(#rggrid)"/>'
-        + '<g id="rgroot"><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
+        + '<g id="rgroot"><g id="rgsections"></g><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
         + f'<div class="rghint">{hint}</div>'
         + '<div class="rgctrls">'
           f'<div class="rgzl" id="rgzl">100%</div>'
