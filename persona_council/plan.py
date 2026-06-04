@@ -430,6 +430,73 @@ def brief_next(project_id: str, store: Store | None = None) -> dict[str, Any]:
     }
 
 
+def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Project-level meta-assessment (read-only, COMPUTED — no LLM verdict): coverage, open evidence
+    gates, open questions, a saturation hint, structural gaps, and a computed
+    continue/converge/complete/blocked recommendation. The host reads this every iteration to stay
+    purposeful in a long run and to decide when to stop (spec/harness-evaluation-and-autonomy.md HX1).
+    """
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    tasks = plan["tasks"]
+    by_bucket: dict[str, dict[str, int]] = {}
+    for t in tasks:
+        b = by_bucket.setdefault(t["bucket"], {"done": 0, "total": 0})
+        b["total"] += 1
+        b["done"] += 1 if t["status"] == "done" else 0
+    # open evidence gates: every not-done verify and what it still needs
+    open_gates = []
+    for t in tasks:
+        if t["bucket"] == "verify" and t["status"] != "done":
+            unmet = verify_unmet(plan, t, store)
+            open_gates.append({"task": t["id"], "title": t["title"], "unmet": unmet})
+    cov = coverage_hint(project_id, store=store)
+    try:
+        oqs = [o["text"] for o in store.list_open_questions(project_id) if o.get("status") == "open"]
+    except Exception:
+        oqs = []
+    # saturation hint: act evidence accumulated vs convergences produced (a coarse, honest proxy —
+    # NOT a score; "are we still diverging faster than we converge?").
+    n_act = sum(1 for t in tasks if t["bucket"] == "act" and t["status"] == "done")
+    n_syn = cov["evidence_by_kind"].get("synthesis", 0)
+    n_council = cov["evidence_by_kind"].get("council", 0)
+    # structural gaps
+    gaps = []
+    for g in open_gates:
+        for u in g["unmet"]:
+            gaps.append(f"{g['title']}: {u}")
+    ready = ready_tasks(plan)
+    complete = is_complete(plan)
+    if complete:
+        rec = "complete"
+    elif not ready:
+        rec = "blocked"
+    else:
+        ready_verify = [t for t in ready if t["bucket"] == "verify" and not verify_unmet(plan, t, store)]
+        ready_analyze = [t for t in ready if t["bucket"] == "analyze"]
+        if ready_verify:
+            rec = "converge"          # a gate is satisfied → consolidate
+        elif ready_analyze:
+            rec = "frame"             # understand before acting
+        else:
+            rec = "act"               # do more work to satisfy a gate
+    return {
+        "project_id": project_id, "goal": plan.get("goal", ""), "complete": complete,
+        "recommendation": rec,
+        "coverage": cov,
+        "tasks_by_bucket": by_bucket,
+        "open_gates": open_gates,
+        "open_questions": oqs,
+        "saturation": {"act_done": n_act, "councils": n_council, "syntheses": n_syn,
+                       "hint": ("converging" if n_syn and n_act <= n_syn * 2 else "still diverging")},
+        "gaps": gaps,
+        "ready": [t["id"] for t in ready],
+        "next": brief_next(project_id, store=store).get("instructions", ""),
+    }
+
+
 # ------------------------------------------------------------------ plan.md render
 
 _STATUS_MARK = {"done": "x", "active": "~", "todo": " ", "blocked": "!"}

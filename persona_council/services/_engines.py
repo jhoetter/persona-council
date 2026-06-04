@@ -179,6 +179,10 @@ def plan_coverage(project_id, store: Store | None = None) -> dict[str, Any]:
     return _plan.coverage_hint(project_id, store=store)
 
 
+def assess_project(project_id, store: Store | None = None) -> dict[str, Any]:
+    return _plan.assess_project(project_id, store=store)
+
+
 # brief_next + record_judgment DISPATCH: plan-driven when the project has a plan, else the legacy
 # methodology engine. (These names were imported from .methodology above; redefined here to dispatch.)
 

@@ -70,3 +70,12 @@ def register_plan(mcp):
         host judgment (never a number); a non-binding coverage snapshot is attached."""
         t = time.perf_counter()
         return _env("assess_progress", services.assess_progress(project_id, task_id, rationale, evidence_refs, delta), t)
+
+    @mcp.tool()
+    def assess_project(project_id: str) -> dict[str, Any]:
+        """Project-level meta-assessment (read-only, computed — no LLM verdict): coverage, open
+        evidence gates, open questions, a saturation hint, structural gaps, and a computed
+        continue/converge/complete/blocked recommendation. Call this every iteration of a long run
+        to stay purposeful and to decide when to stop."""
+        t = time.perf_counter()
+        return _env("assess_project", services.assess_project(project_id), t)
