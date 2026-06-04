@@ -77,3 +77,23 @@ def register_sections(mcp):
         """Suggested section kinds + presentation (data-driven; adopt/tweak/invent)."""
         t = time.perf_counter()
         return _env("suggest_section_kinds", services.suggest_section_kinds(), t)
+
+    # ----- Note nodes: lightweight first-class observation primitive (no methodology required) -----
+    @mcp.tool()
+    def create_note(project_id: str, text: str, title: str = "") -> dict[str, Any]:
+        """Create a lightweight observation NOTE node in the project graph — the atomic unit for
+        affinity work. Notes are first-class nodes (groupable into sections, linkable by edges)."""
+        t = time.perf_counter()
+        return _env("create_note", services.create_note(project_id, text, title), t)
+
+    @mcp.tool()
+    def list_notes(project_id: str) -> dict[str, Any]:
+        """List a project's note nodes."""
+        t = time.perf_counter()
+        return _env("list_notes", services.list_notes(project_id), t)
+
+    @mcp.tool()
+    def delete_note(project_id: str, note_id: str) -> dict[str, Any]:
+        """Delete a note node from the project."""
+        t = time.perf_counter()
+        return _env("delete_note", services.delete_note(project_id, note_id), t)

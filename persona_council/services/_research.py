@@ -263,6 +263,7 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
         if node:
             node["theme_tags"] = tags.get(sid, [])
             nodes.append(node)
+    nodes.extend(note_graph_nodes(project))  # note nodes are first-class (composable primitive)
     nodes.sort(key=lambda n: n["created_at"])  # build order
     edges = [{"from_study": e["from_study"], "to_study": e["to_study"], "type": e["type"],
               "rationale": e.get("rationale", "")} for e in store.list_study_edges(project["id"])]
@@ -406,6 +407,7 @@ def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
                 continue
             seen.add(nid)
             nodes.append(_evidence_node(kind, eid, _title(kind, eid, t), t, store))
+    nodes.extend(note_graph_nodes(project))  # note nodes are first-class (composable primitive)
     nodes.sort(key=lambda n: n.get("created_at", ""))
     # edges: each verify task's synthesis consolidates its act fan's councils (refines)
     edges: list[dict[str, Any]] = []

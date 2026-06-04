@@ -214,6 +214,9 @@ class ResearchProject:
     #   (spec/sections-and-composable-graph.md). A list of Section dicts; pure views over
     #   nodes (reference, not containment). Old projects default to [] on read. ---
     sections: Json = field(default_factory=list)
+    # --- Notes: lightweight first-class observation nodes (the atomic unit for affinity),
+    #   creatable without any methodology. List of {id,title,text,created_at}. ---
+    notes: Json = field(default_factory=list)
 
     def to_dict(self) -> Json:
         return asdict(self)

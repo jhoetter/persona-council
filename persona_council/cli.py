@@ -336,6 +336,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("section-reorder"); p.add_argument("project_id"); p.add_argument("--id", action="append", dest="ids", required=True)
     p = sub.add_parser("section-delete"); p.add_argument("section_id")
     p = sub.add_parser("section-kinds")
+    p = sub.add_parser("note-create"); p.add_argument("project_id"); p.add_argument("text"); p.add_argument("--title", default="")
+    p = sub.add_parser("note-list"); p.add_argument("project_id")
+    p = sub.add_parser("note-delete"); p.add_argument("project_id"); p.add_argument("note_id")
     p = sub.add_parser("meta-brief"); p.add_argument("project_id")
     p = sub.add_parser("meta-outline"); p.add_argument("project_id"); p.add_argument("file")
     p = sub.add_parser("meta-section-brief"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("--report")
@@ -636,6 +639,12 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.delete_section(args.section_id))
         elif args.command == "section-kinds":
             _print(services.suggest_section_kinds())
+        elif args.command == "note-create":
+            _print(services.create_note(args.project_id, args.text, args.title))
+        elif args.command == "note-list":
+            _print(services.list_notes(args.project_id))
+        elif args.command == "note-delete":
+            _print(services.delete_note(args.project_id, args.note_id))
         elif args.command == "meta-brief":
             _print(services.brief_meta_report(args.project_id))
         elif args.command == "meta-outline":

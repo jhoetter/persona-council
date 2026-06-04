@@ -5,6 +5,7 @@
     {"tag": "frame", "presentation": {"label": "Frame", "short": "Frame", "color": "#8a8f98", "glyph": "◇"}},
     {"tag": "council", "presentation": {"label": "Council", "short": "Council", "color": "#6b7cff", "glyph": "▢"}},
     {"tag": "synthesis", "presentation": {"label": "Synthese", "short": "Synthese", "color": "#a142f4", "glyph": "◆"}},
-    {"tag": "artifact", "presentation": {"label": "Artefakt", "short": "Artefakt", "color": "#00897b", "glyph": "▢"}}
+    {"tag": "artifact", "presentation": {"label": "Artefakt", "short": "Artefakt", "color": "#00897b", "glyph": "▢"}},
+    {"tag": "note", "presentation": {"label": "Notiz", "short": "Notiz", "color": "#f29900", "glyph": "✎"}}
   ]
 }

@@ -156,3 +156,61 @@ def delete_section(section_id: str, store=None) -> dict[str, Any]:
     project["updated_at"] = utc_now_iso()  # noqa: F821
     store.upsert_research_project(project)
     return {"deleted": section_id, "nodes_kept": len(sec.get("member_ids", []))}
+
+
+# --------------------------------------------------------------- Note nodes (composable primitive)
+# A `note` is a lightweight, first-class observation node creatable WITHOUT any methodology — the
+# atomic unit for affinity work. It appears in the graph (study_id "note:<id>") and can be grouped
+# into sections and linked by edges, just like any other node.
+
+def _notes(project: dict) -> list[dict]:
+    ns = project.get("notes")
+    if not isinstance(ns, list):
+        ns = []
+        project["notes"] = ns
+    return ns
+
+
+def create_note(project_id: str, text: str, title: str = "", store=None) -> dict[str, Any]:
+    """Create a lightweight observation note node in the project graph (no methodology required)."""
+    store = store or Store()  # noqa: F821
+    project = _require_research_project(store, project_id)  # noqa: F821
+    if not str(text).strip():
+        raise ValueError("a note needs non-empty text")
+    now = utc_now_iso()  # noqa: F821
+    note = {"id": stable_id("note", project["id"], text, now),  # noqa: F821
+            "title": (str(title).strip() or str(text).strip()[:60])[:120],
+            "text": str(text).strip()[:2000], "created_at": now}
+    _notes(project).append(note)
+    project["updated_at"] = now
+    store.upsert_research_project(project)
+    return note
+
+
+def list_notes(project_id: str, store=None) -> list[dict[str, Any]]:
+    store = store or Store()  # noqa: F821
+    return list(_notes(_require_research_project(store, project_id)))  # noqa: F821
+
+
+def delete_note(project_id: str, note_id: str, store=None) -> dict[str, Any]:
+    store = store or Store()  # noqa: F821
+    project = _require_research_project(store, project_id)  # noqa: F821
+    project["notes"] = [n for n in _notes(project) if n["id"] != note_id]
+    project["updated_at"] = utc_now_iso()  # noqa: F821
+    store.upsert_research_project(project)
+    return {"deleted": note_id}
+
+
+def note_graph_nodes(project: dict) -> list[dict[str, Any]]:
+    """Graph node dicts for a project's notes (study_id 'note:<id>', kind 'note'). Used by the
+    graph builders so notes are first-class nodes (section members / edge endpoints)."""
+    from .. import presentation as _pres
+    pres = _pres.present("note")
+    out = []
+    for n in _notes(project):
+        title = n.get("title") or n.get("text", "")[:60]
+        out.append({"study_id": f"note:{n['id']}", "kind": "note", "title": title, "phase": "",
+                    "bucket": "", "created_at": n.get("created_at", ""), "council_count": 0,
+                    "voices": 0, "sentiment": {}, "recommendations": 0, "role": "", "mode": "",
+                    "theme_tags": ["note"], "color": pres["color"], "kind_label": pres["label"], "href": ""})
+    return out
