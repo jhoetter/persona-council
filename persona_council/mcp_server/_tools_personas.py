@@ -33,10 +33,11 @@ def register_personas(mcp):
         return _env("get_persona", services.get_persona(persona_id), t)
 
     @mcp.tool()
-    def list_personas(filters: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Compact list of all personas (overview before drilling in)."""
+    def list_personas(filters: dict[str, Any] | None = None, compact: bool = True) -> dict[str, Any]:
+        """Lean one-line overview of all personas (slug/name/age/role/segment) — drill in with
+        get_persona for the full profile. Pass compact=False for full profiles (large)."""
         t = time.perf_counter()
-        return _env("list_personas", services.list_personas(filters), t)
+        return _env("list_personas", services.list_personas(filters, compact=compact), t)
 
     @mcp.tool()
     def get_persona_soul(persona_id: str) -> dict[str, Any]:

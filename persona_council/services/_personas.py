@@ -356,18 +356,28 @@ def get_persona(persona_id: str, store: Store | None = None) -> dict[str, Any]:
 
 
 
-def list_personas(filters: dict[str, Any] | None = None, store: Store | None = None) -> list[dict[str, Any]]:
+def _persona_summary(p: dict[str, Any]) -> dict[str, Any]:
+    """A LEAN one-line persona overview for list views / the autonomous loop, so listing the cohort
+    never bloats context (drill in with get_persona for the full profile)."""
+    seg = p.get("segment") or {}
+    bits = [seg.get("lebensphase"), seg.get("einstellung"), seg.get("kanal"), seg.get("region"),
+            seg.get("finanzlage")]
+    return {"id": p["id"], "slug": p["slug"], "display_name": p.get("display_name", ""),
+            "age_range": (p.get("identity_traits") or {}).get("age_range", ""),
+            "role": (p.get("role") or {}).get("title", ""),
+            "segment": " · ".join(str(b) for b in bits if b)[:140]}
+
+
+def list_personas(filters: dict[str, Any] | None = None, store: Store | None = None,
+                  compact: bool = False) -> list[dict[str, Any]]:
+    """List personas. `compact=True` returns lean one-line summaries (slug/name/age/role/segment) —
+    the right shape for agents/list views to avoid context bloat; full profiles via get_persona."""
     store = store or Store()
     personas = [ensure_persona_runtime_fields(p, store) for p in store.list_personas()]
-    if not filters:
-        return personas
-    out = []
-    needle = " ".join(str(v).lower() for v in filters.values() if v)
-    for p in personas:
-        blob = json.dumps(p, ensure_ascii=False).lower()
-        if needle in blob:
-            out.append(p)
-    return out
+    if filters:
+        needle = " ".join(str(v).lower() for v in filters.values() if v)
+        personas = [p for p in personas if needle in json.dumps(p, ensure_ascii=False).lower()]
+    return [_persona_summary(p) for p in personas] if compact else personas
 
 
 
