@@ -303,6 +303,40 @@ def _graph_interactive(graph: dict) -> str:
                           "kind": pres.get("short", sec.get("kind", "")),
                           "lx": min(p[0] for p in poly), "ly": min(p[1] for p in poly),
                           "members": present_ids})
+    # SEC4 — methodology bridge: derive a labeled kind="phase" section per methodology phase from
+    # the SAME plan layout, so phases render through the section mechanism (one mechanism) and
+    # coexist with free theme sections (a node can be in a derived phase AND user themes). When
+    # present, these replace the unlabeled diamond silhouettes.
+    phase_sections = []
+    if ml and graph.get("methodology_state"):
+        steps = graph["methodology_state"].get("steps") or []
+        by_phase: dict[str, list] = {}
+        for n in nodes:
+            by_phase.setdefault(n.get("phase", ""), []).append(n["study_id"])
+        verify_consumes = [(s, s.get("consumes", [])) for s in steps if not s.get("is_fan")]
+        pres_ph = _pres.present("phase")
+        for i, fs in enumerate(s for s in steps if s.get("is_fan")):
+            member_ids = list(by_phase.get(fs["key"], []))
+            for v, cons in verify_consumes:           # include the converging waist synthesis
+                if fs["key"] in cons:
+                    member_ids += by_phase.get(v["key"], [])
+            pts: list = []
+            present_ids = [m for m in member_ids if m in bounds]
+            for mid in present_ids:
+                x, y, w, h = bounds[mid]
+                pts += [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
+            if len(pts) < 3:
+                continue
+            poly = _expand_hull(_convex_hull(pts), 46)
+            label = fs.get("name", fs["key"]).split("·")[-1].strip() or fs["key"]
+            phase_sections.append({"id": f"phase__{fs['key']}", "poly": poly, "label": label,
+                                   "color": pres_ph["color"], "glyph": pres_ph.get("glyph", ""),
+                                   "kind": pres_ph.get("short", "Phase"), "phase": True,
+                                   "lx": min(p[0] for p in poly), "ly": min(p[1] for p in poly),
+                                   "members": present_ids})
+        if phase_sections:
+            diamonds = []                              # one mechanism: labeled phases replace diamonds
+    jsections = phase_sections + jsections             # phases behind, user themes on top
     # Bump _LAYOUT_VERSION whenever the layout algorithm changes → stale saved drags are dropped.
     data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds, "sections": jsections,
                        "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION}, ensure_ascii=False)
