@@ -1,0 +1,155 @@
+{
+  "title": "Mein Überblick",
+  "summary": "Zeigt dir deine eigene Lage in deinen Worten: was dein Auto dich gerade kostet, was du beim Wechsel sparst, und ganz grob die Luecke, die spaeter mal entstehen koennte. Alles ehrlich gerechnet, keine Angstzahlen, kein Verkauf. Eine Karte bietet freiwillig einen kleinen naechsten Schritt - oder eben nichts.",
+  "start": "ueberblick",
+  "fidelity": "lofi",
+  "screens": [
+    {
+      "id": "ueberblick",
+      "title": "Mein Überblick",
+      "metrics": [
+        {
+          "id": "m_kfz_jetzt",
+          "label": "Auto kostet dich jetzt",
+          "value": "66 EUR / Monat",
+          "delta": "-8 EUR seit Wechsel",
+          "trend": "down"
+        },
+        {
+          "id": "m_ersparnis",
+          "label": "Frei geworden durch Wechsel",
+          "value": "8 EUR / Monat",
+          "delta": "= 96 EUR im Jahr",
+          "trend": "up"
+        },
+        {
+          "id": "m_luecke",
+          "label": "Grobe Luecke spaeter (Schaetzung)",
+          "value": "ungefaehr",
+          "delta": "nur wenn jemand von dir abhaengt",
+          "trend": "down"
+        }
+      ],
+      "cards": [
+        {
+          "id": "c_auto",
+          "title": "Was dein Auto gerade macht",
+          "body": "Du hast deinen Tarif von 74 auf 66 Euro gedrueckt - sauber selbst geregelt. Diese 8 Euro im Monat sind jetzt frei. Das ist erstmal einfach dein Geld, mit dem du machen kannst, was du willst.",
+          "action": {
+            "id": "a_auto",
+            "label": "Wie sich die 8 Euro entwickeln koennten",
+            "goto": "detail_ersparnis"
+          }
+        },
+        {
+          "id": "c_luecke",
+          "title": "Die Luecke ehrlich eingeordnet",
+          "body": "Die 'Luecke spaeter' klingt dramatischer als sie ist. Solange niemand von deinem Einkommen abhaengt, ist sie fuer dich gerade kein Thema. Wir blasen das hier bewusst nicht auf.",
+          "action": {
+            "id": "a_luecke",
+            "label": "Was die Luecke wirklich bedeutet",
+            "goto": "detail_luecke"
+          }
+        },
+        {
+          "id": "c_schritt",
+          "title": "Ein kleiner naechster Schritt - voellig freiwillig",
+          "body": "Wenn du moechtest, kannst du dir ansehen, was ein kleiner, jederzeit kuendbarer Schritt waere. Kein Vertrag hier, kein Haekchen ist gesetzt, niemand ruft dich an. Du kannst diese Karte auch einfach ignorieren.",
+          "action": {
+            "id": "a_schritt",
+            "label": "Optionalen Schritt ansehen",
+            "goto": "detail_schritt"
+          }
+        }
+      ],
+      "elements": [
+        {
+          "id": "ueberblick_intro",
+          "kind": "text",
+          "value": "Das hier ist nur dein Ueberblick - in deinen Worten, ohne Fachchinesisch. Nichts davon ist ein Angebot, und nichts ist vorausgewaehlt. Du schaust nur."
+        },
+        {
+          "id": "ueberblick_keinedaten",
+          "kind": "text",
+          "value": "Die Zahlen sind grobe, ehrliche Schaetzungen, nicht schoengerechnet. Wir speichern nichts und verkaufen dir nichts."
+        }
+      ]
+    },
+    {
+      "id": "detail_ersparnis",
+      "title": "Deine 8 Euro - ehrlich gerechnet",
+      "elements": [
+        {
+          "id": "ersparnis_text",
+          "kind": "text",
+          "value": "Wenn du die frei gewordenen 8 Euro im Monat einfach liegen laesst, sind das 96 Euro im Jahr. Wuerdest du sie ueber Jahre breit gestreut anlegen, koennte mehr daraus werden - kann aber auch schwanken. Wir versprechen hier keine Wunderzahlen."
+        },
+        {
+          "id": "ersparnis_ehrlich",
+          "kind": "text",
+          "value": "Genauso ehrlich: Du kannst die 8 Euro auch einfach behalten und ausgeben. Das ist kein schlechterer Weg. Es ist dein Geld."
+        },
+        {
+          "id": "ersparnis_zurueck",
+          "kind": "button",
+          "label": "Zurueck zum Ueberblick",
+          "goto": "ueberblick"
+        }
+      ]
+    },
+    {
+      "id": "detail_luecke",
+      "title": "Was die Luecke wirklich bedeutet",
+      "elements": [
+        {
+          "id": "luecke_text",
+          "kind": "text",
+          "value": "Eine 'Vorsorgeluecke' ist nur dann relevant, wenn jemand finanziell auf dich angewiesen ist - Partnerin, Kind. Lebst du allein und versorgst nur dich, ist sie fuer dich gerade kein Problem, das du heute loesen muesstest."
+        },
+        {
+          "id": "luecke_keinangst",
+          "kind": "text",
+          "value": "Wir nutzen diese Zahl bewusst nicht, um dir Angst zu machen. Sie ist ein grober Hinweis, kein Druckmittel. Wenn sie dich heute nicht betrifft, ist 'nichts tun' die richtige Antwort."
+        },
+        {
+          "id": "luecke_zurueck",
+          "kind": "button",
+          "label": "Zurueck zum Ueberblick",
+          "goto": "ueberblick"
+        }
+      ]
+    },
+    {
+      "id": "detail_schritt",
+      "title": "Der optionale kleine Schritt",
+      "elements": [
+        {
+          "id": "schritt_text",
+          "kind": "text",
+          "value": "Falls du moechtest: Ein kleiner Schritt waere ein reiner Risikoschutz ab wenigen Euro im Monat - jederzeit kuendbar, mit Beitragspause in schlechten Monaten, alle Kosten vorab sichtbar. Sparen und Versichern bleiben getrennt."
+        },
+        {
+          "id": "schritt_freiwillig",
+          "kind": "text",
+          "value": "Wichtig: Hier passiert jetzt nichts automatisch. Kein Beitrag, kein Vertrag, kein Rueckruf. Wenn du soweit bist, kannst du das in deinem Tempo selbst anstossen - oder es bleiben lassen."
+        },
+        {
+          "id": "schritt_select",
+          "kind": "select",
+          "label": "Was passt fuer dich gerade?",
+          "options": [
+            "Nur angeschaut, danke - mehr nicht",
+            "Spaeter nochmal anschauen",
+            "Ich moechte mir die Details in Ruhe ansehen"
+          ]
+        },
+        {
+          "id": "schritt_zurueck",
+          "kind": "button",
+          "label": "Zurueck zum Ueberblick",
+          "goto": "ueberblick"
+        }
+      ]
+    }
+  ]
+}
