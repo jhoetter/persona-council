@@ -2,7 +2,7 @@
   "mcpServers": {
     "persona-council": {
       "command": "uv",
-      "args": ["run", "--directory", "/home/jhoetter/repos/persona-council", "persona-council-mcp"]
+      "args": ["run", "persona-council-mcp"]
     }
   }
 }
