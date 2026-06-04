@@ -95,6 +95,15 @@ research", "Problem exploration", "Solution space" — wire the autonomous loop 
 
 ## 3. Improvement tracker (prioritized; each: implement → suite+characterization green → commit)
 
+> **Implemented (2026-06-04):** ✅ **HX1** `assess_project` (computed meta-assessment: coverage /
+> open gates / saturation hint / gaps / continue-converge-complete-blocked rec). ✅ **HX2**
+> `next_action` (the ready step fully loaded — grounding / framed-questions+diverse-participants /
+> fan+gate — one compact call per iteration). ✅ **HX4** the `autonomous-research-run` skill (the lean
+> host/subagent loop) — folding in **HX5** (sections + a notes run-journal keep it self-organizing)
+> and **HX7** (saturation/budget stop criteria, with the `saturation` hint from HX1). Remaining:
+> ◑ **HX3** canonicalize the plan engine / retire the constellation runtime duplication; ◑ **HX6**
+> resumable/re-runnable evidence ids (the E2E id-remap pain). These two are larger refactors.
+
 - **HX1 — Project meta-assessment (`assess_project`).** A read-only, evidence-cited project digest:
   coverage by phase/kind, open questions, contradictions, **saturation signal** (are recent councils
   still adding new themes?), gaps ("no provider voice yet", "no lo-fi test"), and a
