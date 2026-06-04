@@ -2713,31 +2713,62 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
 
 
 def _plan_methodology_state(project: dict, plan: dict, store: Store) -> dict[str, Any] | None:
-    """A layout-ready step state derived from the plan's methodology constellation (no phase_log):
-    steps with key/name/mode/is_fan/tags/consumes so the graph lays out diamonds over act->verify."""
-    key = plan.get("methodology")
-    if not key:
+    """A layout-ready step state derived from the PLAN's real analyze→act→verify DAG: each frame
+    (analyze) task is a fan/diverge step and each verify task is a waist/converge step, wired along
+    the task `consumes` graph. Build steps (frames whose act tasks produced artifacts) declare the
+    artifact_type + the fidelity discriminators built under them, so prototypes place in — and route
+    out of — the right diamond. Reflects the actual constellation, not a static spec."""
+    tasks = plan.get("tasks", [])
+    if not tasks:
         return None
-    try:
-        spec = get_methodology(key, store=store)
-    except Exception:
-        return None
-    from . import methodology as M
-    steps = [{"key": s["id"], "name": s["name"], "mode": M._mode(s), "is_fan": not M._is_decide(s),
-              "role": s["produces"]["role"], "presentation": s.get("presentation") or {},
-              "tags": s["tags"], "consumes": s["consumes"], "produces": s["produces"],
-              "requires": s["requires"], "status": "pending", "exploration_count": 0,
-              "convergence_node": None, "judgments": []}
-             for s in spec["steps"]]
-    return {"project_id": project["id"], "methodology": key, "phase": "", "complete": False,
-            "steps": steps, "phases": steps}
+    builds_under: dict[str, set] = {}   # frame id -> fidelity tags of artifacts built from it
+    syn_of_verify: dict[str, str] = {}  # verify id -> its synthesis node id (the convergence node)
+    for t in tasks:
+        if t["bucket"] == "act":
+            for p in t.get("produces", []):
+                if p.get("kind") == "artifact":
+                    proto = store.get_prototype(p["id"]) or {}
+                    fids = {x for x in (proto.get("tags") or []) if x and x != "prototype"} or {"prototype"}
+                    for c in t.get("consumes", []):
+                        builds_under.setdefault(c, set()).update(fids)
+        elif t["bucket"] == "verify":
+            syn = next((p["id"] for p in t.get("produces", []) if p["kind"] == "synthesis"), None)
+            if syn:
+                syn_of_verify[t["id"]] = f"synthesis:{syn}"
+    steps = []
+    for t in tasks:
+        if t["bucket"] not in ("analyze", "verify"):
+            continue
+        is_fan = t["bucket"] == "analyze"
+        produces: dict[str, Any] = {"role": t.get("capability", "")}
+        if t["id"] in builds_under:
+            produces["artifact_type"] = "prototype"
+            produces["more_tags"] = sorted(builds_under[t["id"]])
+        steps.append({"key": t["id"], "name": t.get("title", t["id"]),
+                      "mode": "diverge" if is_fan else "converge", "is_fan": is_fan,
+                      "role": t.get("capability", ""), "presentation": t.get("presentation") or {},
+                      "tags": [t.get("capability", "")] if t.get("capability") else [],
+                      "consumes": list(t.get("consumes", [])), "produces": produces,
+                      "requires": t.get("requires", {}) or {},
+                      "status": "done" if t.get("status") == "done" else "pending",
+                      "exploration_count": 0, "convergence_node": syn_of_verify.get(t["id"]),
+                      "judgments": []})
+    return {"project_id": project["id"], "methodology": plan.get("methodology", ""), "phase": "",
+            "complete": _plan.is_complete(plan), "steps": steps, "phases": steps}
 
 
 def _evidence_node(kind: str, eid: str, title: str, prod_task: dict, store: Store) -> dict[str, Any]:
     """A heterogeneous graph node for one evidence item. Color/label come from data (present(kind))."""
     from . import presentation as _pres
     pres = _pres.present(kind)
-    step = prod_task.get("step", "")
+    # Bind the node to a layout column: a verify task's synthesis sits in that verify STEP (a waist);
+    # an act task's evidence fans from the FRAME it consumes (the diverge step) — so diamonds emerge
+    # from the plan's real analyze→act→verify DAG, not from a static spec.
+    if prod_task.get("bucket") == "verify":
+        step = prod_task.get("id", "")
+    else:
+        cons = prod_task.get("consumes") or []
+        step = cons[0] if cons else prod_task.get("step", "")
     created = ""
     council_count = 0
     if kind == "council":
@@ -2779,8 +2810,8 @@ def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
     for t in plan["tasks"]:
         for r in t["produces"]:
             kind, eid = r["kind"], r["id"]
-            if kind in ("artifact", "frame"):   # artifacts render via prototypes; frames stay plan-internal
-                continue
+            if kind not in ("council", "synthesis"):  # artifacts render via the prototypes list;
+                continue                              # sessions live on their prototype; frames stay plan-internal
             nid = f"{kind}:{eid}"
             if nid in seen:
                 continue
