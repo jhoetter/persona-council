@@ -164,9 +164,11 @@ def test_legacy_aliases_still_work(store):
     assert conv["role"] == "point-of-view"
 
 
-def test_non_alternating_dag_with_nonprototype_artifact(store):
+def test_non_alternating_dag_with_nonprototype_artifact(store, tmp_path, monkeypatch):
     """C2 acceptance: a NON-alternating shape (one fan feeding two parallel decides) and a
     NON-prototype artifact type (a `survey`) run end-to-end — zero code changes."""
+    from persona_council import prototypes as _proto
+    monkeypatch.setattr(_proto, "prototypes_dir", lambda: tmp_path)  # keep the repo prototypes/ clean
     spec = {
         "key": "branchy", "name": "Branchy", "description": "d", "when_to_use": "w",
         "steps": [
