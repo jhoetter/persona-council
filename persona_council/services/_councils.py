@@ -210,14 +210,19 @@ def export_council_session(session_id: str, format: str = "json", store: Store |
 
 def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, Any]],
                    votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "",
-                   exec_summary: str = "", selection_reason: str = "", store: Store | None = None) -> dict[str, Any]:
-    """Persist a host-authored council (openings/moderator/directed turns + synthesis)."""
+                   exec_summary: str = "", selection_reason: str = "", key: str | None = None,
+                   store: Store | None = None) -> dict[str, Any]:
+    """Persist a host-authored council (openings/moderator/directed turns + synthesis). Pass a stable
+    `key` (e.g. "<project>:<step>:<angle>") to get a DETERMINISTIC id so re-running the step is an
+    idempotent upsert — makes long autonomous runs resumable/replayable (spec/harness-evaluation HX6)."""
     store = store or Store()
+    existing = store.get_council_session(stable_id("council", key)) if key else None
+    cid = stable_id("council", key) if key else stable_id("council", prompt, utc_now_iso())
     session = CouncilSession(
-        id=stable_id("council", prompt, utc_now_iso()),
+        id=cid,
         prompt=prompt, persona_ids=persona_ids, selection_reason=selection_reason or "host-authored",
         turns=turns or [], proposal=proposal, votes=votes or [], summary=summary,
-        exec_summary=exec_summary, created_at=utc_now_iso(),
+        exec_summary=exec_summary, created_at=(existing or {}).get("created_at") or utc_now_iso(),
     ).to_dict()
     store.insert_council_session(session)
     return session

@@ -59,11 +59,12 @@ def register_council(mcp):
         return _env("brief_ask", services.brief_ask(persona_id, question, context), t)
 
     @mcp.tool()
-    def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "") -> dict[str, Any]:
+    def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "", key: str | None = None) -> dict[str, Any]:
         """Persist a host-authored council (openings/moderator/directed turns + votes +
-        exec_summary). Use from the run-council / synthesize skills instead of writing the DB."""
+        exec_summary). Use from the run-council / synthesize skills instead of writing the DB.
+        Pass a stable `key` for a deterministic id (idempotent upsert → resumable long runs)."""
         t = time.perf_counter()
-        return _env("record_council", services.record_council(prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason), t)
+        return _env("record_council", services.record_council(prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason, key), t)
 
     @mcp.tool()
     def get_council(session_id: str) -> dict[str, Any]:
@@ -119,13 +120,13 @@ def register_council(mcp):
         return _env("brief_synthesis", services.brief_synthesis(council_ids, title, start_input, goal), t)
 
     @mcp.tool()
-    def record_synthesis(title: str, start_input: str, council_ids: list[str], payload: dict[str, Any], goal: str = "", synthesis_id: str | None = None) -> dict[str, Any]:
-        """Persist/UPDATE the host-authored synthesis over a council chain. Pass the same
-        synthesis_id (and an EXTENDED council_ids list) to ADD more councils to an existing
-        synthesis — re-authoring the report over the longer chain. Then add_study_to_project
-        to place it in a project graph."""
+    def record_synthesis(title: str, start_input: str, council_ids: list[str] | None = None, payload: dict[str, Any] | None = None, goal: str = "", synthesis_id: str | None = None, key: str | None = None) -> dict[str, Any]:
+        """Persist/UPDATE a host-authored synthesis. A synthesis is DECOUPLED from councils:
+        `council_ids` is OPTIONAL (may be empty — affinity over notes, a synthesis over syntheses, or
+        a standalone analysis); councils are cited evidence, not sub-parts. Pass the same synthesis_id
+        (or a stable `key`) to update in place / make a long run resumable. Then add_study_to_project."""
         t = time.perf_counter()
-        return _env("record_synthesis", services.record_synthesis(title, start_input, council_ids, payload, goal, synthesis_id), t)
+        return _env("record_synthesis", services.record_synthesis(title, start_input, council_ids, payload, goal, synthesis_id, key), t)
 
     @mcp.tool()
     def get_synthesis(synthesis_id: str) -> dict[str, Any]:

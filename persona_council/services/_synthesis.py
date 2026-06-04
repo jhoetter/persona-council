@@ -143,7 +143,8 @@ def brief_synthesis(council_ids: list[str], title: str | None = None, start_inpu
 
 def record_synthesis(title: str, start_input: str, council_ids: list[str] | None = None,
                      payload: dict[str, Any] | None = None,
-                     goal: str = "", synthesis_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
+                     goal: str = "", synthesis_id: str | None = None, key: str | None = None,
+                     store: Store | None = None) -> dict[str, Any]:
     """Persist a host-authored synthesis. A synthesis is a FIRST-CLASS answer/report node and is
     DECOUPLED from councils: `council_ids` is an OPTIONAL list of referenced evidence and may be
     empty — e.g. an affinity-clustering synthesis over observations, a synthesis over other
@@ -155,9 +156,12 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
     """
     store = store or Store()
     council_ids = list(council_ids or [])
+    if key and not synthesis_id:        # deterministic id → idempotent resumable upsert (HX6)
+        synthesis_id = stable_id("synthesis", key)
     data = validate_synthesis_payload(payload or {})
     existing = store.get_synthesis(synthesis_id) if synthesis_id else None
-    sid = (existing or {}).get("id") or stable_id("synthesis", title or "synthesis", utc_now_iso())
+    # honor an explicit/keyed synthesis_id even on first create (so a keyed run is idempotent)
+    sid = (existing or {}).get("id") or synthesis_id or stable_id("synthesis", title or "synthesis", utc_now_iso())
     created = (existing or {}).get("created_at") or utc_now_iso()
     rec = Synthesis(
         id=sid, title=title, start_input=start_input, council_ids=council_ids,
