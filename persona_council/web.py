@@ -1847,6 +1847,81 @@ def create_app():
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)],
                        active="projects", actions=actions)
 
+    def _plan_html(plan: dict, store) -> str:
+        tasks = plan.get("tasks", [])
+        done = sum(1 for t in tasks if t["status"] == "done")
+        complete = bool(tasks) and done == len(tasks)
+        by_title = {t["id"]: t.get("title", t["id"]) for t in tasks}
+        STATUS = {"done": ("✓", "var(--green)"), "active": ("◐", "var(--accent)"),
+                  "todo": ("○", "var(--muted)"), "blocked": ("!", "var(--red)")}
+        # Resolve evidence links by IDENTITY (which collection the ref lives in), not by a kind
+        # literal — the kind LABEL comes from data via present(); storage membership is legitimate.
+        _syn_ids = {s["id"] for s in store.list_syntheses()}
+        _protos = {p["id"]: p for p in store.list_prototypes(plan["project_id"])}
+
+        def ev_chip(r: dict) -> str:
+            rid, kind = r.get("id", ""), r.get("kind", "")
+            label = _pres.present(kind)["short"] if kind else rid
+            href = None
+            if rid in _protos:
+                p = _protos[rid]
+                href, label = f"/prototypes/{p['slug']}", f"{label} · {p.get('name', p['slug'])}"
+            elif rid in _syn_ids:
+                href = f"/syntheses/{rid}"
+            elif store.get_council_session(rid):
+                href = f"/councils/{rid}"
+            if href:
+                return f'<a class="ev" href="{href}">{_esc(label)} ↗</a>'
+            return f'<span class="ev">{_esc(label)}</span>'
+
+        def row(t: dict) -> str:
+            mark, clr = STATUS.get(t["status"], ("○", "var(--muted)"))
+            cons = " · ".join(by_title.get(c, c) for c in t.get("consumes", []))
+            cons_html = f'<div class="small muted" style="margin-top:4px">⊂ {_esc(cons)}</div>' if cons else ""
+            req = t.get("requires", {}) or {}
+            gates = []
+            if req.get("min_inputs") is not None:
+                gates.append(f"min. {req['min_inputs']} Inputs")
+            if req.get("gate_tag"):
+                gates.append(_pres.present(req["gate_tag"])["short"])
+            for tg in (req.get("session_of_tags") or []):
+                gates.append(f"Session: {_pres.present(tg)['short']}")
+            for tg in (req.get("artifact_tags") or []):
+                gates.append(f"Artefakt: {_pres.present(tg)['short']}")
+            gates_html = "".join(f'<span class="gate">{_esc(x)}</span>' for x in gates)
+            cap = t.get("capability", "")
+            cap_html = f'<span class="pcap">{_esc(cap)}</span>' if cap else ""
+            # skip the frame self-reference (a frame task produces a ref to itself); link the rest
+            evs = "".join(ev_chip(r) for r in t.get("produces", []) if r.get("id") != t["id"])
+            ev_html = f'<div class="evs">{evs}</div>' if evs else ""
+            return (f'<div class="ptask"><div class="pmark" style="color:{clr}">{mark}</div>'
+                    f'<div class="pbody"><div class="prow1"><span class="ptitle">{_esc(t.get("title", t["id"]))}</span>'
+                    f'{cap_html}{gates_html}</div>{cons_html}{ev_html}</div></div>')
+
+        secs = []
+        for b, label in [("analyze", "Analyze · verstehen"), ("act", "Act · Councils, Prototypen, Tests"),
+                         ("verify", "Verify · verdichten & entscheiden")]:
+            rows = "".join(row(t) for t in tasks if t["bucket"] == b)
+            if rows:
+                secs.append(f'<div class="psec"><div class="psec-h">{label}</div>{rows}</div>')
+        pill = ('<span class="pill" style="color:var(--green)">● Plan komplett</span>' if complete
+                else f'<span class="pill">{len(tasks) - done} offen</span>')
+        head = (f'<div class="card plan-head"><div class="ph-goal">{_esc(plan.get("goal", ""))}</div>'
+                f'<div class="small muted" style="margin-top:6px">Methodik: '
+                f'<b>{_esc(plan.get("methodology") or "freiform")}</b> · {len(tasks)} Tasks · {done} erledigt &nbsp;{pill}</div></div>')
+        css = ("<style>.plan-head{margin-bottom:20px}.ph-goal{font-weight:650;font-size:16px;line-height:1.4}"
+               ".psec{margin:0 0 24px}.psec-h{font-size:12px;text-transform:uppercase;letter-spacing:.05em;"
+               "color:var(--muted);font-weight:600;margin:0 0 10px}"
+               ".ptask{display:flex;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius);"
+               "background:var(--panel);margin-bottom:8px}.pmark{font-weight:700;width:16px;text-align:center;flex:none}"
+               ".pbody{flex:1;min-width:0}.prow1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ptitle{font-weight:550}"
+               ".pcap{font-size:11px;color:var(--accent);background:var(--accent-weak);padding:1px 8px;border-radius:999px}"
+               ".gate{font-size:11px;color:var(--muted);background:var(--hover);padding:1px 8px;border-radius:999px}"
+               ".evs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ev{font-size:11px;color:var(--muted);"
+               "background:var(--panel-2);border:1px solid var(--line);padding:2px 8px;border-radius:6px;text-decoration:none}"
+               "a.ev:hover{color:var(--accent);border-color:var(--accent)}</style>")
+        return f'{css}<div class="page">{head}{"".join(secs)}</div>'
+
     @app.get("/projects/{project_id}/plan", response_class=HTMLResponse)
     def project_plan(project_id: str) -> str:
         store = Store()
@@ -1858,7 +1933,7 @@ def create_app():
         if not plan:
             body = f'<div class="page">{_empty_state("Plan", "Dieses Projekt hat noch keinen Plan (Freiform/Legacy).")}</div>'
         else:
-            body = f'<div class="page"><div class="doc">{_md(services.export_plan_md(project_id, store=store))}</div></div>'
+            body = _plan_html(plan, store)
         return _layout(proj["title"] + " — Plan", body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), ("Plan", None)],
                        active="projects")
