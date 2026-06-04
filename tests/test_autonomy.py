@@ -19,8 +19,8 @@ def test_assess_project_pulse_on_fresh_plan(store):
     assert a["complete"] is False
     assert a["recommendation"] == "frame"                 # an analyze frame is ready first
     assert "verify" in a["tasks_by_bucket"] and a["tasks_by_bucket"]["verify"]["total"] >= 1
-    # the seeded verify is gated-open (needs act evidence)
-    assert any("act evidence" in u for g in a["open_gates"] for u in g["unmet"])
+    # the seeded verify is gated-open (needs ≥ min_inputs distinct act tasks/angles)
+    assert any("act task" in u or "angles" in u for g in a["open_gates"] for u in g["unmet"])
     assert "saturation" in a and "coverage" in a
 
 

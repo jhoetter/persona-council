@@ -53,3 +53,40 @@ records+links the synthesis before `complete_task`.
 conversion ≈ 0, four textures of resistance, the one LV-shaped opening). The problem isn't thinking —
 it's that the substance landed in notes, not the synthesis. The lean loop + segment-diverse councils
 + self-composition all worked.
+
+### F4 — Develop phase was THIN (1 prototype, 0 ideation councils)
+The run completed a full Double Diamond (9/9) but Develop = a single prototype + 4 proband sessions
+(3 grounded) and NO ideation councils / no varied prototypes. The skill calls for ideation + several
+varied prototypes; the agent went minimal. Root cause = F5 (the breadth gate was satisfiable by one
+angle), plus the agent satisficing the gate.
+
+### F5 — breadth gate satisficing loophole (FIXED, committed)
+`verify__deliver` (min_inputs=2) passed with a fan of **one** act task (the prototype) because its
+artifact + 4 sessions = 5 evidence REFS ≥ 2. The breadth gate counted refs, not angles — so a phase
+could "diverge" on a single solution. **Fix:** `verify_unmet` now counts DISTINCT act TASKS (angles)
+that produced evidence, not raw refs. A single prototype no longer satisfies min_inputs=2 → the loop
+must add a 2nd angle (a 2nd prototype or an ideation council) → genuine breadth. (Tests create ≥2 act
+tasks, so unaffected; 78 passed.)
+
+## FINAL VERDICT (this run)
+**The autonomy works end-to-end from one prompt** — front-door auto-trigger, self-composition, lean
+loop, segment-diverse grounded councils, 4 proband sessions, sections + journal, autonomous
+completion. The gaps were about OUTPUT QUALITY, now fixed for the next run:
+- **Critical (F3):** both answer syntheses (Define POV, Deliver spec) were EMPTY shells — substance
+  stranded in notes/exec-summaries. Fixed via skill ("synthesis IS the answer, author it rich; notes
+  are atoms") + `assess_project` flags thin/orphaned syntheses.
+- **F2:** council schema mismatch (text/stance vs content/vote) broke rendering — normalized on
+  write + tolerant render.
+- **F4/F5:** thin Develop because the breadth gate counted refs not angles — now counts distinct act
+  tasks, forcing real divergence.
+- **F1:** list_personas context bloat — compact mode.
+The running session won't pick up these (its MCP server + loaded skill are fixed); they land on the
+NEXT run. Recommended: re-run the same HMW and re-verify the four syntheses render rich answers,
+Develop has ≥2 prototypes/angles, and councils render their turns.
+
+## Still to spec (deliberate, not done)
+- **HX3** collapse the two engines (the last big refactor).
+- A possible explicit **"converge" sub-step** that records+links a non-trivial synthesis before a
+  verify can complete (promote F3's soft signal to a guided step), and a `record_synthesis`
+  soft-warning on a near-empty payload.
+- charz is unreliable during a live run (the DB mutates); the unit suite (temp DBs) is the real gate.

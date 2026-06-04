@@ -303,10 +303,13 @@ def verify_unmet(plan: dict[str, Any], vtask: dict[str, Any], store: Store) -> l
     pid = plan["project_id"]
     req = vtask["requires"]
     unmet: list[str] = []
-    fan = _fan_evidence(plan, vtask)
+    # Breadth = distinct ACT tasks (angles) that produced evidence — NOT raw evidence refs. Counting
+    # refs let one prototype's (artifact + N sessions) masquerade as "enough exploration", so a phase
+    # could converge on a single angle. Distinct tasks force genuine breadth (≥ min_inputs angles).
+    fan_tasks = [t for t in _fan_tasks(plan, vtask) if any(r.get("kind") != "frame" for r in t.get("produces", []))]
     eff = _eff_min(vtask)
-    if len(fan) < eff:
-        unmet.append(f"need >= {eff} act evidence items in the fan (have {len(fan)})")
+    if len(fan_tasks) < eff:
+        unmet.append(f"need >= {eff} act tasks (distinct angles) with evidence in the fan (have {len(fan_tasks)})")
     if req["gate_tag"]:
         scope = {vtask["id"], *vtask["consumes"], *[t["id"] for t in _fan_tasks(plan, vtask)]}
         ok = any(j.get("decided") and j["gate_tag"] == req["gate_tag"] and j["task_id"] in scope
