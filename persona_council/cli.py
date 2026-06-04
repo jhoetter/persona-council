@@ -378,7 +378,7 @@ def build_parser() -> argparse.ArgumentParser:
     # Prototypes + Playwright harness
     p = sub.add_parser("prototype-scaffold")
     p.add_argument("slug"); p.add_argument("name"); p.add_argument("file"); p.add_argument("--project")
-    p.add_argument("--template", default="spa-min", choices=["spa-min", "spa-sketch"]); p.add_argument("--fidelity")
+    p.add_argument("--template", default=None); p.add_argument("--fidelity")
     p = sub.add_parser("prototype-register")
     p.add_argument("slug"); p.add_argument("name"); p.add_argument("path"); p.add_argument("--entry", default="index.html")
     p.add_argument("--run", default="static"); p.add_argument("--run-cmd", dest="run_cmd"); p.add_argument("--version", default="v0.1")

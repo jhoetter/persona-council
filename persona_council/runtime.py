@@ -157,7 +157,8 @@ class StubAuthoringBackend:
         from . import services as svc
         protos = [p for p in store.list_prototypes(project["id"]) if tag in M._artifact_tags(p)]
         if not protos:
-            fid = tag if tag in ("lofi", "midfi") else None
+            from . import presentation as _pres
+            fid = tag if tag in _pres.discriminator_tags("prototype") else None
             protos = [self._ensure_prototype(project, store, fidelity=fid)]
         proto = protos[0]
         persona = (project.get("persona_ids") or ["auto"])[0]

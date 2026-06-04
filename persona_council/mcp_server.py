@@ -699,11 +699,15 @@ def build_server():
     # ================= Prototypes (real, minimal, locally-runnable apps) =================
     @mcp.tool()
     def scaffold_prototype(slug: str, name: str, concept: dict[str, Any], kind: str = "web",
-                           template: str = "spa-min", project_id: str | None = None,
+                           template: str | None = None, project_id: str | None = None,
                            fidelity: str | None = None) -> dict[str, Any]:
-        """Generate a real, minimal, runnable web app from a host-authored concept (screens +
-        elements) and register it. The app is genuinely clickable (real DOM) for Playwright.
-        template: 'spa-min' (mid-fi, clean) or 'spa-sketch' (lo-fi). fidelity overrides default."""
+        """Generate a real, minimal, runnable web app from a host-authored concept and register it.
+        The app is genuinely clickable (real DOM) for Playwright. The renderer template is resolved
+        from DATA (suggestions/artifact_types.json): pass a `fidelity` tag (lofi/midfi/hifi → a
+        sketchy/clean/polished form) or scaffold a non-form artifact TYPE (flow, dashboard, cards,
+        comparison). `template` forces a specific template; concept-level `fidelity` themes any
+        template. Concept = {title, summary, start, screens:[{id,title,elements,...rich blocks}]};
+        rich blocks read by the non-form templates: screen.metrics / screen.cards / screen.columns."""
         t = time.perf_counter()
         return _env("scaffold_prototype",
                     services.scaffold_prototype(slug, name, concept, kind, template, project_id, fidelity), t)
@@ -712,7 +716,7 @@ def build_server():
     def register_prototype(slug: str, name: str, path: str, entry: str = "index.html", run: str = "static",
                            run_cmd: str | None = None, version: str = "v0.1", project_id: str | None = None,
                            notes: str = "", fidelity: str = "midfi") -> dict[str, Any]:
-        """Register a hand-authored app under prototypes/ as a runnable artifact (fidelity: lofi|midfi)."""
+        """Register a hand-authored app under prototypes/ as a runnable artifact (fidelity tag, e.g. lofi|midfi|hifi)."""
         t = time.perf_counter()
         return _env("register_prototype",
                     services.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes, fidelity), t)

@@ -1,6 +1,6 @@
 {
   "kind": "artifact_types",
-  "note": "SUGGESTED artifact-type tags + their renderer/template/presentation — the DATA source of truth (spec/methodology-presentation-from-data.md §4). Matched by tag-EQUALITY in the engine; rendered by the UI via the `presentation` blocks here (no value is hardcoded in web.py/prototypes.py). Invent your own type by adding an item — no code change.",
+  "note": "SUGGESTED artifact-type tags + their renderer/template/presentation — the DATA source of truth (spec/methodology-presentation-from-data.md §4). Matched by tag-EQUALITY in the engine; rendered by the UI via the `presentation` blocks here (no value is hardcoded in web.py/prototypes.py). Invent your own type by adding an item — no code change. Renderer templates live under persona_council/prototype_templates/<template>/index.html and read the concept JSON (screens/elements + optional rich blocks: metrics/cards/columns/lead) plus an optional concept-level `fidelity` (lofi|midfi|hifi) used purely for theming.",
   "items": [
     {
       "tag": "prototype",
@@ -9,8 +9,37 @@
       "presentation": {"label": "Prototyp", "short": "Prototyp", "icon": "projects", "color": "#00897b", "glyph": "▢"},
       "discriminators": [
         {"tag": "lofi", "template": "spa-sketch", "presentation": {"label": "lo-fi", "short": "lo-fi"}},
-        {"tag": "midfi", "template": "spa-min", "presentation": {"label": "mid-fi", "short": "mid-fi"}}
+        {"tag": "midfi", "template": "spa-min", "presentation": {"label": "mid-fi", "short": "mid-fi"}},
+        {"tag": "hifi", "template": "spa-hifi", "presentation": {"label": "hi-fi", "short": "hi-fi"}}
       ]
+    },
+    {
+      "tag": "flow",
+      "renderer": "spa",
+      "default_template": "spa-flow",
+      "presentation": {"label": "Geführter Flow", "short": "Flow", "icon": "projects", "color": "#5b6cff", "glyph": "➤"},
+      "discriminators": []
+    },
+    {
+      "tag": "dashboard",
+      "renderer": "spa",
+      "default_template": "spa-dashboard",
+      "presentation": {"label": "Übersicht", "short": "Dashboard", "icon": "projects", "color": "#0aa37f", "glyph": "▦"},
+      "discriminators": []
+    },
+    {
+      "tag": "cards",
+      "renderer": "spa",
+      "default_template": "spa-cards",
+      "presentation": {"label": "Karten-Auswahl", "short": "Karten", "icon": "projects", "color": "#a142f4", "glyph": "▥"},
+      "discriminators": []
+    },
+    {
+      "tag": "comparison",
+      "renderer": "spa",
+      "default_template": "spa-comparison",
+      "presentation": {"label": "Vergleich", "short": "Vergleich", "icon": "projects", "color": "#f29900", "glyph": "⇄"},
+      "discriminators": []
     },
     {
       "tag": "survey",

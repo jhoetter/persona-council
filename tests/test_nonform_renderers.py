@@ -1,0 +1,95 @@
+"""S1 — non-form renderer templates + the lofi/midfi/hifi fidelity ladder.
+
+Every renderer template is resolved from DATA (suggestions/artifact_types.json). A prototype can be
+a guided flow, an overview/dashboard, a card/list interface, or a comparison view — not just a form
+— and an INVENTED artifact type renders with no code change. The fidelity ladder (lofi/midfi/hifi)
+is data-declared discriminators of the `prototype` type.
+"""
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from persona_council import presentation, prototypes
+
+
+def _two_screens(home_extra: dict | None = None) -> dict:
+    home = {"id": "home", "title": "Start",
+            "elements": [{"kind": "button", "id": "go", "label": "Los", "goto": "next"}]}
+    if home_extra:
+        home.update(home_extra)
+    return {"title": "Demo", "summary": "S", "start": "home",
+            "screens": [home,
+                        {"id": "next", "title": "Ergebnis",
+                         "elements": [{"kind": "text", "id": "t", "label": "fertig"}]}]}
+
+
+# (type tag, expected template, a template-unique structural marker, screen rich-block)
+CASES = [
+    ("flow", "spa-flow", "Schritt ", {}),
+    ("dashboard", "spa-dashboard", "tiles",
+     {"metrics": [{"id": "m1", "label": "Lücke", "value": "480 €", "delta": "+12%", "trend": "up"}],
+      "cards": [{"id": "c1", "title": "Familienschutz", "body": "x",
+                 "action": {"id": "a1", "label": "Details", "goto": "next"}}]}),
+    ("cards", "spa-cards", "clickable",
+     {"cards": [{"id": "k1", "title": "Familienschutz", "body": "x", "goto": "next"}]}),
+    ("comparison", "spa-comparison", "cols",
+     {"columns": [{"id": "o1", "title": "Basis", "rows": [{"label": "Preis", "value": "9 €"}],
+                   "cta": {"id": "cta1", "label": "Wählen", "goto": "next"}}]}),
+]
+
+
+@pytest.mark.parametrize("type_tag,template,marker,home_extra", CASES)
+def test_nonform_template_scaffolds_clickable(type_tag, template, marker, home_extra, store, tmp_path, monkeypatch):
+    monkeypatch.setattr(prototypes, "prototypes_dir", lambda: tmp_path)
+    # the template is resolved purely from the type tag's default_template (data)
+    assert presentation.resolve_template(type_tag) == template
+    rec = prototypes.scaffold_artifact(f"demo-{type_tag}", "Demo", _two_screens(home_extra),
+                                       type=type_tag, store=store)
+    assert rec["type"] == type_tag
+    html = (tmp_path / f"demo-{type_tag}" / "index.html").read_text(encoding="utf-8")
+    assert marker in html                       # distinct non-form layout
+    assert '"go"' in html and "Los" in html     # the clickable concept is embedded for the SPA
+
+
+def test_fidelity_ladder_is_data_declared():
+    # lofi/midfi/hifi are discriminators of `prototype`, each mapping to a real template — in DATA
+    assert presentation.resolve_template("prototype", ["lofi"]) == "spa-sketch"
+    assert presentation.resolve_template("prototype", ["midfi"]) == "spa-min"
+    assert presentation.resolve_template("prototype", ["hifi"]) == "spa-hifi"
+    assert set(presentation.discriminator_tags("prototype")) >= {"lofi", "midfi", "hifi"}
+    assert presentation.present("hifi")["short"] == "hi-fi"
+
+
+def test_hifi_scaffolds_polished_renderer(store, tmp_path, monkeypatch):
+    monkeypatch.setattr(prototypes, "prototypes_dir", lambda: tmp_path)
+    prototypes.scaffold_prototype("demo-hifi", "Demo", _two_screens(), fidelity="hifi", store=store)
+    html = (tmp_path / "demo-hifi" / "index.html").read_text(encoding="utf-8")
+    assert "Inter" in html and "data-fidelity" not in html.split("<body")[0]  # polished type, themed body
+    assert "'hifi'" in html
+
+
+def test_invented_artifact_type_renders_from_data(store, tmp_path, monkeypatch):
+    """Declare a brand-new artifact type in a suggestions file → it renders with NO code change."""
+    sdir = tmp_path / "sugg"
+    sdir.mkdir()
+    (sdir / "artifact_types.json").write_text(json.dumps({"kind": "artifact_types", "items": [
+        {"tag": "concept_app", "renderer": "spa", "default_template": "spa-cards",
+         "presentation": {"label": "Konzept-App", "short": "App", "color": "#123456", "glyph": "✦"}}]}),
+        encoding="utf-8")
+    orig = presentation.suggestions_dir
+    presentation.suggestions_dir = lambda: sdir
+    presentation.reload_hints()
+    try:
+        monkeypatch.setattr(prototypes, "prototypes_dir", lambda: tmp_path)
+        rec = prototypes.scaffold_artifact("demo-invented", "Demo",
+                                           _two_screens({"cards": [{"id": "c", "title": "X", "goto": "next"}]}),
+                                           type="concept_app", store=store)
+        html = (tmp_path / "demo-invented" / "index.html").read_text(encoding="utf-8")
+        assert "clickable" in html                       # resolved to spa-cards from DATA
+        assert rec["type"] == "concept_app"
+        assert presentation.present("concept_app")["label"] == "Konzept-App"
+    finally:
+        presentation.suggestions_dir = orig
+        presentation.reload_hints()

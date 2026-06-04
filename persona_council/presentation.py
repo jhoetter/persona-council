@@ -103,6 +103,12 @@ def artifact_type_meta(type_tag: str) -> dict[str, Any]:
     return _hints().get(type_tag, {})
 
 
+def discriminator_tags(type_tag: str) -> list[str]:
+    """Tags declared as discriminators of an artifact type (data-driven; e.g. the fidelity
+    ladder lofi/midfi/hifi under `prototype`). No fidelity vocabulary is hardcoded in code."""
+    return [t for t, v in _hints().items() if v.get("_parent") == type_tag]
+
+
 def resolve_template(type_tag: str, tags: list[str] | None = None,
                      explicit: str | None = None) -> str | None:
     """Resolve a renderer template for an artifact from DATA: an explicit template wins; else a
