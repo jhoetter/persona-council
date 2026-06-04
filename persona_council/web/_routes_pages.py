@@ -293,11 +293,12 @@ def register_pages(app) -> None:
         councils_crumb = t("councils"); council_title = t("councils")
         turns = []
         for tn in session["turns"]:
-            mod = " mod" if (tn.get("speaker") == "Moderator" or tn.get("stance") == "moderation") else ""
+            body = tn.get("content") or tn.get("text") or tn.get("message") or ""   # tolerate turn-body field variants
+            mod = " mod" if (tn.get("speaker") == "Moderator" or tn.get("stance") in ("moderation", "moderator") or tn.get("type") == "moderator") else ""
             stance = _label(tn["stance"], _stance_color(tn.get("stance", ""))) if tn.get("stance") else ""
-            concerns = "".join(f'<p class="muted small">• {_esc(q)}</p>' for q in tn.get("questions_or_pushback", [])[:4])
-            mem = "".join(f'<p class="muted small">{_icon("search")} {_esc(m)}</p>' for m in tn.get("memory_used", [])[:3])
-            turns.append(f'<div class="turn{mod}"><div class="hd"><b>{_esc(tn["speaker"])}</b> {stance}</div><p>{_esc(tn["content"])}</p>{concerns}{mem}</div>')
+            concerns = "".join(f'<p class="muted small">• {_esc(q)}</p>' for q in (tn.get("questions_or_pushback") or [])[:4])
+            mem = "".join(f'<p class="muted small">{_icon("search")} {_esc(m)}</p>' for m in (tn.get("memory_refs") or tn.get("memory_used") or [])[:3])
+            turns.append(f'<div class="turn{mod}"><div class="hd"><b>{_esc(tn.get("speaker",""))}</b> {stance}</div><p>{_esc(body)}</p>{concerns}{mem}</div>')
         turns_html = '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>"
         exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
         sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""

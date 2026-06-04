@@ -467,6 +467,22 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
     for g in open_gates:
         for u in g["unmet"]:
             gaps.append(f"{g['title']}: {u}")
+    # CONTENT-quality gaps (right level of assessment, not just structure): a verify that converged
+    # without a linked synthesis (orphaned convergence), or whose synthesis is near-empty (the answer
+    # artifact is hollow — substance may be stranded in notes). Soft signals; they don't block the gate.
+    for tsk in tasks:
+        if tsk["bucket"] != "verify":
+            continue
+        syn_refs = [r for r in tsk.get("produces", []) if r.get("kind") == "synthesis"]
+        if tsk["status"] == "done" and not syn_refs:
+            gaps.append(f"{tsk['title']}: completed without a linked synthesis — record_synthesis → "
+                        f"link_evidence (the converging answer artifact is missing/orphaned)")
+        for r in syn_refs:
+            syn = store.get_synthesis(r["id"]) or {}
+            body = (syn.get("gesamtbild", "") + syn.get("positionierung", "") + syn.get("arc_narrative", "")).strip()
+            if len(body) < 200:
+                gaps.append(f"{tsk['title']}: synthesis is thin/empty — fill gesamtbild/positionierung "
+                            f"(the synthesis IS the answer; don't leave it only in notes)")
     ready = ready_tasks(plan)
     complete = is_complete(plan)
     if complete:

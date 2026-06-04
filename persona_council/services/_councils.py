@@ -218,10 +218,26 @@ def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, An
     store = store or Store()
     existing = store.get_council_session(stable_id("council", key)) if key else None
     cid = stable_id("council", key) if key else stable_id("council", prompt, utc_now_iso())
+    # Normalize turn/vote field variants to the canonical schema so the UI always renders the
+    # authored content (subagents sometimes use text/message for the body, or stance/label on votes).
+    def _nturn(tn):
+        tn = dict(tn) if isinstance(tn, dict) else {"content": str(tn)}
+        if not tn.get("content"):
+            tn["content"] = tn.get("text") or tn.get("message") or ""
+        return tn
+
+    def _nvote(v):
+        v = dict(v) if isinstance(v, dict) else {"vote": str(v)}
+        if not v.get("vote"):
+            v["vote"] = v.get("stance") or v.get("label") or ""   # keep a displayable value
+        return v
+
+    turns = [_nturn(t) for t in (turns or [])]
+    votes = [_nvote(v) for v in (votes or [])]
     session = CouncilSession(
         id=cid,
         prompt=prompt, persona_ids=persona_ids, selection_reason=selection_reason or "host-authored",
-        turns=turns or [], proposal=proposal, votes=votes or [], summary=summary,
+        turns=turns, proposal=proposal, votes=votes, summary=summary,
         exec_summary=exec_summary, created_at=(existing or {}).get("created_at") or utc_now_iso(),
     ).to_dict()
     store.insert_council_session(session)

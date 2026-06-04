@@ -40,6 +40,12 @@ Authoring per bucket (always a SUBAGENT, grounded in `n`):
 - **verify** → subagent consolidates the fan (`n.verify.fan_evidence`) into a synthesis
   (`record_synthesis` — councils OPTIONAL/decoupled; for affinity, synthesize over notes/other
   syntheses with `council_ids=[]`), records the gate judgment, `assess_progress`, `complete_task`.
+  **The synthesis IS the answer artifact — author it RICH**: fill `gesamtbild` (the answer),
+  `positionierung` (the POV), `voices` (per-persona sentiment/relevance/key_argument grounded in the
+  council turns), `segmente`, `handlungsempfehlungen`. Notes are observation ATOMS, never a
+  substitute for the synthesis. `assess_project` flags a thin/empty synthesis as a gap — fix it
+  before moving on. (Council turn body goes in `content`; votes use the SUPPORT/MAYBE/ABSTAIN/OPPOSE
+  scheme so the UI tallies + voices render.)
 
 ## Stay organized & documented (every few iterations — HX5)
 - **Sections**: maintain methodology-independent groupings as the run grows — `create_section` /
