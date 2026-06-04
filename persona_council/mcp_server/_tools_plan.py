@@ -72,6 +72,15 @@ def register_plan(mcp):
         return _env("assess_progress", services.assess_progress(project_id, task_id, rationale, evidence_refs, delta), t)
 
     @mcp.tool()
+    def next_action(project_id: str) -> dict[str, Any]:
+        """The ready task FULLY loaded for a lean autonomous loop: analyze→grounding (prior
+        syntheses + open questions); act→the consumed frame's framed questions + segment-diverse
+        suggested participants; verify→the fan + gate. Carries the project recommendation. Use this
+        as the single per-iteration call: next_action → author via a subagent → persist."""
+        t = time.perf_counter()
+        return _env("next_action", services.next_action(project_id), t)
+
+    @mcp.tool()
     def assess_project(project_id: str) -> dict[str, Any]:
         """Project-level meta-assessment (read-only, computed — no LLM verdict): coverage, open
         evidence gates, open questions, a saturation hint, structural gaps, and a computed

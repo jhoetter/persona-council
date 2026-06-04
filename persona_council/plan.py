@@ -497,6 +497,100 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
     }
 
 
+def _diverse_participants(store: Store, persona_ids: list[str], k: int = 6) -> list[str]:
+    """Pick up to k personas SPREAD across a segment axis (attitude/life-stage), so a council gets
+    real diversity rather than keyword-matched look-alikes (anti-steering)."""
+    buckets: dict[str, list[str]] = {}
+    for pid in persona_ids:
+        p = store.get_persona(pid)
+        if not p:
+            continue
+        seg = p.get("segment") or {}
+        key = str(seg.get("einstellung") or seg.get("lebensphase") or seg.get("kanal") or p.get("slug"))
+        buckets.setdefault(key, []).append(p["slug"])
+    pools = list(buckets.values())
+    out: list[str] = []
+    i = 0
+    while len(out) < k and any(pools) and i < 500:
+        pool = pools[i % len(pools)]
+        if pool:
+            out.append(pool.pop(0))
+        i += 1
+    return out[:k]
+
+
+def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Lean orchestration step (spec/harness-evaluation-and-autonomy.md HX2): the ready task FULLY
+    loaded, so a long autonomous run is one `next_action` → author (subagent) → persist per
+    iteration, keeping host context lean. For analyze → grounding (prior syntheses + open questions);
+    for act → the framed questions of the consumed frame + segment-diverse suggested participants;
+    for verify → the fan to consolidate + the gate to satisfy. Carries the project recommendation."""
+    store = store or Store()
+    plan = get_plan(project_id, store=store)
+    if plan is None:
+        raise PlanError("NO_PLAN", f"project {project_id} has no plan")
+    b = brief_next(project_id, store=store)
+    if b.get("complete"):
+        return {"complete": True, "recommendation": "complete", "instructions": b.get("instructions", "")}
+    t = task(plan, b["task"])
+    project = store.get_research_project(project_id) or {}
+    persona_ids = project.get("persona_ids", [])
+    out: dict[str, Any] = {"complete": False, "task": b["task"], "bucket": b["bucket"],
+                           "capability": b["capability"], "title": b["title"], "intent": b["intent"],
+                           "unmet": b.get("unmet", []), "instructions": b["instructions"]}
+    if b["bucket"] == "analyze":
+        try:
+            oqs = [o["text"] for o in store.list_open_questions(project_id) if o.get("status") == "open"]
+        except Exception:
+            oqs = []
+        out["grounding"] = {
+            "prior_syntheses": [{"id": s["id"], "title": s.get("title", "")} for s in store.list_syntheses()][:8],
+            "open_questions": oqs[:8], "persona_pool": persona_ids,
+            "guidance": "record_frame: >=1 research question grounded in CITED persona memory / prior evidence.",
+        }
+    elif b["bucket"] == "act":
+        questions: list[str] = []
+        for c in t["consumes"]:
+            f = task(plan, c)
+            if f and f.get("frame"):
+                questions += f["frame"].get("questions", [])
+        out["act"] = {
+            "framed_questions": questions[:6],
+            "suggested_participants": _diverse_participants(store, persona_ids, k=6),
+            "guidance": ("Add an act task per ANGLE; run a REAL multi-persona council, or "
+                         "scaffold_artifact + a grounded proband session; link_evidence + complete. "
+                         "Breadth = angles × persona diversity, not one council per persona."),
+        }
+    else:  # verify
+        fan = _fan_evidence(plan, t)
+        out["verify"] = {
+            "fan_evidence": fan, "gate_tag": t["requires"].get("gate_tag"),
+            "needs": b.get("unmet", []),
+            "guidance": ("Consolidate the fan into a synthesis (record_synthesis — councils are "
+                         "OPTIONAL/decoupled), record the gate judgment, assess_progress, complete_task."),
+        }
+        # If the fan is still short of min_inputs, the real next move is ACT work for this diamond:
+        # surface the consuming frames' questions + diverse participants so the host adds act tasks.
+        if len(fan) < _eff_min(t):
+            questions: list[str] = []
+            for c in t["consumes"]:
+                f = task(plan, c)
+                if f and f.get("frame"):
+                    questions += f["frame"].get("questions", [])
+            out["act"] = {
+                "for_frame": t["consumes"], "framed_questions": questions[:6],
+                "suggested_participants": _diverse_participants(store, persona_ids, k=6),
+                "guidance": ("This verify's fan is incomplete — do ACT work first: add an act task "
+                             "per ANGLE consuming the frame, run real councils / build+test prototypes, "
+                             "link_evidence + complete, until the gate's min_inputs is met."),
+            }
+    try:
+        out["recommendation"] = assess_project(project_id, store=store)["recommendation"]
+    except Exception:
+        out["recommendation"] = ""
+    return out
+
+
 # ------------------------------------------------------------------ plan.md render
 
 _STATUS_MARK = {"done": "x", "active": "~", "todo": " ", "blocked": "!"}

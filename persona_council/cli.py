@@ -394,6 +394,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("plan-progress")
     p.add_argument("project_id"); p.add_argument("task_id"); p.add_argument("--rationale", default=""); p.add_argument("--delta", default=""); p.add_argument("--ref", action="append", dest="refs")
     p = sub.add_parser("plan-assess"); p.add_argument("project_id")
+    p = sub.add_parser("plan-next"); p.add_argument("project_id")
     # Prototypes + Playwright harness
     p = sub.add_parser("prototype-scaffold")
     p.add_argument("slug"); p.add_argument("name"); p.add_argument("file"); p.add_argument("--project")
@@ -722,6 +723,8 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.assess_progress(args.project_id, args.task_id, args.rationale, args.refs or [], args.delta))
         elif args.command == "plan-assess":
             _print(services.assess_project(args.project_id))
+        elif args.command == "plan-next":
+            _print(services.next_action(args.project_id))
         elif args.command == "prototype-scaffold":
             _print(services.scaffold_prototype(args.slug, args.name, json.loads(Path(args.file).read_text(encoding="utf-8")),
                                                template=args.template, project_id=args.project, fidelity=args.fidelity))
