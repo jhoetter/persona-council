@@ -431,10 +431,26 @@ def register_pages(app) -> None:
                     f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(s.get("title",""))}</span></a> '
                     f'<span class="muted small">{_esc(pr.get("short", s.get("kind","")))} · {len(s.get("member_ids",[]))}</span></div>')
             sec_html = (f'<div class="oqp-h" style="margin-top:14px">Sections ({len(secs)})</div>' + "".join(rows))
+        # Project pulse (assess_project) — a self-documenting status line for in-flight long runs.
+        pulse_html = ""
+        try:
+            ap = services.assess_project(proj["id"], store=store)
+            cov = ap["coverage"]["evidence_by_kind"]
+            cov_str = " · ".join(f"{k}:{v}" for k, v in cov.items())
+            gaps = ap.get("gaps") or []
+            gap_str = ("<div class='muted small' style='margin-top:4px'>Gaps: "
+                       + "; ".join(_esc(g) for g in gaps[:4]) + "</div>") if gaps else ""
+            pulse_html = (
+                f'<div class="oqp-h">Pulse</div>'
+                f'<div class="strow"><span class="pill">{_esc(ap["recommendation"])}</span> '
+                f'<span class="muted small">{_esc(cov_str)} · Sättigung: {_esc(ap["saturation"]["hint"])}</span>{gap_str}</div>')
+        except Exception:
+            pulse_html = ""
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
         panel = (
             f'<div class="oqpanel" id="oqpanel" hidden>'
-            f'<div class="oqp-h">{t("build_order_h")} (edges)</div>'
+            f'{pulse_html}'
+            f'<div class="oqp-h" style="margin-top:14px">{t("build_order_h")} (edges)</div>'
             f'<div class="pills" style="margin:6px 0 14px">{edge_leg}</div>'
             f'{sec_html}'
             f'<div class="oqp-h" style="margin-top:14px">{t("open_questions_h")}</div>'
