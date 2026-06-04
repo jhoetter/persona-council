@@ -84,7 +84,7 @@ STRINGS: dict[str, dict[str, str]] = {
         # synthesis report
         "answer_exec_summary": "Antwort · Executive Summary",
         "question": "Frage",
-        "councils_overview": "Councils im Überblick",
+        "councils_overview": "Referenzierte Councils (Belege)",
         "jump_into_council": "In den Council springen →",
         "recommendations": "Handlungsempfehlungen",
         "positioning": "Positionierung",
@@ -209,7 +209,7 @@ STRINGS: dict[str, dict[str, str]] = {
         # synthesis report
         "answer_exec_summary": "Answer · Executive Summary",
         "question": "Question",
-        "councils_overview": "Councils overview",
+        "councils_overview": "Referenced councils (evidence)",
         "jump_into_council": "Jump into the council →",
         "recommendations": "Recommendations",
         "positioning": "Positioning",

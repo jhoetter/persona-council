@@ -141,15 +141,21 @@ def brief_synthesis(council_ids: list[str], title: str | None = None, start_inpu
 
 
 
-def record_synthesis(title: str, start_input: str, council_ids: list[str], payload: dict[str, Any],
+def record_synthesis(title: str, start_input: str, council_ids: list[str] | None = None,
+                     payload: dict[str, Any] | None = None,
                      goal: str = "", synthesis_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
-    """Persist a host-authored synthesis over an ordered chain of councils.
+    """Persist a host-authored synthesis. A synthesis is a FIRST-CLASS answer/report node and is
+    DECOUPLED from councils: `council_ids` is an OPTIONAL list of referenced evidence and may be
+    empty — e.g. an affinity-clustering synthesis over observations, a synthesis over other
+    syntheses, or a standalone analysis. Councils are independent nodes a synthesis MAY cite (via
+    `references`/`citations`/`voices`); they are not sub-parts of it.
 
     For the iterative driver loop: pass the SAME synthesis_id each round to update
     one growing study arc in place (chain + interim learnings + next_council_question).
     """
     store = store or Store()
-    data = validate_synthesis_payload(payload)
+    council_ids = list(council_ids or [])
+    data = validate_synthesis_payload(payload or {})
     existing = store.get_synthesis(synthesis_id) if synthesis_id else None
     sid = (existing or {}).get("id") or stable_id("synthesis", title or "synthesis", utc_now_iso())
     created = (existing or {}).get("created_at") or utc_now_iso()

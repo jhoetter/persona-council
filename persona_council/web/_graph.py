@@ -45,7 +45,7 @@ def _graph_layout(graph: dict) -> dict:
 # node box dimensions (must match _RGRAPH_JS NW/NH)
 _NW, _NH = 250, 58
 # Saved drag-layouts in localStorage are keyed by this; bump on any layout-algorithm change.
-_LAYOUT_VERSION = 4
+_LAYOUT_VERSION = 5
 
 
 def _convex_hull(points: list[tuple]) -> list[tuple]:
