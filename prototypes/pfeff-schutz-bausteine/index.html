@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schutz-Bausteine entdecken</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--bg:#f6f7f9;--panel:#fff;--ink:#1c1e21;--muted:#697077;--line:#e6e8eb;--accent:#5b6cff;--accent-ink:#fff;--r:10px;--sh:0 1px 2px rgba(16,18,28,.06);--ff:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body[data-fidelity=lofi]{--panel:#fffef9;--line:#cfcabb;--ink:#2b2b2b;--muted:#7a756a;--accent:#5f6368;--r:14px;--sh:none;--ff:"Comic Sans MS","Segoe Print","Bradley Hand",cursive}
+  body[data-fidelity=hifi]{--bg:#fbfbfd;--panel:#fff;--ink:#0c0d12;--muted:#6b7280;--line:#ececf1;--accent:#5e6ad2;--r:8px;--sh:0 1px 3px rgba(16,18,40,.08),0 0 0 1px rgba(16,18,40,.03);--ff:Inter,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;font:15px/1.5 var(--ff);color:var(--ink);background:var(--bg)}
+  body[data-fidelity=lofi] .card,body[data-fidelity=lofi] .el input,body[data-fidelity=lofi] .el select{border-style:dashed}
+  #lofi-banner{display:none}
+  body[data-fidelity=lofi] #lofi-banner{display:block;background:#fff3cd;color:#7a5b00;text-align:center;padding:5px;font-size:12px;border-bottom:1px dashed #cfcabb}
+  header{padding:16px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  h1{font-size:18px;margin:0}.sub{color:var(--muted);font-size:13px;margin-top:2px}
+  nav{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  nav button{font:inherit;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink)}
+  nav button.active{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  main{max-width:920px;margin:0 auto;padding:22px}
+  .screen{display:none}.screen.active{display:block}
+  .screen h2{font-size:17px;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:0 0 18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:16px;cursor:default;display:flex;flex-direction:column;gap:8px;transition:border-color .12s,transform .12s}
+  .card.clickable{cursor:pointer}.card.clickable:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .card .tag{align-self:flex-start;font-size:11px;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);padding:2px 8px;border-radius:999px}
+  .card h3{margin:0;font-size:15px}.card p{margin:0;color:var(--muted);font-size:14px}
+  .card .meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .el{margin:0 0 14px}.el label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+  .el input,.el select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);width:100%;max-width:380px;background:var(--bg);color:var(--ink)}
+  .el p{margin:0;max-width:62ch}.el a{color:var(--accent)}
+  .btn{font:inherit;border:1px solid transparent;background:var(--accent);color:var(--accent-ink);border-radius:var(--r);padding:8px 14px;cursor:pointer;box-shadow:var(--sh)}
+  .btn.secondary{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .15s;pointer-events:none}#toast.show{opacity:.95}
+</style>
+</head>
+<body>
+<div id="lofi-banner">Lo-Fi · zum Testen, nicht final</div>
+<header><h1 id="apptitle">Schutz-Bausteine entdecken</h1><div class="sub" id="appsummary">Eine ehrliche Karten-Übersicht ohne Fachsprache und ohne Verkaufsdruck. Jeder Schutz-Baustein sagt klar, was er ist, was er ungefähr kostet und wann du ihn ehrlich gesagt NICHT brauchst. Eine Karte heißt 'Erstmal nichts' und ist gleichwertig. Nichts wird nach oben sortiert, nichts wird dir angedreht. Alles ist klein, pausierbar und jederzeit kündbar.</div></header>
+<nav id="nav"></nav>
+<main id="screens"></main>
+<div id="toast"></div>
+<script id="concept" type="application/json">{"title": "Schutz-Bausteine entdecken", "summary": "Eine ehrliche Karten-Übersicht ohne Fachsprache und ohne Verkaufsdruck. Jeder Schutz-Baustein sagt klar, was er ist, was er ungefähr kostet und wann du ihn ehrlich gesagt NICHT brauchst. Eine Karte heißt 'Erstmal nichts' und ist gleichwertig. Nichts wird nach oben sortiert, nichts wird dir angedreht. Alles ist klein, pausierbar und jederzeit kündbar.", "start": "uebersicht", "fidelity": "lofi", "screens": [{"id": "uebersicht", "title": "Schutz-Bausteine", "elements": [{"id": "intro-1", "kind": "text", "text": "Hier sind ein paar Bausteine, die Leuten in deinem Alter manchmal helfen. Kein Ranking, keine Empfehlung. Tipp drauf und schau dir an, was wirklich dahintersteckt – inklusive: wann du das gar nicht brauchst."}, {"id": "intro-2", "kind": "text", "text": "Eine der Karten heißt 'Erstmal nichts'. Die ist genauso ok wie alle anderen."}], "cards": [{"id": "card-nichts", "title": "Erstmal nichts – und das ist ok.", "body": "Vielleicht brauchst du gerade gar keinen Vertrag. Wenn dein Geld knapp ist oder sich gerade nichts Großes verändert, ist Nichts-tun eine ehrliche und richtige Antwort. Du verpasst nichts.", "tag": "Ehrliche Nicht-Option", "meta": "Kosten: 0 €", "goto": "nichts"}, {"id": "card-haftpflicht", "title": "Privat-Haftpflicht", "body": "Springt ein, wenn du aus Versehen jemand anderem oder fremden Sachen schadest. Das ist der Baustein, den die meisten zuerst sinnvoll finden, weil ein Schaden richtig teuer werden kann.", "tag": "Eher früh sinnvoll", "meta": "ca. 3–6 € / Monat", "goto": "haftpflicht"}, {"id": "card-risiko", "title": "Kleiner Risikoschutz", "body": "Zahlt Geld an Menschen, die finanziell von dir abhängen, falls dir etwas Ernstes passiert. Nur Schutz, kein Sparen – deshalb günstig und überschaubar.", "tag": "Hängt an deiner Situation", "meta": "ab ca. 5–10 € / Monat", "goto": "risiko"}, {"id": "card-notgroschen", "title": "Notgroschen", "body": "Kein Versicherungsprodukt, sondern einfach Geld auf einem extra Konto. Oft der ehrlichste 'erste Schritt' – flexibel, kostet keine Gebühr und du kommst jederzeit dran.", "tag": "Kein Vertrag nötig", "meta": "Kosten: 0 €", "goto": "notgroschen"}, {"id": "card-spaeter", "title": "Später nochmal", "body": "Das Thema ist gerade nicht dran, aber du willst es nicht ganz vergessen. Völlig in Ordnung – die meisten Schutz-Bausteine werden erst bei einem echten Anlass wichtig (fester Job, Zusammenziehen, Kind).", "tag": "Auf Wiedervorlage", "meta": "Kosten: 0 €", "goto": "spaeter"}]}, {"id": "nichts", "title": "Erstmal nichts", "elements": [{"id": "nichts-1", "kind": "text", "text": "Erstmal nichts – und das ist ok."}, {"id": "nichts-2", "kind": "text", "text": "Wenn am Monatsende nichts übrig bleibt oder sich in deinem Leben gerade nichts Großes ändert, musst du jetzt nichts abschließen. Niemand hängt finanziell von dir ab? Dann ist 'nichts' oft die ehrliche richtige Wahl."}, {"id": "nichts-3", "kind": "text", "text": "Kosten: 0 €. Bindung: keine. Du kannst jederzeit wiederkommen, wenn sich wirklich etwas ändert."}, {"id": "nichts-4", "kind": "text", "text": "Was du dir merken kannst: Wichtig wird ein Baustein meist nicht 'irgendwann', sondern an einem konkreten Anlass – erster fester Job, Zusammenziehen, Kind. Bis dahin ist Nichts-tun keine Lücke, sondern eine Entscheidung."}, {"id": "nichts-link-spaeter", "kind": "link", "text": "Trotzdem auf Wiedervorlage legen", "goto": "spaeter"}, {"id": "nichts-btn-zurueck", "kind": "button", "text": "Zurück zur Übersicht", "goto": "uebersicht"}]}, {"id": "haftpflicht", "title": "Privat-Haftpflicht", "elements": [{"id": "hp-1", "kind": "text", "text": "Was ist das? Wenn du aus Versehen jemandem schadest – das fremde Handy fällt runter, du baust beim Radfahren einen Unfall – kann das schnell richtig teuer werden. Die Haftpflicht zahlt diesen Schaden statt dir."}, {"id": "hp-2", "kind": "text", "text": "Was kostet das ungefähr? Meist ca. 3–6 € im Monat. Du kannst monatlich kündigen, es gibt keine lange Bindung."}, {"id": "hp-3", "kind": "text", "text": "Wann brauchst du das NICHT? Wenn du noch bei deinen Eltern wohnst, bist du oft über deren Vertrag mitversichert – dann brauchst du keinen eigenen. Kurz dort nachfragen, bevor du etwas abschließt."}, {"id": "hp-eltern", "kind": "select", "text": "Wohnst du noch bei deinen Eltern / in deren Haushalt?", "options": ["Weiß nicht", "Ja – dann erst dort nachfragen", "Nein – eigener Haushalt"]}, {"id": "hp-btn-nichts", "kind": "button", "text": "Doch erstmal nichts", "goto": "nichts"}, {"id": "hp-btn-zurueck", "kind": "button", "text": "Zurück zur Übersicht", "goto": "uebersicht"}]}, {"id": "risiko", "title": "Kleiner Risikoschutz", "elements": [{"id": "ri-1", "kind": "text", "text": "Was ist das? Reiner Schutz: Falls dir etwas Ernstes passiert, bekommen die Menschen Geld, die finanziell von dir abhängen. Kein Sparen, kein 40-Jahre-Vertrag – nur Absicherung, deshalb günstig."}, {"id": "ri-2", "kind": "text", "text": "Was kostet das ungefähr? Oft ab ca. 5–10 € im Monat, je nach Höhe. Klein starten ist erlaubt, der Beitrag lässt sich pausieren und der Vertrag jederzeit kündigen."}, {"id": "ri-3", "kind": "text", "text": "Wann brauchst du das NICHT? Wenn niemand finanziell von dir abhängt – kein Kind, kein Partner mit gemeinsamem Kredit – brauchst du diesen Baustein in der Regel nicht. Dann ist 'nichts' die ehrlichere Wahl."}, {"id": "ri-abh", "kind": "select", "text": "Hängt finanziell jemand von dir ab?", "options": ["Nein – niemand", "Ja – Partner/in oder Kind", "Bin mir unsicher"]}, {"id": "ri-btn-nichts", "kind": "button", "text": "Klingt nicht nach mir – erstmal nichts", "goto": "nichts"}, {"id": "ri-btn-zurueck", "kind": "button", "text": "Zurück zur Übersicht", "goto": "uebersicht"}]}, {"id": "notgroschen", "title": "Notgroschen", "elements": [{"id": "no-1", "kind": "text", "text": "Was ist das? Einfach Geld, das du auf ein extra Konto legst, für den Fall, dass mal was kaputtgeht oder dazwischenkommt. Kein Vertrag, kein Anbieter, keine Provision."}, {"id": "no-2", "kind": "text", "text": "Was kostet das ungefähr? Nichts an Gebühren. Du entscheidest selbst, wie viel und wann – auch 10 € im Monat sind ein Anfang, und du kommst jederzeit dran."}, {"id": "no-3", "kind": "text", "text": "Wann brauchst du das NICHT? Wenn dein Geld gerade so für Miete und Sprit reicht, zwing dich nicht. Dann gilt 'Erstmal nichts'. Der Notgroschen läuft dir nicht weg – du kannst jederzeit anfangen."}, {"id": "no-betrag", "kind": "input", "text": "Was wäre für dich pro Monat machbar (in €)? (optional)"}, {"id": "no-link-mehr", "kind": "link", "text": "Mehr dazu unabhängig nachlesen (z. B. Verbraucherzentrale)", "goto": "info"}, {"id": "no-btn-zurueck", "kind": "button", "text": "Zurück zur Übersicht", "goto": "uebersicht"}]}, {"id": "spaeter", "title": "Später nochmal", "elements": [{"id": "sp-1", "kind": "text", "text": "Auf Wiedervorlage – ohne dass dich jetzt jemand drängt."}, {"id": "sp-2", "kind": "text", "text": "Schutz wird meist nicht 'irgendwann' wichtig, sondern an einem konkreten Anlass. Was davon könnte bei dir als Nächstes kommen?"}, {"id": "sp-anlass", "kind": "select", "text": "Steht bei dir vielleicht bald etwas an?", "options": ["Gerade nichts", "Erster fester Job", "Zusammenziehen", "Kind", "Weiß noch nicht"]}, {"id": "sp-3", "kind": "text", "text": "Wir verschicken keine Werbung und rufen dich nicht an. Du kommst einfach selbst wieder, wenn es so weit ist."}, {"id": "sp-btn-nichts", "kind": "button", "text": "Passt – erstmal nichts", "goto": "nichts"}, {"id": "sp-btn-zurueck", "kind": "button", "text": "Zurück zur Übersicht", "goto": "uebersicht"}]}, {"id": "info", "title": "Unabhängig nachlesen", "elements": [{"id": "in-1", "kind": "text", "text": "Du musst uns nicht glauben. Genau das ist der Punkt: Verlass dich nicht auf jemanden, der etwas verkaufen will."}, {"id": "in-2", "kind": "text", "text": "Unabhängige Stellen wie die Verbraucherzentrale erklären die gleichen Bausteine ohne Verkaufsinteresse. Auch Familie oder Freunde, die schon weiter sind, sind eine gute Quelle."}, {"id": "in-3", "kind": "text", "text": "Wir bekommen keine Provision dafür, wenn du etwas abschließt – und auch nicht dafür, wenn du 'Erstmal nichts' wählst."}, {"id": "in-link-vz", "kind": "link", "text": "Verbraucherzentrale öffnen", "goto": "info"}, {"id": "in-btn-zurueck", "kind": "button", "text": "Zurück zur Übersicht", "goto": "uebersicht"}]}]}</script>
+<script>
+(function(){
+  var C = JSON.parse(document.getElementById('concept').textContent);
+  document.body.dataset.fidelity = C.fidelity || 'midfi';
+  document.getElementById('apptitle').textContent = C.title || 'Prototype';
+  document.getElementById('appsummary').textContent = C.summary || '';
+  var nav=document.getElementById('nav'), root=document.getElementById('screens'), state={};
+  function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1400);}
+  function show(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.dataset.id===id);});document.querySelectorAll('#nav button').forEach(function(b){b.classList.toggle('active',b.dataset.id===id);});}
+  function renderEl(el){
+    var wrap=document.createElement('div');wrap.className='el';
+    if(el.kind==='text'){var p=document.createElement('p');p.textContent=el.label||'';wrap.appendChild(p);}
+    else if(el.kind==='input'){var l=document.createElement('label');l.textContent=el.label||el.id;var inp=document.createElement('input');inp.id=el.id;inp.setAttribute('aria-label',el.label||el.id);inp.addEventListener('input',function(){state[el.id]=inp.value;});wrap.appendChild(l);wrap.appendChild(inp);}
+    else if(el.kind==='select'){var l2=document.createElement('label');l2.textContent=el.label||el.id;var sel=document.createElement('select');sel.id=el.id;sel.setAttribute('aria-label',el.label||el.id);(el.options||[]).forEach(function(o){var op=document.createElement('option');op.value=o;op.textContent=o;sel.appendChild(op);});sel.addEventListener('change',function(){state[el.id]=sel.value;});wrap.appendChild(l2);wrap.appendChild(sel);}
+    else if(el.kind==='link'){var a=document.createElement('a');a.href='#';a.id=el.id;a.textContent=el.label||el.id;a.setAttribute('aria-label',el.label||el.id);if(el.goto){a.addEventListener('click',function(e){e.preventDefault();show(el.goto);});}wrap.appendChild(a);}
+    else {var b=document.createElement('button');b.className='btn'+(el.variant==='secondary'?' secondary':'');b.id=el.id;b.textContent=el.label||el.id;b.setAttribute('aria-label',el.label||el.id);if(el.goto){b.addEventListener('click',function(){show(el.goto);});}else{b.addEventListener('click',function(){toast((el.label||'Done')+' ✓');});}wrap.appendChild(b);}
+    return wrap;
+  }
+  (C.screens||[]).forEach(function(scr){
+    var nb=document.createElement('button');nb.textContent=scr.title||scr.id;nb.dataset.id=scr.id;nb.addEventListener('click',function(){show(scr.id);});nav.appendChild(nb);
+    var sec=document.createElement('section');sec.className='screen';sec.dataset.id=scr.id;
+    var h=document.createElement('h2');h.textContent=scr.title||scr.id;sec.appendChild(h);
+    if((scr.cards||[]).length){var g=document.createElement('div');g.className='grid';scr.cards.forEach(function(c){
+      var card=document.createElement('div');card.className='card'+(c.goto?' clickable':'');if(c.id){card.id=c.id;}card.setAttribute('aria-label',c.title||c.id||'card');
+      if(c.tag){var tg=document.createElement('span');tg.className='tag';tg.textContent=c.tag;card.appendChild(tg);}
+      var h3=document.createElement('h3');h3.textContent=c.title||'';card.appendChild(h3);
+      if(c.body){var p=document.createElement('p');p.textContent=c.body;card.appendChild(p);}
+      if(c.meta){var mt=document.createElement('div');mt.className='meta';mt.textContent=c.meta;card.appendChild(mt);}
+      if(c.goto){card.setAttribute('role','button');card.tabIndex=0;card.addEventListener('click',function(){show(c.goto);});card.addEventListener('keydown',function(e){if(e.key==='Enter')show(c.goto);});}
+      g.appendChild(card);
+    });sec.appendChild(g);}
+    (scr.elements||[]).forEach(function(el){sec.appendChild(renderEl(el));});
+    root.appendChild(sec);
+  });
+  show(C.start || ((C.screens||[])[0]||{}).id);
+})();
+</script>
+</body>
+</html>

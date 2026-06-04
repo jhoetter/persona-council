@@ -1,0 +1,306 @@
+{
+  "title": "Schutz-Bausteine entdecken",
+  "summary": "Eine ehrliche Karten-Übersicht ohne Fachsprache und ohne Verkaufsdruck. Jeder Schutz-Baustein sagt klar, was er ist, was er ungefähr kostet und wann du ihn ehrlich gesagt NICHT brauchst. Eine Karte heißt 'Erstmal nichts' und ist gleichwertig. Nichts wird nach oben sortiert, nichts wird dir angedreht. Alles ist klein, pausierbar und jederzeit kündbar.",
+  "start": "uebersicht",
+  "fidelity": "lofi",
+  "screens": [
+    {
+      "id": "uebersicht",
+      "title": "Schutz-Bausteine",
+      "elements": [
+        {
+          "id": "intro-1",
+          "kind": "text",
+          "text": "Hier sind ein paar Bausteine, die Leuten in deinem Alter manchmal helfen. Kein Ranking, keine Empfehlung. Tipp drauf und schau dir an, was wirklich dahintersteckt – inklusive: wann du das gar nicht brauchst."
+        },
+        {
+          "id": "intro-2",
+          "kind": "text",
+          "text": "Eine der Karten heißt 'Erstmal nichts'. Die ist genauso ok wie alle anderen."
+        }
+      ],
+      "cards": [
+        {
+          "id": "card-nichts",
+          "title": "Erstmal nichts – und das ist ok.",
+          "body": "Vielleicht brauchst du gerade gar keinen Vertrag. Wenn dein Geld knapp ist oder sich gerade nichts Großes verändert, ist Nichts-tun eine ehrliche und richtige Antwort. Du verpasst nichts.",
+          "tag": "Ehrliche Nicht-Option",
+          "meta": "Kosten: 0 €",
+          "goto": "nichts"
+        },
+        {
+          "id": "card-haftpflicht",
+          "title": "Privat-Haftpflicht",
+          "body": "Springt ein, wenn du aus Versehen jemand anderem oder fremden Sachen schadest. Das ist der Baustein, den die meisten zuerst sinnvoll finden, weil ein Schaden richtig teuer werden kann.",
+          "tag": "Eher früh sinnvoll",
+          "meta": "ca. 3–6 € / Monat",
+          "goto": "haftpflicht"
+        },
+        {
+          "id": "card-risiko",
+          "title": "Kleiner Risikoschutz",
+          "body": "Zahlt Geld an Menschen, die finanziell von dir abhängen, falls dir etwas Ernstes passiert. Nur Schutz, kein Sparen – deshalb günstig und überschaubar.",
+          "tag": "Hängt an deiner Situation",
+          "meta": "ab ca. 5–10 € / Monat",
+          "goto": "risiko"
+        },
+        {
+          "id": "card-notgroschen",
+          "title": "Notgroschen",
+          "body": "Kein Versicherungsprodukt, sondern einfach Geld auf einem extra Konto. Oft der ehrlichste 'erste Schritt' – flexibel, kostet keine Gebühr und du kommst jederzeit dran.",
+          "tag": "Kein Vertrag nötig",
+          "meta": "Kosten: 0 €",
+          "goto": "notgroschen"
+        },
+        {
+          "id": "card-spaeter",
+          "title": "Später nochmal",
+          "body": "Das Thema ist gerade nicht dran, aber du willst es nicht ganz vergessen. Völlig in Ordnung – die meisten Schutz-Bausteine werden erst bei einem echten Anlass wichtig (fester Job, Zusammenziehen, Kind).",
+          "tag": "Auf Wiedervorlage",
+          "meta": "Kosten: 0 €",
+          "goto": "spaeter"
+        }
+      ]
+    },
+    {
+      "id": "nichts",
+      "title": "Erstmal nichts",
+      "elements": [
+        {
+          "id": "nichts-1",
+          "kind": "text",
+          "text": "Erstmal nichts – und das ist ok."
+        },
+        {
+          "id": "nichts-2",
+          "kind": "text",
+          "text": "Wenn am Monatsende nichts übrig bleibt oder sich in deinem Leben gerade nichts Großes ändert, musst du jetzt nichts abschließen. Niemand hängt finanziell von dir ab? Dann ist 'nichts' oft die ehrliche richtige Wahl."
+        },
+        {
+          "id": "nichts-3",
+          "kind": "text",
+          "text": "Kosten: 0 €. Bindung: keine. Du kannst jederzeit wiederkommen, wenn sich wirklich etwas ändert."
+        },
+        {
+          "id": "nichts-4",
+          "kind": "text",
+          "text": "Was du dir merken kannst: Wichtig wird ein Baustein meist nicht 'irgendwann', sondern an einem konkreten Anlass – erster fester Job, Zusammenziehen, Kind. Bis dahin ist Nichts-tun keine Lücke, sondern eine Entscheidung."
+        },
+        {
+          "id": "nichts-link-spaeter",
+          "kind": "link",
+          "text": "Trotzdem auf Wiedervorlage legen",
+          "goto": "spaeter"
+        },
+        {
+          "id": "nichts-btn-zurueck",
+          "kind": "button",
+          "text": "Zurück zur Übersicht",
+          "goto": "uebersicht"
+        }
+      ]
+    },
+    {
+      "id": "haftpflicht",
+      "title": "Privat-Haftpflicht",
+      "elements": [
+        {
+          "id": "hp-1",
+          "kind": "text",
+          "text": "Was ist das? Wenn du aus Versehen jemandem schadest – das fremde Handy fällt runter, du baust beim Radfahren einen Unfall – kann das schnell richtig teuer werden. Die Haftpflicht zahlt diesen Schaden statt dir."
+        },
+        {
+          "id": "hp-2",
+          "kind": "text",
+          "text": "Was kostet das ungefähr? Meist ca. 3–6 € im Monat. Du kannst monatlich kündigen, es gibt keine lange Bindung."
+        },
+        {
+          "id": "hp-3",
+          "kind": "text",
+          "text": "Wann brauchst du das NICHT? Wenn du noch bei deinen Eltern wohnst, bist du oft über deren Vertrag mitversichert – dann brauchst du keinen eigenen. Kurz dort nachfragen, bevor du etwas abschließt."
+        },
+        {
+          "id": "hp-eltern",
+          "kind": "select",
+          "text": "Wohnst du noch bei deinen Eltern / in deren Haushalt?",
+          "options": [
+            "Weiß nicht",
+            "Ja – dann erst dort nachfragen",
+            "Nein – eigener Haushalt"
+          ]
+        },
+        {
+          "id": "hp-btn-nichts",
+          "kind": "button",
+          "text": "Doch erstmal nichts",
+          "goto": "nichts"
+        },
+        {
+          "id": "hp-btn-zurueck",
+          "kind": "button",
+          "text": "Zurück zur Übersicht",
+          "goto": "uebersicht"
+        }
+      ]
+    },
+    {
+      "id": "risiko",
+      "title": "Kleiner Risikoschutz",
+      "elements": [
+        {
+          "id": "ri-1",
+          "kind": "text",
+          "text": "Was ist das? Reiner Schutz: Falls dir etwas Ernstes passiert, bekommen die Menschen Geld, die finanziell von dir abhängen. Kein Sparen, kein 40-Jahre-Vertrag – nur Absicherung, deshalb günstig."
+        },
+        {
+          "id": "ri-2",
+          "kind": "text",
+          "text": "Was kostet das ungefähr? Oft ab ca. 5–10 € im Monat, je nach Höhe. Klein starten ist erlaubt, der Beitrag lässt sich pausieren und der Vertrag jederzeit kündigen."
+        },
+        {
+          "id": "ri-3",
+          "kind": "text",
+          "text": "Wann brauchst du das NICHT? Wenn niemand finanziell von dir abhängt – kein Kind, kein Partner mit gemeinsamem Kredit – brauchst du diesen Baustein in der Regel nicht. Dann ist 'nichts' die ehrlichere Wahl."
+        },
+        {
+          "id": "ri-abh",
+          "kind": "select",
+          "text": "Hängt finanziell jemand von dir ab?",
+          "options": [
+            "Nein – niemand",
+            "Ja – Partner/in oder Kind",
+            "Bin mir unsicher"
+          ]
+        },
+        {
+          "id": "ri-btn-nichts",
+          "kind": "button",
+          "text": "Klingt nicht nach mir – erstmal nichts",
+          "goto": "nichts"
+        },
+        {
+          "id": "ri-btn-zurueck",
+          "kind": "button",
+          "text": "Zurück zur Übersicht",
+          "goto": "uebersicht"
+        }
+      ]
+    },
+    {
+      "id": "notgroschen",
+      "title": "Notgroschen",
+      "elements": [
+        {
+          "id": "no-1",
+          "kind": "text",
+          "text": "Was ist das? Einfach Geld, das du auf ein extra Konto legst, für den Fall, dass mal was kaputtgeht oder dazwischenkommt. Kein Vertrag, kein Anbieter, keine Provision."
+        },
+        {
+          "id": "no-2",
+          "kind": "text",
+          "text": "Was kostet das ungefähr? Nichts an Gebühren. Du entscheidest selbst, wie viel und wann – auch 10 € im Monat sind ein Anfang, und du kommst jederzeit dran."
+        },
+        {
+          "id": "no-3",
+          "kind": "text",
+          "text": "Wann brauchst du das NICHT? Wenn dein Geld gerade so für Miete und Sprit reicht, zwing dich nicht. Dann gilt 'Erstmal nichts'. Der Notgroschen läuft dir nicht weg – du kannst jederzeit anfangen."
+        },
+        {
+          "id": "no-betrag",
+          "kind": "input",
+          "text": "Was wäre für dich pro Monat machbar (in €)? (optional)"
+        },
+        {
+          "id": "no-link-mehr",
+          "kind": "link",
+          "text": "Mehr dazu unabhängig nachlesen (z. B. Verbraucherzentrale)",
+          "goto": "info"
+        },
+        {
+          "id": "no-btn-zurueck",
+          "kind": "button",
+          "text": "Zurück zur Übersicht",
+          "goto": "uebersicht"
+        }
+      ]
+    },
+    {
+      "id": "spaeter",
+      "title": "Später nochmal",
+      "elements": [
+        {
+          "id": "sp-1",
+          "kind": "text",
+          "text": "Auf Wiedervorlage – ohne dass dich jetzt jemand drängt."
+        },
+        {
+          "id": "sp-2",
+          "kind": "text",
+          "text": "Schutz wird meist nicht 'irgendwann' wichtig, sondern an einem konkreten Anlass. Was davon könnte bei dir als Nächstes kommen?"
+        },
+        {
+          "id": "sp-anlass",
+          "kind": "select",
+          "text": "Steht bei dir vielleicht bald etwas an?",
+          "options": [
+            "Gerade nichts",
+            "Erster fester Job",
+            "Zusammenziehen",
+            "Kind",
+            "Weiß noch nicht"
+          ]
+        },
+        {
+          "id": "sp-3",
+          "kind": "text",
+          "text": "Wir verschicken keine Werbung und rufen dich nicht an. Du kommst einfach selbst wieder, wenn es so weit ist."
+        },
+        {
+          "id": "sp-btn-nichts",
+          "kind": "button",
+          "text": "Passt – erstmal nichts",
+          "goto": "nichts"
+        },
+        {
+          "id": "sp-btn-zurueck",
+          "kind": "button",
+          "text": "Zurück zur Übersicht",
+          "goto": "uebersicht"
+        }
+      ]
+    },
+    {
+      "id": "info",
+      "title": "Unabhängig nachlesen",
+      "elements": [
+        {
+          "id": "in-1",
+          "kind": "text",
+          "text": "Du musst uns nicht glauben. Genau das ist der Punkt: Verlass dich nicht auf jemanden, der etwas verkaufen will."
+        },
+        {
+          "id": "in-2",
+          "kind": "text",
+          "text": "Unabhängige Stellen wie die Verbraucherzentrale erklären die gleichen Bausteine ohne Verkaufsinteresse. Auch Familie oder Freunde, die schon weiter sind, sind eine gute Quelle."
+        },
+        {
+          "id": "in-3",
+          "kind": "text",
+          "text": "Wir bekommen keine Provision dafür, wenn du etwas abschließt – und auch nicht dafür, wenn du 'Erstmal nichts' wählst."
+        },
+        {
+          "id": "in-link-vz",
+          "kind": "link",
+          "text": "Verbraucherzentrale öffnen",
+          "goto": "info"
+        },
+        {
+          "id": "in-btn-zurueck",
+          "kind": "button",
+          "text": "Zurück zur Übersicht",
+          "goto": "uebersicht"
+        }
+      ]
+    }
+  ]
+}
