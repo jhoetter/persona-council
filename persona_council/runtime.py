@@ -107,6 +107,7 @@ class StubAuthoringBackend:
     def author_exploration(self, project, step, index, store):
         from . import services as svc
         cid = svc.record_council(
+            project_id=project["id"],
             prompt=f"[{step['id']}] exploration {index + 1}",
             persona_ids=(project.get("persona_ids") or ["p1"])[:1],
             turns=[{"speaker": "Auto", "persona_id": "p1", "content": f"{step['intent']} (exploration {index + 1})"}],

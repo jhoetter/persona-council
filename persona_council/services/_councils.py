@@ -73,16 +73,20 @@ from ._common import *  # noqa: F401,F403  (shared helpers + constants)
 
 
 
-def brief_council(prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None,
-                  count: int = 3, context: str | None = None, store: Store | None = None) -> dict[str, Any]:
+def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = None,
+                  filters: dict[str, Any] | None = None, count: int = 3, context: str | None = None,
+                  store: Store | None = None) -> dict[str, Any]:
     """Gather everything needed to run a host-authored council and persist it with
-    record_council. Returns candidate personas (to select from) OR, when persona_ids
-    are given, each participant's loaded agent context to author turns against.
+    record_council. A council is scoped to a research project, so `project_id` is required
+    and validated up front (create one with create_research_project first; personas are
+    global and need no project). Returns candidate personas (to select from) OR, when
+    persona_ids are given, each participant's loaded agent context to author turns against.
 
     Methodology lives in the run-council skill: load each persona's SOUL + memory,
     react in character (support/skepticism/indifference/rejection all valid), then
     author proposal/votes/exec_summary and call record_council."""
     store = store or Store()
+    project = _require_research_project(store, project_id)  # fail fast if no/unknown project
     language = ensure_content_language(" ".join(filter(None, [prompt, context])))
     if not persona_ids:
         personas = list_personas(filters, store)
@@ -95,7 +99,7 @@ def brief_council(prompt: str, persona_ids: list[str] | None = None, filters: di
             for p in personas
         ]
         return {
-            "schema": "council_selection", "language": language, "prompt": prompt,
+            "schema": "council_selection", "language": language, "project_id": project["id"], "prompt": prompt,
             "count": min(max(1, count), len(candidates)) if candidates else 0,
             "candidate_personas": candidates,
             "instructions": (
@@ -117,13 +121,13 @@ def brief_council(prompt: str, persona_ids: list[str] | None = None, filters: di
             "soul_path": ctx["soul_path"], "agent_context": ctx["agent_context"],
         })
     return {
-        "schema": "council", "language": language, "prompt": prompt, "external_context": context,
-        "participants": participants,
+        "schema": "council", "language": language, "project_id": project["id"], "prompt": prompt,
+        "external_context": context, "participants": participants,
         "instructions": (
             "Author one or more turns per participant grounded in their agent_context (SOUL + memory), "
             "honest and anti-steering. Then author proposal, votes (SUPPORT/MAYBE/ABSTAIN/OPPOSE), a "
-            "short summary, and a rich Markdown exec_summary. Persist via record_council(prompt, "
-            f"persona_ids, turns, votes, proposal, summary, exec_summary). {language_instruction(language)}"
+            "short summary, and a rich Markdown exec_summary. Persist via record_council(project_id, "
+            f"prompt, persona_ids, turns, votes, proposal, summary, exec_summary). {language_instruction(language)}"
         ),
     }
 
@@ -208,14 +212,18 @@ def export_council_session(session_id: str, format: str = "json", store: Store |
 
 
 
-def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, Any]],
+def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: list[dict[str, Any]],
                    votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "",
                    exec_summary: str = "", selection_reason: str = "", key: str | None = None,
                    store: Store | None = None) -> dict[str, Any]:
-    """Persist a host-authored council (openings/moderator/directed turns + synthesis). Pass a stable
-    `key` (e.g. "<project>:<step>:<angle>") to get a DETERMINISTIC id so re-running the step is an
-    idempotent upsert — makes long autonomous runs resumable/replayable (spec/harness-evaluation HX6)."""
+    """Persist a host-authored council (openings/moderator/directed turns + synthesis). A council is a
+    research artefact and MUST live inside a research project — `project_id` is required and validated
+    (personas are global, but councils/studies/reports are scoped to a project; see
+    spec/research-graph-and-meta-report.md §4-5). Pass a stable `key` (e.g. "<project>:<step>:<angle>")
+    to get a DETERMINISTIC id so re-running the step is an idempotent upsert — makes long autonomous
+    runs resumable/replayable (spec/harness-evaluation HX6)."""
     store = store or Store()
+    project = _require_research_project(store, project_id)  # fail fast if no/unknown project
     existing = store.get_council_session(stable_id("council", key)) if key else None
     cid = stable_id("council", key) if key else stable_id("council", prompt, utc_now_iso())
     # Normalize turn/vote field variants to the canonical schema so the UI always renders the
@@ -239,8 +247,15 @@ def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, An
         prompt=prompt, persona_ids=persona_ids, selection_reason=selection_reason or "host-authored",
         turns=turns, proposal=proposal, votes=votes, summary=summary,
         exec_summary=exec_summary, created_at=(existing or {}).get("created_at") or utc_now_iso(),
+        project_id=project["id"],
     ).to_dict()
     store.insert_council_session(session)
+    # Register the council on its project so the project owns it directly (idempotent).
+    council_ids = project.setdefault("council_ids", [])
+    if cid not in council_ids:
+        council_ids.append(cid)
+        project["updated_at"] = utc_now_iso()
+        store.upsert_research_project(project)
     return session
 
 

@@ -125,6 +125,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--rounds", type=int, default=3)
 
     p = sub.add_parser("brief-council")
+    p.add_argument("project_id")
     p.add_argument("prompt")
     p.add_argument("--persona", action="append", dest="personas")
     p.add_argument("--count", type=int, default=3)
@@ -481,7 +482,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "council-run":
             _print(services.run_council(args.prompt, args.personas, rounds=args.rounds))
         elif args.command == "brief-council":
-            _print(services.brief_council(args.prompt, args.personas, count=args.count, context=args.context))
+            _print(services.brief_council(args.project_id, args.prompt, args.personas, count=args.count, context=args.context))
         elif args.command == "brief-ask":
             _print(services.brief_ask(args.persona_id, args.question, args.context))
         elif args.command == "ask":

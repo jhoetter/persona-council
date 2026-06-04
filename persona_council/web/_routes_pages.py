@@ -319,6 +319,11 @@ def register_pages(app) -> None:
             if proj:
                 crumbs.append((proj["title"], f"/projects/{proj['id']}"))
             crumbs.append((parent_syn["title"], f"/syntheses/{parent_syn['id']}"))
+        else:
+            # Council owned directly by a project (no synthesis yet).
+            proj = services.parent_project_of_council(session_id, store)
+            if proj:
+                crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((session["prompt"][:50], None))
         return _layout(council_title, _doc(main, rail=rail), store,
                        crumbs=crumbs, active="projects",

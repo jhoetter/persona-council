@@ -142,6 +142,10 @@ class CouncilSession:
     summary: str
     created_at: str
     exec_summary: str = ""  # rich markdown synthesis shown in the UI
+    # A council is a research artefact and is ALWAYS scoped to a research project
+    # (spec/research-graph-and-meta-report.md §4-5: personas are global, but studies/
+    # councils/reports are encapsulated at the Project level). Enforced at creation.
+    project_id: str = ""
 
     def to_dict(self) -> Json:
         return asdict(self)
@@ -217,6 +221,10 @@ class ResearchProject:
     # --- Notes: lightweight first-class observation nodes (the atomic unit for affinity),
     #   creatable without any methodology. List of {id,title,text,created_at}. ---
     notes: Json = field(default_factory=list)
+    # --- Councils belonging to this project. A council is created INSIDE a project and
+    #   later folded into a synthesis (study). Tracked here so the project owns its
+    #   councils directly, even before a synthesis cites them. Old projects default to []. ---
+    council_ids: Json = field(default_factory=list)
 
     def to_dict(self) -> Json:
         return asdict(self)

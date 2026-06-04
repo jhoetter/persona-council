@@ -20,9 +20,13 @@ def test_full_round_trip(store):
     services.attach_evidence(a, "interview", "Customer confirmed pain alpha costs ~2h/week.",
                              notes="interview-01", store=store)
 
-    # --- council: gather then host-authored write-back ---
-    gathered = services.brief_council("Would a diff/freigabe view help?", [a, b], store=store)
-    assert "instructions" in gathered
+    # --- council: a council is scoped to a research project (personas are global) ---
+    project = services.create_research_project("Diff view study", goal="value of a diff view",
+                                               persona_ids=[a, b], store=store)
+    pid = project["id"]
+    # gather then host-authored write-back
+    gathered = services.brief_council(pid, "Would a diff/freigabe view help?", [a, b], store=store)
+    assert "instructions" in gathered and gathered["project_id"] == pid
     turns = [
         {"speaker": "Alpha", "persona_id": a, "stance": "MAYBE", "headline": "useful if traceable",
          "content": "Could help, but only with provenance.", "concerns": ["trust"], "would_use": True},
@@ -31,9 +35,12 @@ def test_full_round_trip(store):
     ]
     votes = [{"persona_id": a, "persona_name": "Alpha", "vote": "MAYBE"},
              {"persona_id": b, "persona_name": "Beta", "vote": "MAYBE"}]
-    council = services.record_council("Would a diff/freigabe view help?", [a, b], turns, votes=votes,
+    council = services.record_council(pid, "Would a diff/freigabe view help?", [a, b], turns, votes=votes,
                                       summary="conditional", store=store)
     cid = council["id"]
+    assert council["project_id"] == pid
+    # the council is owned by the project directly (even before a synthesis cites it)
+    assert cid in services.get_research_project(pid, store=store)["council_ids"]
 
     # --- synthesis: gather surfaces provenance (attached evidence), then author ---
     brief = services.brief_synthesis([cid], title="Diff view", start_input="seed", goal="value of a diff view", store=store)

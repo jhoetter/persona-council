@@ -85,7 +85,7 @@ def create_research_project(title: str, goal: str = "", persona_ids: list[str] |
     project = ResearchProject(
         id=pid, slug=slug, title=title, goal=goal, description=description,
         persona_ids=persona_ids or [], study_ids=[], study_tags={}, themes=[],
-        status="active", created_at=now, updated_at=now,
+        status="active", created_at=now, updated_at=now, council_ids=[],
     ).to_dict()
     store.upsert_research_project(project)
     return project
@@ -126,6 +126,24 @@ def parent_study_of_council(council_id: str, store: Store | None = None) -> dict
     for s in store.list_syntheses():
         if council_id in (s.get("council_ids") or []):
             return {"id": s["id"], "title": s["title"]}
+    return None
+
+
+
+def parent_project_of_council(council_id: str, store: Store | None = None) -> dict[str, Any] | None:
+    """Reverse lookup: which research project OWNS this council? Councils are scoped to a
+    project at creation; this is the direct link (independent of whether a synthesis cites it)."""
+    store = store or Store()
+    council = store.get_council_session(council_id)
+    pid = (council or {}).get("project_id")
+    if pid:
+        p = store.get_research_project(pid)
+        if p:
+            return {"id": p["id"], "slug": p["slug"], "title": p["title"]}
+    # Fallback for projects that track the council in their list (e.g. legacy/migrated data).
+    for p in store.list_research_projects():
+        if council_id in (p.get("council_ids") or []):
+            return {"id": p["id"], "slug": p["slug"], "title": p["title"]}
     return None
 
 

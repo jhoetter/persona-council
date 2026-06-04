@@ -42,14 +42,16 @@ def register_council(mcp):
 
     # ================= Council =================
     @mcp.tool()
-    def brief_council(prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None,
+    def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None,
                       count: int = 3, context: str | None = None) -> dict[str, Any]:
-        """Gather a council. Without persona_ids: returns candidate personas to select
-        from. With persona_ids: returns each participant's loaded agent context (SOUL +
-        memory) to author turns against. Then author proposal/votes/exec_summary and
-        call record_council. See the run-council skill."""
+        """Gather a council. A council is scoped to a research project, so `project_id` is
+        REQUIRED (create one first with create_research_project; personas are global and need
+        no project). Without persona_ids: returns candidate personas to select from. With
+        persona_ids: returns each participant's loaded agent context (SOUL + memory) to author
+        turns against. Then author proposal/votes/exec_summary and call record_council. See the
+        run-council skill."""
         t = time.perf_counter()
-        return _env("brief_council", services.brief_council(prompt, persona_ids, filters, count, context), t)
+        return _env("brief_council", services.brief_council(project_id, prompt, persona_ids, filters, count, context), t)
 
     @mcp.tool()
     def brief_ask(persona_id: str, question: str, context: str | None = None) -> dict[str, Any]:
@@ -59,12 +61,14 @@ def register_council(mcp):
         return _env("brief_ask", services.brief_ask(persona_id, question, context), t)
 
     @mcp.tool()
-    def record_council(prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "", key: str | None = None) -> dict[str, Any]:
+    def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "", key: str | None = None) -> dict[str, Any]:
         """Persist a host-authored council (openings/moderator/directed turns + votes +
-        exec_summary). Use from the run-council / synthesize skills instead of writing the DB.
-        Pass a stable `key` for a deterministic id (idempotent upsert → resumable long runs)."""
+        exec_summary). A council MUST belong to a research project — `project_id` is required and
+        validated (personas are global, councils/studies/reports are project-scoped). Use from the
+        run-council / synthesize skills instead of writing the DB. Pass a stable `key` for a
+        deterministic id (idempotent upsert → resumable long runs)."""
         t = time.perf_counter()
-        return _env("record_council", services.record_council(prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason, key), t)
+        return _env("record_council", services.record_council(project_id, prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason, key), t)
 
     @mcp.tool()
     def get_council(session_id: str) -> dict[str, Any]:
