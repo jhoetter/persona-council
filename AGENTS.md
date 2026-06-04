@@ -135,6 +135,21 @@ Memory & multi-resolution simulation (gather → author → write-back):
   harness `proto_open`/`proto_act`/`proto_read`/`proto_close` lets a persona drive the REAL app,
   and `brief_prototype_session`/`record_prototype_session` fold the grounded reaction into memory.
   Install with `make playwright` (optional; degrades gracefully without chromium).
+- Composable graph — the graph is a canvas of composable LOW-LEVEL primitives (council · synthesis ·
+  prototype · **note** · edge · **section**); the methodology/plan engine is ONE optional orchestrator,
+  not the only structure (spec/sections-and-composable-graph.md):
+  - **Sections** = methodology-INDEPENDENT labeled overlay groupings of nodes ("Initial user research",
+    "Problem exploration"). Explicit set-membership (overlap allowed), a pure overlay (never alters the
+    DAG layout), reference-not-containment (deleting a section never deletes nodes), `kind` an open tag
+    (theme/phase/invented, data-driven via `section_kinds.json`). `create_section`/`update_section`/
+    `add_to_section`/`remove_from_section`/`set_section_members` (promote-a-cluster)/`reorder_sections`/
+    `list_sections`/`get_section`/`delete_section`/`get_section_members`/`export_section` (md/json,
+    self-contained) + `suggest_section_kinds`. Methodology phases render as DERIVED `phase` sections.
+  - **Notes** = lightweight first-class observation nodes (the atomic unit for affinity), creatable with
+    NO methodology: `create_note`/`list_notes`/`delete_note`. They are normal graph nodes (groupable
+    into sections, linkable by edges).
+  - **Syntheses are DECOUPLED from councils**: a synthesis can have zero councils (affinity over notes,
+    a synthesis over other syntheses, a standalone analysis); councils are cited, not owned.
 
 Every tool returns an envelope `{ok, data, next_recommended_tool, _meta}`; the
 `next_recommended_tool` hints the decision DAG (simulate → consolidate → digest;
