@@ -336,6 +336,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("section-reorder"); p.add_argument("project_id"); p.add_argument("--id", action="append", dest="ids", required=True)
     p = sub.add_parser("section-delete"); p.add_argument("section_id")
     p = sub.add_parser("section-kinds")
+    p = sub.add_parser("section-members"); p.add_argument("section_id")
+    p = sub.add_parser("section-export"); p.add_argument("section_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out")
     p = sub.add_parser("note-create"); p.add_argument("project_id"); p.add_argument("text"); p.add_argument("--title", default="")
     p = sub.add_parser("note-list"); p.add_argument("project_id")
     p = sub.add_parser("note-delete"); p.add_argument("project_id"); p.add_argument("note_id")
@@ -639,6 +641,12 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.delete_section(args.section_id))
         elif args.command == "section-kinds":
             _print(services.suggest_section_kinds())
+        elif args.command == "section-members":
+            _print(services.section_members(args.section_id))
+        elif args.command == "section-export":
+            content = services.export_section(args.section_id, args.format)
+            _print({"path": services.write_export(content, args.out)} if args.out else content,
+                   as_json=bool(args.out) or args.format == "json")
         elif args.command == "note-create":
             _print(services.create_note(args.project_id, args.text, args.title))
         elif args.command == "note-list":

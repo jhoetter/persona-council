@@ -427,8 +427,8 @@ def register_pages(app) -> None:
             for s in secs:
                 pr = _pres.present(s.get("kind", "theme"), s.get("presentation"))
                 rows.append(
-                    f'<div class="strow"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
-                    f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(s.get("title",""))}</span> '
+                    f'<div class="strow"><a href="/sections/{_esc(s["id"])}"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
+                    f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(s.get("title",""))}</span></a> '
                     f'<span class="muted small">{_esc(pr.get("short", s.get("kind","")))} · {len(s.get("member_ids",[]))}</span></div>')
             sec_html = (f'<div class="oqp-h" style="margin-top:14px">Sections ({len(secs)})</div>' + "".join(rows))
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
@@ -483,6 +483,31 @@ def register_pages(app) -> None:
             body = _plan_html(plan, store)
         return _layout(proj["title"] + " — Plan", body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), ("Plan", None)],
+                       active="projects")
+
+    @app.get("/sections/{section_id}", response_class=HTMLResponse)
+    def section_view(section_id: str) -> str:
+        store = Store()
+        from .. import presentation as _pres
+        try:
+            data = services.section_members(section_id, store=store)
+        except KeyError:
+            return _layout(t("not_found"), _empty_state("Section", t("runtime_maybe_cleared")), store, active="projects")
+        sec, proj, members = data["section"], data["project"], data["members"]
+        pr = _pres.present(sec.get("kind", "theme"), sec.get("presentation"))
+        chip = (f'<span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
+                f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(pr.get("short", sec.get("kind","")))}</span>')
+        rows = []
+        for m in members:
+            head = (f'<a href="{m["href"]}">{_esc(m["title"])}</a>' if m["href"] else _esc(m["title"]))
+            rows.append(f'<div class="strow"><b>{head}</b> <span class="muted small">{_esc(m["kind"])}</span>'
+                        f'<div class="muted small" style="margin-top:3px">{_esc((m["summary"] or "")[:240])}</div></div>')
+        note_html = f'<p class="lead">{_esc(sec.get("note",""))}</p>' if sec.get("note") else ""
+        body = (f'<div class="page"><div class="card"><h1 class="h1">{_esc(sec["title"])}</h1>'
+                f'<div style="margin:6px 0 14px">{chip} <span class="muted small">{len(members)} Knoten</span></div>'
+                f'{note_html}</div><div style="margin-top:14px">{"".join(rows) or _empty_state("Section", "Keine Mitglieder.")}</div></div>')
+        return _layout(sec["title"], body, store,
+                       crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
                        active="projects")
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)

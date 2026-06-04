@@ -201,6 +201,49 @@ def delete_note(project_id: str, note_id: str, store=None) -> dict[str, Any]:
     return {"deleted": note_id}
 
 
+def section_members(section_id: str, store=None) -> dict[str, Any]:
+    """Resolve a section's member node ids into {kind,title,summary,href} records (a section-scoped
+    view over the graph)."""
+    store = store or Store()  # noqa: F821
+    project, sec = _find(store, section_id)
+    notes = {n["id"]: n for n in _notes(project)}
+    out = []
+    for mid in sec.get("member_ids", []):
+        if mid.startswith("council:"):
+            c = store.get_council_session(mid.split(":", 1)[1]) or {}
+            out.append({"id": mid, "kind": "council", "title": c.get("prompt", mid),
+                        "summary": c.get("exec_summary") or c.get("summary", ""), "href": f"/councils/{mid.split(':',1)[1]}"})
+        elif mid.startswith("synthesis:"):
+            syn = store.get_synthesis(mid.split(":", 1)[1]) or {}
+            out.append({"id": mid, "kind": "synthesis", "title": syn.get("title", mid),
+                        "summary": syn.get("gesamtbild") or syn.get("positionierung", ""), "href": f"/syntheses/{mid.split(':',1)[1]}"})
+        elif mid.startswith("note:"):
+            n = notes.get(mid.split(":", 1)[1], {})
+            out.append({"id": mid, "kind": "note", "title": n.get("title", mid), "summary": n.get("text", ""), "href": ""})
+        else:
+            pr = store.get_prototype(mid) or {}
+            out.append({"id": mid, "kind": "prototype", "title": pr.get("name", mid),
+                        "summary": pr.get("notes", ""), "href": f"/prototypes/{pr.get('slug', mid)}"})
+    return {"section": sec, "project": {"id": project["id"], "slug": project["slug"], "title": project["title"]},
+            "members": out}
+
+
+def export_section(section_id: str, format: str = "md", store=None):
+    """A SELF-CONTAINED export of a section (md|json) — its title + every member node's summary,
+    to hand to a downstream agent (mirrors export_synthesis)."""
+    data = section_members(section_id, store=store)
+    sec, members = data["section"], data["members"]
+    if format == "json":
+        return data
+    lines = [f"# Section · {sec['title']}",
+             f"_{sec.get('kind','theme')} · {len(members)} Knoten · Projekt: {data['project']['title']}_", ""]
+    if sec.get("note"):
+        lines += [sec["note"], ""]
+    for m in members:
+        lines += [f"## {m['title']}", f"*{m['kind']}*", "", (m["summary"] or "—"), ""]
+    return "\n".join(lines)
+
+
 def note_graph_nodes(project: dict) -> list[dict[str, Any]]:
     """Graph node dicts for a project's notes (study_id 'note:<id>', kind 'note'). Used by the
     graph builders so notes are first-class nodes (section members / edge endpoints)."""

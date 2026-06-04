@@ -78,6 +78,18 @@ def register_sections(mcp):
         t = time.perf_counter()
         return _env("suggest_section_kinds", services.suggest_section_kinds(), t)
 
+    @mcp.tool()
+    def get_section_members(section_id: str) -> dict[str, Any]:
+        """Resolve a section's members into {kind,title,summary,href} records (section-scoped view)."""
+        t = time.perf_counter()
+        return _env("get_section_members", services.section_members(section_id), t)
+
+    @mcp.tool()
+    def export_section(section_id: str, format: str = "md") -> dict[str, Any]:
+        """Self-contained export of a section (md|json): its members' summaries, for a downstream agent."""
+        t = time.perf_counter()
+        return _env("export_section", services.export_section(section_id, format), t)
+
     # ----- Note nodes: lightweight first-class observation primitive (no methodology required) -----
     @mcp.tool()
     def create_note(project_id: str, text: str, title: str = "") -> dict[str, Any]:
