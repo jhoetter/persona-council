@@ -1,9 +1,13 @@
 ---
 name: compose-research-plan
-description: From a single prompt (an HMW or any research goal), DESIGN the research plan yourself — decide which methods (councils, prototypes, affinity clustering, proband sessions, syntheses, sections) to stitch together and in what analyze→act→verify shape — then seed it so an autonomous run can execute. Use when the user just drops a question ("how might we …") and expects the agent to figure out the approach. Hands off to autonomous-research-run.
+description: THE FRONT DOOR for any research/design-thinking request — the user just writes a plain prompt (an HMW like "how might we …", "explore X with the personas", "run a design-thinking project on Y", "research whether Z") and you take it END-TO-END: design the plan yourself (decide which methods — councils, prototypes, affinity clustering, proband sessions, syntheses, sections — to stitch together and in what analyze→act→verify shape), seed it, then run it to a well-organized, documented result. No slash command required: trigger on the bare prompt. Auto-use whenever a message is a research question/goal over the personas.
 ---
 
 # compose-research-plan
+
+**This is the single entry point.** The user does NOT type a command — they just write a research
+question (an HMW or any goal over the personas). You recognize it, design the approach, and run it
+all the way to a documented answer. (Steps 1–3 design the plan; step 4 executes it.)
 
 The user gives you a question; **you decide the methodology and the moves**. The plan engine is
 fully composable — `capability` / `artifact_type` / `gate_tag` are FREE tags and you `add_task`
@@ -41,10 +45,12 @@ Decide what kind of work the prompt needs (often a mix):
 - **Justify the design** in the frames' intents and a first `create_note` ("plan rationale: …") — so
   the choice is documented, not implicit.
 
-## 4. Hand off
-Once the plan is seeded, run **autonomous-research-run**: it loops `assess_project` + `next_action`
-→ one subagent authors each step → maintains sections + a run-journal → stops on saturation/budget.
-You designed the shape; that skill executes it lean.
+## 4. Run it (don't stop at the plan)
+Immediately execute the run yourself using the **autonomous-research-run** loop — the user expects an
+answer, not just a plan. Loop `assess_project` + `next_action` → one subagent authors each step
+(pass a stable `key` so it's resumable) → maintain sections + a notes run-journal → stop on
+saturation/budget. Then present the Deliver synthesis + a link to the project graph. This skill owns
+the whole journey from question to documented result.
 
 ## Principles
 You own the methodology choice — make it from the question + the evidence, not from the repo name or

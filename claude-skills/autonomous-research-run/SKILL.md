@@ -1,6 +1,6 @@
 ---
 name: autonomous-research-run
-description: Drive a LONG, autonomous design-research run from a single prompt (an HMW or any framing) to a well-organized, well-documented result — 10s of iterations of councils, prototypes, exploration, synthesis and solution-spaces over the research-PLAN engine. Lean context per step via next_action + assess_project; one subagent authors each step; sections + a run-journal keep it self-organizing. Use for "kick off a full long-running design-thinking simulation from this question and let it run".
+description: The lean autonomous EXECUTION loop over the research-PLAN engine — 10s of iterations of councils, prototypes, exploration, synthesis and solution-spaces to a well-organized, documented result. Lean context per step via next_action + assess_project; one subagent authors each step; sections + a run-journal keep it self-organizing. Normally reached automatically from compose-research-plan (the front door for a bare HMW). Use directly to RESUME or CONTINUE an existing project's run.
 ---
 
 # autonomous-research-run
