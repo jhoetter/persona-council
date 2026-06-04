@@ -1,6 +1,30 @@
 # Refactor Plan (Q1 self-audit)
 
-> **Status:** SPEC (authored by the Q1 self-audit). Authority for Phase Q execution (Q-exec).
+> **Status: Q-exec COMPLETE (2026-06-04).** All five god-files were split into behavior-preserving
+> packages; **no source file exceeds the ~800-LOC bar** (guarded by `tests/test_loc_budget.py`).
+> Each split was gated by the full `pytest` suite (69 passed, 1 skipped) **and** a byte-exact
+> characterization check (`exports/cohort/_charz.py`: 11 route HTML hashes + the 138 CLI commands +
+> 139 MCP tools + every module's public-name set), committed one god-file per commit:
+> - `llm_simulation/` — `_schemas` / `_prompts` / `_validators` / `__init__` (re-exports).
+> - `storage/` — `_schema` (DDL) + `StoreBase` + domain **mixins** composed into `Store`.
+> - `web/` — `_i18n` / `_components` / `_synthesis` / `_graph` (+ `_plan_html`) / `_routes_pages`
+>   (`register_pages`) / `_routes_api` (`register_api`) / `__init__` (`create_app`). Route HTML
+>   byte-identical.
+> - `mcp_server/` — `_env` + per-domain `register_<domain>(mcp)` modules assembled by `build_server()`;
+>   all 139 tools preserved.
+> - `services/` — `_common` + domain submodules (`_personas`/`_simulation`/`_consolidation`/`_memory`/
+>   `_evaluation`/`_snapshots`/`_councils`/`_synthesis`/`_research`/`_engines`). The `globals()`-coupled
+>   simulation cluster (`simulate_day`/`record_day`/`record_month_bundle` + the `generate_*` monkeypatch
+>   targets) is kept intact in `_simulation`. To preserve the original monolith's shared-namespace and
+>   `services.X` monkeypatch semantics with **zero edits to function bodies**, `services/__init__.py`
+>   binds cross-module names into each submodule's globals and forwards `services.X` assignments into
+>   the submodules that define `X` (documented in that file). This is the deliberate technique for a
+>   behavior-preserving split of a tightly-coupled module; a future cleanup may migrate call sites to
+>   qualified imports.
+>
+> ---
+>
+> **Status (original):** SPEC (authored by the Q1 self-audit). Authority for Phase Q execution (Q-exec).
 > **Principle:** every split is **behavior-preserving** — public API (web routes, MCP tools, CLI
 > commands, `services.*` names) stays identical via re-export shims; the full `pytest` suite + a
 > render/characterization check must pass before each commit. Where a split is too risky to do
