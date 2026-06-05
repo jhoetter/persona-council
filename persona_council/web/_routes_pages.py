@@ -426,25 +426,36 @@ def register_pages(app) -> None:
                     if reports else "")
         if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan view
             meta_btn = f'<a class="btn" href="/projects/{_esc(proj["id"])}/plan">{_icon("projects")} Plan</a>' + meta_btn
-        # Linear-style filter: EVERY tag present on a node is a toggleable chip — incl. the
-        # methodology's open step tags (capability/role), not just LLM theme tags. No fixed vocab.
+        protos = graph.get("prototypes") or []
+        # Q4: a TYPE filter row (also the LEGEND) — every node KIND present is a colored, glyph'd,
+        # toggleable chip that filters the graph by type; capability/theme tags go to a 2nd muted row.
+        type_meta: dict[str, tuple] = {}      # type -> (color, label, glyph)
+        for n in graph["nodes"]:
+            nt = n.get("note_kind") if str(n["study_id"]).startswith("note:") else str(n["study_id"]).split(":", 1)[0]
+            if nt and nt not in type_meta:
+                type_meta[nt] = (n.get("color", "#9aa0a6"), n.get("kind_label", nt), n.get("glyph", ""))
+        if protos:
+            ap0 = _artifact_present(protos[0])
+            type_meta["prototype"] = (ap0["color"], t("prototypes_h"), ap0.get("glyph", ""))
+        type_tagset = set(type_meta)
+        type_chips = "".join(
+            f'<button class="rgchip" data-theme="{_esc(ty)}" style="--c:{c}">{_esc((g + " ") if g else "")}{_esc(lab)}</button>'
+            for ty, (c, lab, g) in type_meta.items())
         node_tags = []
         for n in graph["nodes"]:
             for tgx in n.get("theme_tags", []):
-                if tgx not in node_tags:
+                if tgx not in node_tags and tgx not in type_tagset:
                     node_tags.append(tgx)
-        vocab_all = list(dict.fromkeys((proj.get("themes") or []) + node_tags))
-        chips = "".join(
-            f'<button class="rgchip" data-theme="{_esc(th)}" style="--c:{_theme_color(th, vocab_all)}">{_esc(th)}</button>'
-            for th in vocab_all)
-        left = (f'<span class="ptlabel">{_icon("search")}{t("filter")}</span>{chips}'
-                f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if chips else ""
+        tag_vocab = list(dict.fromkeys((proj.get("themes") or []) + node_tags))
+        tag_chips = "".join(
+            f'<button class="rgchip tagchip" data-theme="{_esc(th)}" style="--c:{_theme_color(th, tag_vocab)}">{_esc(th)}</button>'
+            for th in tag_vocab)
+        left = (f'<span class="ptlabel">{_icon("search")} {t("type_h")}</span>{type_chips}'
+                + (f'<span class="ptlabel ptlabel-2">{t("tags_h")}</span>{tag_chips}' if tag_chips else "")
+                + f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if type_chips else ""
         oqbtn = f'<button class="btn" id="oqbtn">{t("legend")} · {t("open_questions_h")} ({len(oqs)})</button>'
-        # (No bespoke methodology strip: the graph itself — columns, emergent silhouettes, and the
-        # tag filter — conveys the constellation. A linear step strip would mis-imply a sequence.)
         toolbar = f'<div class="ptoolbar">{left}<span class="spacer"></span>{oqbtn}{meta_btn}</div>'
         # Artifact viewer: artifacts + recorded persona sessions (read-only).
-        protos = graph.get("prototypes") or []
         proto_html = ""
         if protos:
             rows = []

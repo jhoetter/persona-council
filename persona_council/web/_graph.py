@@ -251,11 +251,13 @@ def _graph_interactive(graph: dict) -> str:
                 suppress.add((idea, conv))
     jnodes = []
     for n in nodes:
-        tags = n.get("theme_tags", [])
+        # node TYPE (council/synthesis/concept/note) is a first-class, filterable tag (Q4).
+        ntype = n.get("note_kind") if str(n["study_id"]).startswith("note:") else str(n["study_id"]).split(":", 1)[0]
+        tags = list(dict.fromkeys([ntype] + (n.get("theme_tags", []) or []))) if ntype else n.get("theme_tags", [])
         x, y = pos[n["study_id"]]
         sent = max(n.get("sentiment", {}).items(), key=lambda kv: kv[1])[0] if n.get("sentiment") else "—"
         if n.get("kind"):                         # heterogeneous evidence node (plan graph)
-            sub = f'{n.get("kind_label", "")} · ' + (", ".join(t for t in tags if t != n["kind"])[:48] or "—")
+            sub = f'{n.get("kind_label", "")} · ' + (", ".join(t for t in tags if t != n["kind"] and t != ntype)[:48] or "—")
             color = n.get("color") or "#9aa0a6"
             href = n.get("href") or ""
         else:                                     # legacy synthesis node
@@ -289,7 +291,7 @@ def _graph_interactive(graph: dict) -> str:
             acolor[pr["id"]] = ap["color"]
             prefix = (ap["glyph"] + " ") if ap["glyph"] else ""
             sub = f'{ap["disc"]} · {ap["label"]} ↗' if ap["disc"] else f'{ap["label"]} ↗'
-            jnodes.append({"id": pr["id"], "x": x, "y": y, "tags": [], "w": pw, "h": 46,
+            jnodes.append({"id": pr["id"], "x": x, "y": y, "tags": ["prototype"], "w": pw, "h": 46,
                            "label": (prefix + pr["name"])[:30] + ("…" if len(pr["name"]) > 28 else ""),
                            "sub": sub, "color": ap["color"],
                            "href": f'/prototypes/{pr["slug"]}', "proto": True})

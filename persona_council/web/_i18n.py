@@ -31,7 +31,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen", "prototypes_h": "Artefakte",
         "no_projects": "Noch keine Projekte. Lege eines an oder backfille deine Synthesen (CLI: research-backfill).",
         "source_studies": "Quell-Studien", "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
-        "filter": "Filter", "clear_filter": "zurücksetzen", "legend": "Legende",
+        "filter": "Filter", "type_h": "Typ", "tags_h": "Tags", "clear_filter": "zurücksetzen", "legend": "Legende",
         "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Synthese.",
         "export_pdf": "Export PDF",
         # generic / not-found
@@ -181,7 +181,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Open questions", "prototypes_h": "Artifacts",
         "no_projects": "No projects yet. Create one or backfill your syntheses (CLI: research-backfill).",
         "source_studies": "Source studies", "themes_h": "Themes", "build_order_h": "Build order",
-        "filter": "Filter", "clear_filter": "clear", "legend": "Legend",
+        "filter": "Filter", "type_h": "Type", "tags_h": "Tags", "clear_filter": "clear", "legend": "Legend",
         "no_councils": "No councils yet.", "no_synthesis": "No synthesis yet.",
         "export_pdf": "Export PDF",
         # generic / not-found

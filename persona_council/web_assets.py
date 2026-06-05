@@ -83,6 +83,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .strow a{text-decoration:none}.strow .ic{vertical-align:-3px;margin-right:5px}
 .ptoolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 10px}
 .ptlabel{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted)}.ptlabel .ic{width:14px;height:14px}
+.ptlabel-2{margin-left:8px;padding-left:10px;border-left:1px solid var(--line);opacity:.85}
+.rgchip.tagchip{font-size:11.5px;padding:2px 9px;opacity:.82}
 .rgchip{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .rgchip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,#9aa0a6)}
 .rgchip:hover{background:var(--hover)}
