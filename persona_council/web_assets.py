@@ -217,7 +217,7 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 
 /* ---- generic ---- */
 h1,h2,h3,h4{color:var(--ink)}
-.h1{font-size:21px;line-height:1.25;letter-spacing:-.018em;margin:0 0 4px;font-weight:600}
+.h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;margin:0 0 4px;font-weight:650}
 .lead{color:var(--muted);font-size:13.5px;margin:0 0 16px;max-width:74ch;line-height:1.5}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 11px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;min-height:30px;transition:background 120ms,border-color 120ms}
 .btn:hover{background:var(--hover)}
@@ -284,9 +284,9 @@ h1,h2,h3,h4{color:var(--ink)}
 .prop{display:flex;align-items:flex-start;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line-2);font-size:12.5px}
 .prop:last-child{border-bottom:0}.prop .k{color:var(--muted);width:84px;flex-shrink:0}
 .prop .v{color:var(--ink);min-width:0;font-weight:500}
-.hero h1{font-size:30px;line-height:1.13;letter-spacing:-.022em;margin:0 0 8px;font-weight:720}
-.hero h1 svg{width:24px;height:24px;color:var(--accent)}
-.hero .sub{color:var(--muted);font-size:15px;margin:0 0 4px;max-width:64ch}
+.hero h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650}
+.hero h1 svg{width:21px;height:21px;color:var(--accent)}
+.hero .sub{color:var(--muted);font-size:14px;margin:0 0 4px;max-width:74ch}
 .callout{display:flex;align-items:flex-start;gap:11px;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:13px 15px;margin:18px 0}
 .callout .emj{color:var(--accent);display:inline-flex;align-items:center;padding-top:1px}
 .callout .emj svg{width:18px;height:18px}
@@ -711,7 +711,7 @@ _RGRAPH_JS = """<script>
 
 _SYN_STYLE = r"""<style>
 .syn-wrap{max-width:920px;margin:0 auto;padding:2px 0 90px}
-.syn-head h1{font-size:32px;line-height:1.12;letter-spacing:-.022em;font-weight:720;margin:0 0 10px}
+.syn-head h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;font-weight:650;margin:0 0 8px}
 .syn-goal{color:var(--muted);font-size:15px;line-height:1.5;max-width:72ch;margin:0 0 14px}
 .syn-meta{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .mchip{font-size:12px;color:var(--muted);border:1px solid var(--line);background:var(--panel-2);border-radius:20px;padding:2px 10px}
@@ -784,7 +784,7 @@ _SYN_STYLE = r"""<style>
 .reclist .rec:target{background:var(--accent-weak);border-radius:8px}
 .axchip{display:inline-block;margin-top:6px;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 7px}
 @media(max-width:1180px){.syn-rail{display:none}}
-@media(max-width:740px){.cgrid{grid-template-columns:1fr}.syn-head h1{font-size:25px}}
+@media(max-width:740px){.cgrid{grid-template-columns:1fr}.syn-head h1{font-size:21px}}
 </style>"""
 
 _SYN_SCRIPT = r"""<script>(function(){
