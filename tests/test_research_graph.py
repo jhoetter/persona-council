@@ -124,3 +124,34 @@ def test_invalid_outline_rejected(store):
     pid = graph["project"]["id"]
     with pytest.raises(ValueError):
         services.record_meta_outline(pid, {"sections": []}, store=store)
+
+
+def test_synthesis_preserves_structured_blocks_and_warns_when_thin(store):
+    """GAP-3 (spec/exploration-depth-and-prototype-variety): a methodology's converge output —
+    clusters / key_problems / ranking / shortlist — must survive record_synthesis and render in the
+    web view + export; a near-empty synthesis returns a SYNTHESIS_THIN soft-warning."""
+    from persona_council import web
+    payload = {
+        "gesamtbild": "Der Kern: nicht alle fuer LV begeistern.",
+        "clusters": [{"label": "Sprachbarriere", "member_node_ids": ["c1"], "insight": "Das Wort ist die Huerde."}],
+        "key_problems": ["LV ist fuer 4/6 ein struktureller Non-Fit"],
+        "ranking": [{"prototype_id": "proto_a", "score_rationale": "ehrlichster Pfad"}],
+        "shortlist": ["proto_a"],
+    }
+    rec = services.record_synthesis("Define POV", "hmw", ["c1"], payload, store=store)
+    got = services.get_synthesis(rec["id"], store=store)
+    assert got["clusters"][0]["label"] == "Sprachbarriere"
+    assert got["key_problems"] == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
+    assert got["ranking"][0]["prototype_id"] == "proto_a" and got["shortlist"] == ["proto_a"]
+    # re-recording the SAME id without re-supplying a block keeps it (additive-safe update)
+    rec2 = services.record_synthesis("Define POV", "hmw", ["c1"], {"gesamtbild": "更新", "synthesis_id": got["id"]},
+                                     synthesis_id=got["id"], store=store)
+    assert services.get_synthesis(rec2["id"], store=store)["key_problems"] == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
+    # web + export surface the structured content
+    html = web._synthesis_html(store, got)
+    assert "Sprachbarriere" in html and "Shortlist" in html and "proto_a" in html
+    md = services.export_synthesis(got["id"], "md", store=store)
+    assert "Sprachbarriere" in md and "proto_a" in md
+    # a truly empty synthesis warns (soft, non-blocking)
+    thin = services.record_synthesis("Empty", "hmw", [], {}, store=store)
+    assert any("SYNTHESIS_THIN" in w for w in thin.get("warnings", []))

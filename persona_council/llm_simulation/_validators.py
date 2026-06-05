@@ -602,6 +602,27 @@ def validate_synthesis_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "ref": str(c["ref"]).strip()[:80],
             "quote": str(c.get("quote", "")).strip()[:600],
         })
+    # Structured convergence blocks (spec/exploration-depth-and-prototype-variety GAP-3): a
+    # methodology's converge output (affinity clusters / key problems / a down-select ranking +
+    # shortlist) MUST survive the write — these are generic structural containers with free-text
+    # content, NOT a closed methodology vocabulary, so they are preserved (capped) for ANY
+    # methodology. (Previously dropped here, hollowing the answer node.)
+    clusters = []
+    for cl in payload.get("clusters", []) or []:
+        if isinstance(cl, dict) and str(cl.get("label", "")).strip():
+            clusters.append({
+                "label": str(cl["label"]).strip()[:160],
+                "member_node_ids": [str(m).strip()[:80] for m in (cl.get("member_node_ids") or []) if str(m).strip()][:60],
+                "insight": str(cl.get("insight", "")).strip()[:1000],
+            })
+    ranking = []
+    for rk in payload.get("ranking", []) or []:
+        if not isinstance(rk, dict):
+            continue
+        ref = str(rk.get("prototype_id") or rk.get("ref") or rk.get("id") or "").strip()
+        rationale = str(rk.get("score_rationale") or rk.get("rationale") or "").strip()
+        if ref or rationale:
+            ranking.append({"prototype_id": ref[:80], "score_rationale": rationale[:800]})
     return {
         "arc_narrative": str(payload.get("arc_narrative", "")).strip()[:6000],
         "gesamtbild": str(payload.get("gesamtbild", "")).strip()[:4000],
@@ -613,6 +634,10 @@ def validate_synthesis_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "references": refs[:50],
         "citations": citations[:50],
         "voices": voices[:200],
+        "clusters": clusters[:40],
+        "key_problems": _strings(payload.get("key_problems", []) or [], 30, 600),
+        "ranking": ranking[:40],
+        "shortlist": _strings(payload.get("shortlist", []) or [], 40, 120),
         "status": ("in_progress" if str(payload.get("status", "")).strip().lower() == "in_progress" else "done"),
         "next_council_question": str(payload.get("next_council_question", "")).strip()[:2000],
         "stop_reason": str(payload.get("stop_reason", "")).strip()[:600],

@@ -163,6 +163,7 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
     # honor an explicit/keyed synthesis_id even on first create (so a keyed run is idempotent)
     sid = (existing or {}).get("id") or synthesis_id or stable_id("synthesis", title or "synthesis", utc_now_iso())
     created = (existing or {}).get("created_at") or utc_now_iso()
+    prev = existing or {}
     rec = Synthesis(
         id=sid, title=title, start_input=start_input, council_ids=council_ids,
         arc_narrative=data["arc_narrative"], gesamtbild=data["gesamtbild"],
@@ -170,14 +171,32 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
         pain_solvers=data["pain_solvers"], segmente=data["segmente"],
         offene_fragen=data["offene_fragen"], references=data["references"],
         created_at=created,
-        goal=goal or (existing or {}).get("goal", ""),
+        goal=goal or prev.get("goal", ""),
         status=data["status"], next_council_question=data["next_council_question"],
         stop_reason=data["stop_reason"], iterations=len(council_ids),
         voices=data["voices"], citations=data["citations"],
+        # Structured convergence blocks (GAP-3): persist what the methodology authored; on an update
+        # that omits one, keep the prior value so re-recording an arc doesn't wipe it.
+        clusters=data["clusters"] or prev.get("clusters", []),
+        key_problems=data["key_problems"] or prev.get("key_problems", []),
+        ranking=data["ranking"] or prev.get("ranking", []),
+        shortlist=data["shortlist"] or prev.get("shortlist", []),
     ).to_dict()
     rec["updated_at"] = utc_now_iso()
     store.upsert_synthesis(rec)
-    return rec
+    # Soft honesty signal (GAP-3 / spec/harness-run-observations): the synthesis IS the answer — flag
+    # (don't block) when it persists with no prose AND no structured blocks AND no voices, so the host
+    # notices a hollow answer node instead of stranding substance in councils/notes.
+    out = dict(rec)
+    has_substance = any([rec["gesamtbild"].strip(), rec["positionierung"].strip(), rec["arc_narrative"].strip(),
+                         rec["clusters"], rec["key_problems"], rec["ranking"], rec["shortlist"],
+                         rec["pain_solvers"], rec["voices"], rec["segmente"]])
+    if not has_substance:
+        out["warnings"] = ["SYNTHESIS_THIN: this synthesis persisted with no prose (gesamtbild/"
+                           "positionierung) and no structured blocks (clusters/key_problems/ranking/"
+                           "shortlist) — the answer node is near-empty. The synthesis IS the answer: "
+                           "author it rich here, don't leave the substance only in councils/notes."]
+    return out
 
 
 
@@ -209,6 +228,8 @@ _SYNTHESIS_EXPORT_LABELS = {
         "big_picture": "Gesamtbild", "recommendations": "Handlungsempfehlungen",
         "effort": "Aufwand", "value": "Nutzen", "positioning": "Positionierung",
         "pain_solvers": "Validierte Pain-Solver / Delight-Engines", "segments": "Segmente",
+        "key_problems": "Kernprobleme", "clusters": "Affinity-Cluster",
+        "ranking": "Ranking", "shortlist": "Shortlist",
         "voices": "Stimmen (pro Persona)", "relevance": "Relevanz", "argument": "Argument",
         "shift": "Wandel", "open_questions": "Offene Fragen / Nächste Studie",
         "sources": "Quellen (Councils in Reihenfolge)",
@@ -221,6 +242,8 @@ _SYNTHESIS_EXPORT_LABELS = {
         "big_picture": "Overall picture", "recommendations": "Recommendations",
         "effort": "Effort", "value": "Value", "positioning": "Positioning",
         "pain_solvers": "Validated pain-solvers / delight-engines", "segments": "Segments",
+        "key_problems": "Key problems", "clusters": "Affinity clusters",
+        "ranking": "Ranking", "shortlist": "Shortlist",
         "voices": "Voices (per persona)", "relevance": "Relevance", "argument": "Argument",
         "shift": "Shift", "open_questions": "Open questions / Next study",
         "sources": "Sources (councils in order)",
@@ -256,8 +279,18 @@ def export_synthesis(synthesis_id: str, format: str = "md", store: Store | None 
             return f"{txt} _({L['effort']} {a}/5 · {L['value']} {n}/5)_" if a and n else str(txt)
         return str(x)
     lines += [f"{i}. {_rec_md(x)}" for i, x in enumerate(syn.get("handlungsempfehlungen", []), 1)] or ["—"]
-    lines += ["", f"## {L['positioning']}", syn.get("positionierung", ""), "",
-              f"## {L['pain_solvers']}"]
+    lines += ["", f"## {L['positioning']}", syn.get("positionierung", "")]
+    # Structured convergence blocks (GAP-3): render when present so the methodology's converge output
+    # (key problems / affinity clusters / down-select ranking + shortlist) survives into the report.
+    if syn.get("key_problems"):
+        lines += ["", f"## {L['key_problems']}"] + [f"- {x}" for x in syn["key_problems"]]
+    if syn.get("clusters"):
+        lines += ["", f"## {L['clusters']}"] + [f"- **{c.get('label','')}** — {c.get('insight','')}" for c in syn["clusters"]]
+    if syn.get("ranking"):
+        lines += ["", f"## {L['ranking']}"] + [f"- **{r.get('prototype_id','')}**: {r.get('score_rationale','')}" for r in syn["ranking"]]
+    if syn.get("shortlist"):
+        lines += ["", f"## {L['shortlist']}"] + [f"- {x}" for x in syn["shortlist"]]
+    lines += ["", f"## {L['pain_solvers']}"]
     lines += [f"- {x}" for x in syn.get("pain_solvers", [])] or ["—"]
     lines += ["", f"## {L['segments']}"]
     lines += [f"- **{s['segment']}** ({s.get('stance','')}): {s.get('why','')}" for s in syn.get("segmente", [])] or ["—"]

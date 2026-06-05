@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ehrlicher Vorsorge-Check</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--bg:#f6f7f9;--panel:#fff;--ink:#1c1e21;--muted:#697077;--line:#e6e8eb;--accent:#5b6cff;--accent-ink:#fff;--r:10px;--sh:0 1px 2px rgba(16,18,28,.06);--ff:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body[data-fidelity=lofi]{--panel:#fffef9;--line:#cfcabb;--ink:#2b2b2b;--muted:#7a756a;--accent:#5f6368;--r:14px;--sh:none;--ff:"Comic Sans MS","Segoe Print","Bradley Hand",cursive}
+  body[data-fidelity=hifi]{--bg:#fbfbfd;--panel:#fff;--ink:#0c0d12;--muted:#6b7280;--line:#ececf1;--accent:#5e6ad2;--r:8px;--sh:0 1px 3px rgba(16,18,40,.08),0 0 0 1px rgba(16,18,40,.03);--ff:Inter,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;font:15px/1.5 var(--ff);color:var(--ink);background:var(--bg)}
+  body[data-fidelity=lofi] .el input,body[data-fidelity=lofi] .el select,body[data-fidelity=lofi] .step,body[data-fidelity=lofi] .dot{border-style:dashed}
+  #lofi-banner{display:none}
+  body[data-fidelity=lofi] #lofi-banner{display:block;background:#fff3cd;color:#7a5b00;text-align:center;padding:5px;font-size:12px;border-bottom:1px dashed #cfcabb}
+  header{padding:16px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  h1{font-size:18px;margin:0}.sub{color:var(--muted);font-size:13px;margin-top:2px}
+  main{max-width:680px;margin:0 auto;padding:26px 22px}
+  .rail{display:flex;align-items:center;gap:8px;margin:0 0 22px;flex-wrap:wrap}
+  .dot{display:flex;align-items:center;gap:7px;cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 11px 4px 4px;font-size:12px;color:var(--muted)}
+  .dot .n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--bg);font-size:11px;font-weight:600;color:var(--muted)}
+  .dot.active{color:var(--ink);border-color:var(--accent)}
+  .dot.active .n,.dot.done .n{background:var(--accent);color:var(--accent-ink,#fff)}
+  .dot.done{color:var(--ink)}
+  .step{display:none;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:22px}
+  .step.active{display:block}
+  .step .stepno{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .step h2{font-size:19px;margin:4px 0 16px}
+  .el{margin:0 0 15px}.el label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+  .el input,.el select{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r);width:100%;background:var(--bg);color:var(--ink)}
+  .el p{margin:0;max-width:60ch;color:var(--ink)}
+  .el a{color:var(--accent)}
+  .btn{font:inherit;border:1px solid transparent;background:var(--accent);color:var(--accent-ink,#fff);border-radius:var(--r);padding:10px 17px;cursor:pointer;box-shadow:var(--sh)}
+  .btn.secondary{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  .nav-row{display:flex;justify-content:space-between;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .15s;pointer-events:none}#toast.show{opacity:.95}
+</style>
+</head>
+<body>
+<div id="lofi-banner">Lo-Fi · zum Testen, nicht final</div>
+<header><h1 id="apptitle">Ehrlicher Vorsorge-Check</h1><div class="sub" id="appsummary">Kein Verkauf, keine Provision: relationaler Einstieg -&gt; eigene Zahlen -&gt; Tod-vs-Berufsunfaehigkeit -&gt; Erklaerschicht -&gt; ehrliches Verdikt (Nein ODER schlanke Risiko-LV/BU) -&gt; gebuehrenfreie Geschaeftsmodell-Transparenz -&gt; 'Spaeter, nicht jetzt'-Exit.</div></header>
+<main>
+  <div class="rail" id="rail"></div>
+  <div id="steps"></div>
+</main>
+<div id="toast"></div>
+<script id="concept" type="application/json">{"title": "Ehrlicher Vorsorge-Check", "summary": "Kein Verkauf, keine Provision: relationaler Einstieg -> eigene Zahlen -> Tod-vs-Berufsunfaehigkeit -> Erklaerschicht -> ehrliches Verdikt (Nein ODER schlanke Risiko-LV/BU) -> gebuehrenfreie Geschaeftsmodell-Transparenz -> 'Spaeter, nicht jetzt'-Exit.", "fidelity": "midfi", "start": "s1_einstieg", "screens": [{"id": "s1_einstieg", "title": "1. Wer haengt von dir ab?", "elements": [{"id": "s1_intro", "kind": "text", "label": "Kein Verkauf. Keine Provision. In 2 Minuten eine ehrliche Einschaetzung, ob du gerade ueberhaupt etwas brauchst. Bevor wir ueber Geld reden: Wer wuerde es spueren, wenn dein Einkommen morgen wegfaellt? Tippe an, was zutrifft."}, {"id": "s1_b_partner", "kind": "button", "label": "Partner:in haengt finanziell von mir ab", "goto": "s2_zahlen"}, {"id": "s1_b_kind", "kind": "button", "label": "Kind(er) haengen von mir ab", "goto": "s2_zahlen"}, {"id": "s1_b_kredit", "kind": "button", "label": "Ich zahle einen Kredit / eine Immobilie gemeinsam ab", "goto": "s2_zahlen"}, {"id": "s1_b_niemand", "kind": "button", "label": "Niemand haengt von mir ab — nur ich selbst", "variant": "secondary", "goto": "s5b_honest_no"}, {"id": "s1_l_transparenz", "kind": "link", "label": "Moment — wie verdient ihr eigentlich Geld, wenn keine Provision?", "goto": "s6_transparenz"}]}, {"id": "s2_zahlen", "title": "2. Deine eigenen Zahlen", "elements": [{"id": "s2_intro", "kind": "text", "label": "Wir rechnen mit DEINEN Zahlen, nicht mit erfundenen Beispielwerten. Nichts wird gespeichert, alles bleibt auf deinem Geraet."}, {"id": "s2_netto", "kind": "input", "label": "Dein monatliches Nettoeinkommen (€)", "placeholder": "z.B. 2400"}, {"id": "s2_abhaengige", "kind": "input", "label": "Wie viele Menschen haengen finanziell an diesem Einkommen?", "placeholder": "z.B. 2"}, {"id": "s2_schulden", "kind": "input", "label": "Offene gemeinsame Schulden / Kredit in € (0 wenn keine)", "placeholder": "z.B. 180000"}, {"id": "s2_b_weiter", "kind": "button", "label": "Weiter zur Risiko-Frage", "goto": "s3_risiko_branch"}]}, {"id": "s3_risiko_branch", "title": "3. Was, wenn du nicht stirbst, aber nicht mehr arbeiten kannst?", "elements": [{"id": "s3_intro", "kind": "text", "label": "Die meisten denken bei 'Lebensversicherung' nur an den Todesfall. Das wahrscheinlichere Einkommensrisiko ist ein anderes: Du lebst, kannst aber deinen Job nicht mehr ausueben (Berufsunfaehigkeit). Beides trifft die, die von dir abhaengen. Welches Risiko trifft dich?"}, {"id": "s3_b_tod", "kind": "button", "label": "Todesfall absichern — meine Familie/Schulden sind im Todesfall ungedeckt", "goto": "s4_erklaerschicht"}, {"id": "s3_b_bu", "kind": "button", "label": "Berufsunfaehigkeit absichern — ich lebe von meiner Arbeitskraft, niemand stirbt, aber das Einkommen faellt weg", "goto": "s4_erklaerschicht"}, {"id": "s3_b_beides", "kind": "button", "label": "Beides ist relevant fuer mich", "goto": "s4_erklaerschicht"}, {"id": "s3_b_keins", "kind": "button", "label": "Ehrlich gesagt: keins davon trifft auf mich zu", "variant": "secondary", "goto": "s5b_honest_no"}]}, {"id": "s4_erklaerschicht", "title": "4. Risiko absichern — nicht Kapital ansparen", "elements": [{"id": "s4_c1", "kind": "text", "label": "RISIKO-ABSICHERUNG (das, was zu dir passt): Du zahlst einen kleinen Beitrag. Faellt dein Einkommen durch Tod oder Berufsunfaehigkeit weg, bekommen die, die von dir abhaengen, Geld. Faellt nichts aus, ist der Beitrag 'weg' — wie bei der KFZ-Haftpflicht. Genau das ist der Sinn."}, {"id": "s4_c2", "kind": "text", "label": "KAPITAL-ANSPAREN (das, was dir oft verkauft wird): Sparen + Versichern in einem Produkt verpackt — hohe Kosten, schlechte Rendite. Fuer fast niemanden in deiner Lage sinnvoll. Wir empfehlen es NICHT."}, {"id": "s4_c3", "kind": "text", "label": "WARUM DAS WICHTIG IST: Wenn du etwas brauchst, dann nur die schlanke Risiko-Variante (Risiko-LV bzw. BU) — nichts mit Sparanteil. Meist ein kleiner zweistelliger Betrag im Monat."}, {"id": "s4_b_verdikt", "kind": "button", "label": "Verstanden — zeig mir mein ehrliches Verdikt", "goto": "s5a_verdikt_ja"}, {"id": "s4_l_transparenz", "kind": "link", "label": "Und wie verdient ihr daran? (Geschaeftsmodell)", "goto": "s6_transparenz"}]}, {"id": "s5a_verdikt_ja", "title": "5a. Ehrliches Verdikt: Ja — aber nur das Schlanke", "elements": [{"id": "s5a_intro", "kind": "text", "label": "Auf Basis DEINER Eingaben: Es haengen Menschen oder Schulden an deinem Einkommen, und das Einkommensrisiko (Tod und/oder Berufsunfaehigkeit) ist real. Genau der enge Fall, in dem sich eine Absicherung lohnt."}, {"id": "s5a_c1", "kind": "text", "label": "UNSERE EMPFEHLUNG: Eine schlanke Risiko-Lebensversicherung (Todesfall) und/oder eine Berufsunfaehigkeitsversicherung — passend zu dem Risiko, das du oben gewaehlt hast. KEIN Sparprodukt, kein Bundle, kein Upsell."}, {"id": "s5a_c2", "kind": "text", "label": "WAS WIR NICHT EMPFEHLEN: Keine kapitalbildende LV, keine Rentenversicherung mit Versicherungsmantel, kein 'Rundum-Paket'. Du brauchst genau ein, maximal zwei Bausteine."}, {"id": "s5a_c3", "kind": "text", "label": "NAECHSTER SCHRITT — OHNE VERKAUFSDRUCK: Neutral 2-3 schlanke Tarife ansehen. Keine Telefonnummer noetig, kein Berater ruft an."}, {"id": "s5a_b_transparenz", "kind": "button", "label": "Erst: wie verdient ihr daran, wenn keine Provision?", "goto": "s6_transparenz"}, {"id": "s5a_b_spaeter", "kind": "button", "label": "Doch lieber spaeter entscheiden — jetzt nicht", "variant": "secondary", "goto": "s7_spaeter"}]}, {"id": "s5b_honest_no", "title": "5b. Ehrliches Verdikt: Nein — du brauchst das jetzt nicht", "elements": [{"id": "s5b_intro", "kind": "text", "label": "Auf Basis deiner Angaben haengt niemand finanziell von dir ab und es gibt kein gemeinsames Einkommensrisiko abzusichern. Eine Lebens- oder BU-Versicherung waere fuer dich JETZT rausgeworfenes Geld. Wir sagen das lieber ehrlich, als dir etwas zu verkaufen."}, {"id": "s5b_c1", "kind": "text", "label": "WARUM NEIN RICHTIG IST: Eine Risiko-LV schuetzt andere, nicht dich. Gibt es niemanden und keinen gemeinsamen Kredit, gibt es nichts abzusichern. Spar dir den Beitrag."}, {"id": "s5b_c2", "kind": "text", "label": "EINE AUSNAHME, DIE DU PRUEFEN SOLLTEST: Lebst du allein, aber komplett von deiner eigenen Arbeitskraft (selbststaendig / keine Ruecklagen)? Dann kann Berufsunfaehigkeit trotzdem relevant sein — auch ohne Abhaengige."}, {"id": "s5b_b_bu_pruefen", "kind": "button", "label": "Stimmt — aber Berufsunfaehigkeit will ich doch pruefen", "goto": "s3_risiko_branch"}, {"id": "s5b_b_spaeter", "kind": "button", "label": "Erinner mich, falls sich meine Lage aendert (spaeter)", "variant": "secondary", "goto": "s7_spaeter"}, {"id": "s5b_l_transparenz", "kind": "link", "label": "Wie verdient ihr eigentlich, wenn ihr mir gerade NICHTS verkauft?", "goto": "s6_transparenz"}]}, {"id": "s6_transparenz", "title": "6. Wie wir Geld verdienen — ohne Provision, ohne Vorab-Gebuehr", "elements": [{"id": "s6_intro", "kind": "text", "label": "Die haeufigste Frage hier. Die ehrliche Antwort, bevor du irgendetwas entscheidest:"}, {"id": "s6_c1", "kind": "text", "label": "KEINE PROVISION PRO ABSCHLUSS: Wir bekommen KEIN Geld dafuer, dass du eine Versicherung abschliesst. Deshalb koennen wir dir auch 'Nein' sagen, ohne etwas zu verlieren. Genau das ist der Punkt."}, {"id": "s6_c2", "kind": "text", "label": "KEINE VORAB-GEBUEHR: Dieser Check kostet dich nichts — weder vorab noch hinterher. Eine Vorab-Gebuehr haben wir bewusst abgeschafft, weil sie wie 'noch ein Trick' wirkt."}, {"id": "s6_c3", "kind": "text", "label": "WOMIT WIR WIRKLICH GELD VERDIENEN: Versicherer zahlen uns eine feste, vom Abschluss UNABHAENGIGE Pauschale dafuer, dass wir passende Menschen ehrlich aufklaeren — egal ob sie abschliessen oder nicht. Unser Anreiz ist die richtige Antwort, nicht der Verkauf."}, {"id": "s6_b_zurueck", "kind": "button", "label": "Ok, das ergibt Sinn — zurueck zu meinem Verdikt", "goto": "s5a_verdikt_ja"}, {"id": "s6_b_spaeter", "kind": "button", "label": "Ich will trotzdem erst spaeter entscheiden", "variant": "secondary", "goto": "s7_spaeter"}, {"id": "s6_b_neu", "kind": "link", "label": "Von vorne anfangen", "goto": "s1_einstieg"}]}, {"id": "s7_spaeter", "title": "7. Spaeter, nicht jetzt — du bestimmst wann", "elements": [{"id": "s7_intro", "kind": "text", "label": "Voellig in Ordnung. Kein Druck, kein KFZ-Moment-Verkauf. Du legst selbst den Anker — wir melden uns nicht von allein. Du kontrollierst den Zeitpunkt (kein automatisches 'Arming', kein verstecktes Tracking):"}, {"id": "s7_b_6m", "kind": "button", "label": "Erinner mich in 6 Monaten", "goto": "s7_done"}, {"id": "s7_b_lebenslage", "kind": "button", "label": "Erinner mich, wenn sich meine Lebenslage aendert (Kind, Immobilie, Heirat) — ich melde das selbst", "goto": "s7_done"}, {"id": "s7_b_garnicht", "kind": "button", "label": "Gar nicht erinnern — ich komme von selbst wieder", "variant": "secondary", "goto": "s7_done"}]}, {"id": "s7_done", "title": "8. Gespeichert — auf deinem Geraet, von dir gesteuert", "elements": [{"id": "s7_done_intro", "kind": "text", "label": "Dein 'Spaeter'-Anker ist gesetzt. Kein Berater ruft an, keine Provision im Hintergrund. Danke fuer deine Ehrlichkeit — du kannst jederzeit zurueckkommen."}, {"id": "s7_done_b_neu", "kind": "button", "label": "Check von vorne starten", "goto": "s1_einstieg"}, {"id": "s7_done_l_transparenz", "kind": "link", "label": "Nochmal: wie verdient ihr Geld?", "goto": "s6_transparenz"}]}]}</script>
+<script>
+(function(){
+  var C = JSON.parse(document.getElementById('concept').textContent);
+  document.body.dataset.fidelity = C.fidelity || 'midfi';
+  document.getElementById('apptitle').textContent = C.title || 'Prototype';
+  document.getElementById('appsummary').textContent = C.summary || '';
+  var rail = document.getElementById('rail'), root = document.getElementById('steps');
+  var screens = C.screens || [], ids = screens.map(function(s){return s.id;}), state = {};
+  function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1400);}
+  function idx(id){return ids.indexOf(id);}
+  function show(id){
+    var cur = idx(id);
+    document.querySelectorAll('.step').forEach(function(s){s.classList.toggle('active', s.dataset.id===id);});
+    document.querySelectorAll('.dot').forEach(function(d,i){d.classList.toggle('active', d.dataset.id===id);d.classList.toggle('done', i<cur);});
+  }
+  function renderEl(el){
+    var wrap=document.createElement('div'); wrap.className='el';
+    if(el.kind==='text'){var p=document.createElement('p');p.textContent=el.label||'';wrap.appendChild(p);}
+    else if(el.kind==='input'){var l=document.createElement('label');l.textContent=el.label||el.id;var inp=document.createElement('input');inp.id=el.id;inp.setAttribute('aria-label',el.label||el.id);if(el.placeholder)inp.placeholder=el.placeholder;inp.addEventListener('input',function(){state[el.id]=inp.value;});wrap.appendChild(l);wrap.appendChild(inp);}
+    else if(el.kind==='select'){var l2=document.createElement('label');l2.textContent=el.label||el.id;var sel=document.createElement('select');sel.id=el.id;sel.setAttribute('aria-label',el.label||el.id);(el.options||[]).forEach(function(o){var op=document.createElement('option');op.value=o;op.textContent=o;sel.appendChild(op);});sel.addEventListener('change',function(){state[el.id]=sel.value;});wrap.appendChild(l2);wrap.appendChild(sel);}
+    else if(el.kind==='link'){var a=document.createElement('a');a.href='#';a.id=el.id;a.textContent=el.label||el.id;a.setAttribute('aria-label',el.label||el.id);if(el.goto){a.addEventListener('click',function(e){e.preventDefault();show(el.goto);});}wrap.appendChild(a);}
+    else {var b=document.createElement('button');b.className='btn'+(el.variant==='secondary'?' secondary':'');b.id=el.id;b.textContent=el.label||el.id;b.setAttribute('aria-label',el.label||el.id);if(el.goto){b.addEventListener('click',function(){show(el.goto);});}else{b.addEventListener('click',function(){toast((el.label||'Done')+' ✓');});}wrap.appendChild(b);}
+    return wrap;
+  }
+  screens.forEach(function(scr,i){
+    var d=document.createElement('div');d.className='dot';d.dataset.id=scr.id;
+    d.innerHTML='<span class="n">'+(i+1)+'</span>'; d.appendChild(document.createTextNode(scr.title||scr.id));
+    d.addEventListener('click',function(){show(scr.id);}); rail.appendChild(d);
+    var sec=document.createElement('div');sec.className='step';sec.dataset.id=scr.id;
+    var sn=document.createElement('div');sn.className='stepno';sn.textContent='Schritt '+(i+1)+' von '+screens.length;sec.appendChild(sn);
+    var h=document.createElement('h2');h.textContent=scr.title||scr.id;sec.appendChild(h);
+    (scr.elements||[]).forEach(function(el){sec.appendChild(renderEl(el));});
+    var row=document.createElement('div');row.className='nav-row';
+    var back=document.createElement('button');back.className='btn secondary';back.id='step-back';back.textContent='← Zurück';back.setAttribute('aria-label','Zurück');back.disabled=i===0;back.addEventListener('click',function(){if(i>0)show(ids[i-1]);});
+    var next=document.createElement('button');next.className='btn';next.id='step-next';next.setAttribute('aria-label',i===screens.length-1?'Fertig':'Weiter');next.textContent=i===screens.length-1?'Fertig ✓':'Weiter →';next.addEventListener('click',function(){if(i<screens.length-1)show(ids[i+1]);else toast('Fertig ✓');});
+    row.appendChild(back);row.appendChild(next);sec.appendChild(row);
+    root.appendChild(sec);
+  });
+  show(C.start || (screens[0]||{}).id);
+})();
+</script>
+</body>
+</html>

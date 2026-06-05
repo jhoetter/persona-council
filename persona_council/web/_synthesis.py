@@ -374,6 +374,31 @@ def _synthesis_html(store: Store, syn: dict) -> str:
     if syn.get("positionierung"):
         sec.append(("positionierung", t("positioning"),
                     f'<div class="block" id="positionierung"><h2 class="bh">{t("positioning")}</h2><div class="es-prose sm">{_md(syn["positionierung"])}</div></div>'))
+    # Structured convergence blocks (GAP-3): a methodology's key problems / affinity clusters /
+    # down-select ranking + shortlist render as first-class answer content when present (data-driven —
+    # labels via i18n, content free-text; no methodology value hardcoded).
+    if syn.get("key_problems"):
+        kp = "".join(f'<div class="psolve">{_srcchips(_esc(x))}</div>' for x in syn["key_problems"])
+        sec.append(("keyproblems", t("key_problems"),
+                    f'<div class="block" id="keyproblems"><h2 class="bh">{t("key_problems")}</h2>{kp}</div>'))
+    if syn.get("clusters"):
+        cl = "".join(
+            f'<div class="segrow"><div><strong>{_esc(c.get("label",""))}</strong>'
+            f'<br><span class="muted">{_esc(c.get("insight",""))}</span></div></div>'
+            for c in syn["clusters"])
+        sec.append(("clusters", t("affinity_clusters"),
+                    f'<div class="block" id="clusters"><h2 class="bh">{t("affinity_clusters")}</h2>{cl}</div>'))
+    if syn.get("ranking"):
+        rk = "".join(
+            f'<div class="segrow"><div><strong>{_esc(r.get("prototype_id",""))}</strong>'
+            f'<br><span class="muted">{_esc(r.get("score_rationale",""))}</span></div></div>'
+            for r in syn["ranking"])
+        sec.append(("ranking", t("ranking"),
+                    f'<div class="block" id="ranking"><h2 class="bh">{t("ranking")}</h2>{rk}</div>'))
+    if syn.get("shortlist"):
+        sl = "".join(f'<div class="psolve">{_esc(x)}</div>' for x in syn["shortlist"])
+        sec.append(("shortlist", t("shortlist"),
+                    f'<div class="block" id="shortlist"><h2 class="bh">{t("shortlist")}</h2>{sl}</div>'))
     # voices — who thinks what & why (filter/sort/shift/evidence)
     panel = _voices_panel(store, syn)
     if panel:
