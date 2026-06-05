@@ -62,6 +62,29 @@ worker's MCP server holds the pre-fix code in memory, so re-run (or restart the 
 _Live-run progress at implementation time: reached the **mid-fi solution presentation** (18/20 tasks;
 3 syntheses, 6 prototypes incl. 1 mid-fi), hi-fi rung remaining._
 
+### WATCH-5 ✅ + the completed run VALIDATES every fix (final assessment, run complete 22/22)
+The full double-diamond-deep closed: 5 anti-steering Discover councils → Define POV reframe → 5 lo-fi
+(15 sessions) → mid-fi (8) → hi-fi (8) = **23 proband sessions**, converging on ONE validated concept.
+- **WATCH-5 resolves positively — anti-steering survived to the final spec.** The Deliver-Hi-Fi
+  synthesis: *"Wir 'begeistern' niemanden 'für eine Lebensversicherung' … meistens ehrlich 'nicht
+  jetzt / nicht du' … konvertiert wird NUR die genuine enge Passung; der validierte Wert ist
+  INCOME-PROTECTION, NICHT die klassische Kapital-LV."* Deliberate non-targets + honest open risks
+  kept; the leading HMW is honestly reframed, not rationalized. The methodology delivered the
+  "exciting", honest result end-to-end.
+- **The winning concept independently proves GAP-1 was the right call.** The chosen answer — *"Der
+  Ehrliche Vorsorge-Check … der aus den EIGENEN Zahlen der Nutzer:innen rechnet, ob sie echten Schutz
+  brauchen"* — is, by its own description, an **interactive computational tool**. The methodology's
+  BEST answer is exactly the prototype class the old renderer couldn't build (it had no compute), so
+  the hi-fi prototype could only approximate it. The new `model` type (GAP-1) is precisely what this
+  winning concept needs to be built for real.
+- **GAP-3 + GAP-5 confirmed systemic on the completed run:** all syntheses persisted with structured
+  blocks = NONE (only prose survived); **0 of 23** proband sessions grounded — even though the final
+  spec asserts "8 reale Playwright-Sessions". The spec *claims* real usage the system never verified —
+  the exact gap GAP-5 closes.
+**Bottom line:** the thinking is the exciting kind; the completed showcase is the strongest possible
+evidence the fixes were necessary AND aimed correctly. A fresh run on the new code will let this same
+quality of thinking land as rich structured answers, a real interactive model, and verified evidence.
+
 ---
 
 ## Findings
