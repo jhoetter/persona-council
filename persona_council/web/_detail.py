@@ -46,7 +46,8 @@ def _relations_html(store, study_id: str, proj_id: str | None,
         return f'<div class="relgrp"><div class="rellbl">{_esc(label)}</div>{rows}</div>'
 
     blocks = grp(t("rel_based_on"), incoming) + grp(t("rel_feeds_into"), outgoing)
-    return f'<div class="card relcard"><div class="relh">{t("relations")}</div>{blocks}</div>' if blocks else ""
+    return (f'<div class="card relcard"><div class="relh">{_icon("link")} {t("relations")}</div>{blocks}</div>'
+            if blocks else "")
 
 
 def _properties_html(rows) -> str:

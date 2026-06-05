@@ -732,7 +732,7 @@ def register_pages(app) -> None:
                       f'{_esc(str(r.get("verdict","")))}</div><ul class="small" style="margin:4px 0 0 16px">{liked}{fric}</ul></div>')
         sessions_html = ("".join(sl)) or f'<div class="muted small">— {t("prototypes_h")}: {t("no_sessions")} —</div>'
         body = (
-            f'<div class="page"><h1 class="h1">{_esc(p["name"])} {fid} '
+            f'<div class="page"><h1 class="h1"><span class="h1ic" style="color:#00897b">{_icon("prototype")}</span>{_esc(p["name"])} {fid} '
             f'<span class="muted small">{_esc(p.get("version",""))} · {_esc(slug)}</span></h1>'
             f'<p class="lead"><a class="btn" href="{src}" target="_blank">{_icon("projects")} {t("open_in_new_tab")} {_icon("external")}</a></p>'
             f'<div class="protoframe"><iframe src="{src}" title="{_esc(p["name"])}" loading="lazy"></iframe></div>'
