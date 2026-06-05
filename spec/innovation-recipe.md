@@ -51,3 +51,13 @@ forms-only) → build the bold model for real and **ground**-test it across segm
 connected, honestly-non-targeted deliverable.
 
 All of this is methodology-agnostic data/capability; an invented methodology gets the same levers.
+
+## Generalization check (2026-06-05) — the levers are NOT domain-specific
+Ran the SAME harness + lenses on a different HMW ("help young people with tight/irregular income build
+a first emergency buffer", same cohort, separate project `rproject_197807dbd17799cf`). The lenses
+produced 6 non-obvious concepts in the new domain — *Gezeiten-Puffer* (tidal analogy: good/bad months
+as tides), an *anti-shame pause button* (reversal), a *round-DOWN skimmer* (mechanism-transfer), a
+*Notgroschen-garden* (make-visible), a peer-liquidity pool, and an extreme dark-horse. The boldest was
+built as a real interactive `model` that computes live and was **grounded**-tested with the extreme
+precarious user (Marvin → grounded=True); `assess_project.novelty` = diverse. Same process, different
+domain, genuinely innovative + experienceable output — the harness's innovation capability generalizes.

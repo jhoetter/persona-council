@@ -1,0 +1,101 @@
+{
+  "title": "Gezeiten-Puffer: steuere gute & schlechte Monate, fuehle den Puffer mitwachsen",
+  "summary": "Ein schwankungs-adaptiver Mikro-Puffer. Du steuerst per Regler deinen aktuellen Monatstyp (von sehr schlecht bis sehr gut) und den geernteten Anteil ueber deinem Sicherheits-Wasserstand. Der Puffer zieht in guten Monaten viel, pausiert in schlechten ehrlich auf null - ohne je einen Plan zu brechen. Der sichtbare Balken zeigt, wie der Notgroschen ueber 12 Monate mitwaechst, plus ein ehrlicher Scham-frei-Index, der zeigt, dass nichts erzwungen wurde.",
+  "fidelity": "lofi",
+  "start": "m",
+  "screens": [
+    {
+      "id": "m",
+      "title": "Dein Gezeiten-Puffer",
+      "elements": [
+        {
+          "id": "monatstyp",
+          "kind": "range",
+          "label": "Monatstyp jetzt (-3 sehr schlecht ... +3 sehr gut)",
+          "min": -3,
+          "max": 3,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "id": "kontostand",
+          "kind": "number",
+          "label": "Kontostand am Monatsende (EUR)",
+          "min": 0,
+          "max": 2000,
+          "step": 10,
+          "default": 250
+        },
+        {
+          "id": "wasserstand",
+          "kind": "number",
+          "label": "Dein Sicherheits-Wasserstand / Mindest-Puffer aufs Konto (EUR)",
+          "min": 0,
+          "max": 1000,
+          "step": 10,
+          "default": 120
+        },
+        {
+          "id": "erntequote",
+          "kind": "range",
+          "label": "Erntequote ueber Wasserstand (% des Ueberschusses)",
+          "min": 0,
+          "max": 50,
+          "step": 5,
+          "default": 20
+        },
+        {
+          "id": "gute_monate",
+          "kind": "range",
+          "label": "Erwartete gute Monate pro Jahr",
+          "min": 0,
+          "max": 12,
+          "step": 1,
+          "default": 7
+        },
+        {
+          "id": "ueberschuss",
+          "kind": "computed",
+          "label": "Frei ueber dem Wasserstand (EUR)",
+          "formula": "max(0, kontostand - wasserstand)"
+        },
+        {
+          "id": "monats_faktor",
+          "kind": "computed",
+          "label": "Schwankungs-Faktor dieses Monats",
+          "formula": "max(0, (monatstyp + 3) / 6)"
+        },
+        {
+          "id": "abzug_diesen_monat",
+          "kind": "bar",
+          "label": "Geernteter Puffer diesen Monat (EUR)",
+          "formula": "round(max(0, kontostand - wasserstand) * (erntequote / 100) * max(0, (monatstyp + 3) / 6))"
+        },
+        {
+          "id": "pausiert",
+          "kind": "computed",
+          "label": "Ehrlich pausiert? (1 = ja, kein Abzug)",
+          "formula": "1 - min(1, round(max(0, kontostand - wasserstand) * (erntequote / 100) * max(0, (monatstyp + 3) / 6)))"
+        },
+        {
+          "id": "jahres_puffer",
+          "kind": "bar",
+          "label": "Mitgewachsener Notgroschen nach 12 Monaten (EUR)",
+          "formula": "round(max(0, kontostand - wasserstand) * (erntequote / 100) * gute_monate * 0.85)"
+        },
+        {
+          "id": "scham_frei_index",
+          "kind": "bar",
+          "label": "Scham-frei-Index (% Monate ohne erzwungenes Sparen)",
+          "formula": "round((12 - gute_monate) / 12 * 100)"
+        },
+        {
+          "id": "drei_monats_ziel",
+          "kind": "bar",
+          "label": "Fortschritt Richtung 3-Monats-Notgroschen (%)",
+          "formula": "min(100, round(max(0, kontostand - wasserstand) * (erntequote / 100) * gute_monate * 0.85 / max(1, wasserstand * 3) * 100))"
+        }
+      ]
+    }
+  ]
+}
