@@ -74,6 +74,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgdiamond{fill:var(--accent);opacity:.055;stroke:var(--accent);stroke-opacity:.16;stroke-width:1.2}
 .rgsection{stroke-width:1.5}
 .rgsection-phase{fill-opacity:.05;stroke-opacity:.30;stroke-dasharray:none}
+.rgphase-guide{stroke:var(--line);stroke-width:1;stroke-dasharray:2 8;opacity:.5}
+.rgphase-label{fill:var(--ink);font-size:15px;font-weight:700;letter-spacing:-.01em}
+.rgphase-sub{fill:var(--muted);font-size:11px}
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgsec-label{font-size:13px;font-weight:650;letter-spacing:.01em;opacity:.92}
 .rgsec-kind{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;fill:var(--muted);opacity:.8}
@@ -406,6 +409,19 @@ _RGRAPH_JS = """<script>
     gD.appendChild(el('polygon',{points: poly.map(function(p){return p[0]+','+p[1];}).join(' '),'class':'rgdiamond'})); }); }
 
   // ---- section overlays (methodology-independent groupings) ----
+  // ---- Q3: phase-column headers + faint guides (the left→right flow, made explicit) ----
+  var gP=document.getElementById('rgphases');
+  if(gP && D.phases && D.phases.length){
+    var ys=D.nodes.map(function(n){return n.y;}); var ymin=Math.min.apply(null,ys.concat([0]))-80;
+    var ymax=Math.max.apply(null,ys.concat([0]))+160;
+    D.phases.forEach(function(p){
+      var ln=el('line',{x1:p.x,y1:ymin,x2:p.x,y2:ymax,'class':'rgphase-guide'}); gP.appendChild(ln);
+      var t=el('text',{x:p.x,y:p.top,'class':'rgphase-label','text-anchor':'middle'});
+      t.textContent=p.i+'. '+p.label; gP.appendChild(t);
+      var g=el('text',{x:p.x,y:p.top+18,'class':'rgphase-sub','text-anchor':'middle'});
+      g.textContent=p.is_fan?'◇ divergieren':'◆ konvergieren'; gP.appendChild(g);
+    });
+  }
   var gS=document.getElementById('rgsections');
   if(gS && D.sections){ D.sections.forEach(function(s){
     var pts=s.poly.map(function(p){return p[0]+','+p[1];}).join(' ');

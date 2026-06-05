@@ -45,7 +45,7 @@ def _graph_layout(graph: dict) -> dict:
 # node box dimensions (must match _RGRAPH_JS NW/NH)
 _NW, _NH = 288, 58
 # Saved drag-layouts in localStorage are keyed by this; bump on any layout-algorithm change.
-_LAYOUT_VERSION = 5
+_LAYOUT_VERSION = 6
 
 
 def _convex_hull(points: list[tuple]) -> list[tuple]:
@@ -225,7 +225,15 @@ def _methodology_layout(graph: dict) -> dict | None:
     for n in graph["nodes"]:
         if n.get("note_kind") == "concept" and not n.get("prototype_id"):
             pos[n["study_id"]] = (ideate_x, AXIS - 150 - st * 72); st += 1
-    return {"pos": pos, "diamonds": diamonds, "proto_pos": proto_pos, "proto_edges": proto_edges, "proto_w": PW}
+    # Q3: clean PHASE-COLUMN HEADERS — one labelled lane per step in flow order, so the left→right
+    # double-diamond is explicit (not inferred from overlapping hulls). Top sits above all nodes.
+    miny = min((y for _x, y in pos.values()), default=AXIS)
+    phase_cols = [{"label": (s.get("name") or s["key"]).split("·")[-1].strip() or s["key"],
+                   "x": col_x[s["key"]] + _NW / 2, "is_fan": bool(s.get("is_fan")),
+                   "i": i + 1, "top": miny - 58}
+                  for i, s in enumerate(sorted(steps, key=lambda s: depth[s["key"]]))]
+    return {"pos": pos, "diamonds": diamonds, "proto_pos": proto_pos, "proto_edges": proto_edges,
+            "proto_w": PW, "phase_cols": phase_cols}
 
 
 def _graph_interactive(graph: dict) -> str:
@@ -353,9 +361,11 @@ def _graph_interactive(graph: dict) -> str:
         if phase_sections:
             diamonds = []                              # one mechanism: labeled phases replace diamonds
     jsections = phase_sections + jsections             # phases behind, user themes on top
+    jphases = (ml.get("phase_cols") if ml else None) or []
     # Bump _LAYOUT_VERSION whenever the layout algorithm changes → stale saved drags are dropped.
     data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds, "sections": jsections,
-                       "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION}, ensure_ascii=False)
+                       "phases": jphases, "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION},
+                      ensure_ascii=False)
     de = _lang() == "de"
     hint = ("Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen"
             if de else "drag · pan background · pinch / ⌘+scroll to zoom · F to fit")
@@ -377,7 +387,7 @@ def _graph_interactive(graph: dict) -> str:
           '<circle cx="1.2" cy="1.2" r="1.1" fill="var(--line-2)"/></pattern>'
         + '</defs>'
         + '<rect id="rgbg" x="0" y="0" width="100%" height="100%" fill="url(#rggrid)"/>'
-        + '<g id="rgroot"><g id="rgsections"></g><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
+        + '<g id="rgroot"><g id="rgphases"></g><g id="rgsections"></g><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
         + f'<div class="rghint">{hint}</div>'
         + '<div class="rgctrls">'
           f'<div class="rgzl" id="rgzl">100%</div>'
