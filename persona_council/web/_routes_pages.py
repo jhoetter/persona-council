@@ -302,12 +302,21 @@ def register_pages(app) -> None:
         turns_html = '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>"
         exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
         sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
+        # the MOTION the personas respond to — surfaced FIRST so the For/Conditional/Against votes have
+        # their question; the exec-summary below it is labelled as the council's FINDING (the result).
+        motion = (session.get("proposal") or "").strip()
+        motion_block = (f'<div class="callout motion"><span class="emj">{_icon("compass")}</span>'
+                        f'<div><strong>{t("council_motion")}</strong>'
+                        f'<p style="font-size:1.08em;margin:.35em 0">&bdquo;{_esc(motion)}&ldquo;</p>'
+                        f'<p class="muted small">{t("council_motion_help")}</p></div></div>') if motion else ""
         main = (f'<div class="hero"><h1>{_esc(session["prompt"])}</h1><p class="sub">{_esc(session["selection_reason"])}</p></div>'
-                f'<div class="callout"><span class="emj">{_icon("compass")}</span><div>{exec_html}</div></div>'
+                f'{motion_block}'
+                f'<div class="callout"><span class="emj">{_icon("bulb")}</span>'
+                f'<div><strong>{t("council_finding")}</strong>{exec_html}</div></div>'
                 f'{sentiment}'
                 f'<div class="sec" id="stimmen"><h2>{voices_detail_h}</h2>{turns_html}</div>'
-                f'<details class="sec"><summary>{proposal_short_h}</summary><div class="card"><strong>{proposal_h}</strong><p>{_esc(session["proposal"])}</p><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
-        vc = {v: sum(1 for x in session["votes"] if x.get("vote") == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
+                f'<details class="sec"><summary>{summary_h}</summary><div class="card"><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
+        vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
         rail = (f'<h4>{vote_h}</h4>'
                 + "".join(f'<div class="prop"><span class="k">{_vote_label(k)}</span><span class="v">{vc[k]}</span></div>' for k in vc)
                 + f'<div class="prop"><span class="k">{personas_h}</span><span class="v">{len(session.get("persona_ids", []))}</span></div>'

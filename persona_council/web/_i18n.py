@@ -53,6 +53,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "ei_fill_ins": "Lückenfüller", "ei_time_sinks": "Zeitfresser",
         "ei_effort_axis": "Aufwand →", "ei_value_axis": "Nutzen →",
         "no_data": "Keine Daten.",
+        # council framing
+        "council_motion": "Zur Debatte gestellte These",
+        "council_motion_help": "Jede Stimme reagiert auf diese These — Zustimmung, bedingt oder Ablehnung.",
+        "council_finding": "Was dieser Council ergab",
         # vote labels
         "vote_support": "Befürwortend", "vote_maybe": "Bedingt",
         "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
@@ -181,6 +185,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "ei_fill_ins": "Fill-ins", "ei_time_sinks": "Time sinks",
         "ei_effort_axis": "Effort →", "ei_value_axis": "Value →",
         "no_data": "No data.",
+        # council framing
+        "council_motion": "The motion put to the council",
+        "council_motion_help": "Each voice responds to this motion — for, conditional, or against.",
+        "council_finding": "What this council found",
         # vote labels
         "vote_support": "For", "vote_maybe": "Conditional",
         "vote_abstain": "Abstain", "vote_oppose": "Against",
