@@ -9,6 +9,12 @@ from ._env import _env
 
 def register_prototypes(mcp):
     # ================= Prototypes (real, minimal, locally-runnable apps) =================
+    # NAMING CONVENTION (M4): two deliberate families —
+    #   prototype_* / *_prototype  = the ARTIFACT lifecycle: scaffold_prototype, run_prototype,
+    #                                stop_prototype, get_prototype, list_prototypes, delete_prototype.
+    #   proto_*                     = the LIVE proband SESSION on a running app, in order:
+    #                                proto_open → proto_act → proto_read → proto_close
+    #                                (then record_prototype_session to persist the grounded result).
     @mcp.tool()
     def scaffold_prototype(slug: str, name: str, concept: dict[str, Any], kind: str = "web",
                            template: str | None = None, project_id: str | None = None,

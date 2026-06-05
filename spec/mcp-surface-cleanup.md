@@ -64,13 +64,21 @@ suite green. (This is dev-clarity, not user-facing, but it's why the surface *fe
 ## M4 — Standardize NAMING drift
 - Prototype tools mix prefixes: `proto_open`/`proto_read`/`proto_act`/`proto_close` +
   `list_proto_sessions` vs `run_prototype`/`scaffold_prototype`/`stop_prototype`/`get_prototype`/
-  `list_prototypes`/`delete_prototype`. **Pick one** (recommend `prototype_*` for lifecycle,
-  `proband_*` for the browser session verbs since they're a persona USING it) and alias the old names
-  for one release.
+  `list_prototypes`/`delete_prototype`.
 - Confirm the entry verbs: `start_project` is canonical; `create_research_project` is the lower-level
-  primitive it wraps — either rename to `_create_research_project` (internal) or document the
-  relationship. **Acceptance:** consistent prefixes within a domain; old names still resolve (aliased)
-  with a deprecation note; docs updated.
+  primitive it wraps.
+
+> **Status (2026-06-05): convention MADE INTENTIONAL (not a churn-rename).** Investigation showed the
+> two prefixes are actually **two coherent, deliberate families**, not drift: `proto_*` = the LIVE
+> proband-SESSION verbs (`proto_open`→`proto_act`→`proto_read`→`proto_close`) a persona drives on a
+> running app; `prototype_*` = the ARTIFACT lifecycle (`scaffold`/`run`/`stop`/`get`/`list`/`delete`).
+> `proto_open` is a service fn AND an MCP tool AND is named in agent-facing instruction strings across
+> ~10 files (plan.py, _engines.py, 3 skills, AGENTS, cli, _env, contract) — a cross-family rename of
+> agent instructions is real risk for cosmetic gain, with no agent benefit (each family is already
+> self-consistent and the skills name them consistently). **Action taken:** documented the convention
+> in `register_prototypes`' banner so the distinction reads as intentional; `start_project` confirmed
+> as the canonical entry (`create_research_project` is its lower-level primitive). **Acceptance:** the
+> two families are each internally consistent + the convention is stated in-code; no rename churn.
 
 ## M5 — Signal the FRONT DOOR (the happy path, in the surface itself)
 162 tools with no curated entry means clarity lives only in the skills. Make the path discoverable:
