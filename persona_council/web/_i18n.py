@@ -64,6 +64,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "council_motion_help": "{n} Personas reagieren aus ihrer GELEBTEN ERFAHRUNG: bestätigt die These (dafür), teils (bedingt) oder widerlegt sie (dagegen). Es ist keine Abstimmung über eine Entscheidung — es ist, was sie tatsächlich erleben. Die Erkenntnis steht darunter.",
         "council_reactions_h": "Reaktion auf die These",
         "council_finding": "Erkenntnis aus diesem Council",
+        "council_voices_help": "Jede Stimme ist eine Persona, die aus IHRER Lebenssituation + Erinnerung auf die These oben reagiert — das ist der Input, den jede bekommen hat.",
+        "council_input_given": "Gegebener Input (Prompt + Kontext)",
+        "council_drew_on": "Stützte sich auf",
         # vote labels
         "vote_support": "Befürwortend", "vote_maybe": "Bedingt",
         "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
@@ -203,6 +206,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "council_motion_help": "{n} personas react from their LIVED EXPERIENCE: confirms the hypothesis (for), partly (conditional), or refutes it (against). This is not a decision vote — it is what they actually experience. The insight is below.",
         "council_reactions_h": "Reaction to the hypothesis",
         "council_finding": "What this council found",
+        "council_voices_help": "Each voice is a persona reacting to the hypothesis above from THEIR life situation + memory — that is the input each was given.",
+        "council_input_given": "Input given (prompt + context)",
+        "council_drew_on": "Drew on",
         # vote labels
         "vote_support": "For", "vote_maybe": "Conditional",
         "vote_abstain": "Abstain", "vote_oppose": "Against",

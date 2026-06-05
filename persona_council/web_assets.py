@@ -237,8 +237,13 @@ details.sec[open]>summary::before{transform:rotate(90deg)}
 
 /* ---- turn cards / detail ---- */
 .turn{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:13px}
-.turn .hd{display:flex;align-items:center;gap:8px;margin:0 0 7px}.turn .hd b{font-size:13.5px}
+.turn .hd{display:flex;align-items:center;gap:8px;margin:0 0 7px;flex-wrap:wrap}.turn .hd b{font-size:13.5px}
 .turn.mod{border-left:3px solid var(--accent);background:var(--accent-weak)}
+.turn-who{display:inline-flex;align-items:center;gap:7px;color:var(--ink);text-decoration:none}
+.turn-who:hover b{color:var(--accent)}
+.turn-ctx{flex-basis:100%;margin:2px 0 0;font-style:italic}
+.turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
+.turn-input summary{cursor:pointer}
 .detail{max-width:980px}.thought{font-size:15px;border-left:3px solid var(--ink);padding:9px 12px;background:var(--panel-2);border-radius:0 6px 6px 0}
 .quote{border-left:3px solid var(--accent);padding:6px 10px;background:var(--panel-2);margin:6px 0;border-radius:0 6px 6px 0}
 .identity{display:grid;grid-template-columns:160px 1fr;gap:20px;align-items:start}

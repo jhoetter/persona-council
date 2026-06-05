@@ -125,9 +125,13 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
         "external_context": context, "participants": participants,
         "instructions": (
             "Author one or more turns per participant grounded in their agent_context (SOUL + memory), "
-            "honest and anti-steering. Then author proposal, votes (SUPPORT/MAYBE/ABSTAIN/OPPOSE), a "
-            "short summary, and a rich Markdown exec_summary. Persist via record_council(project_id, "
-            f"prompt, persona_ids, turns, votes, proposal, summary, exec_summary). {language_instruction(language)}"
+            "honest and anti-steering. On EACH turn set: persona_id, content, stance, vote, "
+            "questions_or_pushback, memory_refs (the memories drawn on), and `input` — a SHORT snapshot "
+            "of what this persona was given (the prompt + the key SOUL/memory lines from agent_context "
+            "that shaped this turn) so the council is AUDITABLE (the UI shows it per voice). Then author "
+            "proposal, votes (SUPPORT/MAYBE/ABSTAIN/OPPOSE), a short summary, and a rich Markdown "
+            "exec_summary. Persist via record_council(project_id, prompt, persona_ids, turns, votes, "
+            f"proposal, summary, exec_summary). {language_instruction(language)}"
         ),
     }
 

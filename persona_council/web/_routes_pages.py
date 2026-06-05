@@ -291,15 +291,33 @@ def register_pages(app) -> None:
         sentiment_title = t("sentiment_this_council")
         vote_h = t("vote"); personas_h = t("personas"); created_h = t("created")
         councils_crumb = t("councils"); council_title = t("councils")
+        # Each voice shows WHO the persona is + the life-context that shaped them (the per-persona
+        # "input") and any recorded input snapshot, so you can see what each was given → what they said.
+        pmap = {pid: store.get_persona(pid) for pid in session.get("persona_ids", [])}
         turns = []
         for tn in session["turns"]:
             body = tn.get("content") or tn.get("text") or tn.get("message") or ""   # tolerate turn-body field variants
             mod = " mod" if (tn.get("speaker") == "Moderator" or tn.get("stance") in ("moderation", "moderator") or tn.get("type") == "moderator") else ""
             stance = _label(tn["stance"], _stance_color(tn.get("stance", ""))) if tn.get("stance") else ""
+            p = pmap.get(tn.get("persona_id"))
+            if p:
+                seg = p.get("segment") or {}
+                desc = " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
+                    or (p.get("source_description") or "")[:130]
+                head = (f'<a href="/personas/{_esc(p["id"])}" class="turn-who">{_avatar(p, 26)}'
+                        f'<b>{_esc(p.get("display_name") or tn.get("speaker", ""))}</b></a> {stance}'
+                        f'<div class="muted small turn-ctx">{_esc(desc)}</div>')
+            else:
+                head = f'<b>{_esc(tn.get("speaker", ""))}</b> {stance}'
+            given = tn.get("input") or tn.get("context_given") or ""
+            given_html = (f'<details class="turn-input"><summary class="muted small">{t("council_input_given")}</summary>'
+                          f'<p class="muted small" style="white-space:pre-wrap">{_esc(given)}</p></details>') if given else ""
             concerns = "".join(f'<p class="muted small">• {_esc(q)}</p>' for q in (tn.get("questions_or_pushback") or [])[:4])
-            mem = "".join(f'<p class="muted small">{_icon("search")} {_esc(m)}</p>' for m in (tn.get("memory_refs") or tn.get("memory_used") or [])[:3])
-            turns.append(f'<div class="turn{mod}"><div class="hd"><b>{_esc(tn.get("speaker",""))}</b> {stance}</div><p>{_esc(body)}</p>{concerns}{mem}</div>')
-        turns_html = '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>"
+            mrefs = (tn.get("memory_refs") or tn.get("memory_used") or [])[:3]
+            mem = (f'<p class="muted small">{_icon("memory")} {t("council_drew_on")}: ' + ", ".join(_esc(m) for m in mrefs) + '</p>') if mrefs else ""
+            turns.append(f'<div class="turn{mod}"><div class="hd">{head}</div>{given_html}<p>{_esc(body)}</p>{concerns}{mem}</div>')
+        turns_html = (f'<p class="muted small" style="margin:-4px 0 12px">{t("council_voices_help")}</p>'
+                      '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>")
         exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
         sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         # A council investigates ONE hypothesis by gathering N diverse personas' lived-experience
