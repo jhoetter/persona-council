@@ -353,3 +353,39 @@ is as important as GAP-3: GAP-3 hollows the ANSWER nodes; GAP-5 hollows the EVID
   validated-vs-open ledger (anti-steering survives to the end)?
 
 _Last updated: 2026-06-05, during the live run (Discover frame done; at Define)._
+
+---
+
+## NEW-CODE SHOWCASE RUN (2026-06-05) — fixes + ideation lenses, analyzed live
+Fresh project `rproject_aa417326320d1d3f` on the **fixed** harness (MCP servers were restarted onto
+the new code; cohort kept, run data purged). Driven host+subagents → persisted via the new-code API.
+
+**Are the phases good? — yes, with a clear INNOVATION uplift:**
+- **Discover (exploration):** 2 deep multi-persona councils, anti-steering held — the disconfirmation
+  council returned **6/6 Non-Fit** and reproduced the inverted-compounding insight (the literate reject
+  LV *because* they grasp cost-drag). Honest, mechanism-level, not shallow.
+- **Define:** now a RICH answer node — 5 affinity clusters + 4 key_problems + 4 segmente + POV, and it
+  **renders** (GAP-3). Reframe is mechanism-level: security is relational/present; this is an
+  *experience* gap, not an *explain* gap.
+- **Ideate (the innovation test):** the new data-driven **ideation lenses** produced markedly more
+  **non-obvious** concepts than the prior run — each names an unexpected mechanism:
+  - *Drag Race: Compounding vs. Cost* (reversal) — a tool that PROVES to the literate user that LV
+    loses to their ETF, weaponizing their own correct intuition → converts skepticism into trust.
+  - *The Future Salon Chair* (experienceable) — steer your income/shock and watch your livelihood
+    scene hold or tear; renders the abstract gap as a present, RELATIONAL loss.
+  - *The Disqualifier* (anti-goal) — an anti-product that says NO to ~80% and makes the honest "no"
+    the headline feature.
+  - *Six Months Without You* (subtract) / *Who Catches Whom* (analogy) / *Pay-It-Forward Proof* (a peer
+    story as the input shell of a live model).
+  This is approaching the lateral, surprising quality the user is targeting — driven by the lenses,
+  not hardcoded.
+- **Prototypes:** include a REAL interactive **model** (the salon chair) that computes live (GAP-1) —
+  the experienceable class that was unbuildable before — plus a comparison and a flow. The model was
+  **grounded-tested** (Deniz: "das erste Mal, dass Vorsorge sich nicht wie ein Verkauf anfühlt";
+  grounded_verified=True, GAP-5).
+- **Down-select:** synthesis with ranking + shortlist (GAP-3), and the **graph connects** via the
+  synthesis spine (GAP-6) — Define→Down-Select linked, prototypes placed.
+
+**Verdict:** the fixed harness produces honest deep exploration AND, with the lenses, genuinely
+innovative concepts + an experienceable interactive prototype — the non-trivial output the user wants.
+Next: fuse the three winners into one bold mid-fi concept and push innovation scoring further.

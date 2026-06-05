@@ -1,0 +1,70 @@
+{
+  "title": "Brauchst du das überhaupt? (90 Sekunden, ehrlich)",
+  "summary": "Die meisten hören hier ein klares Nein — und das ist gut so.",
+  "fidelity": "lofi",
+  "start": "q1",
+  "screens": [
+    {
+      "id": "q1",
+      "title": "Hängt jemand finanziell von dir ab?",
+      "elements": [
+        {
+          "kind": "button",
+          "id": "q1no",
+          "label": "Nein",
+          "goto": "nein",
+          "action": "nein"
+        },
+        {
+          "kind": "button",
+          "id": "q1yes",
+          "label": "Ja — Kind/Kredit/Partner",
+          "goto": "q2",
+          "action": "q2"
+        }
+      ]
+    },
+    {
+      "id": "q2",
+      "title": "Hättest du < 3 Monatsausgaben als Polster?",
+      "elements": [
+        {
+          "kind": "button",
+          "id": "q2no",
+          "label": "Ich hab genug Polster",
+          "goto": "nein",
+          "action": "nein"
+        },
+        {
+          "kind": "button",
+          "id": "q2yes",
+          "label": "Nein, dünn",
+          "goto": "ja",
+          "action": "ja"
+        }
+      ]
+    },
+    {
+      "id": "nein",
+      "title": "Du brauchst das (jetzt) nicht.",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "n",
+          "label": "Ehrlich: kein Produkt für dich. Bau erst ein kleines Polster. Komm wieder, wenn jemand von dir abhängt. Behalt dein Geld."
+        }
+      ]
+    },
+    {
+      "id": "ja",
+      "title": "Für DICH könnte ein schlanker Einkommensschutz passen.",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "j",
+          "label": "Nur ein günstiger Risiko-Baustein, nur so lange die Abhängigkeit besteht — alle Kosten sichtbar, kein Sparmantel."
+        }
+      ]
+    }
+  ]
+}
