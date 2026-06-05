@@ -254,6 +254,40 @@ the observed states never advanced past the start screen. Methodology-agnostic (
 `validate_synthesis_payload` DROPS (GAP-3). Expect another hollow down-select synthesis (ranking/
 shortlist lost). Watching to confirm the defect is systemic across converge steps, not a one-off.
 
+### GAP-5 — DEFECT (major): proband-session groundedness silently failed for ALL sessions and nothing enforced it ⚠️⚠️
+**DB-authoritative fact:** of **15** proband sessions in this project, **0 are `grounded_verified=True`**
+— despite `browser.available() == True` (Playwright IS installed here). The methodology's signature
+guarantee — "personas really USE the running app via Playwright; reactions are rejected unless
+observed" — held for **none** of them, and the run proceeded to down-select on them as valid evidence.
+Two compounding causes, both real:
+1. **Verification requires the session to still be LIVE at record time.** `browser.close()` does
+   `_SESSIONS.pop(session_id)` and `session_log()` reads from `_SESSIONS`, so the moment an agent
+   closes a session (clean hygiene: drive → close → record) the log is gone → `record_prototype_session`
+   finds no log → records `grounded_verified=False` ("harness unavailable") instead of verifying. The
+   correct usage order **destroys the evidence**. (Concurrent subagents + a max-session cap can also
+   evict each other's sessions mid-run.)
+2. **Groundedness is non-consequential.** `record_prototype_session` *records* an unverified session
+   rather than rejecting it; the verify gate's `session_of_tags` counts **any** session (grounded or
+   not); and neither `assess_project` nor the agent surfaced "0/15 verified". So a converge step passed
+   its "real proband test" requirement on entirely unverified usage.
+**Smoking gun (over-claim that grounding should have blocked):** `lofi-later-trigger`'s nav is dead
+(GAP-4: cards use `action`, spa-cards calls `show(c.goto)`→`show(undefined)`), yet a proband's
+`observed_state_refs` claim reaching `armed`/`done` — states the dead nav cannot reach. Grounding is
+exactly the guard for this; it computed `grounded=False` but did not enforce it.
+*Proposed (general):*
+- **Persist the session log independent of the live handle** — keep the log + a set of observed
+  refs/text after `close()` (pop the browser handle, retain the verification record), so a closed
+  session still verifies. (Highest-leverage; removes the order trap.)
+- **Make groundedness consequential** — when `browser.available()`, `record_prototype_session` should
+  reject (or require an explicit `unverified=true`) if refs aren't in the log; the `session_of_tags`
+  gate should require ≥1 **grounded** session, not any session.
+- **Surface it** — `assess_project`/`next_action` report "N/M proband sessions ungrounded" as a gap so
+  the agent (and the watching user) sees the degradation instead of it passing silently.
+*Honesty note:* I can't prove per-session whether the browser was driven-then-closed (cause 1) vs
+not-driven (cause 2) for all 15 without the subagent logs; but the DB fact (0/15 verified, Playwright
+available) + the dead-nav over-claim make the defect and its non-enforcement certain either way. This
+is as important as GAP-3: GAP-3 hollows the ANSWER nodes; GAP-5 hollows the EVIDENCE under them.
+
 ## Watch list (to confirm as the run proceeds)
 - **WATCH-1 — Discover breadth shape.** ✅ resolved positively (see OBS-3): a few rich multi-persona
   councils per angle, spectrum-sampled, memory-grounded. (Kept on the list as a regression check for
