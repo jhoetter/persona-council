@@ -389,3 +389,20 @@ the new code; cohort kept, run data purged). Driven host+subagents → persisted
 **Verdict:** the fixed harness produces honest deep exploration AND, with the lenses, genuinely
 innovative concepts + an experienceable interactive prototype — the non-trivial output the user wants.
 Next: fuse the three winners into one bold mid-fi concept and push innovation scoring further.
+
+### NEW-CODE RUN — COMPLETE showcase (Deliver reached): old vs new (same HMW + cohort)
+| dimension | old run (pre-fix) | new run (fixed harness) |
+|---|---|---|
+| grounded proband sessions | 0 / 23 | **4 / 4** |
+| synthesis structured blocks | all dropped (hollow) | clusters / key_problems / ranking / shortlist persist + render |
+| diamonds connected in graph | no ("no lines") | spine connects Define→Down-Select→Deliver |
+| interactive prototype | faked / static screens | a REAL computational `model` ("Der volle Stuhl"), grounded across 3 segments |
+| concept novelty | conventional (checker/comparison) | trust-inversion, experienceable model, anti-product (lens-driven) |
+
+**Winning answer (honest reframe):** an interactive model that makes the invisible income-gap a
+present, relational scene the user steers — with a fully transparent slim-cover lever and an honest
+"you don't need this" exit. Validated grounded across segments: the literate skeptic (Niklas) TRUSTS
+it *because it gives him right and doesn't sell* (trust-inversion); the mother (Jana) finds a concrete
+gap + honest slim cover; the non-target (Sophie) is confirmed (gap 0). Deliberate non-targets + open
+risks (parameter transparency; the 80%-say-no conversion economics) carried in-spec. This is the
+non-trivial, innovative output the harness now reliably enables.
