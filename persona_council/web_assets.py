@@ -277,7 +277,7 @@ h1,h2,h3,h4{color:var(--ink)}
 .prop:last-child{border-bottom:0}.prop .k{color:var(--muted);width:84px;flex-shrink:0}
 .prop .v{color:var(--ink);min-width:0;font-weight:500}
 .hero h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650}
-.hero h1 svg{width:21px;height:21px;color:var(--accent)}
+.hero h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}
 .hero .sub{color:var(--muted);font-size:14px;margin:0 0 4px;max-width:74ch}
 .callout{display:flex;align-items:flex-start;gap:11px;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:13px 15px;margin:18px 0}
 .callout .emj{color:var(--accent);display:inline-flex;align-items:center;padding-top:1px}

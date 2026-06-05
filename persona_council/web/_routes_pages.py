@@ -233,7 +233,10 @@ def register_pages(app) -> None:
             ("dot", t("size"), _esc(p["company_context"].get("size", ""))),
             ("memory", t("memory"), f'<a class="bc-link" href="/personas/{_esc(p["id"])}/memory">{_icon("memory")} {t("open")}</a>'),
         ], aside=True)
-        return _layout(p["display_name"], _doc(main, rail=props), store,
+        prail = [("aktivitaet", t("activity_over_time"))] if activity else []
+        prail += [("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
+                  ("bez", t("relationships")), ("cal", t("calendar")), ("sec-properties", t("properties"))]
+        return _layout(p["display_name"], _doc(main, rail=props) + _page_rail(prail), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
                        actions=_star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}'))
 
