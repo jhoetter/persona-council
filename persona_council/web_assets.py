@@ -54,7 +54,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .um-trigger{width:100%;display:flex;align-items:center;gap:9px;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;cursor:pointer;color:var(--ink);font-size:13px;font-weight:500;font-family:inherit}
 .um-trigger:hover{background:var(--hover)}
 .usermenu.open .um-trigger{background:var(--hover)}
-.um-ava{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--violet));flex-shrink:0}
+.um-ava{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;color:var(--muted)}
+.um-ava svg{width:18px;height:18px}
 .um-name{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .um-caret{color:var(--muted);display:inline-flex;transition:transform .15s var(--ease)}
 .um-caret .ic{width:16px;height:16px}
@@ -70,8 +71,6 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .segbtn.on{background:var(--panel);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.10)}
 .segbtn.on .ic{color:var(--accent)}
 .seg:not(.seg-theme) .segbtn{padding:8px 4px;font-size:12.5px;font-weight:600}
-.um-links{display:flex;gap:14px;padding:9px 2px 2px;border-top:1px solid var(--line-2);font-size:12px}
-.um-links a{color:var(--muted)}.um-links a:hover{color:var(--accent)}
 .rgwrap{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
 #rg{display:block;touch-action:none;cursor:grab}
 #rg.grabbing{cursor:grabbing}
@@ -86,6 +85,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rge.on{stroke-width:3}
 .rgn.sel>rect:first-of-type{stroke:var(--accent);stroke-width:2.2;filter:drop-shadow(0 3px 9px color-mix(in srgb,var(--accent) 42%,transparent))}
 .rgn.rg-hidden{opacity:.07;pointer-events:none}
+/* node label/sub live in a foreignObject — clamp so long titles never bleed out of the card */
+.rgn-body{box-sizing:border-box;height:100%;display:flex;flex-direction:column;justify-content:center;overflow:hidden;font-family:inherit;pointer-events:none}
+.rgn-title{font-size:13px;font-weight:600;line-height:1.2;color:var(--ink);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.rgn-sub{margin-top:2px;font-size:11.5px;line-height:1.3;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rgctrls{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.12)}
 .rgctrls .rgzl{font-size:10px;color:var(--muted);text-align:center;padding:3px 0;border-bottom:1px solid var(--line-2);user-select:none}
 .rgbtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:0;border-bottom:1px solid var(--line-2);background:var(--panel);color:var(--ink);cursor:pointer;font-size:15px;line-height:1}
@@ -388,9 +391,18 @@ _RGRAPH_JS = """<script>
   var D=JSON.parse(dataEl.textContent);
   var svg=document.getElementById('rg'), root=document.getElementById('rgroot'),
       gE=document.getElementById('rgedges'), gN=document.getElementById('rgnodes');
-  var NS='http://www.w3.org/2000/svg', NW=288, NH=58, MIN=0.25, MAX=2.6;
+  var NS='http://www.w3.org/2000/svg', NW=320, NH=64, MIN=0.25, MAX=2.6;
   var tx=0, ty=0, scale=1, KEY='rgstate:'+(D.key||'x');
   function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a) e.setAttribute(k,a[k]); return e; }
+  // Render a persona-icons glyph (icon name -> path body from D.iconpaths) as a nested
+  // <svg> at (x,y,size). color drives both stroke (currentColor) and any inline fill.
+  function iconEl(name,x,y,size,color){
+    var body=(D.iconpaths||{})[name]; if(!body) return null;
+    var s=el('svg',{x:x,y:y,width:size,height:size,viewBox:'0 0 24 24',fill:'none',
+      stroke:'currentColor','stroke-width':1.9,'stroke-linecap':'round','stroke-linejoin':'round'});
+    if(color) s.setAttribute('style','color:'+color);
+    s.innerHTML=body; return s;
+  }
   var byId={}; D.nodes.forEach(function(n){ byId[n.id]=n; n.dx=n.x; n.dy=n.y; });
 
   // ---- persistence (per project): node positions, viewport, active filters ----
@@ -431,7 +443,10 @@ _RGRAPH_JS = """<script>
       var t=el('text',{x:p.x,y:p.top,'class':'rgphase-label','text-anchor':'middle'});
       t.textContent=p.i+'. '+p.label; gP.appendChild(t);
       var g=el('text',{x:p.x,y:p.top+18,'class':'rgphase-sub','text-anchor':'middle'});
-      g.textContent=p.is_fan?'◇ divergieren':'◆ konvergieren'; gP.appendChild(g);
+      g.textContent=p.is_fan?'divergieren':'konvergieren'; gP.appendChild(g);
+      var gw=0; try{gw=g.getComputedTextLength();}catch(_){}
+      var gi=iconEl(p.is_fan?'diamond':'diamondFilled', p.x-gw/2-15, p.top+18-9, 11);
+      if(gi) gP.appendChild(gi);
     });
   }
   var gS=document.getElementById('rgsections');
@@ -440,8 +455,10 @@ _RGRAPH_JS = """<script>
     var cls='rgsection '+(s.phase?'rgsection-phase':'rgsection-theme');
     var poly=el('polygon',{points:pts,'class':cls,style:'fill:'+s.color+';stroke:'+s.color});
     poly.setAttribute('data-section', s.id); gS.appendChild(poly);
-    var lab=el('text',{x:(s.lx+12),y:(s.ly+22),'class':'rgsec-label',style:'fill:'+s.color});
-    lab.textContent=(s.glyph?s.glyph+'  ':'')+s.label; gS.appendChild(lab);
+    var sx=s.lx+12;
+    if(s.glyph){ var si=iconEl(s.glyph, sx, s.ly+22-11, 13, s.color); if(si){ gS.appendChild(si); sx+=18; } }
+    var lab=el('text',{x:sx,y:(s.ly+22),'class':'rgsec-label',style:'fill:'+s.color});
+    lab.textContent=s.label; gS.appendChild(lab);
     if(s.kind){ var k=el('text',{x:(s.lx+12),y:(s.ly+38),'class':'rgsec-kind'}); k.textContent=s.kind; gS.appendChild(k); }
   }); }
 
@@ -488,9 +505,19 @@ _RGRAPH_JS = """<script>
     if(n.proto){ rectAttrs['stroke-dasharray']='6 4'; }
     g.appendChild(el('rect',rectAttrs));
     g.appendChild(el('rect',{width:5,height:H,rx:2.5,fill:n.color}));
-    var ty=(H<52?18:24), sy=(H<52?34:43);
-    var a=el('text',{x:16,y:ty,'font-size':'13.5','font-weight':'600',fill:'var(--ink)'}); a.textContent=n.label; g.appendChild(a);
-    var b=el('text',{x:16,y:sy,'font-size':'11.5',fill:'var(--muted)'}); b.textContent=n.sub; g.appendChild(b);
+    // Title + sub live in a foreignObject so long labels clamp/ellipsize INSIDE the
+    // card instead of overflowing into neighbours (raw <text> doesn't clip). The glyph
+    // and external-link icons stay as SVG overlays, vertically centred.
+    var padL=14;
+    if(n.glyph){ var ni=iconEl(n.glyph, 14, H/2-7, 15, n.color); if(ni){ g.appendChild(ni); padL=37; } }
+    var padR=(n.ext?24:12);
+    var fo=el('foreignObject',{x:padL,y:0,width:Math.max(12,W-padL-padR),height:H,'pointer-events':'none'});
+    var XH='http://www.w3.org/1999/xhtml';
+    var box=document.createElementNS(XH,'div'); box.setAttribute('class','rgn-body');
+    var a=document.createElementNS(XH,'div'); a.setAttribute('class','rgn-title'); a.textContent=n.label; box.appendChild(a);
+    if(n.sub){ var b=document.createElementNS(XH,'div'); b.setAttribute('class','rgn-sub'); b.textContent=n.sub; box.appendChild(b); }
+    fo.appendChild(box); g.appendChild(fo);
+    if(n.ext){ var ei=iconEl('external', W-20, 8, 12, 'var(--muted)'); if(ei) g.appendChild(ei); }
     gN.appendChild(g); n.el=g;
     var down=null,moved=false;
     g.addEventListener('pointerdown',function(e){ e.stopPropagation(); down={x:e.clientX,y:e.clientY,nx:n.x,ny:n.y}; moved=false; gN.appendChild(g); try{g.setPointerCapture(e.pointerId);}catch(_){} });

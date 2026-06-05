@@ -29,7 +29,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "de": {
         "personas": "Personas", "councils": "Councils",
         "syntheses": "Synthesen", "favorites": "Favoriten", "mark_with_star": "Mit Stern markieren",
-        "sidebar": "Sidebar", "repo": "Repo", "breadcrumb_aria": "Seitenposition",
+        "sidebar": "Sidebar", "breadcrumb_aria": "Seitenposition",
         "settings": "Einstellungen", "theme": "Erscheinungsbild", "language": "Sprache",
         "theme_light": "Hell", "theme_dark": "Dunkel", "theme_system": "System",
         "personas_lead": "{n} synthetische Kundenprofile.",
@@ -178,7 +178,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "en": {
         "personas": "Personas", "councils": "Councils",
         "syntheses": "Syntheses", "favorites": "Favorites", "mark_with_star": "Mark with a star",
-        "sidebar": "Sidebar", "repo": "Repo", "breadcrumb_aria": "Page position",
+        "sidebar": "Sidebar", "breadcrumb_aria": "Page position",
         "settings": "Settings", "theme": "Appearance", "language": "Language",
         "theme_light": "Light", "theme_dark": "Dark", "theme_system": "System",
         "personas_lead": "{n} synthetic customer profiles.",

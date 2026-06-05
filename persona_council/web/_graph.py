@@ -38,14 +38,14 @@ def _graph_layout(graph: dict) -> dict:
         de = depth[n["study_id"]]
         row = per_depth.get(de, 0)
         per_depth[de] = row + 1
-        pos[n["study_id"]] = (40 + de * 300, 30 + row * 104)
+        pos[n["study_id"]] = (40 + de * 600, 30 + row * 108)
     return pos
 
 
 # node box dimensions (must match _RGRAPH_JS NW/NH)
-_NW, _NH = 288, 58
+_NW, _NH = 320, 64
 # Saved drag-layouts in localStorage are keyed by this; bump on any layout-algorithm change.
-_LAYOUT_VERSION = 6
+_LAYOUT_VERSION = 7
 
 
 def _convex_hull(points: list[tuple]) -> list[tuple]:
@@ -107,7 +107,7 @@ def _methodology_layout(graph: dict) -> dict | None:
 
     for s in steps:
         dep(s["key"])
-    COLW, ROWH, X0, AXIS = 520, 118, 40, 340
+    COLW, ROWH, X0, AXIS = 600, 124, 40, 340
     by_step: dict[str, list] = {}
     for n in graph["nodes"]:
         by_step.setdefault(n.get("phase", ""), []).append(n)
@@ -172,7 +172,7 @@ def _methodology_layout(graph: dict) -> dict | None:
 
     # build steps (declare produces.artifact_type) and the steps that consume each artifact tag
     build_steps = [s for s in steps if (s.get("produces") or {}).get("artifact_type")]
-    PW = 200
+    PW = 232
     proto_pos, proto_edges, used_y = {}, [], {}
     for pr in (graph.get("prototypes") or []):
         ptags = _proto_tags(pr)
@@ -273,8 +273,7 @@ def _graph_interactive(graph: dict) -> str:
             color = _theme_color(tags[0], vocab) if tags else "#9aa0a6"
             href = f'/syntheses/{n["study_id"]}'
         jnodes.append({"id": n["study_id"], "x": x, "y": y, "tags": tags,
-                       "label": n["title"][:46] + ("…" if len(n["title"]) > 46 else ""),
-                       "sub": sub, "color": color, "href": href})
+                       "label": n["title"][:96], "sub": sub, "color": color, "href": href})
     _colorlist = list(_EDGE_COLORS.values())
     jedges = []
     for e in graph["edges"]:
@@ -297,11 +296,11 @@ def _graph_interactive(graph: dict) -> str:
             x, y = ppos[pr["id"]]
             ap = _artifact_present(pr)
             acolor[pr["id"]] = ap["color"]
-            prefix = (ap["glyph"] + " ") if ap["glyph"] else ""
-            sub = f'{ap["disc"]} · {ap["label"]} ↗' if ap["disc"] else f'{ap["label"]} ↗'
-            jnodes.append({"id": pr["id"], "x": x, "y": y, "tags": ["prototype"], "w": pw, "h": 46,
-                           "label": (prefix + pr["name"])[:30] + ("…" if len(pr["name"]) > 28 else ""),
+            sub = f'{ap["disc"]} · {ap["label"]}' if ap["disc"] else ap["label"]
+            jnodes.append({"id": pr["id"], "x": x, "y": y, "tags": ["prototype"], "w": pw, "h": 52,
+                           "label": pr["name"][:60],
                            "sub": sub, "color": ap["color"],
+                           "glyph": _pres.glyph_icon(ap["glyph"]), "ext": True,
                            "href": f'/prototypes/{pr["slug"]}', "proto": True})
         for a, b, dashed in ml.get("proto_edges", []):
             col = acolor.get(a) or acolor.get(b) or "#9aa0a6"
@@ -309,7 +308,8 @@ def _graph_interactive(graph: dict) -> str:
     # Sections — methodology-INDEPENDENT overlay groupings (spec/sections-and-composable-graph.md).
     # A PURE overlay: each section's hull is DERIVED from its member node bounds; sections never
     # affect the layout. Label/color/glyph come from DATA via present(kind) (+ object override).
-    from .. import presentation as _pres
+    # (_pres is imported at module top; no local re-import — that would shadow it and make the
+    # earlier glyph_icon() use above an UnboundLocalError.)
     bounds = {jn["id"]: (jn["x"], jn["y"], jn.get("w", _NW), jn.get("h", _NH)) for jn in jnodes}
     jsections = []
     for sec in sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0)):
@@ -323,7 +323,7 @@ def _graph_interactive(graph: dict) -> str:
         poly = _expand_hull(_convex_hull(pts), 30)
         pres = _pres.present(sec.get("kind", "theme"), sec.get("presentation"))
         jsections.append({"id": sec["id"], "poly": poly, "label": sec.get("title", ""),
-                          "color": pres["color"], "glyph": pres.get("glyph", ""),
+                          "color": pres["color"], "glyph": _pres.glyph_icon(pres.get("glyph", "")),
                           "kind": pres.get("short", sec.get("kind", "")),
                           "lx": min(p[0] for p in poly), "ly": min(p[1] for p in poly),
                           "members": present_ids})
@@ -354,7 +354,7 @@ def _graph_interactive(graph: dict) -> str:
             poly = _expand_hull(_convex_hull(pts), 46)
             label = fs.get("name", fs["key"]).split("·")[-1].strip() or fs["key"]
             phase_sections.append({"id": f"phase__{fs['key']}", "poly": poly, "label": label,
-                                   "color": pres_ph["color"], "glyph": pres_ph.get("glyph", ""),
+                                   "color": pres_ph["color"], "glyph": _pres.glyph_icon(pres_ph.get("glyph", "")),
                                    "kind": pres_ph.get("short", "Phase"), "phase": True,
                                    "lx": min(p[0] for p in poly), "ly": min(p[1] for p in poly),
                                    "members": present_ids})
@@ -362,9 +362,18 @@ def _graph_interactive(graph: dict) -> str:
             diamonds = []                              # one mechanism: labeled phases replace diamonds
     jsections = phase_sections + jsections             # phases behind, user themes on top
     jphases = (ml.get("phase_cols") if ml else None) or []
+    # Icon path bodies for the notation/markers the graph JS renders inline (glyph icon
+    # names arrive on nodes/sections; the renderer looks each up here). Single source of
+    # truth: persona-icons. Small fixed set, sent once per graph.
+    from persona_icons import REGULAR as _ICON_REGULAR
+    _GRAPH_ICON_NAMES = ("diamond", "diamondFilled", "square", "squareSplit", "squareRows",
+                         "squareCols", "squareGrid", "rectangle", "exchange", "wave",
+                         "search", "pencil", "caretRight", "external")
+    iconpaths = {n: _ICON_REGULAR[n]["body"] for n in _GRAPH_ICON_NAMES if n in _ICON_REGULAR}
     # Bump _LAYOUT_VERSION whenever the layout algorithm changes → stale saved drags are dropped.
     data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds, "sections": jsections,
-                       "phases": jphases, "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION},
+                       "phases": jphases, "iconpaths": iconpaths,
+                       "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION},
                       ensure_ascii=False)
     hint = t("graph_hint")
     fit_t = t("graph_fit")

@@ -14,6 +14,7 @@ from ._synthesis import (
     _area, _vote_label, _sentiment_section, _synthesis_html, _persona_voices_html,
 )
 from ._graph import _graph_interactive, _plan_html
+from ..presentation import glyph_icon
 
 
 def _projects_page() -> str:
@@ -439,7 +440,7 @@ def register_pages(app) -> None:
             type_meta["prototype"] = (ap0["color"], t("prototypes_h"), ap0.get("glyph", ""))
         type_tagset = set(type_meta)
         type_chips = "".join(
-            f'<button class="rgchip" data-theme="{_esc(ty)}" style="--c:{c}">{_esc((g + " ") if g else "")}{_esc(lab)}</button>'
+            f'<button class="rgchip" data-theme="{_esc(ty)}" style="--c:{c}">{(_icon(glyph_icon(g)) + " ") if g else ""}{_esc(lab)}</button>'
             for ty, (c, lab, g) in type_meta.items())
         node_tags = []
         for n in graph["nodes"]:
