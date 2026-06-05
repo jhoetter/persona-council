@@ -321,18 +321,15 @@ def register_pages(app) -> None:
                 + "".join(f'<div class="prop"><span class="k">{_vote_label(k)}</span><span class="v">{vc[k]}</span></div>' for k in vc)
                 + f'<div class="prop"><span class="k">{personas_h}</span><span class="v">{len(session.get("persona_ids", []))}</span></div>'
                 + f'<div class="prop"><span class="k">{created_h}</span><span class="v">{_esc(session["created_at"][:10])}</span></div>')
+        # Forward, project-rooted crumb: Projects > [Project] > [Council]. (A Discover council FEEDS
+        # the Define synthesis — it is not nested under it; and the project lookup must work for
+        # plan-based projects, where the council is scoped directly to the project.)
         crumbs = [(t("projects"), "/projects")]
-        parent_syn = services.parent_study_of_council(session_id, store)
-        if parent_syn:
-            proj = services.parent_project_of_study(parent_syn["id"], store)
-            if proj:
-                crumbs.append((proj["title"], f"/projects/{proj['id']}"))
-            crumbs.append((parent_syn["title"], f"/syntheses/{parent_syn['id']}"))
-        else:
-            # Council owned directly by a project (no synthesis yet).
-            proj = services.parent_project_of_council(session_id, store)
-            if proj:
-                crumbs.append((proj["title"], f"/projects/{proj['id']}"))
+        proj = (services.parent_project_of_council(session_id, store)
+                or (services.parent_project_of_synthesis(ps["id"], store)
+                    if (ps := services.parent_study_of_council(session_id, store)) else None))
+        if proj:
+            crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((session["prompt"][:50], None))
         return _layout(council_title, _doc(main, rail=rail), store,
                        crumbs=crumbs, active="projects",
@@ -362,7 +359,7 @@ def register_pages(app) -> None:
         actions = (_star("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}")
                    + f'<button class="btn" onclick="window.print()">{t("export_pdf")}</button>')
         crumbs = [(t("projects"), "/projects")]
-        proj = services.parent_project_of_study(synthesis_id, store)
+        proj = services.parent_project_of_synthesis(synthesis_id, store)
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((syn["title"], None))

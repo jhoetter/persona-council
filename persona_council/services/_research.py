@@ -147,6 +147,22 @@ def parent_project_of_council(council_id: str, store: Store | None = None) -> di
     return None
 
 
+def parent_project_of_synthesis(synthesis_id: str, store: Store | None = None) -> dict[str, Any] | None:
+    """Which project owns this synthesis? Robust for PLAN-based projects (the synthesis is produced by
+    a plan verify task, not listed in the old `study_ids`). Powers correct breadcrumbs."""
+    store = store or Store()
+    p = parent_project_of_study(synthesis_id, store=store)        # legacy/constellation path
+    if p:
+        return p
+    for proj in store.list_research_projects():                   # plan path: a task produces it
+        plan = _plan.get_plan(proj["id"], store=store) or {}
+        for task in plan.get("tasks", []):
+            if any(r.get("kind") == "synthesis" and r.get("id") == synthesis_id
+                   for r in task.get("produces", [])):
+                return {"id": proj["id"], "slug": proj["slug"], "title": proj["title"]}
+    return None
+
+
 
 def add_study_to_project(project_id: str, study_id: str, theme_tags: list[str] | None = None,
                          store: Store | None = None) -> dict[str, Any]:
