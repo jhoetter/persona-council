@@ -22,36 +22,20 @@ def _seed_studies(store, n=3):
     return [f"syn{i}" for i in range(n)]
 
 
-def test_backfill_builds_chronological_graph(store):
-    _seed_studies(store, 3)
-    graph = services.backfill_project_from_syntheses("Demo Research", store=store)
-    assert [n["title"] for n in graph["nodes"]] == ["Pains", "UX", "Pricing"]  # build order
-    edges = [(e["from_study"], e["to_study"], e["type"]) for e in graph["edges"]]
-    assert edges == [("syn0", "syn1", "spawned_from"), ("syn1", "syn2", "spawned_from")]
-    assert graph["counts"]["open_questions"] == 3  # promoted from offene_fragen
-
-
-def test_tags_edges_and_validation(store):
-    _seed_studies(store, 2)
-    proj = services.create_research_project("P", goal="g", store=store)
-    pid = proj["id"]
-    services.add_study_to_project(pid, "syn0", store=store)
-    services.add_study_to_project(pid, "syn1", store=store)
-    services.set_study_themes(pid, "syn0", ["Pains"], store=store)
-    services.link_studies(pid, "syn0", "syn1", "spawned_from", "because", store=store)
-    g = services.get_project_graph(pid, store=store)
-    assert "pains" in g["project"]["themes"]
-    assert g["counts"]["edges"] == 1
-    with pytest.raises(ValueError):
-        services.link_studies(pid, "syn0", "syn1", "not_a_type", store=store)
-    with pytest.raises(KeyError):
-        services.add_study_to_project(pid, "does-not-exist", store=store)
+def _project_with_studies(store, sids, title="MR"):
+    """Create a project and attach study_ids directly (the constellation study-graph tools that used
+    to do this are retired; the plan is the graph now). These tests cover the meta-report machinery,
+    which still works over a project's study_ids."""
+    proj = services.create_research_project(title, goal="g", store=store)
+    p = store.get_research_project(proj["id"])
+    p["study_ids"] = list(sids)
+    store.upsert_research_project(p)
+    return proj["id"]
 
 
 def test_meta_report_round_trip(store):
     _seed_studies(store, 2)
-    graph = services.backfill_project_from_syntheses("MR", store=store)
-    pid = graph["project"]["id"]
+    pid = _project_with_studies(store, ["syn0", "syn1"])
 
     brief = services.brief_meta_report(pid, store=store)
     assert brief["study_ids"] == ["syn0", "syn1"] and "instructions" in brief
@@ -76,27 +60,18 @@ def test_meta_report_round_trip(store):
 
 def test_purge_clears_research_graph(store):
     _seed_studies(store, 2)
-    graph = services.backfill_project_from_syntheses("Wipe me", store=store)
-    pid = graph["project"]["id"]
+    pid = _project_with_studies(store, ["syn0", "syn1"], title="Wipe me")
+    services.record_open_questions(pid, ["q?"], store=store)
     assert services.list_research_projects(store=store)
-    assert store.list_study_edges(pid)
     services.purge_runtime_data(remove_files=False, store=store)
     assert services.list_research_projects(store=store) == []
-    assert store.list_study_edges(pid) == []
     assert store.list_meta_reports(pid) == []
     assert store.list_open_questions(pid) == []
 
 
 def test_deletes_cascade_and_detach(store):
     _seed_studies(store, 2)
-    g = services.backfill_project_from_syntheses("Del", store=store)
-    pid = g["project"]["id"]
-    # unlink an edge
-    assert services.unlink_studies(pid, "syn0", "syn1", "spawned_from", store=store)["removed"] == 1
-    # remove a study from the project (keeps the synthesis)
-    services.remove_study_from_project(pid, "syn1", store=store)
-    assert "syn1" not in services.get_research_project(pid, store=store)["study_ids"]
-    assert store.get_synthesis("syn1") is not None
+    pid = _project_with_studies(store, ["syn0", "syn1"], title="Del")
     # delete a synthesis -> also detaches from the project graph
     services.delete_synthesis("syn0", store=store)
     assert store.get_synthesis("syn0") is None
@@ -120,8 +95,7 @@ def test_delete_persona(store):
 
 def test_invalid_outline_rejected(store):
     _seed_studies(store, 1)
-    graph = services.backfill_project_from_syntheses("X", store=store)
-    pid = graph["project"]["id"]
+    pid = _project_with_studies(store, ["syn0"], title="X")
     with pytest.raises(ValueError):
         services.record_meta_outline(pid, {"sections": []}, store=store)
 

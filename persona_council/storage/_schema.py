@@ -236,16 +236,6 @@ CREATE TABLE IF NOT EXISTS research_projects (
   updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS study_edges (
-  id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL,
-  from_study TEXT NOT NULL,
-  to_study TEXT NOT NULL,
-  type TEXT NOT NULL,
-  data TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_study_edges_project ON study_edges(project_id);
 
 CREATE TABLE IF NOT EXISTS research_open_questions (
   id TEXT PRIMARY KEY,

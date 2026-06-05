@@ -346,7 +346,6 @@ def delete_synthesis(synthesis_id: str, store: Store | None = None) -> dict[str,
             p.get("study_tags", {}).pop(synthesis_id, None)
             p["updated_at"] = utc_now_iso()
             store.upsert_research_project(p)
-            store.delete_edges_touching(p["id"], synthesis_id)
             detached.append(p["id"])
     return {"deleted": store.delete_synthesis(synthesis_id), "detached_from_projects": detached}
 

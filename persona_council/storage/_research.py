@@ -26,17 +26,7 @@ class ResearchMixin:
         rows = self.conn.execute("SELECT data FROM research_projects ORDER BY created_at DESC").fetchall()
         return [json.loads(r["data"]) for r in rows]
 
-    def insert_study_edge(self, edge: dict[str, Any]) -> None:
-        self.conn.execute(
-            "INSERT OR REPLACE INTO study_edges (id, project_id, from_study, to_study, type, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (edge["id"], edge["project_id"], edge["from_study"], edge["to_study"], edge["type"],
-             json.dumps(edge, ensure_ascii=False), edge["created_at"]))
-        self.conn.commit()
-
-    def list_study_edges(self, project_id: str) -> list[dict[str, Any]]:
-        rows = self.conn.execute(
-            "SELECT data FROM study_edges WHERE project_id=? ORDER BY created_at", (project_id,)).fetchall()
-        return [json.loads(r["data"]) for r in rows]
+    # study_edge storage RETIRED (constellation graph; the plan engine is the graph now).
 
     def upsert_open_question(self, oq: dict[str, Any]) -> None:
         self.conn.execute(
@@ -137,32 +127,13 @@ class ResearchMixin:
             return {}
         pid = p["id"]
         deleted: dict[str, int] = {}
-        for table in ("study_edges", "research_open_questions", "meta_reports", "methodology_judgments"):
+        for table in ("research_open_questions", "meta_reports", "methodology_judgments"):
             cur = self.conn.execute(f"DELETE FROM {table} WHERE project_id=?", (pid,))
             deleted[table] = cur.rowcount
         cur = self.conn.execute("DELETE FROM research_projects WHERE id=?", (pid,))
         deleted["research_projects"] = cur.rowcount
         self.conn.commit()
         return deleted
-
-    def delete_study_edges(self, project_id: str, from_study: str, to_study: str, type: str | None = None) -> int:
-        if type:
-            cur = self.conn.execute(
-                "DELETE FROM study_edges WHERE project_id=? AND from_study=? AND to_study=? AND type=?",
-                (project_id, from_study, to_study, type))
-        else:
-            cur = self.conn.execute(
-                "DELETE FROM study_edges WHERE project_id=? AND from_study=? AND to_study=?",
-                (project_id, from_study, to_study))
-        self.conn.commit()
-        return cur.rowcount
-
-    def delete_edges_touching(self, project_id: str, study_id: str) -> int:
-        cur = self.conn.execute(
-            "DELETE FROM study_edges WHERE project_id=? AND (from_study=? OR to_study=?)",
-            (project_id, study_id, study_id))
-        self.conn.commit()
-        return cur.rowcount
 
     def delete_open_question(self, question_id: str) -> int:
         cur = self.conn.execute("DELETE FROM research_open_questions WHERE id=?", (question_id,))

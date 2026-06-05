@@ -128,10 +128,10 @@ _REGISTRY["record_judgment"] = _engines.record_judgment
 # The methodology-registry / suggestions / plan-engine / prototype seam names were module
 # globals of the original services.py. Submodules reference some of them by bare name, so they
 # must be part of the bound registry too. The constellation runtime was retired (HX3): a
-# methodology only SEEDS the plan (start_methodology_project/set_project_methodology forward to it).
+# methodology only SEEDS the plan (set_project_methodology re-seeds an existing project; HX3).
 for _eng_name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
-    "start_methodology_project", "set_project_methodology",
+    "set_project_methodology",
     "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_methodologies",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
@@ -158,7 +158,7 @@ for _name, _value in _REGISTRY.items():
 # that the original services.py exposed (they live on _engines after its imports).
 for _name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
-    "start_methodology_project", "set_project_methodology",
+    "set_project_methodology",
     "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_methodologies",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",

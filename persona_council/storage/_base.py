@@ -74,7 +74,6 @@ class StoreBase:
             "eval_reports",
             "research_projects",
             "research_plans",
-            "study_edges",
             "research_open_questions",
             "meta_reports",
         ]
@@ -110,7 +109,6 @@ class StoreBase:
             "eval_reports",
             "research_projects",
             "research_plans",
-            "study_edges",
             "research_open_questions",
             "meta_reports",
             "methodology_judgments",

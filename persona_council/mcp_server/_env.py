@@ -28,7 +28,6 @@ _NEXT: dict[str, dict[str, Any]] = {
     "brief_eval_critic": {"name": "record_eval_critic", "reason": "persist the semantic verdict you authored"},
     "record_eval_critic": {"name": "evaluate_simulation_full", "reason": "combined structural+semantic top verdict"},
     "brief_cohort_critic": {"name": "record_cohort_critic", "reason": "persist the cohort outlier verdict you authored"},
-    "backfill_project_from_syntheses": {"name": "get_project_graph", "reason": "inspect the freshly-built project graph"},
     "create_research_project": {"name": "start_run", "reason": "create the run object, then loop run_step"},
     "brief_meta_report": {"name": "record_meta_outline", "reason": "persist the outline you derived from the graph"},
     "record_meta_outline": {"name": "brief_meta_section", "reason": "author each section grounded in its source studies"},

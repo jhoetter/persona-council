@@ -59,7 +59,7 @@ def test_invented_capability_and_gate_tags_load_and_seed(store):
     M.register_methodology(spec, store=store)
     got = M.get_methodology("invented", store=store)
     assert [s["tags"] for s in got["steps"]] == [["divine-the-vibe"], ["crystallize"]]
-    proj = services.start_methodology_project("Inv", "g", "invented", store=store)   # forwards to start_project
+    proj = services.start_project("Inv", "g", methodology="invented", store=store)   # forwards to start_project
     plan = services.get_plan(proj["id"], store=store)
     frame = PL.task(plan, "frame__scout")
     verify = PL.task(plan, "verify__land")
@@ -106,7 +106,7 @@ def test_non_alternating_dag_with_nonprototype_artifact_seeds(store):
         ],
     }
     M.register_methodology(spec, store=store)
-    proj = services.start_methodology_project("Br", "g", "branchy", persona_ids=["p1"], store=store)
+    proj = services.start_project("Br", "g", methodology="branchy", persona_ids=["p1"], store=store)
     plan = services.get_plan(proj["id"], store=store)
     a, b = PL.task(plan, "verify__pick_a"), PL.task(plan, "verify__pick_b")
     assert a["consumes"] == ["frame__scan"] and b["consumes"] == ["frame__scan"]   # two parallel decides

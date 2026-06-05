@@ -177,12 +177,7 @@ def next_action(project_id, store: Store | None = None) -> dict[str, Any]:
     return _plan.next_action(project_id, store=store)
 
 
-def start_methodology_project(title: str, goal: str, methodology_key: str,
-                              persona_ids: list[str] | None = None, description: str = "",
-                              store: Store | None = None) -> dict[str, Any]:
-    """Back-compat entry: a methodology only SEEDS the plan now (HX3). Forwards to start_project."""
-    return start_project(title, goal, methodology=methodology_key, persona_ids=persona_ids,
-                         description=description, store=store)
+# start_methodology_project RETIRED — use start_project(methodology=<key>) (the canonical entry).
 
 
 

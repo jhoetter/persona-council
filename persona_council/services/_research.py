@@ -98,7 +98,7 @@ def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
     for p in store.list_research_projects():
         out.append({"id": p["id"], "slug": p["slug"], "title": p["title"], "goal": p.get("goal", ""),
                     "status": p.get("status", "active"), "studies": len(p.get("study_ids", [])),
-                    "edges": len(store.list_study_edges(p["id"])), "themes": p.get("themes", [])})
+                    "themes": p.get("themes", [])})
     return out
 
 
@@ -185,60 +185,8 @@ def parent_project_of_synthesis(synthesis_id: str, store: Store | None = None) -
 
 
 
-def add_study_to_project(project_id: str, study_id: str, theme_tags: list[str] | None = None,
-                         store: Store | None = None) -> dict[str, Any]:
-    store = store or Store()
-    project = _require_research_project(store, project_id)
-    if not store.get_synthesis(study_id):
-        raise KeyError(f"Unknown study (synthesis): {study_id}")
-    if study_id not in project["study_ids"]:
-        project["study_ids"].append(study_id)
-    if theme_tags:
-        _apply_themes(project, study_id, theme_tags)
-    project["updated_at"] = utc_now_iso()
-    store.upsert_research_project(project)
-    return project
-
-
-
-def _apply_themes(project: dict[str, Any], study_id: str, tags: list[str]) -> None:
-    clean = [str(t).strip().lower() for t in tags if str(t).strip()][:10]
-    project.setdefault("study_tags", {})[study_id] = clean
-    vocab = project.setdefault("themes", [])
-    for t in clean:
-        if t not in vocab:
-            vocab.append(t)
-
-
-
-def set_study_themes(project_id: str, study_id: str, tags: list[str], store: Store | None = None) -> dict[str, Any]:
-    store = store or Store()
-    project = _require_research_project(store, project_id)
-    if study_id not in project["study_ids"]:
-        raise KeyError(f"Study {study_id} is not in project {project_id}")
-    _apply_themes(project, study_id, tags)
-    project["updated_at"] = utc_now_iso()
-    store.upsert_research_project(project)
-    return project
-
-
-
-def link_studies(project_id: str, from_study_id: str, to_study_id: str, type: str,
-                 rationale: str = "", store: Store | None = None) -> dict[str, Any]:
-    store = store or Store()
-    project = _require_research_project(store, project_id)
-    if type not in EDGE_TYPES:
-        raise ValueError(f"Edge type must be one of {sorted(EDGE_TYPES)}")
-    for sid in (from_study_id, to_study_id):
-        if sid not in project["study_ids"]:
-            raise KeyError(f"Study {sid} is not in project {project_id}")
-    now = utc_now_iso()
-    edge = StudyEdge(id=stable_id("edge", project_id, from_study_id, to_study_id, type),
-                     project_id=project["id"], from_study=from_study_id, to_study=to_study_id,
-                     type=type, rationale=rationale, created_at=now).to_dict()
-    store.insert_study_edge(edge)
-    return edge
-
+# M-cleanup: the constellation study-graph service (add_study_to_project / set_study_themes /
+# link_studies + _apply_themes/_study_node) is RETIRED — the plan engine is the single graph (HX3).
 
 
 def record_open_questions(project_id: str, questions: list[str], study_id: str | None = None,
@@ -271,18 +219,12 @@ def resolve_open_question(project_id: str, question_id: str, answered_by_study_i
     oq["status"] = "answered"
     oq["answered_by_study_id"] = answered_by_study_id
     store.upsert_open_question(oq)
-    # also record the graph edge: the answering study answers the raising study
-    if oq.get("study_id") and answered_by_study_id in project["study_ids"] and oq["study_id"] in project["study_ids"]:
-        try:
-            link_studies(project["id"], answered_by_study_id, oq["study_id"], "answers",
-                         f"answers: {oq['text'][:120]}", store=store)
-        except (ValueError, KeyError):
-            pass
     return oq
 
 
 
 def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
+    """A graph node for a synthesis (study) — used by the plan-less / meta-report study_ids path."""
     syn = store.get_synthesis(study_id)
     if not syn:
         return None
@@ -300,7 +242,6 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
     }
 
 
-
 def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
     """The core navigation call: nodes (studies + tags/sentiment), typed edges,
     themes, build order, and open questions for one research project. When the project has a
@@ -310,33 +251,33 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
     plan = _plan.get_plan(project_id, store=store)
     if plan is not None:                       # the plan engine is the single source of truth (HX3)
         return plan_graph(project_id, store=store)
+    # Plan-less fallback (start_project always seeds a plan, so this is only hit by hand-built data /
+    # the study_ids-based meta-report path): nodes from the project's studies + notes — NO study-edge
+    # layer (retired), so no edges.
     project = _require_research_project(store, project_id)
     tags = project.get("study_tags", {})
     nodes = []
-    for sid in project["study_ids"]:
+    for sid in project.get("study_ids", []):
         node = _study_node(store, sid)
         if node:
             node["theme_tags"] = tags.get(sid, [])
             nodes.append(node)
-    nodes.extend(note_graph_nodes(project))  # note nodes are first-class (composable primitive)
-    nodes.sort(key=lambda n: n["created_at"])  # build order
-    edges = [{"from_study": e["from_study"], "to_study": e["to_study"], "type": e["type"],
-              "rationale": e.get("rationale", "")} for e in store.list_study_edges(project["id"])]
+    nodes.extend(note_graph_nodes(project))
+    nodes.sort(key=lambda n: n.get("created_at", ""))
     oqs = store.list_open_questions(project["id"])
-    methodology_state = None
     return {
         "project": {"id": project["id"], "slug": project["slug"], "title": project["title"],
                     "goal": project.get("goal", ""), "status": project.get("status", "active"),
                     "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", []),
                     "methodology": project.get("methodology", ""), "phase": project.get("phase", "")},
-        "methodology_state": methodology_state,
+        "methodology_state": None,
         "prototypes": list_prototypes_artifacts(project["id"], store=store),
         "sections": list(project.get("sections") or []),
         "nodes": nodes,
-        "edges": edges,
+        "edges": [],
         "open_questions": oqs,
         "build_order": [n["study_id"] for n in nodes],
-        "counts": {"studies": len(nodes), "edges": len(edges),
+        "counts": {"studies": len(nodes), "edges": 0,
                    "open_questions": sum(1 for o in oqs if o.get("status") == "open"),
                    "themes": len(project.get("themes", []))},
     }
@@ -618,15 +559,11 @@ def scaffold_meta_report(project_id: str, store: Store | None = None) -> dict[st
 
 
 def get_research_frontier(project_id: str, store: Store | None = None) -> dict[str, Any]:
-    """The anti-explosion surface: the project's still-open questions, plus a flag
-    when the graph has no edges yet (studies not connected)."""
+    """The anti-explosion surface: the project's still-open questions."""
     store = store or Store()
     project = _require_research_project(store, project_id)
     open_qs = [o for o in store.list_open_questions(project["id"]) if o.get("status") == "open"]
-    edges = store.list_study_edges(project["id"])
     notes = []
-    if project["study_ids"] and not edges:
-        notes.append("studies present but unconnected — add edges (link_studies) or they read as isolated.")
     if not open_qs:
         notes.append("no open questions tracked — the frontier looks closed (or unrecorded).")
     return {"project_id": project["id"], "open_questions": open_qs,
@@ -634,31 +571,7 @@ def get_research_frontier(project_id: str, store: Store | None = None) -> dict[s
 
 
 
-def backfill_project_from_syntheses(title: str = "Research", synthesis_ids: list[str] | None = None,
-                                    store: Store | None = None) -> dict[str, Any]:
-    """Group existing syntheses into ONE project as graph nodes, ordered by creation
-    time, with chronological `spawned_from` edges (rationale marks them as backfilled
-    so they can be re-linked properly later). Returns the project graph."""
-    store = store or Store()
-    if synthesis_ids:
-        studies = [store.get_synthesis(s) for s in synthesis_ids]
-    else:
-        studies = store.list_syntheses()
-    studies = [s for s in studies if s]
-    studies.sort(key=lambda s: s.get("created_at", ""))
-    project = create_research_project(title, goal="Backfilled from existing syntheses.", store=store)
-    pid = project["id"]
-    for s in studies:
-        add_study_to_project(pid, s["id"], store=store)
-    ordered = [s["id"] for s in studies]
-    for prev, cur in zip(ordered, ordered[1:]):
-        link_studies(pid, prev, cur, "spawned_from", "backfilled by creation order (edit later)", store=store)
-    # promote each study's open questions into the project frontier
-    for s in studies:
-        oq = s.get("offene_fragen") or []
-        if oq:
-            record_open_questions(pid, oq[:5], study_id=s["id"], store=store)
-    return get_project_graph(pid, store=store)
+# M-cleanup: backfill_project_from_syntheses RETIRED (a one-time study-graph migration).
 
 
 # --- Deletes (D in CRUD; MCP/CLI only — the web UI is read-only) -------------
@@ -674,23 +587,4 @@ def delete_research_project(project_id: str, store: Store | None = None) -> dict
 
 
 
-def remove_study_from_project(project_id: str, study_id: str, store: Store | None = None) -> dict[str, Any]:
-    """Detach a study from a project (drops its edges in that project); keeps the synthesis."""
-    store = store or Store()
-    project = _require_research_project(store, project_id)
-    if study_id in project["study_ids"]:
-        project["study_ids"].remove(study_id)
-    project.get("study_tags", {}).pop(study_id, None)
-    project["updated_at"] = utc_now_iso()
-    store.upsert_research_project(project)
-    edges = store.delete_edges_touching(project["id"], study_id)
-    return {"project_id": project["id"], "removed_study": study_id, "edges_removed": edges}
-
-
-
-def unlink_studies(project_id: str, from_study_id: str, to_study_id: str, type: str | None = None,
-                   store: Store | None = None) -> dict[str, Any]:
-    """Remove an edge (or all edges) between two studies in a project."""
-    store = store or Store()
-    project = _require_research_project(store, project_id)
-    return {"project_id": project["id"], "removed": store.delete_study_edges(project["id"], from_study_id, to_study_id, type)}
+# M-cleanup: remove_study_from_project / unlink_studies RETIRED (study-edge graph).

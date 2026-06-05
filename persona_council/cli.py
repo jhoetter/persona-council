@@ -316,13 +316,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--persona", action="append", dest="personas")
     p = sub.add_parser("research-list")
     p = sub.add_parser("research-graph"); p.add_argument("project_id")
-    p = sub.add_parser("research-backfill")
-    p.add_argument("--title", default="Research"); p.add_argument("--synthesis", action="append", dest="synthesis_ids")
-    p = sub.add_parser("research-add-study"); p.add_argument("project_id"); p.add_argument("study_id")
-    p = sub.add_parser("research-tag")
-    p.add_argument("project_id"); p.add_argument("study_id"); p.add_argument("tags", nargs="+")
-    p = sub.add_parser("research-link")
-    p.add_argument("project_id"); p.add_argument("from_study"); p.add_argument("to_study"); p.add_argument("type"); p.add_argument("--rationale", default="")
     p = sub.add_parser("research-frontier"); p.add_argument("project_id")
     # Sections (methodology-independent overlay groupings of graph nodes)
     p = sub.add_parser("section-list"); p.add_argument("project_id")
@@ -408,8 +401,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("persona_id"); p.add_argument("prototype_id"); p.add_argument("session_id"); p.add_argument("date"); p.add_argument("file")
     # Deletes (CRUD: delete via CLI/MCP only)
     p = sub.add_parser("research-delete"); p.add_argument("project_id")
-    p = sub.add_parser("research-remove-study"); p.add_argument("project_id"); p.add_argument("study_id")
-    p = sub.add_parser("research-unlink"); p.add_argument("project_id"); p.add_argument("from_study"); p.add_argument("to_study"); p.add_argument("--type")
     p = sub.add_parser("synthesis-delete"); p.add_argument("synthesis_id")
     p = sub.add_parser("council-delete"); p.add_argument("session_id")
     p = sub.add_parser("persona-delete"); p.add_argument("persona_id")
@@ -601,14 +592,6 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.list_research_projects())
         elif args.command == "research-graph":
             _print(services.get_project_graph(args.project_id))
-        elif args.command == "research-backfill":
-            _print(services.backfill_project_from_syntheses(args.title, args.synthesis_ids))
-        elif args.command == "research-add-study":
-            _print(services.add_study_to_project(args.project_id, args.study_id))
-        elif args.command == "research-tag":
-            _print(services.set_study_themes(args.project_id, args.study_id, args.tags))
-        elif args.command == "research-link":
-            _print(services.link_studies(args.project_id, args.from_study, args.to_study, args.type, args.rationale))
         elif args.command == "research-frontier":
             _print(services.get_research_frontier(args.project_id))
         elif args.command == "section-list":
@@ -730,10 +713,6 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.record_prototype_session(args.persona_id, args.prototype_id, args.session_id, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
         elif args.command == "research-delete":
             _print(services.delete_research_project(args.project_id))
-        elif args.command == "research-remove-study":
-            _print(services.remove_study_from_project(args.project_id, args.study_id))
-        elif args.command == "research-unlink":
-            _print(services.unlink_studies(args.project_id, args.from_study, args.to_study, args.type))
         elif args.command == "synthesis-delete":
             _print(services.delete_synthesis(args.synthesis_id))
         elif args.command == "council-delete":
