@@ -37,8 +37,12 @@ def register_council(mcp):
         """Persist a host-authored council. Shape it by what you pass (the UI derives the mode):
         DISCOVERY = `questions` (open user-research questions) + answer turns, NO proposal/votes;
         EVALUATION = `proposal` (a concept reacted to) + stances; DECISION = `proposal` + `votes`.
-        A council MUST belong to a research project. Pass a stable `key` for a deterministic id
-        (idempotent upsert → resumable runs)."""
+        DISCOVERY turns: author ONE turn per (persona, question) and set `question_index` (0-based
+        index into `questions`) on each, so the council page renders a moderated Q→A transcript —
+        the moderator's question, then each persona's answer to it. A turn that addresses no single
+        question may omit it. Turn fields: persona_id, content, question_index, stance, memory_refs,
+        input. A council MUST belong to a research project. Pass a stable `key` for a deterministic
+        id (idempotent upsert → resumable runs)."""
         t = time.perf_counter()
         return _env("record_council", services.record_council(project_id, prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason, questions, key), t)
 
@@ -143,7 +147,8 @@ def register_council(mcp):
             "       proposal/votes (you are LISTENING — hypotheses come LATER, in Define); a `proposal`\n"
             "       to REACT to a concept (evaluation); proposal+votes only for an explicit DECISION.\n"
             "       Flow: brief_council -> author turns (set each turn's persona_id, content, stance,\n"
-            "       memory_refs, input) -> record_council.\n"
+            "       memory_refs, input; for DISCOVERY also question_index = which question it answers,\n"
+            "       one turn per persona+question) -> record_council.\n"
             "       PROTOTYPE: scaffold_prototype(concept) -> run_prototype -> a grounded proband session\n"
             "       (proto_open -> proto_act -> proto_read -> proto_close) -> record_prototype_session.\n"
             "       Then add_task + link_evidence + complete_task.\n"

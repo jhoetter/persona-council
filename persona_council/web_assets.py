@@ -273,6 +273,17 @@ details.sec[open]>summary::before{transform:rotate(90deg)}
 /* a persona's multiple answers stack in one card, separated by a hairline */
 .turn-ans+.turn-ans{margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)}
 .turn-ans>p{margin:0}
+/* moderated transcript: one round per moderator question (the question, then the answers) */
+.qrounds{display:flex;flex-direction:column;gap:16px}
+.qround{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
+.qround-q{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;background:var(--accent-weak);border-bottom:1px solid var(--line)}
+.qround-q>svg{color:var(--accent);flex-shrink:0;width:18px;height:18px;margin-top:1px}
+.qround-q p{margin:2px 0 0;font-weight:600;font-size:14.5px;line-height:1.35}
+.qround-n{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+.qa-ans{padding:12px 15px}
+.qa-ans+.qa-ans{border-top:1px solid var(--line-2)}
+.qa-who{margin-bottom:7px}
+.qa-ans .turn-ans+.turn-ans{margin-top:9px;padding-top:9px}
 .turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
 .turn-input summary{cursor:pointer}
 .detail{max-width:980px}.thought{font-size:15px;border-left:3px solid var(--ink);padding:9px 12px;background:var(--panel-2);border-radius:0 6px 6px 0}

@@ -259,6 +259,16 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: 
         tn = dict(tn) if isinstance(tn, dict) else {"content": str(tn)}
         if not tn.get("content"):
             tn["content"] = tn.get("text") or tn.get("message") or ""
+        # question_index = which moderator question (index into `questions`) this answer addresses.
+        # First-class so the council page can render a moderated Q->A transcript; tolerate the
+        # question_idx alias and a stringified int.
+        qi = tn.get("question_index", tn.get("question_idx"))
+        if isinstance(qi, bool):
+            qi = None
+        elif isinstance(qi, str) and qi.strip().lstrip("-").isdigit():
+            qi = int(qi)
+        if isinstance(qi, int):
+            tn["question_index"] = qi
         return tn
 
     def _nvote(v):

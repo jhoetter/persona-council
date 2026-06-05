@@ -88,6 +88,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "council_voices_help": "Jede Stimme ist eine Persona, die aus IHRER Lebenssituation + Erinnerung antwortet — das ist der Input, den jede bekommen hat.",
         "council_input_given": "Gegebener Input (Prompt + Kontext)",
         "council_drew_on": "Stützte sich auf",
+        "further_answers": "Weitere Antworten",
         # vote labels
         "vote_support": "Befürwortend", "vote_maybe": "Bedingt",
         "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
@@ -237,6 +238,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "council_voices_help": "Each voice is a persona answering from THEIR life situation + memory — that is the input each was given.",
         "council_input_given": "Input given (prompt + context)",
         "council_drew_on": "Drew on",
+        "further_answers": "Further answers",
         # vote labels
         "vote_support": "For", "vote_maybe": "Conditional",
         "vote_abstain": "Abstain", "vote_oppose": "Against",

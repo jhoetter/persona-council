@@ -300,6 +300,11 @@ def register_pages(app) -> None:
             return (tn.get("speaker") == "Moderator" or tn.get("stance") in ("moderation", "moderator")
                     or tn.get("type") == "moderator")
 
+        def _qidx(tn: dict):
+            """Which moderator question this answer addresses (index into session.questions), or None."""
+            q = tn.get("question_index", tn.get("question_idx"))
+            return q if isinstance(q, int) and not isinstance(q, bool) else None
+
         def _answer_html(tn: dict) -> str:
             """One answer (a single turn): optional input snapshot, the text, concerns, memory refs."""
             body = tn.get("content") or tn.get("text") or tn.get("message") or ""   # tolerate body field variants
@@ -311,39 +316,78 @@ def register_pages(app) -> None:
             mem = (f'<p class="muted small">{_icon("memory")} {t("council_drew_on")}: ' + ", ".join(_esc(m) for m in mrefs) + '</p>') if mrefs else ""
             return f'<div class="turn-ans">{given_html}<p>{_esc(body)}</p>{concerns}{mem}</div>'
 
-        # One card PER PERSONA: a persona answering several questions used to render as several
-        # identical-header blocks (confusing). Group a persona's turns into a single card with their
-        # answers stacked; moderator turns stand on their own.
-        grouped: list[tuple] = []     # (persona_id|None, [turns], is_mod)
-        idx_of: dict = {}
-        for tn in session["turns"]:
-            pid = tn.get("persona_id")
-            if _is_mod(tn) or not pid:
-                grouped.append((pid, [tn], _is_mod(tn)))
-            elif pid in idx_of:
-                grouped[idx_of[pid]][1].append(tn)
-            else:
-                idx_of[pid] = len(grouped)
-                grouped.append((pid, [tn], False))
-
-        turns = []
-        for pid, tns, is_mod in grouped:
+        def _persona_head(pid, tns: list) -> str:
+            """Avatar + name + life-context + first declared stance, for a persona's answer block."""
             p = pmap.get(pid)
             stance_src = next((x for x in tns if x.get("stance") and not _is_mod(x)), None)
             stance = _label(stance_src["stance"], _stance_color(stance_src["stance"])) if stance_src else ""
-            if p:
-                seg = p.get("segment") or {}
-                desc = " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
-                    or (p.get("source_description") or "")[:130]
-                head = (f'<a href="/personas/{_esc(p["id"])}" class="turn-who">{_avatar(p, 26)}'
-                        f'<b>{_esc(p.get("display_name") or tns[0].get("speaker", ""))}</b></a> {stance}'
-                        f'<div class="muted small turn-ctx">{_esc(desc)}</div>')
-            else:
-                head = f'<b>{_esc(tns[0].get("speaker", ""))}</b> {stance}'
-            answers = "".join(_answer_html(tn) for tn in tns)
-            turns.append(f'<div class="turn{" mod" if is_mod else ""}"><div class="hd">{head}</div>{answers}</div>')
-        turns_html = (f'<p class="muted small" style="margin:-4px 0 12px">{t("council_voices_help")}</p>'
-                      '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>")
+            if not p:
+                return f'<b>{_esc(tns[0].get("speaker", ""))}</b> {stance}'
+            seg = p.get("segment") or {}
+            desc = " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
+                or (p.get("source_description") or "")[:130]
+            return (f'<a href="/personas/{_esc(p["id"])}" class="turn-who">{_avatar(p, 26)}'
+                    f'<b>{_esc(p.get("display_name") or tns[0].get("speaker", ""))}</b></a> {stance}'
+                    f'<div class="muted small turn-ctx">{_esc(desc)}</div>')
+
+        def _by_persona(tlist: list) -> list:
+            order, by = [], {}
+            for tn in tlist:
+                pid = tn.get("persona_id")
+                if pid not in by:
+                    by[pid] = []; order.append(pid)
+                by[pid].append(tn)
+            return [(pid, by[pid]) for pid in order]
+
+        def _answer_block(pid, tns: list) -> str:
+            return (f'<div class="qa-ans"><div class="qa-who hd">{_persona_head(pid, tns)}</div>'
+                    + "".join(_answer_html(tn) for tn in tns) + '</div>')
+
+        answer_turns = [tn for tn in session["turns"] if not _is_mod(tn) and tn.get("persona_id")]
+        questions = session.get("questions") or []
+        in_range = lambda tn: (_qidx(tn) is not None and 0 <= _qidx(tn) < len(questions))
+        indexed = [tn for tn in answer_turns if in_range(tn)]
+        help_html = f'<p class="muted small" style="margin:-4px 0 12px">{t("council_voices_help")}</p>'
+
+        if questions and answer_turns and len(indexed) >= 0.6 * len(answer_turns):
+            # MODERATED TRANSCRIPT — one round per moderator question: the question (moderator's voice),
+            # then the persona answers that addressed it. This is the "how they discussed with the
+            # moderator" view; it needs a per-answer question_index (future councils set it — see
+            # record_council). Existing councils without indices use the per-persona fallback below.
+            rounds = []
+            for qi, q in enumerate(questions):
+                qts = [tn for tn in answer_turns if _qidx(tn) == qi]
+                if not qts:
+                    continue
+                ans = "".join(_answer_block(pid, ts) for pid, ts in _by_persona(qts))
+                rounds.append(
+                    f'<div class="qround"><div class="qround-q">{_icon("compass")}'
+                    f'<div><div class="qround-n">{t("question")} {qi + 1}</div><p>{_esc(q)}</p></div></div>'
+                    f'<div class="qround-a">{ans}</div></div>')
+            rest = [tn for tn in answer_turns if not in_range(tn)]
+            if rest:
+                ans = "".join(_answer_block(pid, ts) for pid, ts in _by_persona(rest))
+                rounds.append(f'<div class="qround"><div class="qround-q">{_icon("bulb")}'
+                              f'<div><div class="qround-n">{t("further_answers")}</div></div></div>'
+                              f'<div class="qround-a">{ans}</div></div>')
+            turns_html = help_html + '<div class="qrounds">' + "".join(rounds) + "</div>"
+        else:
+            # FALLBACK — one clean card per persona (a persona answering several questions used to
+            # render as several identical-header blocks). Moderator turns stand on their own.
+            grouped: list[tuple] = []
+            idx_of: dict = {}
+            for tn in session["turns"]:
+                pid = tn.get("persona_id")
+                if _is_mod(tn) or not pid:
+                    grouped.append((pid, [tn], _is_mod(tn)))
+                elif pid in idx_of:
+                    grouped[idx_of[pid]][1].append(tn)
+                else:
+                    idx_of[pid] = len(grouped); grouped.append((pid, [tn], False))
+            cards = [f'<div class="turn{" mod" if is_mod else ""}"><div class="hd">{_persona_head(pid, tns)}</div>'
+                     + "".join(_answer_html(tn) for tn in tns) + '</div>'
+                     for pid, tns, is_mod in grouped]
+            turns_html = help_html + '<div style="display:grid;gap:12px">' + "".join(cards) + "</div>"
         exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
         n_voices = len(session.get("persona_ids", []))
         # A council has THREE honest shapes (derived, no stored type): DISCOVERY (open questions →
