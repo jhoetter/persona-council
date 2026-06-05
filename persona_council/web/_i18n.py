@@ -75,7 +75,6 @@ STRINGS: dict[str, dict[str, str]] = {
         # council framing
         "council_motion": "Untersuchte These",
         "council_motion_help": "{n} Personas reagieren aus ihrer GELEBTEN ERFAHRUNG: bestätigt die These (dafür), teils (bedingt) oder widerlegt sie (dagegen). Es ist keine Abstimmung über eine Entscheidung — es ist, was sie tatsächlich erleben. Die Erkenntnis steht darunter.",
-        "council_reactions_h": "Reaktion auf die These",
         "council_finding": "Erkenntnis aus diesem Council",
         "council_questions_h": "Fragen, die wir gestellt haben",
         "council_questions_help": "Eine offene Discovery-Runde — wir HÖREN ZU, was {n} Personas tatsächlich erleben. Keine These, keine Abstimmung; die Antworten unten sind die Forschungsdaten.",
@@ -225,7 +224,6 @@ STRINGS: dict[str, dict[str, str]] = {
         # council framing
         "council_motion": "The hypothesis investigated",
         "council_motion_help": "{n} personas react from their LIVED EXPERIENCE: confirms the hypothesis (for), partly (conditional), or refutes it (against). This is not a decision vote — it is what they actually experience. The insight is below.",
-        "council_reactions_h": "Reaction to the hypothesis",
         "council_finding": "What this council found",
         "council_questions_h": "The questions we asked",
         "council_questions_help": "An open discovery round — we LISTEN to what {n} personas actually experience. No hypothesis, no vote; the answers below are the research data.",

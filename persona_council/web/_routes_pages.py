@@ -217,17 +217,18 @@ def register_pages(app) -> None:
         {activity}
         <div class="sec" id="ziele"><h2>{t("goals")}</h2>{_pills(p["goals"])}</div>
         <div class="sec" id="pains"><h2>{t("pain_points")}</h2>{_pills([x["issue"] for x in data["pain_points"]] or p["pain_points"])}</div>
+        <div class="sec" id="tools"><h2>{t("tools")}</h2>{_pills(p["tools"])}</div>
         <div class="sec" id="bez"><h2>{t("relationships")}</h2>{''.join(f'<p><strong>{_esc(r["name"])}</strong> <span class="muted">— {_esc(r["type"])}: {_esc(r["friction"])}</span></p>' for r in p["relationships"])}</div>
         <div class="sec" id="cal"><h2>{t("calendar")}</h2><p class="muted">{date_links or t("no_days_yet")}</p>
         {_calendar_tabs(p["id"], selected_date, view)}{_period_calendar_html(p["id"], selected_date, view, period)}</div>
         """
-        rail = (f'<h4>{t("properties")}</h4>'
-                f'<div class="prop"><span class="k">{t("role")}</span><span class="v">{_esc(p["role"]["title"])}</span></div>'
-                f'<div class="prop"><span class="k">{t("industry")}</span><span class="v">{_esc(p["company_context"]["industry"])}</span></div>'
-                f'<div class="prop"><span class="k">{t("size")}</span><span class="v">{_esc(p["company_context"].get("size",""))}</span></div>'
-                f'<div class="prop"><span class="k">{t("tools")}</span><span class="v">{_pills(p["tools"])}</span></div>'
-                f'<div class="prop"><span class="k">{t("memory")}</span><span class="v"><a class="bc-link" href="/personas/{_esc(p["id"])}/memory">{_icon("memory")} {t("open")}</a></span></div>')
-        return _layout(p["display_name"], _doc(main, rail=rail), store,
+        props = _properties_html([
+            ("personas", t("role"), _esc(p["role"]["title"])),
+            ("projects", t("industry"), _esc(p["company_context"]["industry"])),
+            ("dot", t("size"), _esc(p["company_context"].get("size", ""))),
+            ("memory", t("memory"), f'<a class="bc-link" href="/personas/{_esc(p["id"])}/memory">{_icon("memory")} {t("open")}</a>'),
+        ])
+        return _layout(p["display_name"], _doc(main + props), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
                        actions=_star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}'))
 
@@ -257,13 +258,14 @@ def register_pages(app) -> None:
           <div class="card"><h3>{t("artifacts")}</h3>{_pills(a.get("artifacts_touched", [])) or '—'}</div>
           <div class="card"><h3>{t("open_loops")}</h3>{_pills(a.get("open_loops", [])) or '—'}</div></div>
         """
-        rail = (f'<h4>{t("properties")}</h4>'
-                f'<div class="prop"><span class="k">{t("persona")}</span><span class="v"><a class="bc-link" href="/personas/{_esc(p["id"])}">{_esc(p["display_name"])}</a></span></div>'
-                f'<div class="prop"><span class="k">{t("tool")}</span><span class="v">{_esc(a["tool"])}</span></div>'
-                f'<div class="prop"><span class="k">{t("mood")}</span><span class="v">{_esc(a["impact"]["mood"])}</span></div>'
-                f'<div class="prop"><span class="k">{t("participants")}</span><span class="v">{_pills(a.get("participants", []) or [alone_label])}</span></div>'
-                f'<div class="prop"><span class="k">{t("decision")}</span><span class="v muted">{_esc(a.get("decision") or "—")}</span></div>')
-        return _layout(a["task"], _doc(main, rail=rail), store,
+        props = _properties_html([
+            ("personas", t("persona"), f'<a class="bc-link" href="/personas/{_esc(p["id"])}">{_esc(p["display_name"])}</a>'),
+            ("square", t("tool"), _esc(a["tool"])),
+            ("dot", t("mood"), _esc(a["impact"]["mood"])),
+            ("personas", t("participants"), _pills(a.get("participants", []) or [alone_label])),
+            ("check", t("decision"), _esc(a.get("decision") or "")),
+        ])
+        return _layout(a["task"], _doc(main + props), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], f'/personas/{p["id"]}'), (a["task"][:46], None)], active="personas")
 
     @app.get("/councils", response_class=HTMLResponse)
@@ -426,13 +428,12 @@ def register_pages(app) -> None:
                 f'{sentiment}'
                 f'<div class="sec" id="stimmen"><h2>{voices_label}</h2>{turns_html}</div>'
                 f'<details class="sec"><summary>{summary_h}</summary><div class="card"><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
-        rail = f'<div class="prop"><span class="k">{personas_h}</span><span class="v">{n_voices}</span></div>'
+        prop_rows = [("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
             vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
-            rail = (f'<h4>{t("council_reactions_h")}</h4>'
-                    + "".join(f'<div class="prop"><span class="k">{_vote_label(k)}</span><span class="v">{vc[k]}</span></div>' for k in vc)
-                    + rail)
-        rail += f'<div class="prop"><span class="k">{created_h}</span><span class="v">{_esc(session["created_at"][:10])}</span></div>'
+            prop_rows += [("dot", _vote_label(k), str(vc[k])) for k in vc]
+        prop_rows.append(("dot", created_h, _esc(session["created_at"][:10])))
+        cprops = _properties_html(prop_rows)
         # Forward, project-rooted crumb: Projects > [Project] > [Council]. (A Discover council FEEDS
         # the Define synthesis — it is not nested under it; and the project lookup must work for
         # plan-based projects, where the council is scoped directly to the project.)
@@ -447,7 +448,9 @@ def register_pages(app) -> None:
         crail = [("sec-question", t("question")), ("stimmen", t("voices"))]
         if rel:
             crail.append(("sec-relations", t("relations")))
-        return _layout(council_title, _doc(main + rel, rail=rail) + _page_rail(crail), store,
+        if cprops:
+            crail.append(("sec-properties", t("properties")))
+        return _layout(council_title, _doc(main + rel + cprops) + _page_rail(crail), store,
                        crumbs=crumbs, active="projects",
                        actions=_star("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))
 

@@ -160,7 +160,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .prop{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:7px 2px;font-size:13px;border-bottom:1px solid var(--line-2)}
 .prop:last-child{border-bottom:0}
 .prop-k{display:inline-flex;align-items:center;gap:8px;color:var(--muted);flex-shrink:0}.prop-k svg{width:15px;height:15px;color:var(--faint)}
-.prop-v{color:var(--ink);font-weight:500;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prop-v{color:var(--ink);font-weight:500;text-align:right;min-width:0;overflow-wrap:anywhere}
 /* view toggle (Outline / Graph) */
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}
