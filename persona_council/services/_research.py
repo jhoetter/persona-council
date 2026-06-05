@@ -271,7 +271,7 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
     (councils/syntheses/artifacts/frames as first-class nodes)."""
     store = store or Store()
     plan = _plan.get_plan(project_id, store=store)
-    if plan is not None and any(t.get("produces") for t in plan["tasks"]):
+    if plan is not None:                       # the plan engine is the single source of truth (HX3)
         return plan_graph(project_id, store=store)
     project = _require_research_project(store, project_id)
     tags = project.get("study_tags", {})
@@ -287,18 +287,6 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
               "rationale": e.get("rationale", "")} for e in store.list_study_edges(project["id"])]
     oqs = store.list_open_questions(project["id"])
     methodology_state = None
-    if project.get("methodology"):
-        try:
-            methodology_state = get_methodology_state(project["id"], store=store)
-            # Make each step's OPEN TAGS first-class on its nodes so they are filterable in the
-            # graph exactly like theme tags (capability/role/etc. — no hardcoded vocabulary).
-            step_tags = {s["key"]: list(s.get("tags") or []) for s in methodology_state["steps"]}
-            for node in nodes:
-                extra = step_tags.get(node.get("phase", ""), [])
-                if extra:
-                    node["theme_tags"] = list(dict.fromkeys((node.get("theme_tags") or []) + extra))
-        except Exception:
-            methodology_state = None
     return {
         "project": {"id": project["id"], "slug": project["slug"], "title": project["title"],
                     "goal": project.get("goal", ""), "status": project.get("status", "active"),

@@ -108,33 +108,38 @@ def test_invented_artifact_type_renders_from_data(store, tmp_path, monkeypatch):
 
 # --------------------------------------------------------------------------- P3: structure
 
-def test_step_tags_are_first_class_on_nodes(store):
-    """A node carries its step's open tags so they are filterable like theme tags."""
-    proj = M.start_methodology_project("DD", "g", "double_diamond", store=store)
-    pid = proj["id"]
-    store.insert_council_session({"id": "c1", "created_at": "2026-01-01T00:00:00+00:00", "prompt": "p",
+def _council(store, cid):
+    store.insert_council_session({"id": cid, "created_at": "2026-01-01T00:00:00+00:00", "prompt": "p",
         "persona_ids": ["p1"], "turns": [], "votes": [], "proposal": "", "summary": "",
         "exec_summary": "e", "selection_reason": "x"})
-    M.record_node(pid, "A", ["c1"], {"gesamtbild": "a"}, store=store)
+
+
+def test_step_tags_are_first_class_on_nodes(store):
+    """A node carries its diverge step's open tags so they are filterable like theme tags. The plan
+    engine (HX3) derives the constellation from the analyze→act→verify DAG: an act council's node
+    inherits the kind tag plus the frame (diverge step) tag it consumes."""
+    proj = services.start_project("DD", "g", "double_diamond", persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__discover", ["q?"], memory_refs=["m1"], store=store)
+    _council(store, "c1")
+    a = services.add_task(pid, "act", "explore", "Pain council", consumes=["frame__discover"], store=store)
+    services.link_evidence(pid, a["id"], {"kind": "council", "id": "c1"}, store=store)
     graph = services.get_project_graph(pid, store=store)
-    disc_node = next(n for n in graph["nodes"] if n.get("phase") == "discover")
-    assert "explore" in disc_node["theme_tags"]          # capability tag is now filterable
-    assert "problem-landscape" in disc_node["theme_tags"]  # role tag too
+    disc_node = next(n for n in graph["nodes"] if n.get("phase") == "frame__discover")
+    assert "council" in disc_node["theme_tags"]          # evidence-kind tag is filterable
+    assert "frame" in disc_node["theme_tags"]            # diverge step tag propagated onto the node
 
 
 def test_empty_step_draws_no_diamond(store):
-    """A declared fan with no nodes yet must NOT render an (empty) diamond silhouette."""
-    proj = M.start_methodology_project("DD", "g", "double_diamond_deep", store=store)
+    """A declared fan with no act evidence yet must NOT render an (empty) diamond silhouette."""
+    proj = services.start_project("DD", "g", "double_diamond_deep", persona_ids=["p1"], store=store)
     pid = proj["id"]
-    store.insert_council_session({"id": "c1", "created_at": "2026-01-01T00:00:00+00:00", "prompt": "p",
-        "persona_ids": ["p1"], "turns": [], "votes": [], "proposal": "", "summary": "",
-        "exec_summary": "e", "selection_reason": "x"})
-    store.insert_council_session({"id": "c2", "created_at": "2026-01-01T00:00:00+00:00", "prompt": "p",
-        "persona_ids": ["p1"], "turns": [], "votes": [], "proposal": "", "summary": "",
-        "exec_summary": "e", "selection_reason": "x"})
-    M.record_node(pid, "A", ["c1"], {"gesamtbild": "a"}, store=store)
-    M.record_node(pid, "B", ["c2"], {"gesamtbild": "b"}, store=store)
+    services.record_frame(pid, "frame__discover", ["q?"], memory_refs=["m1"], store=store)
+    for cid in ("c1", "c2"):
+        _council(store, cid)
+        a = services.add_task(pid, "act", "explore", f"angle {cid}", consumes=["frame__discover"], store=store)
+        services.link_evidence(pid, a["id"], {"kind": "council", "id": cid}, store=store)
     graph = services.get_project_graph(pid, store=store)
     ml = web._methodology_layout(graph)
-    # only `discover` has nodes → exactly one diamond, not one per declared diverge step
+    # only `discover` has act evidence → exactly one diamond, not one per declared diverge step
     assert len(ml["diamonds"]) == 1
