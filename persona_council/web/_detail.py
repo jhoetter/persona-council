@@ -50,6 +50,41 @@ def _relations_html(store, study_id: str, proj_id: str | None,
             if blocks else "")
 
 
+# Reaction keys that are meta/internal (shown via the badge/header), not user-facing content.
+_SESSION_SKIP = {"persona", "fidelity", "version", "observed_state_refs", "self_authored", "session_id"}
+
+
+def _session_card(store, sess: dict) -> str:
+    """One prototype/persona session, rendered generically. The reaction schema is agent-authored
+    and varies widely (9+ shapes across the corpus), so we resolve the persona's display name and
+    render every substantive field — never cherry-pick fixed keys (which silently hides content)."""
+    r = sess.get("reaction") if isinstance(sess.get("reaction"), dict) else {}
+    pid = sess.get("persona_id", "") or ""
+    name = r.get("persona") or ""
+    if not name and pid:                                   # data is matched — resolve slug/id → name
+        p = store.get_persona(pid)
+        name = (p or {}).get("display_name") or pid
+    gv = ((_icon("check") + " " + t("grounded_yes")) if sess.get("grounded_verified")
+          else (_icon("circle") + " " + t("grounded_no")))
+    fields = []
+    for k, v in r.items():
+        if k in _SESSION_SKIP or v in (None, "", [], {}):
+            continue
+        if isinstance(v, bool):
+            val = _icon("check") if v else _icon("circle")
+        elif isinstance(v, list):
+            val = ('<ul class="small" style="margin:2px 0 0 16px">'
+                   + "".join(f"<li>{_esc(str(x))}</li>" for x in v) + "</ul>")
+        else:
+            val = f'<div class="small">{_esc(str(v))}</div>'
+        label = _esc(k.replace("_", " ").capitalize())
+        fields.append(f'<div style="margin:7px 0"><div class="muted small" '
+                      f'style="text-transform:uppercase;letter-spacing:.04em">{label}</div>{val}</div>')
+    inner = "".join(fields) or f'<div class="muted small">—</div>'
+    return (f'<div class="strow"><b>{_esc(name or pid or "—")}</b> <span class="muted small">{gv}</span>'
+            f'<div style="margin-top:4px">{inner}</div></div>')
+
+
 def _properties_html(rows) -> str:
     """Linear-style Properties panel: an icon + label + value per row (skips empty values)."""
     inner = "".join(

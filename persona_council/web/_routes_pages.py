@@ -15,7 +15,7 @@ from ._synthesis import (
 )
 from ._graph import _graph_interactive, _plan_html, _outline_html
 from ..presentation import glyph_icon
-from ._detail import _relations_html, _properties_html
+from ._detail import _relations_html, _properties_html, _session_card
 from ._rail import _page_rail
 
 
@@ -557,7 +557,8 @@ def register_pages(app) -> None:
                 for s in sess[:6]:
                     r = s.get("reaction", {})
                     gv = _icon("check") if s.get("grounded_verified") else _icon("circle")
-                    sl.append(f'<li>{_esc(s.get("persona_id",""))}: {_esc(str(r.get("verdict") or r.get("summary","")))[:80]} '
+                    nm = r.get("persona") or (store.get_persona(s.get("persona_id", "")) or {}).get("display_name") or s.get("persona_id", "")
+                    sl.append(f'<li><b>{_esc(nm)}</b>: {_esc(str(r.get("verdict") or r.get("reaction_text") or ""))[:80]} '
                               f'<span class="muted small">{gv} grounded</span></li>')
                 sl_html = ("<ul style='margin:4px 0 0 18px'>" + "".join(sl) + "</ul>") if sl else '<div class="muted small">— keine Sessions —</div>'
                 ap = _artifact_present(p)
@@ -732,16 +733,8 @@ def register_pages(app) -> None:
         fid = f'<span class="pill">{_esc(_ap["disc"] or _ap["label"])}</span>'
         src = f'/proto-files/{_esc(slug)}/{_esc(p.get("entry", "index.html"))}'
         sessions = store.list_prototype_sessions(prototype_id=p["id"])
-        sl = []
-        for s in sessions:
-            r = s.get("reaction", {})
-            gv = (_icon("check") + " " + t("grounded_yes")) if s.get("grounded_verified") else (_icon("circle") + " " + t("grounded_no"))
-            liked = "".join(f"<li>{_icon('thumbsup')} {_esc(x)}</li>" for x in (r.get("liked") or [])[:3])
-            fric = "".join(f"<li>{_icon('warning')} {_esc(x)}</li>" for x in (r.get("friction") or [])[:3])
-            sl.append(f'<div class="strow"><b>{_esc(s.get("persona_id",""))}</b> '
-                      f'<span class="muted small">{gv}</span><div class="small" style="margin-top:3px">'
-                      f'{_esc(str(r.get("verdict","")))}</div><ul class="small" style="margin:4px 0 0 16px">{liked}{fric}</ul></div>')
-        sessions_html = ("".join(sl)) or f'<div class="muted small">— {t("prototypes_h")}: {t("no_sessions")} —</div>'
+        sessions_html = ("".join(_session_card(store, s) for s in sessions)
+                         or f'<div class="muted small">— {t("prototypes_h")}: {t("no_sessions")} —</div>')
         body = (
             f'<div class="page"><h1 class="h1"><span class="h1ic" style="color:#00897b">{_icon("prototype")}</span>{_esc(p["name"])} {fid} '
             f'<span class="muted small">{_esc(p.get("version",""))} · {_esc(slug)}</span></h1>'
