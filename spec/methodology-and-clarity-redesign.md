@@ -1,5 +1,13 @@
 # Methodology & clarity redesign — question-led discovery, legible flow, consistent node-types
 
+> **Status: ✅ IMPLEMENTED 2026-06-05 (Q1–Q4, suite green, pushed).** Q1+Q2 — councils carry a
+> first-class `questions` field + three DERIVED modes (discovery = questions→answers, no vote;
+> evaluation; decision); the council page + brief_council + the skill all branch on mode; showcase
+> Discover councils re-run as open questions. Q4 — a TYPE filter row (= legend) with every node kind
+> (incl. prototypes) filterable; capability tags on a muted secondary row. Q3 — numbered phase-column
+> headers (1.Discover→6.Deliver, diverge/converge) make the left→right double-diamond explicit. The
+> design below is the reference.
+
 > User feedback (2026-06-05): "we start with statements and hypotheses already. I said you should
 > naturally start with just user-research QUESTIONS — begin with a council where we ask them about
 > things (what insurances do you have, how do you save money right now …); only LATER do hypotheses,
