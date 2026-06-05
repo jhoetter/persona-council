@@ -142,7 +142,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "voices_in_detail": "Stimmen im Detail ({n})",
         "proposal_short_summary": "Proposal &amp; Kurz-Summary",
         "proposal": "Proposal", "summary": "Summary",
-        "vote": "Abstimmung", "created": "Erzeugt", "done": "done",
+        "vote": "Abstimmung", "created": "Erzeugt", "status": "Status", "project": "Projekt", "fidelity": "Fidelity", "done": "done",
         # persona detail
         "activity_over_time": "Aktivität über Zeit",
         "activities_per_day": "Simulierte Aktivitäten pro Tag ({n} gesamt).",
@@ -292,7 +292,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "voices_in_detail": "Voices in detail ({n})",
         "proposal_short_summary": "Proposal &amp; brief summary",
         "proposal": "Proposal", "summary": "Summary",
-        "vote": "Vote", "created": "Created", "done": "done",
+        "vote": "Vote", "created": "Created", "status": "Status", "project": "Project", "fidelity": "Fidelity", "done": "done",
         # persona detail
         "activity_over_time": "Activity over time",
         "activities_per_day": "Simulated activities per day ({n} total).",
