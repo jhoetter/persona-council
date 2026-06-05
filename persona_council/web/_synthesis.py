@@ -93,7 +93,7 @@ def _vote_parts(sessions: list[dict]) -> tuple[Counter, list[tuple]]:
     tot: Counter = Counter()
     for s in sessions:
         for v in s.get("votes", []):
-            tot[v.get("vote")] += 1
+            tot[str(v.get("vote", "")).upper()] += 1   # case-robust: 'support' counts as SUPPORT
     return tot, [(tot.get(k, 0), _VOTE_COLOR[k], _vote_label(k)) for k in _VOTE_ORDER]
 
 
@@ -118,7 +118,7 @@ def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
     pv: dict = defaultdict(Counter)
     for s in sessions:
         for v in s.get("votes", []):
-            pv[v.get("persona_id")][v.get("vote")] += 1
+            pv[v.get("persona_id")][str(v.get("vote", "")).upper()] += 1   # case-robust
     if not pv:
         return ""
     personas = {p["id"]: p for p in services.list_personas(store=store)}
@@ -349,7 +349,7 @@ def _synthesis_html(store: Store, syn: dict) -> str:
         c = store.get_council_session(cid)
         if not c:
             continue
-        tally = Counter(v.get("vote") for v in (c.get("votes") or []) if isinstance(v, dict))
+        tally = Counter(str(v.get("vote", "")).upper() for v in (c.get("votes") or []) if isinstance(v, dict))
         parts = [(tally.get(k, 0), _VOTE_COLOR[k], k) for k in _VOTE_ORDER]
         prompt = c.get("prompt") or cid
         ref_rows.append(
