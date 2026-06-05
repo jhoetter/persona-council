@@ -63,9 +63,17 @@ So you cannot skip the work or conclude early.
   3–5 prototypes; mid-fi ≈ 1–2. Adjust to the problem; `log`/note when you cap.
 
 ## Real prototypes (lo-fi → mid-fi)
-- Lo-fi: `scaffold_artifact(slug, name, concept, type="prototype", tags=["lofi"])` — cheap, several.
+- DIVERSE IN KIND — read `next_action.act.artifact_palette` and pick varied archetypes, NOT N forms:
+  a guided `flow`, a `comparison`, a `dashboard`, a `cards` interface, or an interactive **`model`**
+  (`type="model"`: `range`/`number` inputs feeding `computed`/`bar` elements whose `formula` evaluates
+  live — e.g. a steerable pension-gap / compounding model a persona actually drives). Include ≥1
+  deliberately extreme **dark-horse** concept; an honest "this is not for you" verdict is legitimate.
+- Lo-fi: `scaffold_artifact(slug, name, concept, type="prototype"|"model"|…, tags=["lofi"])` — several.
 - Mid-fi: `scaffold_artifact(... tags=["midfi"])` of the shortlisted concept.
-- Always tested for real via the Playwright harness; reactions grounded in the session log.
+- Tested for REAL via Playwright — and groundedness is enforced: `proto_open` → `proto_act`/`proto_read`
+  (cite states you actually saw) → `record_prototype_session`. The session log is retained past
+  `proto_close`, so record AFTER driving; an UNVERIFIED session does not satisfy a `session_of_tags`
+  gate. Every nav target must resolve to a screen (scaffold rejects dead interactions).
 
 ## Output
 Three real diamonds in the project graph (wide discover fan → key problems → wide ideate fan →

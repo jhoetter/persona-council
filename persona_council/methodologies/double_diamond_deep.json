@@ -6,7 +6,7 @@
   "steps": [
     {
       "id": "discover", "name": "Discover", "tags": ["explore", "problem-landscape"],
-      "intent": "Empathize broadly: one exploration PER persona/segment. Surface the real lived problems, feelings and frictions around the challenge. No solutions. Anti-steering is strongest here.",
+      "intent": "Empathize broadly across DISTINCT ANGLES (e.g. the trigger moment, the mental model / language barrier, money reality, trust, a premise-check, the provider/insider view). Run a FEW real MULTI-persona councils — several segment-diverse personas reacting to each other — NOT one council per persona. Surface real lived problems, feelings, frictions; no solutions; anti-steering is strongest here (include a disconfirmation angle that tests whether the premise even holds).",
       "strategy": "pain-discovery", "diverge_by": "persona_subset",
       "produces": {"role": "problem-landscape"}
     },
@@ -19,7 +19,7 @@
     },
     {
       "id": "ideate", "name": "Ideate (Lo-Fi)", "tags": ["explore", "build", "solution-options"],
-      "intent": "Generate many distinct solution concepts for the key problem(s) — one exploration per idea — and build SEVERAL lo-fi prototypes of the strongest ones. Go broad before judging.",
+      "intent": "Generate many distinct solution concepts for the key problem(s) — one exploration per idea — then build SEVERAL lo-fi prototypes of the strongest ones, DIVERSE IN KIND (see next_action.act.artifact_palette: a guided flow, a comparison, an overview, a card interface, an interactive MODEL that lets a persona steer numbers/a curve — not N forms). Include >=1 deliberately extreme 'dark-horse' concept. Go broad before judging.",
       "strategy": "positive-deepdive", "consumes": ["define"], "diverge_by": "solution_candidate",
       "produces": {"role": "solution-options", "artifact_type": "prototype", "more_tags": ["lofi"]}
     },

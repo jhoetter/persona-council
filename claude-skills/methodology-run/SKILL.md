@@ -50,10 +50,15 @@ decided `gate_tag` judgment exists, and any required artifacts/sessions exist. S
 the work or conclude early.
 
 ## Build / test (artifacts)
-Build varied, real, clickable prototypes (NOT just forms): `scaffold_artifact(slug, name, concept,
-type="prototype", tags=["lofi"|"midfi"|"hifi"])`. Test them: `run_prototype` → `proto_open`/
-`proto_act` (Playwright) → `record_artifact_session` (grounded in the observed state) → `link_evidence`.
-A verify task with `session_of_tags:["lofi"]` needs a recorded session of a lofi artifact, etc.
+Build varied, real, clickable prototypes (NOT just forms) — diversify the KIND via
+`next_action.act.artifact_palette`: a guided `flow`, a `comparison`, a `dashboard`, `cards`, or an
+interactive **`model`** (`type="model"`: `range`/`number` inputs → `computed`/`bar` elements with a
+live `formula`, e.g. a steerable pension-gap/compounding model). Consider a deliberately extreme
+dark-horse concept. `scaffold_artifact(slug, name, concept, type=…, tags=["lofi"|"midfi"|"hifi"])`.
+Test for REAL: `run_prototype` → `proto_open`/`proto_act`/`proto_read` (cite states you actually saw)
+→ `record_artifact_session` → `link_evidence`. Groundedness is enforced: the session log survives
+`proto_close`, so record after driving; an UNVERIFIED session won't satisfy a `session_of_tags` gate,
+and scaffold rejects a prototype with a dead (unresolvable) nav target.
 
 ## Output
 `export_plan_md(project_id)` renders the analyze/act/verify log. The project graph shows councils +
