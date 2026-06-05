@@ -63,6 +63,12 @@ def _validate_concept(concept: dict[str, Any]) -> dict[str, Any]:
                 raise PrototypeError("BAD_CONCEPT", "each element needs an id")
             if el.get("kind") not in _ELEMENT_KINDS:
                 raise PrototypeError("BAD_CONCEPT", f"bad element kind: {el.get('kind')}")
+            if el["kind"] == "verdict" and not (isinstance(el.get("cases"), list) and el["cases"]):
+                raise PrototypeError("BAD_CONCEPT", f"verdict element '{el['id']}' needs a non-empty `cases` list "
+                                                    "[{when:<expr>, text}] (the data-driven conditional display)")
+            if el["kind"] in ("chart", "timeline") and not (el.get("x") or el.get("points") or el.get("series")):
+                raise PrototypeError("BAD_CONCEPT", f"{el['kind']} element '{el['id']}' needs `x`{{from,to,step}} + "
+                                                    "`series`[{formula}] (or `points`)")
             _norm_nav(el, f"screen '{s['id']}' element '{el['id']}'")
         # screen-level card-like blocks (cards / options) also navigate — validate them too (the old
         # validator ignored these, which is how a dead `action`-only card slipped through).
@@ -76,8 +82,10 @@ def _validate_concept(concept: dict[str, Any]) -> dict[str, Any]:
 
 
 # Element kinds the SPA renderers understand. Extended for the interactive/computational rung
-# (range/number/computed/bar) so a prototype can be a real model, not only static screens (GAP-1).
-_ELEMENT_KINDS = {"button", "input", "select", "text", "link", "range", "number", "computed", "bar"}
+# (range/number/computed/bar — GAP-1) and the experience layer (chart/verdict/timeline — ESV5,
+# rendered by spa-journey) so a prototype can be a real, production-credible experience.
+_ELEMENT_KINDS = {"button", "input", "select", "text", "link", "range", "number", "computed", "bar",
+                  "chart", "verdict", "timeline"}
 
 
 def _render_spa(name: str, concept: dict[str, Any], template: str) -> str:

@@ -137,3 +137,54 @@ def test_interactive_model_prototype_scaffolds_with_live_formula(store, tmp_path
     saved = json.loads((tmp_path / "p" / "model1" / "concept.json").read_text())
     el = {e["id"]: e for e in saved["screens"][0]["elements"]}
     assert el["summe"]["formula"] == "rate*12*jahre" and el["ziel"]["kind"] == "bar"  # formula preserved
+
+
+def _journey_concept(rate, title="J"):
+    return {"title": title, "summary": "s", "fidelity": "hifi", "start": "s", "screens": [{"id": "s", "title": "S",
+        "elements": [
+            {"kind": "range", "id": "rate", "label": "Sparrate", "min": 0, "max": 300, "step": 10, "value": rate},
+            {"kind": "computed", "id": "sum", "label": "Eingezahlt", "formula": "rate*12*40", "suffix": " EUR"},
+            {"kind": "chart", "id": "c", "label": "Verlauf", "x": {"id": "jahre", "from": 0, "to": 40, "step": 10},
+             "series": [{"label": "V", "formula": "rate*12*jahre"}]},
+            {"kind": "verdict", "id": "v", "cases": [
+                {"when": "rate==0", "text": "Du legst nichts zurueck.", "tone": "bad"},
+                {"when": "rate>=200", "text": "Starker Puffer.", "tone": "good"}], "else": "Solide.", "elseTone": "warn"}]}]}
+
+
+def test_journey_type_validates_resolves_and_rejects_malformed(store, tmp_path, monkeypatch):
+    """ESV5: the `journey` artifact type resolves to spa-journey (data); a journey with chart + verdict
+    scaffolds; a verdict without cases or a chart without x/series is rejected at scaffold."""
+    import persona_council.prototypes as P
+    monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "p")
+    from persona_council import services, presentation
+    presentation.reload_hints()
+    assert presentation.resolve_template("journey", ["hifi"]) == "spa-journey"
+    services.scaffold_artifact("ok", "Ok", _journey_concept(50), type="journey", tags=["hifi"], store=store)
+    bad_v = {"title": "T", "start": "s", "screens": [{"id": "s", "title": "S",
+             "elements": [{"kind": "verdict", "id": "v"}]}]}            # no cases
+    with pytest.raises(P.PrototypeError):
+        services.scaffold_artifact("bv", "B", bad_v, type="journey", store=store)
+    bad_c = {"title": "T", "start": "s", "screens": [{"id": "s", "title": "S",
+             "elements": [{"kind": "chart", "id": "c"}]}]}              # no x/series
+    with pytest.raises(P.PrototypeError):
+        services.scaffold_artifact("bc", "B", bad_c, type="journey", store=store)
+
+
+def test_journey_verdict_evaluates_live_in_browser(store, tmp_path, monkeypatch):
+    """ESV5: the no-eval evaluator's comparison ops drive a `verdict` live — a journey with rate=0
+    shows the bad-case verdict; one with rate=250 shows the good-case (proven via the real browser)."""
+    import persona_council.prototypes as P
+    monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "p")
+    from persona_council import services, browser
+    if not browser.available():
+        pytest.skip("Playwright unavailable")
+    import time
+    seen = {}
+    for slug, rate, expect in [("jz", 0, "Du legst nichts"), ("jp", 250, "Starker Puffer")]:
+        art = services.scaffold_artifact(slug, slug, _journey_concept(rate), type="journey", tags=["hifi"],
+                                         project_id=None, store=store)
+        run = services.run_prototype(art["id"], store=store); time.sleep(0.6)
+        sess = browser.open_session(run["url"], art["id"], "t")
+        seen[slug] = sess["snapshot"]["text"]
+        browser.close(sess["session_id"]); services.stop_prototype(art["id"], store=store)
+        assert expect in seen[slug], (slug, seen[slug][:200])

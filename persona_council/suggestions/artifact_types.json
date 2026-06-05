@@ -42,6 +42,14 @@
       "discriminators": []
     },
     {
+      "tag": "journey",
+      "renderer": "spa",
+      "default_template": "spa-journey",
+      "presentation": {"label": "Erfahrbare Journey", "short": "Journey", "icon": "projects", "color": "#5e6ad2", "glyph": "❯∿"},
+      "_note": "A PRODUCTION-CREDIBLE experience: an interactive model embedded in a multi-screen narrative FLOW with cross-screen state, plus `chart` (sweep an input -> live curves), `verdict` (data-driven conditional text via comparison exprs), and `timeline` elements. The richest hi-fi class. Theme via concept.fidelity (lofi/midfi/hifi).",
+      "discriminators": []
+    },
+    {
       "tag": "model",
       "renderer": "spa",
       "default_template": "spa-model",
