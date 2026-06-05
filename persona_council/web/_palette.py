@@ -1,8 +1,9 @@
 """Cmd+K command palette: global jump across every entity + nav commands.
 
 Self-contained (CSS + markup + JS), injected once by _layout so it works on every
-page. Kept out of web_assets.py to respect the per-file LOC bar. The result list is
-rendered client-side from /api/search; static nav commands are seeded in the markup."""
+page. Kept out of web_assets.py to respect the per-file LOC bar. Results come from
+/api/search and are grouped by type, Linear/Raycast-style (leading type dot, muted
+section headers, a footer hint bar)."""
 from __future__ import annotations
 
 import json
@@ -13,58 +14,79 @@ from ._i18n import t
 PALETTE_CSS = r"""
 .cmdk[hidden]{display:none}
 .cmdk{position:fixed;inset:0;z-index:200;display:flex;align-items:flex-start;justify-content:center}
-.cmdk-bd{position:absolute;inset:0;background:rgba(0,0,0,.45)}
-.cmdk-panel{position:relative;margin-top:13vh;width:min(640px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden}
-.cmdk-in{width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:16px;padding:16px 18px;outline:none;font-family:inherit}
-.cmdk-list{max-height:min(56vh,440px);overflow:auto;padding:6px}
-.cmdk-empty{color:var(--muted);font-size:13px;padding:18px;text-align:center}
-.cmdk-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;text-decoration:none;color:var(--ink);cursor:pointer}
-.cmdk-item.sel{background:var(--accent-weak)}
-.cmdk-type{flex:none;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 7px;min-width:66px;text-align:center}
-.cmdk-t{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cmdk-sub{flex:none;max-width:38%;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk-bd{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.cmdk-panel{position:relative;margin-top:12vh;width:min(620px,92vw);max-height:74vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden}
+.cmdk-in{width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:15px;padding:15px 18px;outline:none;font-family:inherit}
+.cmdk-in::placeholder{color:var(--faint)}
+.cmdk-list{flex:1;overflow:auto;padding:6px 6px 8px}
+.cmdk-empty{color:var(--muted);font-size:13px;padding:26px;text-align:center}
+.cmdk-sec{font-size:11px;color:var(--faint);font-weight:600;letter-spacing:.04em;padding:10px 12px 4px}
+.cmdk-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--ink);cursor:pointer}
+.cmdk-item.sel{background:var(--hover)}
+.cmdk-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.cmdk-dot[data-t=project]{background:#7a5ed1}.cmdk-dot[data-t=persona]{background:#3d7fc4}
+.cmdk-dot[data-t=council]{background:var(--accent)}.cmdk-dot[data-t=synthesis]{background:#9a8cff}
+.cmdk-dot[data-t=prototype]{background:#00897b}.cmdk-dot[data-t=section]{background:#3d9b6b}
+.cmdk-dot[data-t=note]{background:#b87a25}
+.cmdk-t{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk-sub{flex:none;max-width:40%;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk-foot{display:flex;gap:18px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:11.5px}
+.cmdk-foot kbd{font-family:inherit;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px;color:var(--ink);font-size:11px}
 """
 
 
 def palette_markup() -> str:
-    """Per-request overlay markup (localised). Static nav commands are seeded as JSON."""
-    cmds = json.dumps([
-        {"title": t("projects"), "url": "/projects", "type": "go"},
-        {"title": t("personas"), "url": "/personas", "type": "go"},
-    ])
+    """Per-request overlay markup (localised). Static nav commands + group labels are seeded as JSON."""
+    cfg = json.dumps({
+        "cmds": [
+            {"title": t("projects"), "url": "/projects", "type": "go"},
+            {"title": t("personas"), "url": "/personas", "type": "go"},
+        ],
+        "labels": {"go": t("cmdk_jump"), "project": t("projects"), "persona": t("personas"),
+                   "council": t("councils"), "synthesis": t("syntheses"),
+                   "prototype": t("prototypes_h"), "section": t("sections"), "note": t("notes_h")},
+    })
     return (
         '<div class="cmdk" id="cmdk" hidden>'
         '<div class="cmdk-bd" data-cmdk-close></div>'
         '<div class="cmdk-panel" role="dialog" aria-modal="true">'
         f'<input id="cmdk-in" class="cmdk-in" type="text" autocomplete="off" spellcheck="false" placeholder="{t("cmdk_placeholder")}">'
         f'<div class="cmdk-list" id="cmdk-list" data-empty="{t("cmdk_empty")}"></div>'
+        f'<div class="cmdk-foot"><span><kbd>↑↓</kbd>{t("cmdk_nav")}</span>'
+        f'<span><kbd>↵</kbd>{t("cmdk_open")}</span><span><kbd>esc</kbd>{t("cmdk_close")}</span></div>'
         '</div></div>'
-        f'<script id="cmdk-cmds" type="application/json">{cmds}</script>'
+        f'<script id="cmdk-cfg" type="application/json">{cfg}</script>'
     )
 
 
 PALETTE_JS = r"""<script>(function(){
 var ov=document.getElementById('cmdk'); if(!ov) return;
 var inp=document.getElementById('cmdk-in'), list=document.getElementById('cmdk-list');
-var cmds=[]; try{ cmds=JSON.parse(document.getElementById('cmdk-cmds').textContent)||[]; }catch(e){}
+var CFG={cmds:[],labels:{}}; try{ CFG=JSON.parse(document.getElementById('cmdk-cfg').textContent)||CFG; }catch(e){}
+var ORDER=['go','project','persona','council','synthesis','prototype','section','note'];
 var items=[], sel=0, timer=null;
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-function open(){ ov.hidden=false; inp.value=''; render(cmds); inp.focus(); }
+function open(){ ov.hidden=false; inp.value=''; render(CFG.cmds); inp.focus(); }
 function close(){ ov.hidden=true; }
-function render(rows){ items=rows||[]; sel=0;
-  if(!items.length){ list.innerHTML='<div class="cmdk-empty">'+esc(list.getAttribute('data-empty'))+'</div>'; return; }
-  list.innerHTML=items.map(function(r,i){
-    return '<a class="cmdk-item'+(i===0?' sel':'')+'" href="'+esc(r.url)+'" data-i="'+i+'">'
-      +'<span class="cmdk-type">'+esc(r.type)+'</span>'
-      +'<span class="cmdk-t">'+esc(r.title)+'</span>'
-      +(r.subtitle?'<span class="cmdk-sub">'+esc(r.subtitle)+'</span>':'')+'</a>'; }).join('');
+function render(rows){
+  if(!rows||!rows.length){ items=[]; sel=0; list.innerHTML='<div class="cmdk-empty">'+esc(list.getAttribute('data-empty'))+'</div>'; return; }
+  var groups={}; rows.forEach(function(r){ (groups[r.type]=groups[r.type]||[]).push(r); });
+  var ordered=[], html='';
+  ORDER.forEach(function(tp){ var g=groups[tp]; if(!g) return;
+    html+='<div class="cmdk-sec">'+esc(CFG.labels[tp]||tp)+'</div>';
+    g.forEach(function(r){ var i=ordered.length; ordered.push(r);
+      html+='<a class="cmdk-item'+(i===0?' sel':'')+'" href="'+esc(r.url)+'" data-i="'+i+'">'
+        +'<span class="cmdk-dot" data-t="'+esc(r.type)+'"></span>'
+        +'<span class="cmdk-t">'+esc(r.title)+'</span>'
+        +(r.subtitle?'<span class="cmdk-sub">'+esc(r.subtitle)+'</span>':'')+'</a>'; }); });
+  items=ordered; sel=0; list.scrollTop=0; list.innerHTML=html;
 }
 function move(d){ var els=list.querySelectorAll('.cmdk-item'); if(!els.length) return;
   if(els[sel]) els[sel].classList.remove('sel'); sel=(sel+d+els.length)%els.length;
   els[sel].classList.add('sel'); els[sel].scrollIntoView({block:'nearest'}); }
 function search(q){ q=(q||'').trim();
-  if(!q){ render(cmds); return; }
-  var hits=cmds.filter(function(c){ return c.title.toLowerCase().indexOf(q.toLowerCase())>=0; });
+  if(!q){ render(CFG.cmds); return; }
+  var hits=CFG.cmds.filter(function(c){ return c.title.toLowerCase().indexOf(q.toLowerCase())>=0; });
   fetch('/api/search?q='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(rows){
     if(ov.hidden) return; render(hits.concat(rows||[])); }).catch(function(){ render(hits); });
 }
