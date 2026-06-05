@@ -93,3 +93,25 @@ def test_invented_artifact_type_renders_from_data(store, tmp_path, monkeypatch):
     finally:
         presentation.suggestions_dir = orig
         presentation.reload_hints()
+
+
+def test_dead_string_nav_rejected_and_action_alias_normalized(store, tmp_path, monkeypatch):
+    """GAP-4: a card/element whose STRING nav target resolves to no screen is rejected at scaffold
+    (no silently-dead, yet proband-tested, prototype); a valid `action` string is normalized to
+    `goto` so goto-only templates navigate."""
+    import persona_council.prototypes as P
+    monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "p")
+    from persona_council import services
+    dead = {"title": "T", "start": "home", "screens": [
+        {"id": "home", "title": "H", "cards": [{"id": "c", "title": "Go", "action": "ghost"}]},
+        {"id": "real", "title": "R", "elements": [{"kind": "text", "id": "t", "label": "ok"}]}]}
+    with pytest.raises(P.PrototypeError):
+        services.scaffold_artifact("dead", "Dead", dead, type="prototype", tags=["lofi"], store=store)
+    ok = {"title": "T", "start": "home", "screens": [
+        {"id": "home", "title": "H", "cards": [{"id": "c", "title": "Go", "action": "real"}]},
+        {"id": "real", "title": "R", "elements": [{"kind": "text", "id": "t", "label": "ok"}]}]}
+    services.scaffold_artifact("okp", "Ok", ok, type="prototype", tags=["lofi"], store=store)
+    import json
+    concept = json.loads((tmp_path / "p" / "okp" / "concept.json").read_text())
+    card = concept["screens"][0]["cards"][0]
+    assert card["goto"] == "real" and card["action"] == "real"   # action string normalized to goto

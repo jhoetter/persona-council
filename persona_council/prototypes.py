@@ -40,16 +40,20 @@ def _validate_concept(concept: dict[str, Any]) -> dict[str, Any]:
     idset = {s["id"] for s in screens if isinstance(s, dict) and str(s.get("id", "")).strip()}
 
     def _norm_nav(obj: dict[str, Any], where: str) -> None:
-        """Accept `goto` OR `action` as the navigation key (templates differ), normalize BOTH so any
-        renderer navigates, and REJECT a target that resolves to no screen — so a prototype can't
-        scaffold (and then get proband-tested) with a silently dead interaction (GAP-4)."""
-        tgt = str(obj.get("goto") or obj.get("action") or "").strip()
+        """Accept a STRING `goto` OR `action` as the screen-navigation key (templates differ),
+        normalize both so any renderer navigates, and REJECT a target that resolves to no screen — so
+        a prototype can't scaffold (then get proband-tested) with a silently dead interaction (GAP-4).
+        A non-string `action`/`goto` (a nested action object) is the template's concern — left as-is."""
+        goto, action = obj.get("goto"), obj.get("action")
+        tgt = goto.strip() if isinstance(goto, str) else (action.strip() if isinstance(action, str) else "")
         if not tgt:
             return
         if tgt not in idset:
             raise PrototypeError("BAD_CONCEPT", f"{where} navigates to '{tgt}', which is not a screen id "
                                                 f"(dead interaction); valid screens: {sorted(idset)}")
-        obj["goto"] = obj["action"] = tgt
+        obj["goto"] = tgt
+        if not isinstance(action, (dict, list)):   # don't clobber a nested action object
+            obj["action"] = tgt
 
     for s in screens:
         if not isinstance(s, dict) or not str(s.get("id", "")).strip():
