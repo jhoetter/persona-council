@@ -48,6 +48,11 @@ Authoring per dispatch (always a SUBAGENT, grounded in `s.next_action`):
   (`n.act.suggested_participants` — segment-diverse, NOT keyword) via the run-council flow, or
   `scaffold_artifact` + a grounded Playwright proband session; then `add_task`+`link_evidence`+
   `complete_task`. Breadth = angles × persona diversity, **never one council per persona**.
+  **Council shape (Q1/Q2):** EARLY discovery is OPEN USER RESEARCH — pass `questions=[…]` (conversational:
+  "Welche Versicherungen hast du? Wie sparst du gerade?"), turns are honest ANSWERS, NO proposal/votes
+  (you are LISTENING; hypotheses are an OUTPUT of Define, never the input). Use a `proposal` only to
+  react to a concept/prototype (evaluation), and `votes` only for an explicit decision (rare). State
+  motions as questions, not hypotheses, until you have understood.
 - **verify** → subagent consolidates the fan (`n.verify.fan_evidence`) into a synthesis
   (`record_synthesis` — councils OPTIONAL/decoupled; for affinity, synthesize over notes/other
   syntheses with `council_ids=[]`), records the gate judgment, `assess_progress`, `complete_task`.

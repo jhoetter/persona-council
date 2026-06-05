@@ -61,14 +61,14 @@ def register_council(mcp):
         return _env("brief_ask", services.brief_ask(persona_id, question, context), t)
 
     @mcp.tool()
-    def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "", key: str | None = None) -> dict[str, Any]:
-        """Persist a host-authored council (openings/moderator/directed turns + votes +
-        exec_summary). A council MUST belong to a research project — `project_id` is required and
-        validated (personas are global, councils/studies/reports are project-scoped). Use from the
-        run-council / synthesize skills instead of writing the DB. Pass a stable `key` for a
-        deterministic id (idempotent upsert → resumable long runs)."""
+    def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "", questions: list[str] | None = None, key: str | None = None) -> dict[str, Any]:
+        """Persist a host-authored council. Shape it by what you pass (the UI derives the mode):
+        DISCOVERY = `questions` (open user-research questions) + answer turns, NO proposal/votes;
+        EVALUATION = `proposal` (a concept reacted to) + stances; DECISION = `proposal` + `votes`.
+        A council MUST belong to a research project. Pass a stable `key` for a deterministic id
+        (idempotent upsert → resumable runs)."""
         t = time.perf_counter()
-        return _env("record_council", services.record_council(project_id, prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason, key), t)
+        return _env("record_council", services.record_council(project_id, prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason, questions, key), t)
 
     @mcp.tool()
     def get_council(session_id: str) -> dict[str, Any]:

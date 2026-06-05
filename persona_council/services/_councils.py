@@ -124,14 +124,24 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
         "schema": "council", "language": language, "project_id": project["id"], "prompt": prompt,
         "external_context": context, "participants": participants,
         "instructions": (
-            "Author one or more turns per participant grounded in their agent_context (SOUL + memory), "
-            "honest and anti-steering. On EACH turn set: persona_id, content, stance, vote, "
-            "questions_or_pushback, memory_refs (the memories drawn on), and `input` — a SHORT snapshot "
-            "of what this persona was given (the prompt + the key SOUL/memory lines from agent_context "
-            "that shaped this turn) so the council is AUDITABLE (the UI shows it per voice). Then author "
-            "proposal, votes (SUPPORT/MAYBE/ABSTAIN/OPPOSE), a short summary, and a rich Markdown "
-            "exec_summary. Persist via record_council(project_id, prompt, persona_ids, turns, votes, "
-            f"proposal, summary, exec_summary). {language_instruction(language)}"
+            "Run this council in the shape the task calls for (the UI derives it):\n"
+            "• DISCOVERY (default for early research): pass `questions` = the OPEN, conversational "
+            "user-research questions you ask (e.g. 'Welche Versicherungen hast du? Wie legst du gerade "
+            "Geld zur Seite? Wann hast du zuletzt an Absicherung gedacht?'). Each turn is that persona's "
+            "honest ANSWER. Do NOT invent a hypothesis and do NOT collect votes — you are LISTENING. "
+            "Leave proposal/votes empty.\n"
+            "• EVALUATION (reacting to a concept/prototype): set `proposal` to the thing reacted to and "
+            "ask conversationally ('Was löst das bei dir aus? Was fehlt?'); set each turn's `stance`; no "
+            "hard votes.\n"
+            "• DECISION (rare — an explicit choice): set `proposal` + `votes` (SUPPORT/MAYBE/ABSTAIN/"
+            "OPPOSE).\n"
+            "On EACH turn set: persona_id, content, stance (where applicable), questions_or_pushback, "
+            "memory_refs (the memories drawn on), and `input` — a SHORT snapshot of what this persona was "
+            "given (the question(s)/prompt + the key SOUL/memory lines from agent_context) so the council "
+            "is AUDITABLE (the UI shows it per voice). Ground every turn in agent_context, honest + "
+            "anti-steering. Then a short summary + a rich Markdown exec_summary. Persist via "
+            "record_council(project_id, prompt, persona_ids, turns, votes=[], proposal='', questions=[...], "
+            f"summary, exec_summary). {language_instruction(language)}"
         ),
     }
 
@@ -216,10 +226,23 @@ def export_council_session(session_id: str, format: str = "json", store: Store |
 
 
 
+def council_mode(council: dict[str, Any]) -> str:
+    """DERIVE a council's shape (no closed vocabulary, no stored type): `decision` (a proposal put to a
+    vote — For/Against), `evaluation` (a concept/proposal reacted to conversationally, no hard vote), or
+    `discovery` (open user-research questions → answers). spec/methodology-and-clarity-redesign.md Q2."""
+    has_prop = bool((council.get("proposal") or "").strip())
+    has_votes = bool(council.get("votes"))
+    if has_prop and has_votes:
+        return "decision"
+    if has_prop:
+        return "evaluation"
+    return "discovery"
+
+
 def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: list[dict[str, Any]],
                    votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "",
-                   exec_summary: str = "", selection_reason: str = "", key: str | None = None,
-                   store: Store | None = None) -> dict[str, Any]:
+                   exec_summary: str = "", selection_reason: str = "", questions: list[str] | None = None,
+                   key: str | None = None, store: Store | None = None) -> dict[str, Any]:
     """Persist a host-authored council (openings/moderator/directed turns + synthesis). A council is a
     research artefact and MUST live inside a research project — `project_id` is required and validated
     (personas are global, but councils/studies/reports are scoped to a project; see
@@ -250,7 +273,8 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: 
         id=cid,
         prompt=prompt, persona_ids=persona_ids, selection_reason=selection_reason or "host-authored",
         turns=turns, proposal=proposal, votes=votes, summary=summary,
-        exec_summary=exec_summary, created_at=(existing or {}).get("created_at") or utc_now_iso(),
+        exec_summary=exec_summary, questions=[str(q).strip() for q in (questions or []) if str(q).strip()],
+        created_at=(existing or {}).get("created_at") or utc_now_iso(),
         project_id=project["id"],
     ).to_dict()
     store.insert_council_session(session)

@@ -207,3 +207,20 @@ def test_concept_notes_connect_into_the_graph(store):
     # the un-prototyped concept is wired to the down-select synthesis (no float)
     assert any(e["from_study"] == cn["study_id"] and e["to_study"] == f"synthesis:{syn['id']}"
                for e in g["edges"]), "un-prototyped concept must connect to the down-select synthesis"
+
+
+def test_council_modes_discovery_evaluation_decision(store):
+    """Q1/Q2: a council's shape is DERIVED — discovery (open `questions`, no proposal/votes),
+    evaluation (a proposal reacted to), decision (proposal + votes). `questions` is stored first-class."""
+    pid = services.start_project("M", "hmw?", None, persona_ids=[], store=store)["id"]
+    disc = services.record_council(pid, "Geldgewohnheiten", [], [{"content": "Ich spare per ETF"}],
+                                   questions=["Wie sparst du gerade?", "Welche Versicherungen hast du?"],
+                                   store=store, key="d")
+    assert disc["questions"] == ["Wie sparst du gerade?", "Welche Versicherungen hast du?"]
+    assert services.council_mode(disc) == "discovery"
+    dec = services.record_council(pid, "Bauen?", [], [{"content": "ja"}], proposal="Wir bauen X",
+                                  votes=[{"vote": "SUPPORT"}], store=store, key="x")
+    assert services.council_mode(dec) == "decision"
+    ev = services.record_council(pid, "Reaktion", [], [{"content": "gut"}], proposal="Das Konzept",
+                                 store=store, key="e")
+    assert services.council_mode(ev) == "evaluation"

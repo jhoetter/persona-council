@@ -319,29 +319,44 @@ def register_pages(app) -> None:
         turns_html = (f'<p class="muted small" style="margin:-4px 0 12px">{t("council_voices_help")}</p>'
                       '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>")
         exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
-        sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
-        # A council investigates ONE hypothesis by gathering N diverse personas' lived-experience
-        # reactions. Lead with the hypothesis (so the For/Conditional/Against reactions have their
-        # question) + how to read it; the exec-summary is the FINDING. (UX: "what is the question?")
         n_voices = len(session.get("persona_ids", []))
-        motion = (session.get("proposal") or "").strip()
-        motion_block = (f'<div class="callout motion"><span class="emj">{_icon("compass")}</span>'
-                        f'<div><strong>{t("council_motion")}</strong>'
-                        f'<p style="font-size:1.1em;margin:.35em 0">&bdquo;{_esc(motion)}&ldquo;</p>'
-                        f'<p class="muted small">{t("council_motion_help", n=n_voices)}</p></div></div>') if motion else ""
+        # A council has THREE honest shapes (derived, no stored type): DISCOVERY (open questions →
+        # answers, no vote — listening), EVALUATION (react to a concept), DECISION (a motion put to a
+        # vote). Lead the page with the right framing so "what is the question?" is always answered.
+        mode = services.council_mode(session)
+        voices_label = t("council_voices_answers") if mode == "discovery" else voices_detail_h
+        if mode == "discovery":
+            qs = session.get("questions") or ([session.get("prompt")] if session.get("prompt") else [])
+            qlist = "".join(f'<li>{_esc(q)}</li>' for q in qs) or f'<li class="muted">—</li>'
+            lead_block = (f'<div class="callout motion"><span class="emj">{_icon("compass")}</span>'
+                          f'<div><strong>{t("council_questions_h")}</strong>'
+                          f'<ul style="margin:.4em 0 .2em 20px;font-size:1.02em">{qlist}</ul>'
+                          f'<p class="muted small">{t("council_questions_help", n=n_voices)}</p></div></div>')
+            sentiment = ""                                    # a listening session has no vote/sentiment chart
+        else:
+            motion = (session.get("proposal") or "").strip()
+            label = t("council_eval_h") if mode == "evaluation" else t("council_motion")
+            help_ = t("council_eval_help", n=n_voices) if mode == "evaluation" else t("council_motion_help", n=n_voices)
+            lead_block = (f'<div class="callout motion"><span class="emj">{_icon("compass")}</span>'
+                          f'<div><strong>{label}</strong>'
+                          f'<p style="font-size:1.1em;margin:.35em 0">&bdquo;{_esc(motion)}&ldquo;</p>'
+                          f'<p class="muted small">{help_}</p></div></div>') if motion else ""
+            sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         main = (f'<div class="hero"><h1>{_esc(session["prompt"])}</h1>'
-                f'<p class="sub">{t("council_kicker", n=n_voices)} · {_esc(session["selection_reason"])}</p></div>'
-                f'{motion_block}'
+                f'<p class="sub">{t("council_kicker_" + mode, n=n_voices)} · {_esc(session["selection_reason"])}</p></div>'
+                f'{lead_block}'
                 f'<div class="callout"><span class="emj">{_icon("bulb")}</span>'
                 f'<div><strong>{t("council_finding")}</strong>{exec_html}</div></div>'
                 f'{sentiment}'
-                f'<div class="sec" id="stimmen"><h2>{voices_detail_h}</h2>{turns_html}</div>'
+                f'<div class="sec" id="stimmen"><h2>{voices_label}</h2>{turns_html}</div>'
                 f'<details class="sec"><summary>{summary_h}</summary><div class="card"><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
-        vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
-        rail = (f'<h4>{t("council_reactions_h")}</h4>'
-                + "".join(f'<div class="prop"><span class="k">{_vote_label(k)}</span><span class="v">{vc[k]}</span></div>' for k in vc)
-                + f'<div class="prop"><span class="k">{personas_h}</span><span class="v">{len(session.get("persona_ids", []))}</span></div>'
-                + f'<div class="prop"><span class="k">{created_h}</span><span class="v">{_esc(session["created_at"][:10])}</span></div>')
+        rail = f'<div class="prop"><span class="k">{personas_h}</span><span class="v">{n_voices}</span></div>'
+        if mode != "discovery":                               # the vote panel only where a vote/reaction exists
+            vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
+            rail = (f'<h4>{t("council_reactions_h")}</h4>'
+                    + "".join(f'<div class="prop"><span class="k">{_vote_label(k)}</span><span class="v">{vc[k]}</span></div>' for k in vc)
+                    + rail)
+        rail += f'<div class="prop"><span class="k">{created_h}</span><span class="v">{_esc(session["created_at"][:10])}</span></div>'
         # Forward, project-rooted crumb: Projects > [Project] > [Council]. (A Discover council FEEDS
         # the Define synthesis — it is not nested under it; and the project lookup must work for
         # plan-based projects, where the council is scoped directly to the project.)

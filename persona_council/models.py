@@ -142,6 +142,11 @@ class CouncilSession:
     summary: str
     created_at: str
     exec_summary: str = ""  # rich markdown synthesis shown in the UI
+    # `questions`: the OPEN, conversational user-research questions a DISCOVERY council asked
+    # ("Welche Versicherungen hast du? Wie sparst du gerade?"). When present (and proposal/votes empty)
+    # the council is a discovery conversation, not a hypothesis-and-vote. Mode is DERIVED from these
+    # three fields — see council_mode() (spec/methodology-and-clarity-redesign.md Q1/Q2).
+    questions: list[str] = field(default_factory=list)
     # A council is a research artefact and is ALWAYS scoped to a research project
     # (spec/research-graph-and-meta-report.md §4-5: personas are global, but studies/
     # councils/reports are encapsulated at the Project level). Enforced at creation.
