@@ -612,3 +612,46 @@ def run_step(run_id: str, store: Store | None = None) -> dict[str, Any]:
                               "record_completeness_critic(project_id, verdict) then record_critic_round.")}
     finish_run(run_id, "stopped", store=store)
     return {"kind": "done", "status": "stopped", "summary": _rl_summary(pid, store)}
+
+
+# ===================== ESV §D.2/D.3 — memory depth + the eval (quality) harness =====================
+
+def cohort_memory_depth(persona_ids: list[str] | None = None, store: Store | None = None) -> dict[str, Any]:
+    """How deep is the cohort's simulated memory? (avg facts+events per persona). Councils are only as
+    deep as the lives behind them — a thin cohort should be deepened (simulate-cohort) before a run."""
+    store = store or Store()
+    pids = persona_ids or [p["id"] for p in store.list_personas()]
+    m = store.count_memory_for_personas(pids)
+    avg = (m["facts"] + m["events"]) / max(1, len(pids))
+    return {"personas": len(pids), "facts": m["facts"], "events": m["events"], "avg_per_persona": round(avg, 1),
+            "hint": "deep" if avg >= 6 else "thin — deepen the cohort (simulate-cohort) for richer councils"}
+
+
+def score_run(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """Persist a RunScore snapshot of a finished project's quality (the last critic's rubric scores +
+    finish + novelty + groundedness + memory depth), so output quality is TRACKED over time (a
+    regression signal for the methodology itself, not just the code) — ESV §D.3."""
+    store = store or Store()
+    project = store.get_research_project(project_id)
+    if not project:
+        raise PlanError("UNKNOWN_PROJECT", f"unknown research project: {project_id}")
+    a = assess_project(project_id, store=store)
+    critics = project.get("critic_reports", [])
+    last_critic = critics[-1] if critics else {}
+    g = get_project_graph(project_id, store=store)            # noqa: F821 (bound)
+    sessions = [x for x in store.list_prototype_sessions()
+                if (store.get_prototype(x.get("prototype_id", "")) or {}).get("project_id") == project_id]
+    now = utc_now_iso()
+    score = {"id": stable_id("runscore", project_id, now), "project_id": project_id, "created_at": now,
+             "complete": a.get("complete"), "finish": a.get("finish", {}), "novelty": a.get("novelty", {}),
+             "memory_depth": a.get("memory_depth", {}),
+             "critic_passed": bool(last_critic.get("passed")), "critic_scores": last_critic.get("scores", {}),
+             "coverage": {"councils": sum(1 for n in g["nodes"] if str(n["study_id"]).startswith("council:")),
+                          "syntheses": sum(1 for n in g["nodes"] if str(n["study_id"]).startswith("synthesis:")),
+                          "prototypes": len(g.get("prototypes") or []), "sections": len(g.get("sections") or [])},
+             "groundedness": {"sessions": len(sessions),
+                              "grounded": sum(1 for x in sessions if x.get("grounded_verified"))}}
+    project.setdefault("run_scores", []).append(score)
+    project["updated_at"] = now
+    store.upsert_research_project(project)
+    return score

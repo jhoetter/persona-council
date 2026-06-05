@@ -51,6 +51,17 @@ class MemoryMixin:
         self.conn.execute("UPDATE entity_facts SET t_invalid=?, data=? WHERE id=?",
                           (t_invalid, json.dumps(data, ensure_ascii=False), fact_id))
 
+    def count_memory_for_personas(self, persona_ids: list[str]) -> dict[str, int]:
+        """Cheap aggregate (one query each) of memory depth across a cohort — ESV6 memory_depth."""
+        if not persona_ids:
+            return {"facts": 0, "events": 0}
+        q = ",".join("?" * len(persona_ids))
+        facts = self.conn.execute(f"SELECT COUNT(*) AS c FROM entity_facts WHERE persona_id IN ({q})",
+                                  tuple(persona_ids)).fetchone()["c"]
+        events = self.conn.execute(f"SELECT COUNT(*) AS c FROM experience_events WHERE persona_id IN ({q})",
+                                   tuple(persona_ids)).fetchone()["c"]
+        return {"facts": int(facts), "events": int(events)}
+
     def list_entity_facts(self, entity_id: str, as_of: str | None = None, valid_only: bool = False) -> list[dict[str, Any]]:
         rows = self.conn.execute(
             "SELECT data FROM entity_facts WHERE entity_id=? ORDER BY t_valid", (entity_id,)).fetchall()

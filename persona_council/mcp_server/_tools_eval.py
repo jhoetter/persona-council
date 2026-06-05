@@ -129,3 +129,18 @@ def register_eval(mcp):
         `missing` is non-empty or a rubric dimension is below threshold."""
         t = time.perf_counter()
         return _env("record_completeness_critic", services.record_completeness_critic(project_id, verdict), t)
+
+    # ----- ESV §D: memory depth + the eval (quality) harness -----
+    @mcp.tool()
+    def cohort_memory_depth(persona_ids: list[str] | None = None) -> dict[str, Any]:
+        """How deep is the cohort's simulated memory (avg facts+events/persona)? A thin cohort should be
+        deepened (simulate-cohort) before a run so councils are grounded in rich lived experience."""
+        t = time.perf_counter()
+        return _env("cohort_memory_depth", services.cohort_memory_depth(persona_ids), t)
+
+    @mcp.tool()
+    def score_run(project_id: str) -> dict[str, Any]:
+        """Persist a RunScore (critic rubric scores + finish + novelty + groundedness + memory depth) so
+        output quality is tracked over time — a regression signal for the methodology itself."""
+        t = time.perf_counter()
+        return _env("score_run", services.score_run(project_id), t)

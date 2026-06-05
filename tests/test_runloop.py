@@ -126,3 +126,25 @@ def test_runloop_resumes_identically_after_kill(store):
     # no duplicate keyed work: completing is idempotent, the plan reached a single finished state
     assert services.assess_project(pid, store=store)["finish"]["finished"] is True
     assert set(ev_mid).issubset(set(s["id"] for s in store.list_syntheses()))   # earlier evidence preserved
+
+
+def test_pipeline_regression_score_and_memory_depth(store):
+    """ESV6: a full driver run produces a FINISHED, organized, concluded, handed-off project; score_run
+    persists the quality snapshot; assess_project surfaces memory_depth (thin cohort flagged)."""
+    _register_tiny_methodology(store)
+    pid = services.start_project("ESV6", "hmw?", "esv_test", persona_ids=["p1"], store=store)["id"]
+    run = services.start_run(pid, budget=60, store=store)
+    out = _drive(run["run_id"], pid, store)
+    assert out["kind"] == "done" and out["status"] == "finished"
+    # the finished project is organized + concluded + handed-off, with a structured terminal synthesis
+    g = services.get_project_graph(pid, store=store)
+    assert len(g["sections"]) >= 1 and store.list_meta_reports(pid)
+    syns = store.list_syntheses()
+    assert any((s.get("gesamtbild") or "").strip() and (s.get("key_problems") or s.get("pain_solvers")) for s in syns)
+    # memory_depth: a 1-persona cohort with no simulated life is flagged thin
+    md = services.assess_project(pid, store=store)["memory_depth"]
+    assert md["personas"] == 1 and md["hint"].startswith("thin")
+    assert services.cohort_memory_depth(["p1"], store=store)["avg_per_persona"] == 0.0
+    # score_run persists a quality snapshot
+    sc = services.score_run(pid, store=store)
+    assert sc["complete"] is True and sc["finish"]["finished"] is True and "councils" in sc["coverage"]

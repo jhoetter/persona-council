@@ -569,6 +569,22 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
               "concluded": not any("CONCLUSION" in g for g in finish_gaps),
               "handed_off": not any("META-REPORT" in g for g in finish_gaps),
               "finished": not finish_gaps, "gaps": finish_gaps}
+    # memory_depth (ESV6): councils are only as deep as the simulated lives behind them — flag a thin
+    # cohort so a run deepens memory (simulate-cohort) before concluding it has explored deeply.
+    memory_depth = {}
+    try:
+        pids = (store.get_research_project(project_id) or {}).get("persona_ids", [])
+        if pids:
+            m = store.count_memory_for_personas(pids)
+            avg = (m["facts"] + m["events"]) / max(1, len(pids))
+            memory_depth = {"personas": len(pids), "facts": m["facts"], "events": m["events"],
+                            "avg_per_persona": round(avg, 1),
+                            "hint": "deep" if avg >= 6 else "thin — deepen the cohort (simulate-cohort) for richer councils"}
+            if memory_depth["hint"].startswith("thin"):
+                gaps.append("cohort memory is thin (few simulated events/facts per persona) — deepen it "
+                            "(simulate-cohort) so councils are grounded in rich lived experience")
+    except Exception:
+        memory_depth = {}
     ready = ready_tasks(plan)
     complete = is_complete(plan)
     if complete and finish_gaps:
@@ -597,6 +613,7 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
                        "hint": ("converging" if n_syn and n_act <= n_syn * 2 else "still diverging")},
         "novelty": novelty,
         "finish": finish,
+        "memory_depth": memory_depth,
         "gaps": gaps,
         "ready": [t["id"] for t in ready],
         "next": brief_next(project_id, store=store).get("instructions", ""),
@@ -731,61 +748,5 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
     return out
 
 
-# ------------------------------------------------------------------ plan.md render
-
-_STATUS_MARK = {"done": "x", "active": "~", "todo": " ", "blocked": "!"}
-
-
-def _gate_summary(t: dict[str, Any]) -> str:
-    r = t["requires"]
-    parts = []
-    if r["min_inputs"] is not None:
-        parts.append(f"min_inputs={r['min_inputs']}")
-    if r["gate_tag"]:
-        parts.append(f"gate={r['gate_tag']}")
-    if r["artifact_tags"]:
-        parts.append(f"artifacts={','.join(r['artifact_tags'])}")
-    if r["session_of_tags"]:
-        parts.append(f"sessions={','.join(r['session_of_tags'])}")
-    return ("; gates: " + " · ".join(parts)) if parts else ""
-
-
-def render_plan_md(plan: dict[str, Any]) -> str:
-    """Render the plan as a human-readable, bucketed plan.md (bim-agent json→md style)."""
-    tasks = plan["tasks"]
-    ready = {t["id"] for t in ready_tasks(plan)}
-    head = [
-        f"# Research plan — {plan.get('goal', '') or plan['project_id']}",
-        "",
-        f"Methodology: {plan.get('methodology') or 'freeform'} · "
-        f"Tasks: {len(tasks)} · Updated: {plan.get('updated_at', '')}",
-        "",
-    ]
-    # Next (ready frontier)
-    nxt = [t for t in tasks if t["id"] in ready]
-    head.append("## Next (ready)")
-    if nxt:
-        for t in nxt:
-            head.append(f"- **{t['id']}** [{t['bucket']}/{t['capability'] or '—'}] {t['title']} — {t['status']}")
-    else:
-        head.append("- _(none — plan complete or blocked)_" if tasks else "- _(no tasks yet)_")
-    head.append("")
-    # Buckets in analyze → act → verify order, then any others
-    order = ["analyze", "act", "verify"]
-    buckets = order + sorted({t["bucket"] for t in tasks} - set(order))
-    for b in buckets:
-        rows = [t for t in tasks if t["bucket"] == b]
-        if not rows:
-            continue
-        head.append(f"## {b.capitalize()}")
-        for t in rows:
-            mark = _STATUS_MARK.get(t["status"], " ")
-            ev = ", ".join(f"{r['kind']}:{r['id']}" for r in t["produces"] if r["id"]) or "—"
-            cons = (" ⊂ " + ", ".join(t["consumes"])) if t["consumes"] else ""
-            head.append(f"- [{mark}] **{t['id']}** ({t['capability'] or '—'}) {t['title']} — "
-                        f"`{t['status']}`{cons}{_gate_summary(t)}")
-            head.append(f"    evidence: {ev}")
-            if t["plan_note"]:
-                head.append(f"    note: {t['plan_note']}")
-        head.append("")
-    return "\n".join(head).rstrip() + "\n"
+# plan.md render lives in plan_render.py (kept under the LOC bar); re-exported for back-compat.
+from .plan_render import render_plan_md  # noqa: E402,F401

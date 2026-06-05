@@ -125,6 +125,19 @@ Memory & multi-resolution simulation (gather → author → write-back):
   Tag-agnostic: it enforces only the DAG (`consumes`), integer `min_inputs`, tag-equality references,
   and evidence-backed judgment PRESENCE — never tag membership. Shape (diverge/converge/diamonds/
   branches/loops) is DERIVED from the task DAG + recorded evidence.
+- ESV — exhaustive, self-verifying runs (`spec/exhaustive-self-verifying-runs.md`). The autonomous loop
+  is a **deterministic RunLoop engine** the host skill executes: `start_run`(resumable run object +
+  journal) → loop `run_step` (the brain: assess + next_action + the deterministic finish work + the
+  critic gate) → spawn ONE subagent per dispatch → `checkpoint_step`. "Done" ≠ "gates passed": a run is
+  only `complete` when `assess_project.finish` is **finished** (organized via `derive_sections` +
+  concluded + handed-off via `scaffold_meta_report`/meta-report) AND an INDEPENDENT
+  **completeness critic** (`brief_completeness_critic`→`record_completeness_critic`, rubric in
+  `suggestions/critic_rubric.json`) passes — it lists concrete `missing` work (un-sampled segments,
+  un-prototyped concepts, untested risks, missing fidelity rungs), the driver injects each as real work
+  (`inject_work`) and re-runs until dry (K=2, hard cap 4). `assess_project` also surfaces `novelty`,
+  `memory_depth` (thin cohorts → deepen via simulate-cohort), and `score_run` tracks quality over time.
+  Concepts are first-class (`create_note kind="concept"` {lens, artifact_kind, prototype_id}). Resumable
+  via deterministic keys; a killed run replays its journal with zero lost work.
 - Methodologies = tag-driven CONSTELLATION **plan seeds**: a methodology is a DAG of steps carrying
   OPEN TAGS (capability/role/artifact-type/gate are free strings). `list_methodologies`/
   `get_methodology`/`start_methodology_project`/`set_project_methodology` SEED a plan from the
@@ -142,8 +155,10 @@ Memory & multi-resolution simulation (gather → author → write-back):
   Artifact archetypes are DATA (`suggestions/artifact_types.json`, surfaced as the `artifact_palette`
   in `next_action`): a guided `flow`, a `comparison`, a `dashboard`, a `cards` interface, or an
   interactive **`model`** (range/number inputs feeding `computed`/`bar` elements whose `formula` is
-  evaluated live — a steerable pension-gap/compounding simulation, not a static screen) — diversify
-  the KIND, don't default to a form. `record_prototype_session` returns an `UNVERIFIED_SESSION`
+  evaluated live — a steerable pension-gap/compounding simulation, not a static screen), or a
+  **`journey`** (a model embedded in a multi-screen flow with cross-screen state + `chart` live curves
+  + `verdict` data-driven conditional text — the production-credible hi-fi class) — diversify the KIND,
+  don't default to a form. `record_prototype_session` returns an `UNVERIFIED_SESSION`
   warning (and a session_of_tags gate requires a GROUNDED session) when a reaction isn't verified
   against real observed usage — the session log is retained past `proto_close` so a real drive verifies.
   Install with `make playwright` (optional; degrades gracefully without chromium).
