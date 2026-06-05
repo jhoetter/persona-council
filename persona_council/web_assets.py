@@ -78,11 +78,14 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgn{user-select:none;cursor:pointer}
 .rgn>rect:first-of-type{transition:stroke .12s,filter .12s}
 .rgn,.rge{transition:opacity .16s}
-.rge{transition:opacity .16s,stroke-width .12s}
+/* Calm-by-default edges (Linear-style): structural edges quiet at rest, the long dashed loop-backs
+   barely-there — relationships light UP on hover/select via .on, dim via .off. */
+.rge{transition:opacity .16s,stroke-width .12s;opacity:.42}
+.rge.dash{opacity:.16}
 .rgn:hover>rect:first-of-type{stroke:var(--accent)}
-.rgn.off,.rge.off{opacity:.13}
+.rgn.off,.rge.off{opacity:.10}
 .rgn.on>rect:first-of-type{stroke:var(--accent)}
-.rge.on{stroke-width:3}
+.rge.on{opacity:1;stroke-width:3}
 .rgn.sel>rect:first-of-type{stroke:var(--accent);stroke-width:2.2;filter:drop-shadow(0 3px 9px color-mix(in srgb,var(--accent) 42%,transparent))}
 .rgn.rg-hidden{opacity:.07;pointer-events:none}
 /* node label/sub live in a foreignObject — clamp so long titles never bleed out of the card */
@@ -98,6 +101,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgmini .mn{fill:var(--muted);opacity:.5}
 #rgmvp{fill:color-mix(in srgb,var(--accent) 15%,transparent);stroke:var(--accent);stroke-width:1.3}
 .rgdiamond{fill:var(--accent);opacity:.055;stroke:var(--accent);stroke-opacity:.16;stroke-width:1.2}
+.rgwrap:not(.groups-on) #rgsections{display:none}
+.rgbtn.on{color:var(--accent);background:var(--accent-weak)}
 .rgsection{stroke-width:1.5}
 .rgsection-phase{fill-opacity:.05;stroke-opacity:.30;stroke-dasharray:none}
 .rgphase-guide{stroke:var(--line);stroke-width:1;stroke-dasharray:2 8;opacity:.5}
@@ -489,7 +494,7 @@ _RGRAPH_JS = """<script>
 
   // ---- edges (bezier, depth-aware) ----
   var edgeEls=[];
-  D.edges.forEach(function(ed){ var a={fill:'none',stroke:ed.color,'stroke-width':'2','marker-end':'url(#rgah-'+ed.mid+')','class':'rge'}; if(ed.dashed){a['stroke-dasharray']='6 5'; a['stroke-width']='1.6';} var p=el('path',a); gE.appendChild(p); edgeEls.push({ed:ed,p:p}); });
+  D.edges.forEach(function(ed){ var a={fill:'none',stroke:ed.color,'stroke-width':'2','marker-end':'url(#rgah-'+ed.mid+')','class':ed.dashed?'rge dash':'rge'}; if(ed.dashed){a['stroke-dasharray']='6 5'; a['stroke-width']='1.6';} var p=el('path',a); gE.appendChild(p); edgeEls.push({ed:ed,p:p}); });
   function route(){ edgeEls.forEach(function(o){ var a=byId[o.ed.from], b=byId[o.ed.to]; if(!a||!b) return;
     o.p.style.display=(a.hidden||b.hidden)?'none':'';
     var aw=a.w||NW, ah=a.h||NH, bw=b.w||NW, bh=b.h||NH;
@@ -573,7 +578,7 @@ _RGRAPH_JS = """<script>
   // ---- control buttons ----
   var ctrls=document.querySelector('.rgctrls');
   if(ctrls) ctrls.addEventListener('click',function(e){ var btn=e.target.closest('.rgbtn'); if(!btn) return; var a=btn.getAttribute('data-act'), r=svg.getBoundingClientRect();
-    if(a==='zin') zoomAt(r.width/2,r.height/2,1.25); else if(a==='zout') zoomAt(r.width/2,r.height/2,0.8); else if(a==='fit') fit(true); else if(a==='reset') resetLayout(); });
+    if(a==='zin') zoomAt(r.width/2,r.height/2,1.25); else if(a==='zout') zoomAt(r.width/2,r.height/2,0.8); else if(a==='fit') fit(true); else if(a==='reset') resetLayout(); else if(a==='groups'){ var w=svg.closest('.rgwrap'); if(w){ var on=w.classList.toggle('groups-on'); btn.classList.toggle('on',on); } } });
 
   // ---- background pan + wheel/trackpad ----
   var pan=null;

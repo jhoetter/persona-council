@@ -429,6 +429,7 @@ def _graph_interactive(graph: dict) -> str:
         + f'<div class="rghint">{hint}</div>'
         + '<div class="rgctrls">'
           f'<div class="rgzl" id="rgzl">100%</div>'
+          f'<button class="rgbtn" data-act="groups" title="{t("groups_toggle")}">{_icon("squareGrid")}</button>'
           f'<button class="rgbtn" data-act="zin" title="{zin_t}">+</button>'
           f'<button class="rgbtn" data-act="zout" title="{zout_t}">−</button>'
           f'<button class="rgbtn" data-act="fit" title="{fit_t}">⤢</button>'
