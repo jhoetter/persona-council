@@ -113,7 +113,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rground-label{fill:var(--muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 /* Linear-style project OUTLINE (primary view) — grouped, collapsible, never overlaps */
 .outlinecard{flex:1;overflow:auto;padding:8px 0 40px}
-.outline{max-width:1000px;margin:0 auto;padding:0 24px}
+.outline{max-width:900px;margin:0 auto;padding:0 24px}
 .ol-phase{border-bottom:1px solid var(--line-2)}
 .ol-phase>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:13px 6px;font-size:13.5px;position:sticky;top:0;background:var(--bg);z-index:1}
 .ol-phase>summary::-webkit-details-marker{display:none}
@@ -139,7 +139,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .outline .olrow.dim{opacity:.42}
 /* themes — cross-cutting labels (Linear-style): a filter bar + per-row dots; activating a theme
    highlights its members (.rel) and dims the rest (.dim). */
-.olthemes{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:1000px;margin:4px auto 2px;padding:0 24px}
+.olthemes{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:900px;margin:4px auto 2px;padding:0 24px}
 .olth-l{font-size:12px;color:var(--faint);margin-right:2px}
 .olth-chip{display:inline-flex;align-items:center;gap:6px;max-width:230px;padding:3px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--muted);font-size:12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .olth-chip:hover{background:var(--hover)}
@@ -206,7 +206,7 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 /* Project detail = full-bleed graph hero */
 .main>section:has(.proj){flex:1;min-height:0;padding:0;display:flex;flex-direction:column;overflow:hidden}
 .proj{flex:1;min-height:0;display:flex;flex-direction:column}
-.proj-head{flex-shrink:0;width:100%;max-width:1000px;margin:0 auto;padding:22px 24px 12px}
+.proj-head{flex-shrink:0;width:100%;max-width:900px;margin:0 auto;padding:22px 24px 12px}
 .proj-head .stats{margin:0 0 14px}
 .proj-head .ptoolbar{margin:0}
 .proj-graph{flex:1;min-height:0;display:flex}
@@ -242,14 +242,6 @@ h1,h2,h3,h4{color:var(--ink)}
 .stats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
 .stat{display:flex;align-items:baseline;gap:7px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px 12px}
 .stat b{font-size:17px;font-weight:700}.stat span{color:var(--muted);font-size:12.5px}
-.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
-.pcard{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:14px;transition:border-color 150ms,box-shadow 150ms,transform 150ms;display:block}
-.pcard:hover{border-color:#c9ccc6;box-shadow:var(--shadow-sm);transform:translateY(-1px)}
-.pcard .top{display:flex;gap:11px;align-items:center}
-.pcard .nm{font-weight:650;font-size:14px}
-.pcard .ro{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pcard .st{margin:11px 0 9px;font-size:12.5px;color:var(--ink);min-height:34px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.pcard .meta{display:flex;gap:7px;flex-wrap:wrap}
 
 /* ---- linear list rows (G3) ---- */
 .group{margin:18px 0 2px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-weight:600}
@@ -367,9 +359,6 @@ input,select{font:inherit;border:1px solid var(--line);background:var(--panel);c
 .starbtn:hover{color:#e3a008;background:var(--hover)}
 .starbtn .star{fill:none}
 .starbtn.on{color:#e3a008}.starbtn.on .star{fill:#e3a008;stroke:#e3a008}
-.pcard{position:relative}
-.pcard .starbtn{position:absolute;top:9px;right:9px;opacity:0;transition:opacity 120ms}
-.pcard:hover .starbtn,.pcard .starbtn.on{opacity:1}
 #favs a{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .favrow{display:flex;align-items:center;gap:2px}
 .favx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:1px 7px;border-radius:6px;opacity:0;transition:opacity 120ms}

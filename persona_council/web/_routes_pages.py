@@ -24,12 +24,17 @@ def _projects_page() -> str:
     store = Store()
     rows = []
     for p in services.list_research_projects(store=store):
+        meta = []                                              # only show counts that are non-zero (no "0 Themes" noise)
+        if p["studies"]:
+            meta.append(f'<span>{p["studies"]} {t("syntheses")}</span>')
+        if p["edges"]:
+            meta.append(f'<span>{p["edges"]} {t("build_order_h")}</span>')
+        if p.get("themes"):
+            meta.append(f'<span>{len(p["themes"])} {t("themes_h")}</span>')
         rows.append(f'<a class="row" href="/projects/{_esc(p["id"])}">'
                     f'<span class="rico" style="color:var(--accent)">{_icon("projects")}</span>'
                     f'<span class="title">{_esc(p["title"])}</span>'
-                    f'<span class="right"><span>{p["studies"]} {t("syntheses")}</span>'
-                    f'<span>{p["edges"]} {t("build_order_h")}</span>'
-                    f'<span>{len(p.get("themes", []))} {t("themes_h")}</span></span></a>')
+                    f'<span class="right">{"".join(meta)}</span></a>')
     rows_html = "".join(rows) or f'<div class="list-empty">{_icon("projects")}<span>{t("no_projects")}</span></div>'
     cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
     body = f'<div class="page"><h1 class="h1">{t("projects")}{cnt}</h1><p class="lead">{t("projects_lead")}</p><div class="rows">{rows_html}</div></div>'
@@ -147,26 +152,24 @@ def register_pages(app) -> None:
     from fastapi.responses import HTMLResponse
 
     # ---------- helpers that need the store ----------
-    def _persona_card(p: dict, store: Store) -> str:
+    def _persona_row(p: dict, store: Store) -> str:
         pid = p["id"]
         try:
             proj = services.list_active_projects(pid, store=store)
         except Exception:
             proj = []
         loops = len(store.list_threads(pid, "open"))
-        st = services.get_current_state(pid, store=store)
-        cur = st.get("current_activity") if st.get("current_activity") != "not simulated yet" else t("not_simulated_yet")
         meta = []
         if proj:
             meta.append(_label(t("n_projects", n=len(proj)), "var(--accent)"))
         if loops:
             meta.append(_label(t("n_open", n=loops), "var(--amber)"))
         return (
-            f'<a class="pcard" href="/personas/{_esc(pid)}">'
-            f'{_star("persona", pid, p["display_name"], f"/personas/{pid}")}'
-            f'<div class="top">{_avatar(p, 40)}<div style="min-width:0"><div class="nm">{_esc(p["display_name"])}</div>'
-            f'<div class="ro">{_esc(p["role"]["title"])} · {_esc(p["company_context"]["industry"])}</div></div></div>'
-            f'<div class="st">{_esc(cur)}</div><div class="meta">{"".join(meta)}</div></a>'
+            f'<a class="row" href="/personas/{_esc(pid)}">{_avatar(p, 22)}'
+            f'<span class="title">{_esc(p["display_name"])}'
+            f'<span class="muted small"> · {_esc(p["role"]["title"])}</span></span>'
+            f'<span class="right"><span class="muted small">{_esc(p["company_context"]["industry"])}</span>{"".join(meta)}'
+            f'{_star("persona", pid, p["display_name"], f"/personas/{pid}")}</span></a>'
         )
 
     @app.get("/", response_class=HTMLResponse)
@@ -178,8 +181,10 @@ def register_pages(app) -> None:
     def personas_list() -> str:
         store = Store()
         personas = services.list_personas(store=store)
-        cards = "".join(_persona_card(p, store) for p in personas) or f'<p class="muted">{t("no_personas")}</p>'
-        body = f'<div class="page"><h1 class="h1">{t("personas")}</h1><p class="lead">{t("personas_lead", n=len(personas))}</p><div class="pgrid">{cards}</div></div>'
+        rows = "".join(_persona_row(p, store) for p in personas) or f'<div class="list-empty">{_icon("personas")}<span>{t("no_personas")}</span></div>'
+        cnt = f'<span class="h1cnt">{len(personas)}</span>' if personas else ""
+        body = (f'<div class="page"><h1 class="h1">{t("personas")}{cnt}</h1>'
+                f'<p class="lead">{t("personas_lead", n=len(personas))}</p><div class="rows">{rows}</div></div>')
         return _layout(t("personas"), body, store, crumbs=[(t("personas"), None)], active="personas")
 
     @app.get("/personas/{persona_id}", response_class=HTMLResponse)
@@ -286,7 +291,7 @@ def register_pages(app) -> None:
         rows_html = "".join(rows) or f'<div class="list-empty">{_icon("councils")}<span>{t("no_councils")}</span></div>'
         cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
         body = f'<div class="page"><h1 class="h1">{t("councils")}{cnt}</h1><p class="lead">{t("councils_lead")}</p><div class="rows">{rows_html}</div></div>'
-        return _layout(t("councils"), body, store, crumbs=[(t("projects"), "/projects"), (t("councils"), None)], active="projects")
+        return _layout(t("councils"), body, store, crumbs=[(t("councils"), None)], active="councils")
 
     @app.get("/councils/{session_id}", response_class=HTMLResponse)
     def council_detail(session_id: str) -> str:
@@ -469,7 +474,7 @@ def register_pages(app) -> None:
         rows_html = "".join(rows) or f'<div class="list-empty">{_icon("syntheses")}<span>{t("no_synthesis")}</span></div>'
         cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
         body = f'<div class="page"><h1 class="h1">{t("syntheses")}{cnt}</h1><p class="lead">{t("syntheses_lead")}</p><div class="rows">{rows_html}</div></div>'
-        return _layout(t("syntheses"), body, store, crumbs=[(t("projects"), "/projects"), (t("syntheses"), None)], active="projects")
+        return _layout(t("syntheses"), body, store, crumbs=[(t("syntheses"), None)], active="syntheses")
 
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:

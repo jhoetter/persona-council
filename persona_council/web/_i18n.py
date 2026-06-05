@@ -151,7 +151,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "properties": "Eigenschaften", "role": "Rolle", "industry": "Branche",
         "size": "Größe", "tools": "Tools", "memory": "Memory", "open": "öffnen",
         "n_projects": "{n} Projekte", "n_open": "{n} offen",
-        "not_simulated_yet": "noch nicht simuliert",
         # activity detail
         "what_happened": "Was geschah", "thought": "Gedanke",
         "conversation": "Konversation", "none_f": "Keine.",
@@ -302,7 +301,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "properties": "Properties", "role": "Role", "industry": "Industry",
         "size": "Size", "tools": "Tools", "memory": "Memory", "open": "open",
         "n_projects": "{n} projects", "n_open": "{n} open",
-        "not_simulated_yet": "not simulated yet",
         # activity detail
         "what_happened": "What happened", "thought": "Thought",
         "conversation": "Conversation", "none_f": "None.",
