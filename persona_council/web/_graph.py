@@ -507,7 +507,7 @@ def _plan_html(plan: dict, store) -> str:
         rows = "".join(row(t) for t in tasks if t["bucket"] == b)
         if rows:
             secs.append(f'<div class="psec"><div class="psec-h">{label}</div>{rows}</div>')
-    pill = ('<span class="pill" style="color:var(--green)">● Plan komplett</span>' if complete
+    pill = (f'<span class="pill" style="color:var(--green)">{_icon("dot")} Plan komplett</span>' if complete
             else f'<span class="pill">{len(tasks) - done} offen</span>')
     head = (f'<div class="card plan-head"><div class="ph-goal">{_esc(plan.get("goal", ""))}</div>'
             f'<div class="small muted" style="margin-top:6px">Methodik: '

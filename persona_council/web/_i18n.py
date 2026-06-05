@@ -50,7 +50,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "section": "Abschnitt", "no_members": "Keine Mitglieder.", "n_nodes": "{n} Knoten",
         "pulse": "Pulse", "gaps": "Gaps", "saturation": "Sättigung",
         "sessions": "Sessions", "no_sessions": "keine Sessions",
-        "grounded_yes": "✓ grounded", "grounded_no": "○ unbestätigt",
+        "grounded_yes": "grounded", "grounded_no": "unbestätigt",
         "open_in_new_tab": "In neuem Tab öffnen ↗",
         "export_pdf": "Export PDF",
         # generic / not-found
@@ -204,7 +204,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "section": "Section", "no_members": "No members.", "n_nodes": "{n} nodes",
         "pulse": "Pulse", "gaps": "Gaps", "saturation": "Saturation",
         "sessions": "Sessions", "no_sessions": "no sessions",
-        "grounded_yes": "✓ grounded", "grounded_no": "○ unconfirmed",
+        "grounded_yes": "grounded", "grounded_no": "unconfirmed",
         "open_in_new_tab": "Open in new tab ↗",
         "export_pdf": "Export PDF",
         # generic / not-found

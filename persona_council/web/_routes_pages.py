@@ -466,7 +466,7 @@ def register_pages(app) -> None:
                 sl = []
                 for s in sess[:6]:
                     r = s.get("reaction", {})
-                    gv = "✓" if s.get("grounded_verified") else "○"
+                    gv = _icon("check") if s.get("grounded_verified") else _icon("circle")
                     sl.append(f'<li>{_esc(s.get("persona_id",""))}: {_esc(str(r.get("verdict") or r.get("summary","")))[:80]} '
                               f'<span class="muted small">{gv} grounded</span></li>')
                 sl_html = ("<ul style='margin:4px 0 0 18px'>" + "".join(sl) + "</ul>") if sl else '<div class="muted small">— keine Sessions —</div>'
@@ -530,7 +530,7 @@ def register_pages(app) -> None:
         for s in (ms.get("steps") or []):
             nm = (s.get("name") or s["key"]).split("·")[-1].strip()
             cnt = len(by_phase.get(s["key"], []))
-            glyph = "◇" if s.get("is_fan") else "◆"      # diverge vs converge
+            glyph = _icon("diamond") if s.get("is_fan") else _icon("diamondFilled")  # diverge vs converge
             cnt_s = f' <b>{cnt}</b>' if cnt else ""
             flow.append(f'<span class="ovstep">{glyph} {_esc(nm)}{cnt_s}</span>')
         flow_html = '<span class="ovarr">→</span>'.join(flow) or f'<span class="muted small">{t("no_data")}</span>'
@@ -660,9 +660,9 @@ def register_pages(app) -> None:
         sl = []
         for s in sessions:
             r = s.get("reaction", {})
-            gv = t("grounded_yes") if s.get("grounded_verified") else t("grounded_no")
-            liked = "".join(f"<li>👍 {_esc(x)}</li>" for x in (r.get("liked") or [])[:3])
-            fric = "".join(f"<li>⚠ {_esc(x)}</li>" for x in (r.get("friction") or [])[:3])
+            gv = (_icon("check") + " " + t("grounded_yes")) if s.get("grounded_verified") else (_icon("circle") + " " + t("grounded_no"))
+            liked = "".join(f"<li>{_icon('thumbsup')} {_esc(x)}</li>" for x in (r.get("liked") or [])[:3])
+            fric = "".join(f"<li>{_icon('warning')} {_esc(x)}</li>" for x in (r.get("friction") or [])[:3])
             sl.append(f'<div class="strow"><b>{_esc(s.get("persona_id",""))}</b> '
                       f'<span class="muted small">{gv}</span><div class="small" style="margin-top:3px">'
                       f'{_esc(str(r.get("verdict","")))}</div><ul class="small" style="margin:4px 0 0 16px">{liked}{fric}</ul></div>')

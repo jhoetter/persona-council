@@ -6,7 +6,7 @@ from .. import services
 from ..storage import Store
 from ._i18n import t
 from ._components import (
-    _esc, _avatar, _label, _stance_color, _md, _srcchips, _rec_item, _rec_row_n,
+    _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _rec_item, _rec_row_n,
     _effort_impact, _star, _SYN_STYLE, _SYN_SCRIPT,
 )
 
@@ -293,7 +293,7 @@ def _voices_panel(store: Store, syn: dict) -> str | None:
             f'<div class="vrow-main"><span class="vav">{_avatar(p, 30)}</span>'
             f'<div class="vmeta"><div class="vline1"><b>{_esc(name)}</b>{_label(sent, _sent_color(sent))}{_relbar(rel)}{shbadge}</div>'
             f'<div class="varg">{_esc(v.get("key_argument",""))}</div></div>'
-            f'<div class="vright">{segchip}{_star("persona", pid, name, f"/personas/{pid}")}<span class="vchev">▸</span></div>'
+            f'<div class="vright">{segchip}{_star("persona", pid, name, f"/personas/{pid}")}<span class="vchev">{_icon("caretRight")}</span></div>'
             f'</div>{exp_html}</div>'
         )
     js = (VOICES_JS.replace("__SENT_LABEL__", t("sentiment_label"))
