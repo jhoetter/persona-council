@@ -12,6 +12,7 @@ from .. import presentation as _pres
 from ..storage import Store
 from ..web_assets import CSS, HEAD_JS, _RGRAPH_JS, _SYN_STYLE, _SYN_SCRIPT  # noqa: F401  (extracted assets)
 from ._i18n import t, _lang
+from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
 
 
 def _esc(value: object) -> str:
@@ -225,7 +226,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 <title>{_esc(title)} · Persona Council</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-{HEAD_JS}<style>{CSS}</style></head>
+{HEAD_JS}<style>{CSS}{PALETTE_CSS}</style></head>
 <body><div class="app" id="app">
   <aside class="sidebar">
     <div class="brand"><span class="mark"></span><a href="/">Persona&nbsp;Council</a></div>
@@ -238,7 +239,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
       {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{app_js}</body></html>"""
+</div>{palette_markup()}{PALETTE_JS}{app_js}</body></html>"""
 
 
 def _empty_state(title: str, message: str) -> str:

@@ -88,3 +88,38 @@ def register_api(app) -> None:
             return JSONResponse(services.get_synthesis(synthesis_id))
         except KeyError:
             return JSONResponse({"error": "synthesis_not_found"}, status_code=404)
+
+    @app.get("/api/search")
+    def api_search(q: str = Query(default="")):
+        """Global command-palette search: title-substring match across every entity type."""
+        from ..storage import Store
+        ql = q.strip().lower()
+        if not ql:
+            return JSONResponse([])
+        store = Store()
+        out: list[dict] = []
+
+        def add(typ, title, subtitle, url):
+            sub = subtitle if isinstance(subtitle, str) else ""
+            if title and ql in title.lower():
+                out.append({"type": typ, "title": title, "subtitle": sub, "url": url})
+
+        for p in store.list_research_projects():
+            add("project", p.get("title", ""), (p.get("goal", "") or "")[:90], f"/projects/{p['id']}")
+        for p in store.list_personas():
+            role = p.get("role")
+            role_t = role.get("title", "") if isinstance(role, dict) else (role or "")
+            add("persona", p.get("display_name", ""), role_t, f"/personas/{p['id']}")
+        for c in store.list_council_sessions():
+            add("council", c.get("prompt", ""), "", f"/councils/{c['id']}")
+        for sy in store.list_syntheses():
+            add("synthesis", sy.get("title", ""), "", f"/syntheses/{sy['id']}")
+        for pr in store.list_prototypes():
+            add("prototype", pr.get("name", ""), pr.get("version", ""), f"/prototypes/{pr['slug']}")
+        for proj in store.list_research_projects():
+            for sec in services.list_sections(proj["id"], store=store):
+                add("section", sec.get("title", ""), proj.get("title", ""), f"/sections/{sec['id']}")
+            for nt in services.list_notes(proj["id"], store=store):
+                add("note", nt.get("title", ""), proj.get("title", ""), f"/notes/{nt['id']}")
+        out.sort(key=lambda r: (0 if r["title"].lower().startswith(ql) else 1, len(r["title"])))
+        return JSONResponse(out[:20])
