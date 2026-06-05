@@ -129,7 +129,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ol-ptag{flex-shrink:0;width:74px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
 .ol-flat{padding-top:4px}
 .olrow.ol-tw{position:relative}
-.olrow.ol-tw::before{content:"";position:absolute;left:24px;top:0;bottom:50%;width:11px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line);border-bottom-left-radius:5px}
+.olrow.ol-tw::before{content:"";position:absolute;left:26px;top:-3px;bottom:50%;width:13px;border-left:1.6px solid var(--line-2);border-bottom:1.6px solid var(--line-2);border-bottom-left-radius:7px}
+.olrow.ol-tw:hover::before{border-color:var(--accent)}
 /* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
 .outline .olrow.rel{background:var(--accent-weak)}
@@ -142,7 +143,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .olth-chip:hover{background:var(--hover)}
 .olth-chip.on{border-color:transparent;background:var(--accent-weak);color:var(--accent);font-weight:600}
 .olth-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.olth-dots{display:inline-flex;gap:3px;flex-shrink:0;margin-right:8px}
+/* per-row theme membership = a LABELLED pill (colour + name), not a cryptic bare dot */
+.olth-pills{display:inline-flex;gap:5px;flex-shrink:0;margin-right:10px}
+.olth-pill{display:inline-flex;align-items:center;gap:5px;padding:1px 9px 1px 7px;border-radius:11px;background:var(--panel-2);color:var(--muted);font-size:11px;font-weight:500;white-space:nowrap}
+.olth-pill i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 /* view toggle (Outline / Graph) */
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}

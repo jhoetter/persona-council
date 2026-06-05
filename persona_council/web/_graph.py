@@ -643,6 +643,12 @@ def _outline_html(graph: dict) -> str:
     _TH_COLORS = ["#6d5ef0", "#0f9d8f", "#e0820a", "#c0476b", "#3a7bd5", "#8a6d3b", "#4a7d7d"]
     themes = [s for s in graph.get("sections", []) if s.get("kind") == "theme" and s.get("member_ids")]
     th_color = {s["id"]: _TH_COLORS[i % len(_TH_COLORS)] for i, s in enumerate(themes)}
+
+    def _short(title: str) -> str:                            # compact, legible theme label for the pill
+        s = title.split(":")[0].split("(")[0].strip()
+        return s[:16] + ("…" if len(s) > 16 else "")
+
+    th_short = [_short(s["title"]) for s in themes]
     node_themes: dict[str, list] = {}
     for ti, s in enumerate(themes):
         for m in s.get("member_ids", []):
@@ -650,16 +656,18 @@ def _outline_html(graph: dict) -> str:
 
     def row(it: dict) -> str:
         h = f' href="{_esc(it["href"])}"' if it["href"] else ""
-        tw = "ol-tw" if it["indent"] else ""                  # tree connector for nested rows
+        tw = "ol-tw" if it["indent"] else ""                  # folder-style tree connector for nested rows
         tis = node_themes.get(it["oid"], [])
-        dots = "".join(f'<span class="olth-dot" style="background:{th_color[themes[i]["id"]]}" '
-                       f'title="{_esc(themes[i]["title"])}"></span>' for i in tis)
+        pills = "".join(                                      # labelled pills (colour + name), not cryptic dots
+            f'<span class="olth-pill" title="{_esc(themes[i]["title"])}">'
+            f'<i style="background:{th_color[themes[i]["id"]]}"></i>{_esc(th_short[i])}</span>'
+            for i in tis)
         return (f'<a class="olrow {tw}" data-oid="{_esc(it["oid"])}" data-th="{" ".join(map(str, tis))}" '
                 f'style="padding-left:{10 + it["indent"] * 26}px"{h}>'
                 f'<span class="ol-dot" style="background:{it["color"]}"></span>'
                 f'<span class="ol-ptag">{_esc(it["plabel"])}</span>'
                 f'<span class="ol-title">{_esc(it["title"])}</span>'
-                f'<span class="olth-dots">{dots}</span>'
+                f'<span class="olth-pills">{pills}</span>'
                 f'<span class="ol-kind">{_esc(it["kind"])}</span></a>')
 
     out = []
