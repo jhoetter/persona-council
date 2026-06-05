@@ -131,7 +131,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ol-ptag{flex-shrink:0;width:74px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
 .ol-flat{padding-top:4px}
 .olrow.ol-tw{position:relative}
-.olrow.ol-tw::before{content:"";position:absolute;left:26px;top:-3px;bottom:50%;width:13px;border-left:1.6px solid var(--line-2);border-bottom:1.6px solid var(--line-2);border-bottom-left-radius:7px}
+.olrow.ol-tw::before{content:"";position:absolute;left:26px;top:-3px;bottom:50%;width:9px;border-left:1.6px solid var(--line-2);border-bottom:1.6px solid var(--line-2);border-bottom-left-radius:6px}
 .olrow.ol-tw:hover::before{border-color:var(--accent)}
 /* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
@@ -759,7 +759,7 @@ _SYN_STYLE = r"""<style>
 .syn-rail .tick:hover .tk-bar{opacity:.75;width:28px}
 .syn-rail .tick.active .tk-bar{opacity:1;width:28px;background:var(--accent)}
 .tk-label{font-size:12px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 10px;white-space:nowrap;opacity:0;transform:translateX(8px);transition:opacity .14s,transform .14s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.12)}
-.syn-rail:hover .tk-label{opacity:1;transform:none}
+.syn-rail .tick:hover .tk-label{opacity:1;transform:none}
 .syn-rail .tick.active .tk-label{color:var(--accent);border-color:var(--accent)}
 .syn-main [id]{scroll-margin-top:26px}
 .ei-wrap{margin:6px 0 22px}
