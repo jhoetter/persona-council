@@ -98,11 +98,32 @@ space", which is valuable far beyond DT.
 
 ---
 
+### OBS-3 — Discover councils are deep, spectrum-sampled, and memory-grounded ✅ (keep) — resolves WATCH-1
+The agent ran **3 rich MULTI-persona Discover councils** (5–6 personas each) on distinct angle-clusters
+— (a) the KFZ-moment vs present-money, (b) comprehension/language ("can you even decode
+'Lebensversicherung/Rentenlücke'?"), (c) trust & sales-pressure — NOT thin 1:1 per-persona
+micro-interviews. The comprehension council (`council_5b87a0f6`) is exemplary:
+- personas **deliberately sampled along a spectrum** ("Begriff löst nichts aus" → "Begriff selbst
+  erschlossen"), per its `selection_reason`;
+- each reaction **cites that persona's specific lived memory** (Steuerberater's "Basisrente";
+  Verbraucherzentrale commission video; Riester Standmitteilung; the WhatsApp question-list);
+- a **vote-motion** ("I could explain in my own words what an LV does for me" → OPPOSE 3 / MAYBE 2 /
+  SUPPORT 1) crystallizes a measurable position;
+- the synthesis reaches a **mechanism-level reframe**: the *word* fails in 3 ways (empty / mis-framed
+  as "commission-sale" / hides Risiko-vs-Kapital), while lived "Sicherheit" is **relational &
+  present-tense** and the product language never reaches it.
+*Why it matters:* this is the non-shallow exploration the rubric wants, and it confirms WATCH-1 is
+fine for THIS run. *Spec implication:* the quality came from agent discipline + the
+`prepare_persona_agent_context`/council/memory primitives — **not** hardcoding — so the architecture is
+working at the council layer. Keep; the remaining risk is downstream (Ideate/prototype = GAP-1/GAP-2).
+*Open nuance:* the user's specific "they lack compounding intuition → simulate their non-working life"
+mechanism hasn't explicitly surfaced yet; the adjacent "abstract future vs concrete present" tension
+has. Watch whether Define/Ideate makes the "make the invisible future *experienceable*" move (→ GAP-1).
+
 ## Watch list (to confirm as the run proceeds)
-- **WATCH-1 — Discover breadth shape.** The seed discover intent says "one exploration PER
-  persona/segment". Does the agent run a FEW *rich multi-persona* councils per angle-cluster (good), or
-  many THIN per-persona micro-interviews (the anti-pattern the user flagged)? If the latter, the deep
-  seed's wording needs a breadth-semantics fix (breadth = angles × multi-persona, not 1:1 per persona).
+- **WATCH-1 — Discover breadth shape.** ✅ resolved positively (see OBS-3): a few rich multi-persona
+  councils per angle, spectrum-sampled, memory-grounded. (Kept on the list as a regression check for
+  the seed's "one exploration per persona/segment" wording, which could still mislead a future run.)
 - **WATCH-2 — Define reframe.** Does the POV reach a *mechanism-level* reframe (why the topic is
   invisible/irrelevant and what experience would change it) or restate the brief?
 - **WATCH-3 — Ideate breadth.** ≥4–8 *distinct-kind* concepts before down-select, or premature collapse
