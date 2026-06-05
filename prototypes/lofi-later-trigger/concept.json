@@ -1,0 +1,108 @@
+{
+  "title": "Später, nicht jetzt",
+  "summary": "Eine Life-Event-Trigger-Karte (kein Formular), die den KFZ-Moment ausdrücklich als falschen Zeitpunkt ablehnt und der Person erlaubt, einen selbstgewählten Zukunfts-Trigger scharfzustellen. Respektiert den Vermeidungs-/Ruhemodus. Nichts passiert, bis das Event eintritt. Kein Verkauf, keine Provision, kein Nachfassen.",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "title": "Jetzt ist nicht der Moment — und das ist ok",
+      "subtitle": "Du hast gerade dein Auto am Hals: Versicherung, Papiere, Kosten. Über Vorsorge oder Finanzen nachzudenken? Ehrlich: jetzt ist nicht der Moment. Wir verkaufen dir hier nichts — kein Formular, keine Beratung, kein Anruf. Stattdessen kannst du dir SELBST einen Moment in der Zukunft aussuchen, an dem es vielleicht doch passt. Wir melden uns dann — und nur dann. Bis dahin: Ruhe.",
+      "cards": [
+        {
+          "id": "go_triggers",
+          "title": "Klingt fair — zeig mir die Optionen",
+          "body": "Such dir einen späteren Moment aus. Unverbindlich, jederzeit abstellbar.",
+          "action": "triggers"
+        },
+        {
+          "id": "go_nothing",
+          "title": "Nein danke, lass mich in Ruhe",
+          "body": "Völlig ok. Nichts wird gespeichert.",
+          "action": "left_alone"
+        }
+      ]
+    },
+    {
+      "id": "triggers",
+      "title": "Welcher Moment passt für dich — irgendwann?",
+      "subtitle": "Wähle EIN Lebensereignis, an das wir dich erinnern sollen. Erst wenn es eintritt, melden wir uns ein einziges Mal. Kein Konto, keine Daten, kein Nachfassen zwischendurch.",
+      "cards": [
+        {
+          "id": "arm_zusammenziehen",
+          "title": "Wenn ich mit jemandem zusammenziehe",
+          "body": "Gemeinsame Miete, gemeinsames Konto — dann vielleicht ein Thema.",
+          "action": "armed"
+        },
+        {
+          "id": "arm_kind",
+          "title": "Wenn ein Kind kommt",
+          "body": "Wenn plötzlich jemand von dir abhängt.",
+          "action": "armed"
+        },
+        {
+          "id": "arm_selbststaendig",
+          "title": "Wenn ich mich selbstständig mache",
+          "body": "Wenn kein Arbeitgeber mehr im Rücken steht.",
+          "action": "armed"
+        },
+        {
+          "id": "arm_eigeneswohnung",
+          "title": "Wenn ich meine erste eigene Wohnung beziehe",
+          "body": "Eigener Hausstand, eigene Verantwortung.",
+          "action": "armed"
+        },
+        {
+          "id": "decline_none",
+          "title": "Keins davon passt — nichts scharfstellen",
+          "body": "Dann stellen wir nichts ein. Auch gut.",
+          "action": "left_alone"
+        }
+      ]
+    },
+    {
+      "id": "armed",
+      "title": "Gespeichert. Jetzt passiert erst mal nichts.",
+      "subtitle": "Alles klar — wir haben deinen gewählten Moment gemerkt, sonst nichts. Keine Mails, keine Anrufe, keine Erinnerungen zwischendurch. Erst wenn dieser Moment in deinem Leben eintritt, melden wir uns ein einziges Mal. Du hast die Hand drauf.",
+      "cards": [
+        {
+          "id": "disarm",
+          "title": "Doch wieder abstellen",
+          "body": "Ein Klick und der Trigger ist weg — ohne Rückfrage.",
+          "action": "left_alone"
+        },
+        {
+          "id": "done",
+          "title": "Passt so — fertig",
+          "body": "Trigger bleibt scharf, bis dein Moment kommt.",
+          "action": "done"
+        }
+      ]
+    },
+    {
+      "id": "left_alone",
+      "title": "Alles gut. Wir lassen dich in Ruhe.",
+      "subtitle": "Kein Trigger scharf, nichts gespeichert, keine Kontaktaufnahme. Versprochen. Falls irgendwann doch ein Moment kommt, weißt du, wo wir sind. Bis dahin: kümmer dich um dein Auto.",
+      "cards": [
+        {
+          "id": "back_intro",
+          "title": "Zurück zum Anfang",
+          "body": "Nochmal ansehen.",
+          "action": "intro"
+        }
+      ]
+    },
+    {
+      "id": "done",
+      "title": "Fertig — kein Stress.",
+      "subtitle": "Dein Moment ist gemerkt. Du kannst das Fenster jetzt einfach schließen. Wir tauchen erst wieder auf, wenn dein gewähltes Ereignis eintritt.",
+      "cards": [
+        {
+          "id": "back_intro2",
+          "title": "Zurück zum Anfang",
+          "body": "Nochmal ansehen.",
+          "action": "intro"
+        }
+      ]
+    }
+  ]
+}

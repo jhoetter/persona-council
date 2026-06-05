@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Später, nicht jetzt</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--bg:#f6f7f9;--panel:#fff;--ink:#1c1e21;--muted:#697077;--line:#e6e8eb;--accent:#5b6cff;--accent-ink:#fff;--r:10px;--sh:0 1px 2px rgba(16,18,28,.06);--ff:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body[data-fidelity=lofi]{--panel:#fffef9;--line:#cfcabb;--ink:#2b2b2b;--muted:#7a756a;--accent:#5f6368;--r:14px;--sh:none;--ff:"Comic Sans MS","Segoe Print","Bradley Hand",cursive}
+  body[data-fidelity=hifi]{--bg:#fbfbfd;--panel:#fff;--ink:#0c0d12;--muted:#6b7280;--line:#ececf1;--accent:#5e6ad2;--r:8px;--sh:0 1px 3px rgba(16,18,40,.08),0 0 0 1px rgba(16,18,40,.03);--ff:Inter,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;font:15px/1.5 var(--ff);color:var(--ink);background:var(--bg)}
+  body[data-fidelity=lofi] .card,body[data-fidelity=lofi] .el input,body[data-fidelity=lofi] .el select{border-style:dashed}
+  #lofi-banner{display:none}
+  body[data-fidelity=lofi] #lofi-banner{display:block;background:#fff3cd;color:#7a5b00;text-align:center;padding:5px;font-size:12px;border-bottom:1px dashed #cfcabb}
+  header{padding:16px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  h1{font-size:18px;margin:0}.sub{color:var(--muted);font-size:13px;margin-top:2px}
+  nav{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  nav button{font:inherit;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink)}
+  nav button.active{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  main{max-width:920px;margin:0 auto;padding:22px}
+  .screen{display:none}.screen.active{display:block}
+  .screen h2{font-size:17px;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:0 0 18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:16px;cursor:default;display:flex;flex-direction:column;gap:8px;transition:border-color .12s,transform .12s}
+  .card.clickable{cursor:pointer}.card.clickable:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .card .tag{align-self:flex-start;font-size:11px;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);padding:2px 8px;border-radius:999px}
+  .card h3{margin:0;font-size:15px}.card p{margin:0;color:var(--muted);font-size:14px}
+  .card .meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .el{margin:0 0 14px}.el label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+  .el input,.el select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);width:100%;max-width:380px;background:var(--bg);color:var(--ink)}
+  .el p{margin:0;max-width:62ch}.el a{color:var(--accent)}
+  .btn{font:inherit;border:1px solid transparent;background:var(--accent);color:var(--accent-ink);border-radius:var(--r);padding:8px 14px;cursor:pointer;box-shadow:var(--sh)}
+  .btn.secondary{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .15s;pointer-events:none}#toast.show{opacity:.95}
+</style>
+</head>
+<body>
+<div id="lofi-banner">Lo-Fi · zum Testen, nicht final</div>
+<header><h1 id="apptitle">Später, nicht jetzt</h1><div class="sub" id="appsummary">Eine Life-Event-Trigger-Karte (kein Formular), die den KFZ-Moment ausdrücklich als falschen Zeitpunkt ablehnt und der Person erlaubt, einen selbstgewählten Zukunfts-Trigger scharfzustellen. Respektiert den Vermeidungs-/Ruhemodus. Nichts passiert, bis das Event eintritt. Kein Verkauf, keine Provision, kein Nachfassen.</div></header>
+<nav id="nav"></nav>
+<main id="screens"></main>
+<div id="toast"></div>
+<script id="concept" type="application/json">{"title": "Später, nicht jetzt", "summary": "Eine Life-Event-Trigger-Karte (kein Formular), die den KFZ-Moment ausdrücklich als falschen Zeitpunkt ablehnt und der Person erlaubt, einen selbstgewählten Zukunfts-Trigger scharfzustellen. Respektiert den Vermeidungs-/Ruhemodus. Nichts passiert, bis das Event eintritt. Kein Verkauf, keine Provision, kein Nachfassen.", "start": "intro", "screens": [{"id": "intro", "title": "Jetzt ist nicht der Moment — und das ist ok", "subtitle": "Du hast gerade dein Auto am Hals: Versicherung, Papiere, Kosten. Über Vorsorge oder Finanzen nachzudenken? Ehrlich: jetzt ist nicht der Moment. Wir verkaufen dir hier nichts — kein Formular, keine Beratung, kein Anruf. Stattdessen kannst du dir SELBST einen Moment in der Zukunft aussuchen, an dem es vielleicht doch passt. Wir melden uns dann — und nur dann. Bis dahin: Ruhe.", "cards": [{"id": "go_triggers", "title": "Klingt fair — zeig mir die Optionen", "body": "Such dir einen späteren Moment aus. Unverbindlich, jederzeit abstellbar.", "goto": "triggers"}, {"id": "go_nothing", "title": "Nein danke, lass mich in Ruhe", "body": "Völlig ok. Nichts wird gespeichert.", "goto": "left_alone"}]}, {"id": "triggers", "title": "Welcher Moment passt für dich — irgendwann?", "subtitle": "Wähle EIN Lebensereignis, an das wir dich erinnern sollen. Erst wenn es eintritt, melden wir uns ein einziges Mal. Kein Konto, keine Daten, kein Nachfassen zwischendurch.", "cards": [{"id": "arm_zusammenziehen", "title": "Wenn ich mit jemandem zusammenziehe", "body": "Gemeinsame Miete, gemeinsames Konto — dann vielleicht ein Thema.", "goto": "armed"}, {"id": "arm_kind", "title": "Wenn ein Kind kommt", "body": "Wenn plötzlich jemand von dir abhängt.", "goto": "armed"}, {"id": "arm_selbststaendig", "title": "Wenn ich mich selbstständig mache", "body": "Wenn kein Arbeitgeber mehr im Rücken steht.", "goto": "armed"}, {"id": "arm_eigeneswohnung", "title": "Wenn ich meine erste eigene Wohnung beziehe", "body": "Eigener Hausstand, eigene Verantwortung.", "goto": "armed"}, {"id": "decline_none", "title": "Keins davon passt — nichts scharfstellen", "body": "Dann stellen wir nichts ein. Auch gut.", "goto": "left_alone"}]}, {"id": "armed", "title": "Gespeichert. Jetzt passiert erst mal nichts.", "subtitle": "Alles klar — wir haben deinen gewählten Moment gemerkt, sonst nichts. Keine Mails, keine Anrufe, keine Erinnerungen zwischendurch. Erst wenn dieser Moment in deinem Leben eintritt, melden wir uns ein einziges Mal. Du hast die Hand drauf.", "cards": [{"id": "disarm", "title": "Doch wieder abstellen", "body": "Ein Klick und der Trigger ist weg — ohne Rückfrage.", "goto": "left_alone"}, {"id": "done", "title": "Passt so — fertig", "body": "Trigger bleibt scharf, bis dein Moment kommt.", "goto": "done"}]}, {"id": "left_alone", "title": "Alles gut. Wir lassen dich in Ruhe.", "subtitle": "Kein Trigger scharf, nichts gespeichert, keine Kontaktaufnahme. Versprochen. Falls irgendwann doch ein Moment kommt, weißt du, wo wir sind. Bis dahin: kümmer dich um dein Auto.", "cards": [{"id": "back_intro", "title": "Zurück zum Anfang", "body": "Nochmal ansehen.", "goto": "intro"}]}, {"id": "done", "title": "Fertig — kein Stress.", "subtitle": "Dein Moment ist gemerkt. Du kannst das Fenster jetzt einfach schließen. Wir tauchen erst wieder auf, wenn dein gewähltes Ereignis eintritt.", "cards": [{"id": "back_intro2", "title": "Zurück zum Anfang", "body": "Nochmal ansehen.", "goto": "intro"}]}]}</script>
+<script>
+(function(){
+  var C = JSON.parse(document.getElementById('concept').textContent);
+  document.body.dataset.fidelity = C.fidelity || 'midfi';
+  document.getElementById('apptitle').textContent = C.title || 'Prototype';
+  document.getElementById('appsummary').textContent = C.summary || '';
+  var nav=document.getElementById('nav'), root=document.getElementById('screens'), state={};
+  function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1400);}
+  function show(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.dataset.id===id);});document.querySelectorAll('#nav button').forEach(function(b){b.classList.toggle('active',b.dataset.id===id);});}
+  function renderEl(el){
+    var wrap=document.createElement('div');wrap.className='el';
+    if(el.kind==='text'){var p=document.createElement('p');p.textContent=el.label||'';wrap.appendChild(p);}
+    else if(el.kind==='input'){var l=document.createElement('label');l.textContent=el.label||el.id;var inp=document.createElement('input');inp.id=el.id;inp.setAttribute('aria-label',el.label||el.id);inp.addEventListener('input',function(){state[el.id]=inp.value;});wrap.appendChild(l);wrap.appendChild(inp);}
+    else if(el.kind==='select'){var l2=document.createElement('label');l2.textContent=el.label||el.id;var sel=document.createElement('select');sel.id=el.id;sel.setAttribute('aria-label',el.label||el.id);(el.options||[]).forEach(function(o){var op=document.createElement('option');op.value=o;op.textContent=o;sel.appendChild(op);});sel.addEventListener('change',function(){state[el.id]=sel.value;});wrap.appendChild(l2);wrap.appendChild(sel);}
+    else if(el.kind==='link'){var a=document.createElement('a');a.href='#';a.id=el.id;a.textContent=el.label||el.id;a.setAttribute('aria-label',el.label||el.id);if(el.goto){a.addEventListener('click',function(e){e.preventDefault();show(el.goto);});}wrap.appendChild(a);}
+    else {var b=document.createElement('button');b.className='btn'+(el.variant==='secondary'?' secondary':'');b.id=el.id;b.textContent=el.label||el.id;b.setAttribute('aria-label',el.label||el.id);if(el.goto){b.addEventListener('click',function(){show(el.goto);});}else{b.addEventListener('click',function(){toast((el.label||'Done')+' ✓');});}wrap.appendChild(b);}
+    return wrap;
+  }
+  (C.screens||[]).forEach(function(scr){
+    var nb=document.createElement('button');nb.textContent=scr.title||scr.id;nb.dataset.id=scr.id;nb.addEventListener('click',function(){show(scr.id);});nav.appendChild(nb);
+    var sec=document.createElement('section');sec.className='screen';sec.dataset.id=scr.id;
+    var h=document.createElement('h2');h.textContent=scr.title||scr.id;sec.appendChild(h);
+    if((scr.cards||[]).length){var g=document.createElement('div');g.className='grid';scr.cards.forEach(function(c){
+      var card=document.createElement('div');card.className='card'+(c.goto?' clickable':'');if(c.id){card.id=c.id;}card.setAttribute('aria-label',c.title||c.id||'card');
+      if(c.tag){var tg=document.createElement('span');tg.className='tag';tg.textContent=c.tag;card.appendChild(tg);}
+      var h3=document.createElement('h3');h3.textContent=c.title||'';card.appendChild(h3);
+      if(c.body){var p=document.createElement('p');p.textContent=c.body;card.appendChild(p);}
+      if(c.meta){var mt=document.createElement('div');mt.className='meta';mt.textContent=c.meta;card.appendChild(mt);}
+      if(c.goto){card.setAttribute('role','button');card.tabIndex=0;card.addEventListener('click',function(){show(c.goto);});card.addEventListener('keydown',function(e){if(e.key==='Enter')show(c.goto);});}
+      g.appendChild(card);
+    });sec.appendChild(g);}
+    (scr.elements||[]).forEach(function(el){sec.appendChild(renderEl(el));});
+    root.appendChild(sec);
+  });
+  show(C.start || ((C.screens||[])[0]||{}).id);
+})();
+</script>
+</body>
+</html>

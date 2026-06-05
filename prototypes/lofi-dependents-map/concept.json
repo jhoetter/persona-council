@@ -1,0 +1,193 @@
+{
+  "title": "Wer hängt von dir ab?",
+  "summary": "Eine relationale Karte (kein Formular): Tippe an, wer eine finanzielle Lücke hätte, wenn dein Einkommen morgen wegfiele. Wir zeigen die Euro-Lücke und sagen ehrlich, ob du wirklich eine (reine Risiko-) Lebensversicherung brauchst — oder gerade nicht.",
+  "start": "map",
+  "screens": [
+    {
+      "id": "map",
+      "title": "Wer hätte eine Lücke, wenn dein Einkommen morgen wegfiele?",
+      "cards": [
+        {
+          "id": "card_partner",
+          "title": "Partner:in",
+          "body": "Teilt Miete, Konto oder eine gemeinsame Zukunft mit dir.",
+          "goto": "result_partner"
+        },
+        {
+          "id": "card_kind",
+          "title": "Kind",
+          "body": "Ist auf dein Einkommen angewiesen — Betreuung, Schule, Alltag.",
+          "goto": "result_kind"
+        },
+        {
+          "id": "card_mitschuldner",
+          "title": "Mitschuldner:in",
+          "body": "Haftet mit dir für einen Kredit (z. B. Wohnung, Auto).",
+          "goto": "result_mitschuldner"
+        },
+        {
+          "id": "card_niemand",
+          "title": "Niemand",
+          "body": "Ehrlich: Aktuell hängt finanziell niemand von mir ab.",
+          "goto": "result_niemand"
+        }
+      ]
+    },
+    {
+      "id": "result_partner",
+      "title": "Da ist eine echte Lücke — für eine:n Menschen, nicht für ein Produkt.",
+      "elements": [
+        {
+          "id": "p_intro",
+          "kind": "text",
+          "label": "Wenn dein Einkommen morgen wegfällt:"
+        },
+        {
+          "id": "p_who",
+          "kind": "text",
+          "label": "Wer steht im Regen: Dein:e Partner:in"
+        },
+        {
+          "id": "p_gap",
+          "kind": "text",
+          "label": "Geschätzte monatliche Lücke: ~ 1.400 €"
+        },
+        {
+          "id": "p_years",
+          "kind": "text",
+          "label": "Über die nächsten Jahre: ein gemeinsam getragenes Leben, das plötzlich allein finanziert werden muss."
+        },
+        {
+          "id": "p_verdict",
+          "kind": "text",
+          "label": "VERDIKT: Hier ergibt eine reine Risiko-Lebensversicherung Sinn — nicht als Sparprodukt, sondern damit der Mensch neben dir nicht zusätzlich zur Trauer auch noch die Miete verliert. Nur die Lücke absichern, die wirklich da ist."
+        }
+      ],
+      "cards": [
+        {
+          "id": "back1",
+          "title": "Andere Person hinzufügen",
+          "body": "Hängt noch jemand von dir ab?",
+          "goto": "map"
+        }
+      ]
+    },
+    {
+      "id": "result_kind",
+      "title": "Ein Kind hängt an deinem Einkommen — das ist die klarste Lücke.",
+      "elements": [
+        {
+          "id": "k_intro",
+          "kind": "text",
+          "label": "Wenn dein Einkommen morgen wegfällt:"
+        },
+        {
+          "id": "k_who",
+          "kind": "text",
+          "label": "Wer steht im Regen: Dein Kind"
+        },
+        {
+          "id": "k_gap",
+          "kind": "text",
+          "label": "Geschätzte monatliche Lücke: ~ 1.100 €"
+        },
+        {
+          "id": "k_until",
+          "kind": "text",
+          "label": "Bis wann: bis es selbst auf eigenen Beinen steht."
+        },
+        {
+          "id": "k_verdict",
+          "kind": "text",
+          "label": "VERDIKT: Eine reine Risiko-Lebensversicherung deckt genau diese Jahre ab, in denen dein Kind ohne dein Einkommen nicht klarkäme. Kein Schnickschnack, keine Geldanlage — nur die Brücke, bis es erwachsen ist."
+        }
+      ],
+      "cards": [
+        {
+          "id": "back2",
+          "title": "Andere Person hinzufügen",
+          "body": "Hängt noch jemand von dir ab?",
+          "goto": "map"
+        }
+      ]
+    },
+    {
+      "id": "result_mitschuldner",
+      "title": "Eine geteilte Schuld bleibt — auch ohne dich.",
+      "elements": [
+        {
+          "id": "m_intro",
+          "kind": "text",
+          "label": "Wenn dein Einkommen morgen wegfällt:"
+        },
+        {
+          "id": "m_who",
+          "kind": "text",
+          "label": "Wer steht im Regen: Dein:e Mitschuldner:in"
+        },
+        {
+          "id": "m_debt",
+          "kind": "text",
+          "label": "Offene gemeinsame Schuld: ~ Restkredit, der allein bleibt"
+        },
+        {
+          "id": "m_risk",
+          "kind": "text",
+          "label": "Risiko: die andere Person muss allein weiterzahlen — oder verliert das gemeinsame Ding."
+        },
+        {
+          "id": "m_verdict",
+          "kind": "text",
+          "label": "VERDIKT: Hier reicht oft eine Risiko-LV genau in Höhe des Restkredits, befristet auf die Kreditlaufzeit. Sichert die geteilte Last ab — nicht mehr, nicht weniger."
+        }
+      ],
+      "cards": [
+        {
+          "id": "back3",
+          "title": "Andere Person hinzufügen",
+          "body": "Hängt noch jemand von dir ab?",
+          "goto": "map"
+        }
+      ]
+    },
+    {
+      "id": "result_niemand",
+      "title": "Dann brauchst du jetzt keine Lebensversicherung. Ehrlich.",
+      "elements": [
+        {
+          "id": "n_intro",
+          "kind": "text",
+          "label": "Wenn niemand von deinem Einkommen abhängt, sichert eine LV vor allem die Provision des Vermittlers ab — nicht dich."
+        },
+        {
+          "id": "n_who",
+          "kind": "text",
+          "label": "Wer stünde im Regen: Niemand"
+        },
+        {
+          "id": "n_gap",
+          "kind": "text",
+          "label": "Echte Lücke: 0 €"
+        },
+        {
+          "id": "n_need",
+          "kind": "text",
+          "label": "Was du stattdessen brauchst: einen Notgroschen für DICH — 2–3 Monatsausgaben griffbereit."
+        },
+        {
+          "id": "n_verdict",
+          "kind": "text",
+          "label": "VERDIKT: Spar dir die Beiträge. Bau zuerst ein kleines Polster für dich selbst auf. Wenn sich dein Leben ändert — Partner:in, Kind, gemeinsamer Kredit — komm wieder. Dann reden wir über genau die Lücke, die dann real ist."
+        }
+      ],
+      "cards": [
+        {
+          "id": "back4",
+          "title": "Hat sich was geändert? Neu starten",
+          "body": "Hängt doch jemand von dir ab?",
+          "goto": "map"
+        }
+      ]
+    }
+  ]
+}
