@@ -327,39 +327,29 @@ agent session present to perform the spawns (as today) — it is NOT a headless 
 unattended runs still mean a Claude Code session, never `claude -p`. This reshapes A.3 (the driver
 pseudocode is the *host skill*; the loop primitives are engine calls).
 
-**OD-2 — Concurrency safety of parallel act fan-out on the shared plan.** `add_task`/`link_evidence`
-are read-modify-write on one plan JSON document; parallel subagents racing them will lose writes.
-Options: (a) **serialize plan mutations** through the driver (subagents return evidence, the driver
-applies add_task/link sequentially after the parallel authoring) — simplest, safe; (b) per-task append
-with optimistic-concurrency/retry; (c) a row-per-task plan model. *Recommendation:* **(a)** — fan out
-the *authoring* (councils/prototypes/sessions, which write to their own tables safely), but the driver
-applies the *plan* mutations sequentially. Cleanly removes the race.
+**OD-2 — Concurrency safety of parallel act fan-out on the shared plan. → DECIDED: (a) serialize plan
+mutations.** Fan out the *authoring* (councils/prototypes/sessions write to their own tables safely);
+the driver applies `add_task`/`link_evidence` sequentially after the parallel authoring. Removes the
+read-modify-write race on the plan document.
 
-**OD-3 — Concepts must become FIRST-CLASS structured data.** The critic's `concepts_not_prototyped`
-breadth-candidate can't be computed today: ideate concepts live as free text in `frame.questions`.
-Decision: add a lightweight structured concept record (e.g. notes tagged `concept` with
-`{id,title,lens,artifact_kind,prototyped:bool}`, or a `concepts` block on the ideate frame) so the
-critic + the novelty signal can reason over them. *Recommendation:* concept = a `note` with a
-`concept` kind + a `prototype_id` link when built; cheap, reuses notes, makes the gap computable.
-(Affects B.2 frame computation; small but needs deciding.)
+**OD-3 — Concepts must become FIRST-CLASS structured data. → DECIDED: a concept = a `note`** (kind
+`concept`) whose `data` carries `{title, lens, artifact_kind, prototype_id|null}`. When a prototype is
+built for a concept, set `prototype_id`. `brief_completeness_critic` computes `concepts_not_prototyped`
+= concept-notes with `prototype_id is null`. Cheap, reuses the notes primitive, makes the gap
+computable. (Affects B.2 frame computation + the ideate step contract.)
 
-**OD-4 — Driver testability without an LLM.** Acceptance like "one subagent per step, resumes
-identically" can't drive real Claude in CI. We need a **deterministic authoring stub** for the
-`RunLoop` (ironically, the role the retired `StubAuthoringBackend` played) — a test double that
-returns canned evidence per step so the engine's loop/resume/critic-gate are unit-testable. *Recommend:*
-ship a `tests` stub backend with the engine (OD-1 option b makes this clean: the engine takes a
-`record_result` callback; tests feed canned results).
+**OD-4 — Driver testability without an LLM. → DECIDED: a deterministic authoring stub.** The engine
+exposes `record_result(run_id, step_id, evidence_ids)`; tests feed canned evidence per step (no Claude)
+so the loop/resume/critic-gate are fully unit-testable. Ship the stub helper in `tests/`.
 
-**OD-5 — Budget semantics + critic non-convergence.** Define `budget` units (recommend: **step count**
-primary, optional token ceiling), enforcement (driver stops dispatching past budget, then runs the
-finish steps + a honest "capped" note), and a critic **max-rounds** cap so an over-eager critic can't
-loop forever (recommend: K=2 dry rounds to pass; hard cap of e.g. 4 critic rounds, then finish with the
-remaining `missing` recorded as open questions). Pin the numbers in config/data, not code.
+**OD-5 — Budget semantics + critic non-convergence. → DECIDED.** `budget` = **step count** (primary),
+optional token ceiling. The driver stops dispatching past budget, then still runs the finish steps + a
+honest "capped" note. Critic: **K=2** consecutive dry rounds to pass; hard cap **4** critic rounds, then
+finish with remaining `missing` recorded as open questions. Numbers live in config/data, not code.
 
-**OD-6 — Integration with the existing front door.** Does ESV **replace** `autonomous-research-run`
-or wrap it? *Recommendation:* the `RunLoop` engine becomes the core; `autonomous-research-run` becomes
-the thin host skill over it (OD-1b), and `compose-research-plan` hands off to it unchanged. One loop,
-not two.
+**OD-6 — Integration with the existing front door. → DECIDED: wrap.** The `RunLoop` engine becomes the
+core; `autonomous-research-run` becomes the thin host skill over it (OD-1b); `compose-research-plan`
+hands off unchanged. One loop, not two.
 
 **Smaller spec tightenings (can be settled in-PR, not blocking):** evaluator boolean/comparison
 precedence + short-circuit (C.4); the chart x-sweep must not clobber a real input of the same id;
