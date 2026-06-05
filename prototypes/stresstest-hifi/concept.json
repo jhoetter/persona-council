@@ -1,0 +1,266 @@
+{
+  "title": "Der ehrliche Stresstest",
+  "summary": "Provisionsfrei, kein Abschluss-Button. Jetzt liegt auch die Beitrags-Mathematik UND unser Geschäftsmodell offen — beides steuerst/prüfst du selbst.",
+  "fidelity": "hifi",
+  "start": "kassensturz",
+  "screens": [
+    {
+      "id": "kassensturz",
+      "title": "Nach dem Auto: 60-Sekunden-Kassensturz",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "k0",
+          "label": "Du hast gerade dein Auto versichert — erledigt. Jetzt KEIN zweiter Verkauf, nur ein ehrlicher Kassensturz."
+        },
+        {
+          "kind": "text",
+          "id": "k1",
+          "label": "Wir sind provisionsfrei, niemand ruft dich an, und am Ende gibt es bewusst keinen Abschluss-Button. Wie wir trotzdem Geld verdienen, steht offen auf Seite 3."
+        },
+        {
+          "kind": "button",
+          "id": "go",
+          "label": "Mein ehrlicher Stresstest →",
+          "goto": "rechner",
+          "action": "rechner"
+        }
+      ]
+    },
+    {
+      "id": "rechner",
+      "title": "Dein Haushalt — alles offen, alles selbst steuerbar",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "r0",
+          "label": "Festes Gehalt? Lass beide Monats-Felder gleich (ein 'festes Gehalt'-Wert = 12 gute Monate). Schwankend/selbstständig? Stell gute vs. schlechte Monate getrennt ein."
+        },
+        {
+          "kind": "range",
+          "id": "einkommen_gut",
+          "label": "Einkommen in einem GUTEN Monat (€)",
+          "min": 1000,
+          "max": 5000,
+          "step": 100,
+          "value": 2400,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "einkommen_schlecht",
+          "label": "Einkommen in einem SCHLECHTEN Monat (€) — festes Gehalt: gleich lassen",
+          "min": 0,
+          "max": 5000,
+          "step": 100,
+          "value": 2400,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "gute_monate",
+          "label": "Gute Monate im Jahr (festes Gehalt = 12)",
+          "min": 0,
+          "max": 12,
+          "step": 1,
+          "value": 12
+        },
+        {
+          "kind": "range",
+          "id": "hkosten",
+          "label": "Was euer Haushalt monatlich zum Leben braucht (€)",
+          "min": 600,
+          "max": 5000,
+          "step": 100,
+          "value": 1700,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "partner",
+          "label": "Was OHNE dich noch reinkäme (Partner/Sonstiges, €/Monat)",
+          "min": 0,
+          "max": 5000,
+          "step": 100,
+          "value": 0,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "erspartes",
+          "label": "Polster / Erspartes (€)",
+          "min": 0,
+          "max": 30000,
+          "step": 500,
+          "value": 1500,
+          "suffix": " €"
+        },
+        {
+          "kind": "text",
+          "id": "r1",
+          "label": "Zähl ehrlich: Kind? Partner:in ohne eigenes Einkommen? Gemeinsamer Kredit? Niemand → 0 ist völlig ok."
+        },
+        {
+          "kind": "range",
+          "id": "abhaengige",
+          "label": "Menschen, die finanziell von DIR abhängen (außer dir)",
+          "min": 0,
+          "max": 4,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "kind": "text",
+          "id": "r2",
+          "label": "↓ ANNAHME 1 (offen, du steuerst): wie viele Monate soll der Schutz die Lücke decken?"
+        },
+        {
+          "kind": "range",
+          "id": "faktor",
+          "label": "Annahme 1: Schutz deckt die Lücke so viele Monate",
+          "min": 0,
+          "max": 120,
+          "step": 6,
+          "value": 60,
+          "suffix": " Monate"
+        },
+        {
+          "kind": "text",
+          "id": "r3",
+          "label": "↓ ANNAHME 2 (offen, du steuerst): der Preis je 10.000 € Schutz — keine versteckte Marge."
+        },
+        {
+          "kind": "range",
+          "id": "preis",
+          "label": "Annahme 2: Preis je 10.000 € Risikoschutz",
+          "min": 0.5,
+          "max": 3,
+          "step": 0.1,
+          "value": 1.2,
+          "suffix": " €/Monat",
+          "decimals": 1
+        },
+        {
+          "kind": "computed",
+          "id": "schnitt",
+          "label": "Dein realer Schnitt pro Monat",
+          "formula": "(gute_monate*einkommen_gut + (12-gute_monate)*einkommen_schlecht)/12",
+          "suffix": " €",
+          "decimals": 0
+        },
+        {
+          "kind": "computed",
+          "id": "luecke",
+          "label": "Monatliche Lücke, wenn dein Einkommen wegfällt",
+          "formula": "max(0, hkosten - partner)",
+          "suffix": " €"
+        },
+        {
+          "kind": "bar",
+          "id": "monate_tragbar",
+          "label": "So lange trägt euer Polster diese Lücke",
+          "formula": "min(24, erspartes / max(1, hkosten - partner))",
+          "max": 24,
+          "suffix": " Mon.",
+          "decimals": 1
+        },
+        {
+          "kind": "computed",
+          "id": "bedarf",
+          "label": "Dein Schutzbedarf = Lücke × Annahme 1 × (jemand abhängig?)",
+          "formula": "max(0, hkosten - partner) * faktor * min(1, abhaengige)",
+          "suffix": " €"
+        },
+        {
+          "kind": "text",
+          "id": "r4",
+          "label": "Steht da 0 €? Dann brauchst du keinen Todesfallschutz — ehrlich. Geh zum Ergebnis."
+        },
+        {
+          "kind": "computed",
+          "id": "beitrag_gut",
+          "label": "Beitrag im guten Monat = Bedarf/10.000 × Annahme 2 (offen gerechnet)",
+          "formula": "round(max(0, hkosten - partner) * faktor * min(1, abhaengige) / 10000 * preis)",
+          "suffix": " €"
+        },
+        {
+          "kind": "computed",
+          "id": "beitrag_schlecht",
+          "label": "Beitrag im schlechten Monat",
+          "formula": "0",
+          "suffix": " € — pausiert, ohne Scham, ohne Storno"
+        },
+        {
+          "kind": "button",
+          "id": "zurtransp",
+          "label": "Wie verdient ihr daran? (offen) →",
+          "goto": "transparenz",
+          "action": "transparenz"
+        },
+        {
+          "kind": "button",
+          "id": "weiter",
+          "label": "Mein ehrliches Ergebnis →",
+          "goto": "ergebnis",
+          "action": "ergebnis"
+        }
+      ]
+    },
+    {
+      "id": "transparenz",
+      "title": "Wie wir Geld verdienen — offen",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "t0",
+          "label": "Provisionsfrei heißt: kein Vermittler bekommt eine Abschlussprovision, niemand hat einen Anreiz, dir etwas anzudrehen. Es gibt keinen Kontaktpunkt-KPI."
+        },
+        {
+          "kind": "text",
+          "id": "t1",
+          "label": "Wir verdienen an einer kleinen, festen Verwaltungsmarge auf den Schutz, den du WIRKLICH brauchst — dieselbe Marge, egal ob du 0 € oder 20 € Schutz wählst. Deshalb rät dir das Tool ehrlich auch zu '0 €'."
+        },
+        {
+          "kind": "text",
+          "id": "t2",
+          "label": "Beide Annahmen (Deckungs-Monate UND Preis je 10.000 €) liegen oben offen und du steuerst sie selbst. Es gibt keine versteckte Zahl in diesem Tool."
+        },
+        {
+          "kind": "link",
+          "id": "backr",
+          "label": "← Zurück zu meinen Zahlen",
+          "goto": "rechner",
+          "action": "rechner"
+        }
+      ]
+    },
+    {
+      "id": "ergebnis",
+      "title": "Dein ehrliches Ergebnis",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "e0",
+          "label": "War dein Schutzbedarf 0 €? Dann ist dein erster Schritt KEIN Vertrag, sondern ein winziger Notgroschen — z.B. 10 € automatisch am Zahltag (in einem knappen Monat darf auch der pausieren). Das war's."
+        },
+        {
+          "kind": "text",
+          "id": "e1",
+          "label": "Hängt jemand von dir ab? Dann schließt ein schlanker, mitatmender Risikoschutz (KEINE Kapital-LV, kein Sparmantel) genau die Lücke — zum Beitrag, den du oben mit deinen eigenen, offenen Annahmen selbst berechnet hast."
+        },
+        {
+          "kind": "text",
+          "id": "e2",
+          "label": "Kein Button, kein Anruf. Wenn du willst, kommst du wieder, sobald sich dein Leben ändert — ein Kind, ein Kredit, ein eigener Laden. Bis dahin: nichts."
+        },
+        {
+          "kind": "link",
+          "id": "zurueck",
+          "label": "← Zurück zu meinen Zahlen",
+          "goto": "rechner",
+          "action": "rechner"
+        }
+      ]
+    }
+  ]
+}

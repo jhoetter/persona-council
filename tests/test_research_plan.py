@@ -369,3 +369,17 @@ def test_assess_project_surfaces_novelty_signal(store, tmp_path, monkeypatch):
     services.scaffold_artifact("a-model", "M", concept, type="model", tags=["lofi"], project_id=pid, store=store)
     n2 = services.assess_project(pid, store=store)["novelty"]
     assert n2["has_interactive_model"] is True and n2["hint"] == "diverse"
+
+
+def test_assess_project_finish_readiness_gate(store, tmp_path, monkeypatch):
+    """A run must not stop at 'gates passed'. assess_project reports FINISH readiness (organized +
+    concluded + handed-off); when the plan is complete but unfinished, the recommendation is 'finish'."""
+    import persona_council.prototypes as PP
+    monkeypatch.setattr(PP, "prototypes_dir", lambda: tmp_path / "p")
+    proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__root", ["q?"], memory_refs=["m1"], store=store)  # completes it -> plan complete
+    a = services.assess_project(pid, store=store)
+    assert a["complete"] is True and a["recommendation"] == "finish"
+    assert a["finish"]["organized"] is False and a["finish"]["finished"] is False
+    assert any("organized" in g for g in a["gaps"])

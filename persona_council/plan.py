@@ -534,9 +534,43 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
             novelty = {"artifact_kinds": [], "distinct_kinds": 0, "has_interactive_model": False, "hint": "no artifacts yet"}
     except Exception:
         novelty = {}
+    # FINISH readiness: gates-passed is NOT the same as a finished, exhaustive, well-told project. A
+    # run must not stop at "a good starting point". `finish` checks the project is ORGANIZED (sections),
+    # CONCLUDED (a substantial terminal synthesis), and HANDED OFF (a meta-report) — generic, data-
+    # driven, methodology-agnostic. When the plan's gates are all met but these are missing, the
+    # recommendation is `finish`, not `complete`.
+    finish_gaps: list[str] = []
+    try:
+        project = store.get_research_project(project_id) or {}
+        if not (project.get("sections") or []):
+            finish_gaps.append("not organized — create phase/theme SECTIONS (Discover/Define/Solution/"
+                               "Prototype-ladder/Deliver) so the hi-fi + conclusion are surfaced")
+        # a substantial terminal conclusion: the last verify task's synthesis, non-thin
+        verify_syn = [r["id"] for t in tasks if t["bucket"] == "verify"
+                      for r in t.get("produces", []) if r.get("kind") == "synthesis"]
+        concl = store.get_synthesis(verify_syn[-1]) if verify_syn else None
+        body = (concl or {}).get("gesamtbild", "") + (concl or {}).get("positionierung", "") if concl else ""
+        if not concl or len(body.strip()) < 400:
+            finish_gaps.append("no substantial CONCLUSION — author a rich terminal solution-presentation "
+                               "synthesis (the answer, who-wins + non-targets, validated solvers, build spec)")
+        try:
+            if not store.list_meta_reports(project_id):
+                finish_gaps.append("no META-REPORT — author the project narrative/handover (meta_report)")
+        except Exception:
+            pass
+    except Exception:
+        finish_gaps = []
+    if finish_gaps:
+        gaps.extend(finish_gaps)
+    finish = {"organized": not any("organized" in g for g in finish_gaps),
+              "concluded": not any("CONCLUSION" in g for g in finish_gaps),
+              "handed_off": not any("META-REPORT" in g for g in finish_gaps),
+              "finished": not finish_gaps, "gaps": finish_gaps}
     ready = ready_tasks(plan)
     complete = is_complete(plan)
-    if complete:
+    if complete and finish_gaps:
+        rec = "finish"            # gates met but not a finished, organized, concluded project
+    elif complete:
         rec = "complete"
     elif not ready:
         rec = "blocked"
@@ -559,6 +593,7 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
         "saturation": {"act_done": n_act, "councils": n_council, "syntheses": n_syn,
                        "hint": ("converging" if n_syn and n_act <= n_syn * 2 else "still diverging")},
         "novelty": novelty,
+        "finish": finish,
         "gaps": gaps,
         "ready": [t["id"] for t in ready],
         "next": brief_next(project_id, store=store).get("instructions", ""),

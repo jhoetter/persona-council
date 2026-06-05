@@ -1,0 +1,143 @@
+{
+  "title": "Der Stresstest: Was, wenn dein Gehalt morgen wegfällt?",
+  "summary": "Dreh an deinen eigenen Zahlen und sieh in Echtzeit, wie lange euer Haushalt trägt — und ob überhaupt jemand von dir abhängt. Kein Verkauf.",
+  "fidelity": "lofi",
+  "start": "rechner",
+  "screens": [
+    {
+      "id": "rechner",
+      "title": "Dein Haushalt",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "t0",
+          "label": "Kein Pitch. Stell deine echten Zahlen ein — das Ergebnis gehört dir."
+        },
+        {
+          "kind": "range",
+          "id": "einkommen",
+          "label": "Dein Netto pro Monat (€)",
+          "min": 1200,
+          "max": 4500,
+          "step": 100,
+          "value": 2200,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "hkosten",
+          "label": "Was euer Haushalt monatlich zum Leben braucht (€)",
+          "min": 800,
+          "max": 4500,
+          "step": 100,
+          "value": 1800,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "partner",
+          "label": "Was OHNE dich noch reinkäme (Partner/Sonstiges, €/Monat)",
+          "min": 0,
+          "max": 4500,
+          "step": 100,
+          "value": 0,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "erspartes",
+          "label": "Erspartes / Polster (€)",
+          "min": 0,
+          "max": 25000,
+          "step": 500,
+          "value": 2000,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "abhaengige",
+          "label": "Menschen, die finanziell von DIR abhängen (außer dir)",
+          "min": 0,
+          "max": 3,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "kind": "computed",
+          "id": "luecke",
+          "label": "Monatliche Lücke, wenn dein Einkommen wegfällt",
+          "formula": "max(0, hkosten - partner)",
+          "suffix": " €"
+        },
+        {
+          "kind": "bar",
+          "id": "monate",
+          "label": "So lange trägt euer Polster",
+          "formula": "min(24, erspartes / max(1, hkosten - partner))",
+          "max": 24,
+          "suffix": " Mon.",
+          "decimals": 1
+        },
+        {
+          "kind": "computed",
+          "id": "bedarf",
+          "label": "Grober Schutzbedarf (Lücke × 12 × Abhängige)",
+          "formula": "max(0, (hkosten - partner) * 12 * abhaengige)",
+          "suffix": " €"
+        },
+        {
+          "kind": "text",
+          "id": "t1",
+          "label": "Steht da 0 € Bedarf? Dann brauchst du gerade keinen Todesfallschutz — ehrlich."
+        },
+        {
+          "kind": "button",
+          "id": "weiter",
+          "label": "Wenn jemand abhängt: schlanker Schutz →",
+          "goto": "schutz",
+          "action": "schutz"
+        }
+      ]
+    },
+    {
+      "id": "schutz",
+      "title": "Der schlanke Schutz (nur wenn nötig)",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "t2",
+          "label": "Voll transparent. Reiner Risikoschutz, kein Sparen, jederzeit kündbar."
+        },
+        {
+          "kind": "range",
+          "id": "schutzbeitrag",
+          "label": "Monatlicher Beitrag Risikoschutz (€)",
+          "min": 0,
+          "max": 40,
+          "step": 1,
+          "value": 0,
+          "suffix": " €"
+        },
+        {
+          "kind": "computed",
+          "id": "deckung",
+          "label": "Deckt im Ernstfall grob (Illustration)",
+          "formula": "schutzbeitrag * 6000",
+          "suffix": " €"
+        },
+        {
+          "kind": "text",
+          "id": "t3",
+          "label": "0 € Beitrag = kein Vertrag. Das ist ein völlig legitimes Ergebnis."
+        },
+        {
+          "kind": "link",
+          "id": "zurueck",
+          "label": "← Zurück zu meinen Zahlen",
+          "goto": "rechner",
+          "action": "rechner"
+        }
+      ]
+    }
+  ]
+}

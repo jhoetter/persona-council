@@ -1,0 +1,130 @@
+{
+  "title": "Der atmende Schutz — Schutz, der mit deinem Cashflow mitatmet",
+  "summary": "Für Selbstständige & schwankende Einkommen: ein Schutz, der in guten Monaten mehr zieht und in schlechten ehrlich pausiert — ohne Scham, ohne Storno.",
+  "fidelity": "lofi",
+  "start": "atmen",
+  "screens": [
+    {
+      "id": "atmen",
+      "title": "Gute & schlechte Monate",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "m0",
+          "label": "Feste Dekaden-Raten passen nicht zu schwankendem Einkommen. Stell deine Realität ein:"
+        },
+        {
+          "kind": "range",
+          "id": "gut",
+          "label": "Gute Monate im Jahr",
+          "min": 0,
+          "max": 12,
+          "step": 1,
+          "value": 7
+        },
+        {
+          "kind": "range",
+          "id": "guteink",
+          "label": "Einkommen in guten Monaten (€)",
+          "min": 1500,
+          "max": 6000,
+          "step": 100,
+          "value": 3200,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "schlechteink",
+          "label": "Einkommen in schlechten Monaten (€)",
+          "min": 0,
+          "max": 3000,
+          "step": 100,
+          "value": 900,
+          "suffix": " €"
+        },
+        {
+          "kind": "range",
+          "id": "grundlast",
+          "label": "Monatliche Grundlast, die NIE wackeln darf (€)",
+          "min": 0,
+          "max": 2500,
+          "step": 100,
+          "value": 1500,
+          "suffix": " €"
+        },
+        {
+          "kind": "computed",
+          "id": "schlecht",
+          "label": "Schlechte Monate",
+          "formula": "12 - gut"
+        },
+        {
+          "kind": "computed",
+          "id": "schnitt",
+          "label": "Dein realer Schnitt pro Monat",
+          "formula": "(gut*guteink + (12-gut)*schlechteink)/12",
+          "suffix": " €",
+          "decimals": 0
+        },
+        {
+          "kind": "bar",
+          "id": "deckung",
+          "label": "In schlechten Monaten ist deine Grundlast gedeckt zu",
+          "formula": "min(100, schlechteink / max(1, grundlast) * 100)",
+          "max": 100,
+          "suffix": " %",
+          "decimals": 0
+        },
+        {
+          "kind": "computed",
+          "id": "beitraggut",
+          "label": "Beitrag in GUTEN Monaten (zieht mit)",
+          "formula": "round(grundlast * 0.012)",
+          "suffix": " €"
+        },
+        {
+          "kind": "computed",
+          "id": "beitragschlecht",
+          "label": "Beitrag in SCHLECHTEN Monaten",
+          "formula": "0",
+          "suffix": " € — pausiert, ohne Scham"
+        },
+        {
+          "kind": "text",
+          "id": "m1",
+          "label": "Der Schutz pausiert automatisch im schlechten Monat und wächst im guten wieder mit. Kein Storno, kein Verlust."
+        },
+        {
+          "kind": "button",
+          "id": "warum",
+          "label": "Warum das fair ist →",
+          "goto": "fair",
+          "action": "fair"
+        }
+      ]
+    },
+    {
+      "id": "fair",
+      "title": "Warum 'atmend' statt 'starr'",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "fa1",
+          "label": "Eine starre 40-Jahre-Rate bricht beim ersten schlechten Monat — und erzeugt Scham und Storno. Ein mitatmender Beitrag bildet dein echtes Jahr ab."
+        },
+        {
+          "kind": "text",
+          "id": "fa2",
+          "label": "Voll transparent: du siehst jeden Monat, was gezogen wird und wann pausiert ist."
+        },
+        {
+          "kind": "link",
+          "id": "zurueck",
+          "label": "← Zurück zu meinen Monaten",
+          "goto": "atmen",
+          "action": "atmen"
+        }
+      ]
+    }
+  ]
+}

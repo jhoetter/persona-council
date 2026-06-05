@@ -1,0 +1,149 @@
+{
+  "title": "Brauchst du das überhaupt? — der ehrliche 2-Minuten-Check",
+  "summary": "Ein Check, der die meisten Leute am Ende beruhigt nach Hause schickt. Kein Funnel, kein Abschluss.",
+  "fidelity": "lofi",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "title": "Bevor wir anfangen",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "i1",
+          "label": "Die ehrliche Wahrheit vorweg: die meisten jungen Berufseinsteiger:innen brauchen KEINE Lebensversicherung. Dieser Check sagt dir, ob du die Ausnahme bist."
+        },
+        {
+          "kind": "text",
+          "id": "i2",
+          "label": "Wir verkaufen am Ende nichts. Versprochen."
+        },
+        {
+          "kind": "button",
+          "id": "go",
+          "label": "Los geht's →",
+          "goto": "frage1",
+          "action": "frage1"
+        }
+      ]
+    },
+    {
+      "id": "frage1",
+      "title": "Frage 1: Hängt jemand finanziell an dir?",
+      "elements": [
+        {
+          "kind": "select",
+          "id": "abh",
+          "label": "Wer würde finanziell ins Wanken geraten, wenn dein Einkommen wegfiele?",
+          "options": [
+            "Niemand außer mir",
+            "Mein:e Partner:in (verdient selbst)",
+            "Mein:e Partner:in (verdient kaum/nicht)",
+            "Mein Kind",
+            "Gemeinsamer Kredit / gemeinsame Miete"
+          ]
+        },
+        {
+          "kind": "button",
+          "id": "n1",
+          "label": "Weiter →",
+          "goto": "frage2",
+          "action": "frage2"
+        }
+      ]
+    },
+    {
+      "id": "frage2",
+      "title": "Frage 2: Hast du einen Notgroschen?",
+      "elements": [
+        {
+          "kind": "select",
+          "id": "polster",
+          "label": "Wie viele Monate kämst du ohne Einkommen über die Runden?",
+          "options": [
+            "Quasi 0 — am Monatsende nie was übrig",
+            "1–2 Monate",
+            "3–6 Monate",
+            "Mehr als 6 Monate"
+          ]
+        },
+        {
+          "kind": "text",
+          "id": "f2t",
+          "label": "Faustregel: Bevor du über LV nachdenkst, kommt der Notgroschen. Immer."
+        },
+        {
+          "kind": "button",
+          "id": "n2",
+          "label": "Auswerten →",
+          "goto": "ergebnis",
+          "action": "ergebnis"
+        }
+      ]
+    },
+    {
+      "id": "ergebnis",
+      "title": "Dein ehrliches Ergebnis",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "e1",
+          "label": "Für die allermeisten hier lautet das Ergebnis: ›Noch nicht nötig.‹ Kümmere dich zuerst um den Notgroschen — das bringt dir heute mehr als jede Police."
+        },
+        {
+          "kind": "text",
+          "id": "e2",
+          "label": "Das ist kein Korb. Das ist ein ehrlicher Rat, der dich Geld spart."
+        },
+        {
+          "kind": "button",
+          "id": "raus",
+          "label": "Passt — danke, kein Verkauf (fertig)",
+          "goto": "danke",
+          "action": "danke"
+        },
+        {
+          "kind": "link",
+          "id": "ausnahme_link",
+          "label": "Ich habe ein Kind / einen gemeinsamen Kredit — was dann?",
+          "goto": "ausnahme",
+          "action": "ausnahme"
+        }
+      ]
+    },
+    {
+      "id": "ausnahme",
+      "title": "Die Ausnahme: jemand hängt wirklich an dir",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "a1",
+          "label": "Dann — und NUR dann — ergibt ein schlanker, voll transparenter Risikoschutz (keine Kapital-LV!) Sinn: er schließt genau die Lücke, falls dir etwas passiert."
+        },
+        {
+          "kind": "text",
+          "id": "a2",
+          "label": "Kein Sparmantel, jederzeit kündbar, Kosten komplett offen. Mehr nicht."
+        },
+        {
+          "kind": "button",
+          "id": "fertig2",
+          "label": "Verstanden — fertig",
+          "goto": "danke",
+          "action": "danke"
+        }
+      ]
+    },
+    {
+      "id": "danke",
+      "title": "Fertig",
+      "elements": [
+        {
+          "kind": "text",
+          "id": "d1",
+          "label": "Das war der ganze Check. Du gehst ohne Vertrag — und hoffentlich mit einem klareren Kopf."
+        }
+      ]
+    }
+  ]
+}
