@@ -101,6 +101,12 @@ suite green. (This is dev-clarity, not user-facing, but it's why the surface *fe
 **Acceptance:** from a cold start, the canonical sequence is discoverable from the tool docstrings
 alone; the skills remain the richer path but are no longer the *only* source of the happy path.
 
+> **Catalogue (2026-06-05):** added a `persona-council://guide/catalogue` resource — a browsable,
+> by-domain index of EVERY tool, **auto-generated** by AST-parsing the live `_tools_*.py` modules at
+> request time (so it can't drift). Domains in ESV-reading order (plan/run loop → councils →
+> prototypes → … → eval), each tool with its one-line purpose; resources + prompts listed too.
+> `research_guide` points to it. A contract test asserts it covers every registered tool.
+
 ---
 
 ## Net effect

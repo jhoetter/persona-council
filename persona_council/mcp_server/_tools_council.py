@@ -159,6 +159,7 @@ def register_council(mcp):
             "anti-steering (rejection is valid — don't nudge toward a product); honest unknowns become\n"
             "open questions, never fake progress. INSPECT anytime: list_research_projects ->\n"
             "get_project_graph -> assess_project (the pulse: recommendation, gaps, novelty, finish).\n"
+            "Browse EVERY tool by domain: the `persona-council://guide/catalogue` resource.\n"
             "Richer playbooks live in the skills: compose-research-plan / autonomous-research-run."
         )
 

@@ -33,6 +33,13 @@ def build_server():
     register_council(mcp)
     register_sections(mcp)
 
+    from ._catalogue import catalogue_md
+
+    @mcp.resource("persona-council://guide/catalogue")
+    def catalogue_guide() -> str:
+        """A browsable, by-domain index of EVERY tool (auto-generated from the live modules)."""
+        return catalogue_md()
+
     return mcp
 
 

@@ -70,3 +70,21 @@ def test_expected_tools_registered():
              "backfill_project_from_syntheses", "import_snapshot", "export_snapshot", "export_logs"}
     leaked = (retired | admin) & names
     assert not leaked, f"retired/admin tools still on the agent surface: {sorted(leaked)}"
+
+
+def test_catalogue_covers_every_tool_grouped_by_domain():
+    """The auto-generated catalogue resource indexes EVERY registered tool, grouped by domain, so it
+    can't drift from the live registry (spec/mcp-surface-cleanup.md M5)."""
+    import asyncio, re
+    from persona_council.mcp_server import build_server
+    from persona_council.mcp_server._catalogue import catalogue_md
+    srv = build_server()
+    live = {t.name for t in asyncio.run(srv.list_tools())}
+    md = catalogue_md()
+    listed = set(re.findall(r"- \*\*([a-z_]+)\*\*", md))
+    assert live.issubset(listed), f"catalogue missing tools: {sorted(live - listed)}"
+    # grouped under the right domain headers + the resource is registered
+    assert "## Plan engine & run loop" in md and "- **run_step**" in md
+    assert "## Councils & syntheses" in md and "- **record_council**" in md
+    uris = {str(r.uri) for r in asyncio.run(srv.list_resources())}
+    assert "persona-council://guide/catalogue" in uris
