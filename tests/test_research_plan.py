@@ -379,6 +379,9 @@ def test_assess_project_finish_readiness_gate(store, tmp_path, monkeypatch):
     proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
     pid = proj["id"]
     services.record_frame(pid, "frame__root", ["q?"], memory_refs=["m1"], store=store)  # completes it -> plan complete
+    concept = {"title": "T", "start": "a", "screens": [{"id": "a", "title": "A", "elements": [
+        {"kind": "text", "id": "t", "label": "x"}]}]}
+    services.scaffold_artifact("p", "P", concept, type="prototype", tags=["lofi"], project_id=pid, store=store)  # substantial
     a = services.assess_project(pid, store=store)
     assert a["complete"] is True and a["recommendation"] == "finish"
     assert a["finish"]["organized"] is False and a["finish"]["finished"] is False

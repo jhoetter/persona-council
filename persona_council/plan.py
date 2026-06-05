@@ -540,9 +540,12 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
     # driven, methodology-agnostic. When the plan's gates are all met but these are missing, the
     # recommendation is `finish`, not `complete`.
     finish_gaps: list[str] = []
+    # only a SUBSTANTIAL project (a methodology run, or one that produced prototypes) is held to the
+    # finish bar — a minimal freeform inquiry (a lone frame) is legitimately complete as-is.
+    substantial = bool(plan.get("methodology")) or bool(store.list_prototypes(project_id))
     try:
         project = store.get_research_project(project_id) or {}
-        if not (project.get("sections") or []):
+        if substantial and not (project.get("sections") or []):
             finish_gaps.append("not organized — create phase/theme SECTIONS (Discover/Define/Solution/"
                                "Prototype-ladder/Deliver) so the hi-fi + conclusion are surfaced")
         # a substantial terminal conclusion: the last verify task's synthesis, non-thin
@@ -550,11 +553,11 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
                       for r in t.get("produces", []) if r.get("kind") == "synthesis"]
         concl = store.get_synthesis(verify_syn[-1]) if verify_syn else None
         body = (concl or {}).get("gesamtbild", "") + (concl or {}).get("positionierung", "") if concl else ""
-        if not concl or len(body.strip()) < 400:
+        if substantial and (not concl or len(body.strip()) < 400):
             finish_gaps.append("no substantial CONCLUSION — author a rich terminal solution-presentation "
                                "synthesis (the answer, who-wins + non-targets, validated solvers, build spec)")
         try:
-            if not store.list_meta_reports(project_id):
+            if substantial and not store.list_meta_reports(project_id):
                 finish_gaps.append("no META-REPORT — author the project narrative/handover (meta_report)")
         except Exception:
             pass
