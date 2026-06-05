@@ -227,8 +227,8 @@ def register_pages(app) -> None:
             ("projects", t("industry"), _esc(p["company_context"]["industry"])),
             ("dot", t("size"), _esc(p["company_context"].get("size", ""))),
             ("memory", t("memory"), f'<a class="bc-link" href="/personas/{_esc(p["id"])}/memory">{_icon("memory")} {t("open")}</a>'),
-        ])
-        return _layout(p["display_name"], _doc(main + props), store,
+        ], aside=True)
+        return _layout(p["display_name"], _doc(main, rail=props), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
                        actions=_star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}'))
 
@@ -264,8 +264,8 @@ def register_pages(app) -> None:
             ("dot", t("mood"), _esc(a["impact"]["mood"])),
             ("personas", t("participants"), _pills(a.get("participants", []) or [alone_label])),
             ("check", t("decision"), _esc(a.get("decision") or "")),
-        ])
-        return _layout(a["task"], _doc(main + props), store,
+        ], aside=True)
+        return _layout(a["task"], _doc(main, rail=props), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], f'/personas/{p["id"]}'), (a["task"][:46], None)], active="personas")
 
     @app.get("/councils", response_class=HTMLResponse)
@@ -433,7 +433,7 @@ def register_pages(app) -> None:
             vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
             prop_rows += [("dot", _vote_label(k), str(vc[k])) for k in vc]
         prop_rows.append(("dot", created_h, _esc(session["created_at"][:10])))
-        cprops = _properties_html(prop_rows)
+        cprops = _properties_html(prop_rows, aside=True)
         # Forward, project-rooted crumb: Projects > [Project] > [Council]. (A Discover council FEEDS
         # the Define synthesis — it is not nested under it; and the project lookup must work for
         # plan-based projects, where the council is scoped directly to the project.)
@@ -444,13 +444,13 @@ def register_pages(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((session["prompt"][:50], None))
-        rel = _relations_html(store, f"council:{session_id}", proj["id"] if proj else None)
+        rel = _relations_html(store, f"council:{session_id}", proj["id"] if proj else None, aside=True)
         crail = [("sec-question", t("question")), ("stimmen", t("voices"))]
         if rel:
             crail.append(("sec-relations", t("relations")))
         if cprops:
             crail.append(("sec-properties", t("properties")))
-        return _layout(council_title, _doc(main + rel + cprops) + _page_rail(crail), store,
+        return _layout(council_title, _doc(main, rail=rel + cprops) + _page_rail(crail), store,
                        crumbs=crumbs, active="projects",
                        actions=_star("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))
 

@@ -9,7 +9,7 @@ from ._components import _esc, _icon
 
 
 def _relations_html(store, study_id: str, proj_id: str | None,
-                    extra_in: list | None = None, extra_out: list | None = None) -> str:
+                    extra_in: list | None = None, extra_out: list | None = None, aside: bool = False) -> str:
     """Linear-style RELATIONS block for a detail page (progressive disclosure: precise links live HERE,
     not in the list). Built from the project graph's real plan-evidence edges — what this was BASED ON
     (incoming) and what it FEEDS INTO (outgoing) — plus any caller-supplied extra links (e.g. a prototype's
@@ -46,8 +46,11 @@ def _relations_html(store, study_id: str, proj_id: str | None,
         return f'<div class="relgrp"><div class="rellbl">{_esc(label)}</div>{rows}</div>'
 
     blocks = grp(t("rel_based_on"), incoming) + grp(t("rel_feeds_into"), outgoing)
-    return (f'<div class="card relcard" id="sec-relations"><div class="relh">{_icon("link")} {t("relations")}</div>{blocks}</div>'
-            if blocks else "")
+    if not blocks:
+        return ""
+    if aside:
+        return f'<h4 id="sec-relations">{_icon("link")} {t("relations")}</h4>{blocks}'
+    return f'<div class="card relcard" id="sec-relations"><div class="relh">{_icon("link")} {t("relations")}</div>{blocks}</div>'
 
 
 # Reaction keys that are meta/internal (shown via the badge/header), not user-facing content.
@@ -85,10 +88,15 @@ def _session_card(store, sess: dict) -> str:
             f'<div style="margin-top:4px">{inner}</div></div>')
 
 
-def _properties_html(rows) -> str:
-    """Linear-style Properties panel: an icon + label + value per row (skips empty values)."""
+def _properties_html(rows, aside: bool = False) -> str:
+    """Linear-style Properties panel: an icon + label + value per row (skips empty values).
+    aside=True renders a bare section (h4 + rows) to sit inside the _doc right rail."""
     inner = "".join(
         f'<div class="prop"><span class="prop-k">{_icon(ic)}{_esc(lbl)}</span>'
         f'<span class="prop-v">{val}</span></div>'
         for ic, lbl, val in rows if val not in (None, "", "—"))
-    return f'<div class="card propcard" id="sec-properties"><div class="relh">{t("properties")}</div>{inner}</div>' if inner else ""
+    if not inner:
+        return ""
+    if aside:
+        return f'<h4 id="sec-properties">{t("properties")}</h4>{inner}'
+    return f'<div class="card propcard" id="sec-properties"><div class="relh">{t("properties")}</div>{inner}</div>'

@@ -201,7 +201,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .bc-cur{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bc-sep{color:var(--line);flex-shrink:0;user-select:none}
 section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
-.page{max-width:1120px;margin:0 auto}
+.page{max-width:1200px;margin:0 auto}
 .page.wide{max-width:none}
 /* Project detail = full-bleed graph hero */
 .main>section:has(.proj){flex:1;min-height:0;padding:0;display:flex;flex-direction:column;overflow:hidden}
@@ -270,10 +270,10 @@ h1,h2,h3,h4{color:var(--ink)}
 
 /* ---- document layout (G4): toc | doc | rail ---- */
 .doc{display:grid;gap:30px;align-items:start}
-.doc.d3{grid-template-columns:196px minmax(0,1fr) 268px}
-.doc.d2{grid-template-columns:minmax(0,1fr) 268px}
-.doc.d1{grid-template-columns:minmax(0,760px)}
-.doc-main{min-width:0;max-width:760px}
+.doc.d3{grid-template-columns:200px minmax(0,1fr) 280px}
+.doc.d2{grid-template-columns:minmax(0,1fr) 280px}
+.doc.d1{grid-template-columns:minmax(0,900px)}
+.doc-main{min-width:0;max-width:900px}
 .toc{position:sticky;top:0;align-self:start;font-size:12.5px}
 .toc .th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:0 0 8px}
 .toc a{display:block;padding:4px 8px;border-radius:5px;color:var(--muted);border-left:2px solid transparent}
