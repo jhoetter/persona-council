@@ -567,10 +567,11 @@ def _plan_html(plan: dict, store) -> str:
     return f'{css}<div class="page">{head}{"".join(secs)}</div>'
 
 
-def _outline_html(graph: dict) -> str:
-    """Linear-style grouped OUTLINE — the clean, never-overlapping primary project view: a collapsible
-    Phase → Round → items list. Concepts + their prototypes get a definitive home under the ideation
-    phase (independent of which frame the run technically built them off)."""
+def _outline_html(graph: dict, group_by: str = "round") -> str:
+    """Linear-style grouped OUTLINE — the clean, never-overlapping primary project view. Group-by axis
+    is switchable (Linear's "Group by"): ROUND-primary tells the chronological iteration story (Runde 1
+    full pass → Runde 2 …), PHASE-primary groups all of a phase together. Concepts + their prototypes
+    get a definitive home under the ideation phase, independent of which frame the run built them off."""
     nodes = graph["nodes"]
     steps = (graph.get("methodology_state") or {}).get("steps") or []
     by_id = {s["key"]: s for s in steps}
@@ -598,58 +599,82 @@ def _outline_html(graph: dict) -> str:
                 reached = True
         node_round[n["study_id"]] = rnd
     nrounds = max(node_round.values(), default=0) + 1
+    if nrounds <= 1:
+        group_by = "phase"                                    # round grouping is meaningless with 1 round
     build_steps = [s["key"] for s in steps if (s.get("produces") or {}).get("artifact_type")]
     ideation = (build_steps[-1] if build_steps
                 else next((s["key"] for s in reversed(steps) if s.get("is_fan")), None))
-    by_cell: dict[tuple, list] = {}
-    for n in nodes:
-        if n.get("note_kind") == "concept":
-            continue                                          # concepts handled via the solution block
-        by_cell.setdefault((n.get("phase", ""), node_round[n["study_id"]]), []).append(n)
+    ordered = sorted(steps, key=lambda s: depth[s["key"]])
+    pmeta = {s["key"]: (i, (s.get("name") or s["key"]).split("·")[-1].strip() or s["key"],
+                        "◇" if s.get("is_fan") else "◆")
+             for i, s in enumerate(ordered)}
     concepts = sorted((n for n in nodes if n.get("note_kind") == "concept"),
                       key=lambda n: n.get("created_at", ""))
     protos = graph.get("prototypes") or []
     pro_of = {c["study_id"]: [p for p in protos if p["id"] == c.get("prototype_id")] for c in concepts}
     used = {p["id"] for ps in pro_of.values() for p in ps}
 
-    def row(color: str, title: str, kind: str, href: str, indent: int = 1) -> str:
-        h = f' href="{_esc(href)}"' if href else ""
-        return (f'<a class="olrow"{h} style="padding-left:{10 + indent * 24}px">'
-                f'<span class="ol-dot" style="background:{color or "#9aa0a6"}"></span>'
-                f'<span class="ol-title">{_esc(title)}</span>'
-                f'<span class="ol-kind">{_esc(kind)}</span></a>')
+    items: list[dict] = []                                    # one flat tagged list, re-grouped two ways
 
-    out = ['<div class="outline">']
-    for i, s in enumerate(sorted(steps, key=lambda s: depth[s["key"]])):
-        sk = s["key"]
-        label = (s.get("name") or sk).split("·")[-1].strip() or sk
-        glyph = "◇" if s.get("is_fan") else "◆"
-        body = []
-        for r in range(nrounds):
-            rows = "".join(row(n.get("color", ""), n.get("title", ""),
-                               n.get("kind_label", n.get("kind", "")), n.get("href", ""))
-                           for n in by_cell.get((sk, r), []))
-            extra = ""
-            if sk == ideation:                                # concepts + prototypes live here
-                for c in (c for c in concepts if node_round.get(c["study_id"], 0) == r):
-                    extra += row(c.get("color", "#a142f4"), c.get("title", ""), "Konzept", c.get("href", ""), 1)
-                    for p in pro_of.get(c["study_id"], []):
-                        extra += row("#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
-                                     f'/prototypes/{p["slug"]}', 2)
-                if r == 0:
-                    for p in protos:
-                        if p["id"] not in used:
-                            extra += row("#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
-                                         f'/prototypes/{p["slug"]}', 1)
-            cell = rows + extra
-            if cell:
-                if nrounds > 1:
-                    body.append(f'<div class="ol-rlabel">Runde {r + 1}</div>{cell}')
-                else:
-                    body.append(cell)
-        if not body:
+    def add(color, title, kind, href, pk, r, order, indent=0):
+        po, plabel, _g = pmeta.get(pk, (99, "", ""))
+        items.append({"color": color or "#9aa0a6", "title": title, "kind": kind, "href": href,
+                      "pk": pk, "plabel": plabel, "po": po, "round": r, "order": order, "indent": indent})
+
+    for n in nodes:
+        if n.get("note_kind") == "concept" or n.get("phase", "") not in pmeta:
             continue
-        out.append(f'<details class="ol-phase" open><summary><span class="ol-gl">{glyph}</span>'
-                   f'<b>{i + 1}. {_esc(label)}</b></summary>{"".join(body)}</details>')
+        add(n.get("color", ""), n.get("title", ""), n.get("kind_label", n.get("kind", "")),
+            n.get("href", ""), n.get("phase", ""), node_round[n["study_id"]], n.get("created_at", ""))
+    for c in concepts:
+        cr = node_round.get(c["study_id"], 0)
+        add(c.get("color", "#a142f4"), c.get("title", ""), "Konzept", c.get("href", ""),
+            ideation, cr, c.get("created_at", ""))
+        for p in pro_of.get(c["study_id"], []):
+            add("#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
+                f'/prototypes/{p["slug"]}', ideation, cr, c.get("created_at", "") + "~", indent=1)
+    for p in protos:
+        if p["id"] not in used:
+            add("#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
+                f'/prototypes/{p["slug"]}', ideation, 0, p.get("created_at", ""))
+
+    def row(it: dict, show_phase: bool) -> str:
+        h = f' href="{_esc(it["href"])}"' if it["href"] else ""
+        ptag = f'<span class="ol-ptag">{_esc(it["plabel"])}</span>' if show_phase else ""
+        return (f'<a class="olrow"{h} style="padding-left:{10 + it["indent"] * 24}px">'
+                f'<span class="ol-dot" style="background:{it["color"]}"></span>{ptag}'
+                f'<span class="ol-title">{_esc(it["title"])}</span>'
+                f'<span class="ol-kind">{_esc(it["kind"])}</span></a>')
+
+    toggle = ""
+    if nrounds > 1:
+        toggle = ('<div class="ol-groupby">'
+                  f'<span class="ol-gbl">{t("group_by")}</span>'
+                  f'<a class="ol-gb{" on" if group_by == "phase" else ""}" href="?view=list&amp;group=phase">{t("by_phase")}</a>'
+                  f'<a class="ol-gb{" on" if group_by == "round" else ""}" href="?view=list&amp;group=round">{t("by_round")}</a></div>')
+
+    out = [toggle, '<div class="outline">']
+    if group_by == "round":
+        for r in range(nrounds):
+            ris = sorted((it for it in items if it["round"] == r), key=lambda it: (it["po"], it["order"]))
+            if not ris:
+                continue
+            rows = "".join(row(it, True) for it in ris)
+            out.append(f'<details class="ol-phase" open><summary><span class="ol-gl ol-round">↻</span>'
+                       f'<b>{t("round_n", n=r + 1)}</b> <span class="ol-cnt">{len(ris)}</span></summary>{rows}</details>')
+    else:
+        for s in ordered:
+            po, plabel, pglyph = pmeta[s["key"]]
+            pis = [it for it in items if it["pk"] == s["key"]]
+            if not pis:
+                continue
+            body = []
+            for r in range(nrounds):
+                ris = sorted((it for it in pis if it["round"] == r), key=lambda it: it["order"])
+                if ris:
+                    lbl = f'<div class="ol-rlabel">{t("round_n", n=r + 1)}</div>' if nrounds > 1 else ""
+                    body.append(lbl + "".join(row(it, False) for it in ris))
+            out.append(f'<details class="ol-phase" open><summary><span class="ol-gl">{pglyph}</span>'
+                       f'<b>{po + 1}. {_esc(plabel)}</b></summary>{"".join(body)}</details>')
     out.append("</div>")
     return "".join(out)
