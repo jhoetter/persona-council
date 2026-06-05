@@ -462,7 +462,7 @@ def register_pages(app) -> None:
             for p in protos:
                 sess = store.list_prototype_sessions(prototype_id=p["id"])
                 run_badge = ('<span class="pill" style="border-color:#3d7b5f">running</span>'
-                             + f' <a href="{_esc(p["url"])}" target="_blank">open ↗</a>' if p.get("running") and p.get("url") else "")
+                             + f' <a href="{_esc(p["url"])}" target="_blank">open {_icon("external")}</a>' if p.get("running") and p.get("url") else "")
                 sl = []
                 for s in sess[:6]:
                     r = s.get("reaction", {})
@@ -474,7 +474,7 @@ def register_pages(app) -> None:
                 pill = ap["disc"] or ap["label"]
                 rows.append(f'<div class="strow"><a href="/prototypes/{_esc(p["slug"])}">{_icon("projects")}<b>{_esc(p["name"])}</b></a> '
                             f'<span class="pill">{_esc(pill)}</span> <span class="muted small">{_esc(p.get("version",""))}</span> '
-                            f'<a class="btn" style="padding:2px 8px" href="/prototypes/{_esc(p["slug"])}">ansehen ↗</a>{sl_html}</div>')
+                            f'<a class="btn" style="padding:2px 8px" href="/prototypes/{_esc(p["slug"])}">ansehen {_icon("external")}</a>{sl_html}</div>')
             proto_html = (f'<div class="oqp-h" style="margin-top:14px">{t("prototypes_h")} ({len(protos)})</div>'
                           + "".join(rows))
         # Sections outline (methodology-independent groupings) — a navigable list in the panel.
@@ -520,46 +520,11 @@ def register_pages(app) -> None:
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
                  "document.addEventListener('click',function(e){"
                  "if(!p.hidden&&!p.contains(e.target)&&e.target!==b)p.hidden=true;});})();</script>")
-        # ---- UX2: an always-visible OVERVIEW ("story") — question → path → answer — so a viewer
-        # understands the project without decoding the graph. All data-driven from the plan/graph.
-        ms = graph.get("methodology_state") or {}
-        by_phase: dict[str, list] = {}
-        for n in graph["nodes"]:
-            by_phase.setdefault(n.get("phase", ""), []).append(n)
-        flow = []
-        for s in (ms.get("steps") or []):
-            nm = (s.get("name") or s["key"]).split("·")[-1].strip()
-            cnt = len(by_phase.get(s["key"], []))
-            glyph = _icon("diamond") if s.get("is_fan") else _icon("diamondFilled")  # diverge vs converge
-            cnt_s = f' <b>{cnt}</b>' if cnt else ""
-            flow.append(f'<span class="ovstep">{glyph} {_esc(nm)}{cnt_s}</span>')
-        flow_html = '<span class="ovarr">→</span>'.join(flow) or f'<span class="muted small">{t("no_data")}</span>'
-        n_concepts = sum(1 for n in graph["nodes"] if n.get("note_kind") == "concept")
-        all_sess = [x for pr in protos for x in store.list_prototype_sessions(prototype_id=pr["id"])]
-        n_grounded = sum(1 for x in all_sess if x.get("grounded_verified"))
-        stats = (f'{t("ov_concepts")}: <b>{n_concepts}</b> · {t("ov_prototypes")}: <b>{len(protos)}</b> · '
-                 f'{t("ov_grounded")}: <b>{n_grounded}/{len(all_sess)}</b> · {t("ov_open")}: <b>{len(oqs)}</b>')
-        concl = services.project_conclusion(proj["id"], store=store)
-        ans, win = concl["synthesis"], concl["winning_prototype"]
-        ans_text = (ans or {}).get("gesamtbild", "") or (ans or {}).get("positionierung", "")
-        if ans_text:
-            btns = f'<a class="btn" href="/syntheses/{_esc(ans["id"])}">{t("ov_full_solution")} →</a>'
-            if win:
-                btns += f' <a class="btn" href="/prototypes/{_esc(win["slug"])}" target="_blank">▶ {_esc(win["name"])} ↗</a>'
-            answer_html = f'<p>{_esc(ans_text[:560])}{"…" if len(ans_text) > 560 else ""}</p><div style="margin-top:8px">{btns}</div>'
-        else:
-            answer_html = f'<p class="muted">{t("ov_no_answer")}</p>'
-        overview = (
-            '<div class="ovcard">'
-            f'<div class="ovrow"><span class="ov-k">{t("ov_question")}</span><div class="ov-v"><p class="lead" style="margin:0">{_esc(proj.get("goal", ""))}</p></div></div>'
-            f'<div class="ovrow"><span class="ov-k">{t("ov_path")}</span><div class="ov-v"><div class="ovflow">{flow_html}</div><div class="muted small" style="margin-top:7px">{stats}</div></div></div>'
-            f'<div class="ovrow"><span class="ov-k">{t("ov_answer")}</span><div class="ov-v">{answer_html}</div></div>'
-            '</div>')
         body = (
             f'<div class="proj">'
             f'<div class="proj-head"><h1 class="h1">{_esc(proj["title"])}</h1>'
+            f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
             f'{toolbar}</div>'
-            f'{overview}'
             f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>'
             f'{panel}{oq_js}'
             f'</div>')
@@ -670,7 +635,7 @@ def register_pages(app) -> None:
         body = (
             f'<div class="page"><h1 class="h1">{_esc(p["name"])} {fid} '
             f'<span class="muted small">{_esc(p.get("version",""))} · {_esc(slug)}</span></h1>'
-            f'<p class="lead"><a class="btn" href="{src}" target="_blank">{_icon("projects")} {t("open_in_new_tab")}</a></p>'
+            f'<p class="lead"><a class="btn" href="{src}" target="_blank">{_icon("projects")} {t("open_in_new_tab")} {_icon("external")}</a></p>'
             f'<div class="protoframe"><iframe src="{src}" title="{_esc(p["name"])}" loading="lazy"></iframe></div>'
             f'<div class="card" style="margin-top:16px"><b>{t("prototypes_h")} · {t("sessions")} ({len(sessions)})</b>'
             f'<div style="margin-top:8px">{sessions_html}</div></div></div>')

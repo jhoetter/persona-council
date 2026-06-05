@@ -25,6 +25,26 @@ PALETTE = ["#6b7cff", "#34a853", "#f29900", "#a142f4", "#ea4335", "#00897b", "#5
 # Structural default glyphs (keyed to the geometric fan/waist BOOLEAN, never to a value string).
 FAN_GLYPH, WAIST_GLYPH = "◇", "◆"  # ◇ hollow (fan) / ◆ filled (waist)
 
+# Maps the (open-ended) Unicode notation glyphs used in suggestions/*.json and the
+# fan/waist structural defaults onto persona-icons icon names, so the research graph
+# and overview render real icons instead of text glyphs. Unmapped glyphs fall back
+# to "square" (a neutral marker) rather than leaking raw Unicode.
+GLYPH_ICON: dict[str, str] = {
+    "◇": "diamond", "◆": "diamondFilled",
+    "▢": "square", "▣": "squareSplit", "▤": "squareRows",
+    "▥": "squareCols", "▦": "squareGrid", "▭": "rectangle",
+    "⇄": "exchange", "∿": "wave", "❯∿": "wave",
+    "⌕": "search", "✎": "pencil", "➤": "caretRight",
+}
+
+
+def glyph_icon(glyph: str | None) -> str:
+    """Resolve a notation glyph to a persona-icons name. "" for no glyph; an
+    unknown non-empty glyph maps to the neutral 'square' so nothing renders raw."""
+    if not glyph:
+        return ""
+    return GLYPH_ICON.get(glyph, "square")
+
 # The conventional artifact type for legacy records that predate the `type` field. A single
 # back-compat default (not a value-keyed table); the real type list lives in artifact_types.json.
 DEFAULT_ARTIFACT_TYPE = "prototype"

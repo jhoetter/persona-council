@@ -355,7 +355,7 @@ def _synthesis_html(store: Store, syn: dict) -> str:
         ref_rows.append(
             f'<a class="ref-row" href="/councils/{_esc(cid)}"><span class="ref-n">C{i}</span>'
             f'<span class="ref-t">{_esc(prompt[:96])}</span>'
-            f'<span class="ref-bar">{_stacked(parts, thin=True)}</span><span class="ref-go">→</span></a>')
+            f'<span class="ref-bar">{_stacked(parts, thin=True)}</span><span class="ref-go">{_icon("arrowRight")}</span></a>')
     if ref_rows:
         belege = ("belege", t("councils"),
                   f'<details class="block" id="belege"><summary class="bh" style="cursor:pointer">'
