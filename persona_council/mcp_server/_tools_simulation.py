@@ -78,16 +78,8 @@ def register_simulation(mcp):
         t = time.perf_counter()
         return _env("continue_simulation", services.continue_simulation(persona_id, days), t)
 
-    @mcp.tool()
-    def clear_simulations() -> dict[str, Any]:
-        """Delete all generated simulation + memory state (personas kept)."""
-        t = time.perf_counter()
-        return _env("clear_simulations", services.clear_simulations(), t)
-
-    @mcp.tool()
-    def purge_runtime_data(remove_files: bool = True) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("purge_runtime_data", services.purge_runtime_data(remove_files), t)
+    # M2 — clear_simulations / purge_runtime_data are DESTRUCTIVE operator actions, removed from the
+    # agent surface (CLI-only: `persona-council clear-simulations` / `purge`). spec/mcp-surface-cleanup M2.
 
     # ================= Consolidation (Phase C) =================
     @mcp.tool()

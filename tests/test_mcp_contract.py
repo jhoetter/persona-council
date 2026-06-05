@@ -42,7 +42,6 @@ def test_expected_tools_registered():
         "evaluate_cohort_diversity", "brief_cohort_critic", "record_cohort_critic",
         # research graph + meta-report:
         "create_research_project", "list_research_projects", "get_project_graph",
-        "backfill_project_from_syntheses",
         "brief_meta_report", "record_meta_outline", "brief_meta_section",
         "record_meta_section", "export_meta_report",
         # deletes (CRUD complete via MCP):
@@ -66,5 +65,8 @@ def test_expected_tools_registered():
     # RETIRED from the agent surface (the plan engine is the single graph path). Guard against regress.
     retired = {"add_study_to_project", "set_study_themes", "link_studies", "remove_study_from_project",
                "unlink_studies", "start_methodology_project"}
-    leaked = retired & names
-    assert not leaked, f"retired legacy tools still registered: {sorted(leaked)}"
+    # M2 — admin/maintenance actions are CLI-only, off the agent surface.
+    admin = {"purge_runtime_data", "clear_simulations", "prune_memory", "backfill_embeddings",
+             "backfill_project_from_syntheses", "import_snapshot", "export_snapshot", "export_logs"}
+    leaked = (retired | admin) & names
+    assert not leaked, f"retired/admin tools still on the agent surface: {sorted(leaked)}"

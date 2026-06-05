@@ -47,11 +47,7 @@ def register_research(mcp):
         t = time.perf_counter()
         return _env("get_research_frontier", services.get_research_frontier(project_id), t)
 
-    @mcp.tool()
-    def backfill_project_from_syntheses(title: str = "Research", synthesis_ids: list[str] | None = None) -> dict[str, Any]:
-        """Group existing syntheses into one project graph (chronological spawned_from edges)."""
-        t = time.perf_counter()
-        return _env("backfill_project_from_syntheses", services.backfill_project_from_syntheses(title, synthesis_ids), t)
+    # M2 — backfill_project_from_syntheses is a one-time MIGRATION, CLI-only (off the agent surface).
 
     # ----- Meta-Report: second-order synthesis over a whole project graph -----
     @mcp.tool()

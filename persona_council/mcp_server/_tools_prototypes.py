@@ -166,13 +166,4 @@ def register_prototypes(mcp):
         t = time.perf_counter()
         return _env("record_evidence_check", services.record_evidence_check(persona_id, result), t)
 
-    @mcp.tool()
-    def backfill_embeddings(persona_id: str | None = None) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("backfill_embeddings", services.backfill_embeddings(persona_id), t)
-
-    @mcp.tool()
-    def prune_memory(persona_id: str, keep_days: int = 120, as_of: str | None = None) -> dict[str, Any]:
-        """Salience forgetting: drop embeddings of old, unlinked, loop-free episodes."""
-        t = time.perf_counter()
-        return _env("prune_memory", services.prune_memory(persona_id, keep_days, as_of), t)
+    # M2 — backfill_embeddings / prune_memory are MAINTENANCE actions, CLI-only (off the agent surface).

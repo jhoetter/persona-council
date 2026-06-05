@@ -91,29 +91,12 @@ def register_council(mcp):
         t = time.perf_counter()
         return _env("export_persona", services.export_persona(persona_id, format), t)
 
-    @mcp.tool()
-    def export_logs(persona_id: str, start_date: str | None = None, end_date: str | None = None, format: str = "json") -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("export_logs", services.export_logs(persona_id, start_date, end_date, format), t)
+    # M2 — export_logs / export_snapshot / import_snapshot are operator backup/debug actions, CLI-only.
 
     @mcp.tool()
     def export_council_session(session_id: str, format: str = "json") -> dict[str, Any]:
         t = time.perf_counter()
         return _env("export_council_session", services.export_council_session(session_id, format), t)
-
-    @mcp.tool()
-    def export_snapshot(out_dir: str | None = None) -> dict[str, Any]:
-        """Write a portable snapshot of ALL generated state (profiles, SOUL/MEMORY,
-        events, memory graph, eval, avatars) to data/export/ — gitignored/local-only."""
-        t = time.perf_counter()
-        return _env("export_snapshot", services.export_snapshot(out_dir), t)
-
-    @mcp.tool()
-    def import_snapshot(in_dir: str | None = None, embed: bool = True) -> dict[str, Any]:
-        """Rebuild the runtime DB (+ avatars, SOUL/MEMORY) from data/export/. The portable
-        round-trip: clone + import_snapshot reproduces the exact state, no re-generation."""
-        t = time.perf_counter()
-        return _env("import_snapshot", services.import_snapshot(in_dir, embed=embed), t)
 
     # ----- Synthesis (study arc over a chain of councils) -----
     @mcp.tool()
