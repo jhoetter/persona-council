@@ -195,6 +195,19 @@ h1,h2,h3,h4{color:var(--ink)}
 .callout .emj{color:var(--accent);display:inline-flex;align-items:center;padding-top:1px}
 .callout .emj svg{width:18px;height:18px}
 .callout p{margin:0}
+.callout.motion{border-left-color:#a142f4;background:rgba(161,66,244,.06)}
+.callout.motion .emj{color:#a142f4}
+/* UX2: the project overview "story" band — question / path / answer, always visible above the graph */
+.ovcard{flex-shrink:0;margin:0 30px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.ovrow{display:flex;gap:16px;padding:14px 18px;border-top:1px solid var(--line)}
+.ovrow:first-child{border-top:none}
+.ovrow .ov-k{flex:0 0 96px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.ovrow .ov-v{flex:1;min-width:0}
+.ovrow .ov-v p{margin:0;max-width:80ch}
+.ovflow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ovstep{white-space:nowrap;padding:4px 11px;border:1px solid var(--line);border-radius:999px;font-size:13px}
+.ovstep b{color:var(--accent)}
+.ovarr{color:var(--muted);font-size:13px}
 .mdtable{border-collapse:collapse;width:100%;margin:16px 0;font-size:13px;line-height:1.4}
 .mdtable th,.mdtable td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
 .mdtable th{background:var(--panel-2);font-weight:650;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}

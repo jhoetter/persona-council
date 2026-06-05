@@ -53,6 +53,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "ei_fill_ins": "Lückenfüller", "ei_time_sinks": "Zeitfresser",
         "ei_effort_axis": "Aufwand →", "ei_value_axis": "Nutzen →",
         "no_data": "Keine Daten.",
+        # project overview ("story")
+        "ov_question": "Die Frage", "ov_path": "Der Weg", "ov_answer": "Die Antwort",
+        "ov_full_solution": "Vollständige Lösung", "ov_view_proto": "Prototyp ansehen",
+        "ov_concepts": "Konzepte", "ov_prototypes": "Prototypen", "ov_grounded": "Grounded Sessions",
+        "ov_open": "Offene Fragen", "ov_no_answer": "Noch keine abschließende Antwort — Lauf nicht beendet.",
         # council framing
         "council_motion": "Zur Debatte gestellte These",
         "council_motion_help": "Jede Stimme reagiert auf diese These — Zustimmung, bedingt oder Ablehnung.",
@@ -185,6 +190,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "ei_fill_ins": "Fill-ins", "ei_time_sinks": "Time sinks",
         "ei_effort_axis": "Effort →", "ei_value_axis": "Value →",
         "no_data": "No data.",
+        # project overview ("story")
+        "ov_question": "The question", "ov_path": "The path", "ov_answer": "The answer",
+        "ov_full_solution": "Full solution", "ov_view_proto": "View prototype",
+        "ov_concepts": "Concepts", "ov_prototypes": "Prototypes", "ov_grounded": "Grounded sessions",
+        "ov_open": "Open questions", "ov_no_answer": "No conclusion yet — run not finished.",
         # council framing
         "council_motion": "The motion put to the council",
         "council_motion_help": "Each voice responds to this motion — for, conditional, or against.",
