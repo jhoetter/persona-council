@@ -22,13 +22,15 @@ def _projects_page() -> str:
     store = Store()
     rows = []
     for p in services.list_research_projects(store=store):
-        rows.append(f'<a class="row" href="/projects/{_esc(p["id"])}">{_icon("projects")}'
+        rows.append(f'<a class="row" href="/projects/{_esc(p["id"])}">'
+                    f'<span class="rico" style="color:var(--accent)">{_icon("projects")}</span>'
                     f'<span class="title">{_esc(p["title"])}</span>'
                     f'<span class="right"><span>{p["studies"]} {t("syntheses")}</span>'
                     f'<span>{p["edges"]} {t("build_order_h")}</span>'
                     f'<span>{len(p.get("themes", []))} {t("themes_h")}</span></span></a>')
-    rows_html = "".join(rows) or f'<div class="row muted">{t("no_projects")}</div>'
-    body = f'<div class="page"><h1 class="h1">{t("projects")}</h1><p class="lead">{t("projects_lead")}</p><div class="rows">{rows_html}</div></div>'
+    rows_html = "".join(rows) or f'<div class="list-empty">{_icon("projects")}<span>{t("no_projects")}</span></div>'
+    cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
+    body = f'<div class="page"><h1 class="h1">{t("projects")}{cnt}</h1><p class="lead">{t("projects_lead")}</p><div class="rows">{rows_html}</div></div>'
     return _layout(t("projects"), body, store, crumbs=[(t("projects"), None)], active="projects")
 
 
@@ -313,12 +315,14 @@ def register_pages(app) -> None:
                    f'<i style="width:{v["SUPPORT"]/tot*100}%;background:var(--green)"></i>'
                    f'<i style="width:{v["MAYBE"]/tot*100}%;background:var(--amber)"></i>'
                    f'<i style="width:{(v["OPPOSE"]+v["ABSTAIN"])/tot*100}%;background:var(--muted)"></i></span>')
-            rows.append(f'<a class="row" href="/councils/{_esc(c["id"])}">{_icon("councils")}'
+            rows.append(f'<a class="row" href="/councils/{_esc(c["id"])}">'
+                        f'<span class="rico" style="color:var(--blue)">{_icon("councils")}</span>'
                         f'<span class="title">{_esc(c["prompt"])}</span>'
                         f'<span class="right">{bar}<span>{c["personas"]} {t("personas")}</span><span>{_esc(c["created_at"][:10])}</span>'
                         f'{_star("council", c["id"], c["prompt"][:60], f"/councils/{c['id']}")}</span></a>')
-        rows_html = "".join(rows) or f'<div class="row muted">{t("no_councils")}</div>'
-        body = f'<div class="page"><h1 class="h1">{t("councils")}</h1><p class="lead">{t("councils_lead")}</p><div class="rows">{rows_html}</div></div>'
+        rows_html = "".join(rows) or f'<div class="list-empty">{_icon("councils")}<span>{t("no_councils")}</span></div>'
+        cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
+        body = f'<div class="page"><h1 class="h1">{t("councils")}{cnt}</h1><p class="lead">{t("councils_lead")}</p><div class="rows">{rows_html}</div></div>'
         return _layout(t("councils"), body, store, crumbs=[(t("projects"), "/projects"), (t("councils"), None)], active="projects")
 
     @app.get("/councils/{session_id}", response_class=HTMLResponse)
@@ -489,13 +493,15 @@ def register_pages(app) -> None:
         rows = []
         for s in store.list_syntheses():
             done = s.get("status", "done") == "done"
-            rows.append(f'<a class="row" href="/syntheses/{_esc(s["id"])}">{_icon("syntheses")}'
+            rows.append(f'<a class="row" href="/syntheses/{_esc(s["id"])}">'
+                        f'<span class="rico" style="color:var(--violet)">{_icon("syntheses")}</span>'
                         f'<span class="title">{_esc(s["title"])}</span>'
                         f'<span class="right">{_label(t("done") if done else t("running"), "var(--green)" if done else "var(--amber)")}'
                         f'<span>{len(s.get("council_ids", []))} {t("councils")}</span><span>{_esc(s["created_at"][:10])}</span>'
                         f'{_star("synthesis", s["id"], s["title"], f"/syntheses/{s['id']}")}</span></a>')
-        rows_html = "".join(rows) or f'<div class="row muted">{t("no_synthesis")}</div>'
-        body = f'<div class="page"><h1 class="h1">{t("syntheses")}</h1><p class="lead">{t("syntheses_lead")}</p><div class="rows">{rows_html}</div></div>'
+        rows_html = "".join(rows) or f'<div class="list-empty">{_icon("syntheses")}<span>{t("no_synthesis")}</span></div>'
+        cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
+        body = f'<div class="page"><h1 class="h1">{t("syntheses")}{cnt}</h1><p class="lead">{t("syntheses_lead")}</p><div class="rows">{rows_html}</div></div>'
         return _layout(t("syntheses"), body, store, crumbs=[(t("projects"), "/projects"), (t("syntheses"), None)], active="projects")
 
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
