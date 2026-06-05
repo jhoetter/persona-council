@@ -66,6 +66,24 @@ class ResearchMixin:
             "SELECT data FROM meta_reports WHERE project_id=? ORDER BY created_at DESC", (project_id,)).fetchall()
         return [json.loads(r["data"]) for r in rows]
 
+    # ---- ESV: the resumable run object ----
+    def upsert_run(self, run: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT OR REPLACE INTO runs (run_id, project_id, status, cursor, data, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (run["run_id"], run["project_id"], run.get("status", "active"), int(run.get("cursor", 0)),
+             json.dumps(run, ensure_ascii=False), run["created_at"], run.get("updated_at", run["created_at"])))
+        self.conn.commit()
+
+    def get_run(self, run_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute("SELECT data FROM runs WHERE run_id=?", (run_id,)).fetchone()
+        return json.loads(row["data"]) if row else None
+
+    def list_runs(self, project_id: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT data FROM runs WHERE project_id=? ORDER BY created_at DESC", (project_id,)).fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
     # ---- Methodology engine: user-defined specs + per-phase judgments ----
     def upsert_methodology(self, spec: dict[str, Any]) -> None:
         self.conn.execute(

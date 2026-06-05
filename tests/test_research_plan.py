@@ -415,3 +415,31 @@ def test_completeness_critic_surfaces_gaps_and_refuses_dishonest_pass(store):
     services.set_note_data(note["id"], {"prototype_id": "prototype_x"}, store=store)
     b2 = services.brief_completeness_critic(pid, store=store)
     assert b2["frame"]["breadth_candidates"]["concepts_not_prototyped"] == []
+
+
+def test_resumable_run_object_and_keyed_session(store, tmp_path, monkeypatch):
+    """ESV3: keyed prototype sessions upsert idempotently (same id); the run object journals steps +
+    resumes (start_run with the same run_id returns the existing journal, not a fresh run)."""
+    import persona_council.prototypes as PP
+    monkeypatch.setattr(PP, "prototypes_dir", lambda: tmp_path / "p")
+    proj = services.start_project("ESV3", "hmw?", None, persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    concept = {"title": "T", "start": "a", "screens": [{"id": "a", "title": "A", "elements": [
+        {"kind": "text", "id": "t", "label": "x"}]}]}
+    art = services.scaffold_artifact("a", "A", concept, type="prototype", tags=["lofi"], project_id=pid, store=store)
+    k = "run1:proto:p1"
+    r1 = services.record_prototype_session("p1", art["id"], "s", "2026-06-05",
+        {"summary": "ok", "observed_state_refs": ["x"], "verdict": "ok"}, key=k, store=store)
+    r2 = services.record_prototype_session("p1", art["id"], "s", "2026-06-05",
+        {"summary": "ok2", "observed_state_refs": ["x"], "verdict": "ok"}, key=k, store=store)
+    assert r1["prototype_session"]["id"] == r2["prototype_session"]["id"]          # idempotent upsert
+    assert len([x for x in store.list_prototype_sessions() if x["prototype_id"] == art["id"]]) == 1
+    # run object
+    run = services.start_run(pid, budget=10, store=store)
+    rid = run["run_id"]
+    services.checkpoint_step(rid, {"task_id": "frame__root", "bucket": "analyze", "key": services.run_key(rid, "frame__root"),
+                                   "evidence": [{"kind": "frame", "id": "frame__root"}], "summary": "framed"}, store=store)
+    j = services.run_journal(rid, store=store)
+    assert j["cursor"] == 1 and j["steps"][0]["task_id"] == "frame__root"
+    assert services.start_run(pid, run_id=rid, store=store)["cursor"] == 1          # resume returns the journal
+    assert services.finish_run(rid, store=store)["status"] == "finished"

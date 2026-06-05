@@ -338,7 +338,7 @@ def brief_prototype_session(persona_id, prototype_id, store: Store | None = None
 
 
 def record_prototype_session(persona_id, prototype_id, session_id, date_value, reaction,
-                             store: Store | None = None):
+                             key: str | None = None, store: Store | None = None):
     store = store or Store()
     proto = _proto.get_prototype(prototype_id, store=store)
     refs = [str(r).strip() for r in (reaction.get("observed_state_refs") or []) if str(r).strip()]
@@ -360,7 +360,8 @@ def record_prototype_session(persona_id, prototype_id, session_id, date_value, r
         grounded = False  # session closed / harness unavailable — record but mark unverified
     now = utc_now_iso()
     sess = PrototypeSession(
-        id=stable_id("protosession", persona_id, prototype_id, now), persona_id=persona_id,
+        id=(stable_id("protosession", key) if key else stable_id("protosession", persona_id, prototype_id, now)),
+        persona_id=persona_id,
         prototype_id=proto["id"], session_id=session_id, date=date_value, reaction=reaction,
         observed_state_refs=refs, created_at=now).to_dict()
     sess["grounded_verified"] = grounded
@@ -398,3 +399,82 @@ def record_prototype_session(persona_id, prototype_id, session_id, date_value, r
                     "real drive will verify. An unverified session does NOT satisfy a session_of_tags gate.")
         out["warnings"] = [msg]
     return out
+
+
+# ===================== ESV §A.2 — the resumable run object (driver journal) =====================
+
+def run_key(run_id: str, task_id: str, angle: str = "") -> str:
+    """The deterministic key every per-step write carries so a re-run is an idempotent upsert."""
+    return f"{run_id}:{task_id}:{angle}" if angle else f"{run_id}:{task_id}"
+
+
+def start_run(project_id: str, budget: int | None = None, run_id: str | None = None,
+              store: Store | None = None) -> dict[str, Any]:
+    """Create (or load) the run object for a project — the resumable journal the driver advances. If
+    `run_id` already exists, it is returned as-is (resume)."""
+    store = store or Store()
+    if not store.get_research_project(project_id):
+        raise PlanError("UNKNOWN_PROJECT", f"unknown research project: {project_id}")
+    if run_id:
+        existing = store.get_run(run_id)
+        if existing:
+            return existing
+    now = utc_now_iso()
+    plan = _plan.get_plan(project_id, store=store) or {}
+    run = {"run_id": run_id or stable_id("run", project_id, now), "project_id": project_id,
+           "methodology": plan.get("methodology", ""), "status": "active",
+           "budget": int(budget) if budget is not None else None, "cursor": 0,
+           "steps": [], "critic_rounds": [], "created_at": now, "updated_at": now}
+    store.upsert_run(run)
+    return run
+
+
+def run_journal(run_id: str, store: Store | None = None) -> dict[str, Any]:
+    """The run's journal (steps + critic rounds + cursor + status) — the single source of truth for
+    resume. Lean: ids + 1-line summaries only, never authored text."""
+    store = store or Store()
+    r = store.get_run(run_id)
+    if not r:
+        raise PlanError("UNKNOWN_RUN", f"unknown run: {run_id}")
+    return r
+
+
+def checkpoint_step(run_id: str, step: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
+    """Append a completed step to the journal (ids + a 1-line summary). Returns the new cursor."""
+    store = store or Store()
+    r = store.get_run(run_id)
+    if not r:
+        raise PlanError("UNKNOWN_RUN", f"unknown run: {run_id}")
+    entry = {"idx": len(r["steps"]), "task_id": step.get("task_id", ""), "bucket": step.get("bucket", ""),
+             "key": step.get("key", ""), "evidence": step.get("evidence", []),
+             "summary": str(step.get("summary", ""))[:300]}
+    r["steps"].append(entry)
+    r["cursor"] = len(r["steps"])
+    r["updated_at"] = utc_now_iso()
+    store.upsert_run(r)
+    return {"cursor": r["cursor"], "run_id": run_id}
+
+
+def record_critic_round(run_id: str, passed: bool, missing_count: int, store: Store | None = None) -> dict[str, Any]:
+    """Log one completeness-critic round on the run (for the loop-until-dry gate + observability)."""
+    store = store or Store()
+    r = store.get_run(run_id)
+    if not r:
+        raise PlanError("UNKNOWN_RUN", f"unknown run: {run_id}")
+    r.setdefault("critic_rounds", []).append({"round": len(r.get("critic_rounds", [])),
+                                              "passed": bool(passed), "missing": int(missing_count)})
+    r["updated_at"] = utc_now_iso()
+    store.upsert_run(r)
+    return {"round": len(r["critic_rounds"]) - 1, "passed": bool(passed)}
+
+
+def finish_run(run_id: str, status: str = "finished", store: Store | None = None) -> dict[str, Any]:
+    """Mark the run finished/stopped."""
+    store = store or Store()
+    r = store.get_run(run_id)
+    if not r:
+        raise PlanError("UNKNOWN_RUN", f"unknown run: {run_id}")
+    r["status"] = status
+    r["updated_at"] = utc_now_iso()
+    store.upsert_run(r)
+    return {"run_id": run_id, "status": status, "steps": len(r["steps"])}

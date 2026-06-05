@@ -116,6 +116,7 @@ class StoreBase:
             "methodology_judgments",
             "prototypes",
             "prototype_sessions",
+            "runs",
             "personas",
             "audit_log",
         ]

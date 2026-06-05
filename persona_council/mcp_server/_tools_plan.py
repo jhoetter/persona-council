@@ -88,3 +88,35 @@ def register_plan(mcp):
         to stay purposeful and to decide when to stop."""
         t = time.perf_counter()
         return _env("assess_project", services.assess_project(project_id), t)
+
+    # ----- ESV §A: the resumable run object (driver journal) -----
+    @mcp.tool()
+    def start_run(project_id: str, budget: int | None = None, run_id: str | None = None) -> dict[str, Any]:
+        """Create (or resume) the run object that the driver advances over the plan. Returns the run +
+        its journal; pass an existing run_id to resume (idempotent)."""
+        t = time.perf_counter()
+        return _env("start_run", services.start_run(project_id, budget, run_id), t)
+
+    @mcp.tool()
+    def run_journal(run_id: str) -> dict[str, Any]:
+        """The run's journal (steps + critic rounds + cursor + status) — the source of truth for resume."""
+        t = time.perf_counter()
+        return _env("run_journal", services.run_journal(run_id), t)
+
+    @mcp.tool()
+    def checkpoint_step(run_id: str, step: dict[str, Any]) -> dict[str, Any]:
+        """Append a completed step (task_id, bucket, key, evidence ids, 1-line summary) to the journal."""
+        t = time.perf_counter()
+        return _env("checkpoint_step", services.checkpoint_step(run_id, step), t)
+
+    @mcp.tool()
+    def record_critic_round(run_id: str, passed: bool, missing_count: int) -> dict[str, Any]:
+        """Log one completeness-critic round on the run (loop-until-dry observability)."""
+        t = time.perf_counter()
+        return _env("record_critic_round", services.record_critic_round(run_id, passed, missing_count), t)
+
+    @mcp.tool()
+    def finish_run(run_id: str, status: str = "finished") -> dict[str, Any]:
+        """Mark the run finished/stopped."""
+        t = time.perf_counter()
+        return _env("finish_run", services.finish_run(run_id, status), t)

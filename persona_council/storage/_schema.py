@@ -266,6 +266,19 @@ CREATE TABLE IF NOT EXISTS meta_reports (
 );
 CREATE INDEX IF NOT EXISTS idx_meta_reports_project ON meta_reports(project_id);
 
+-- ESV: the resumable run object (driver journal). One run drives one project's plan to a
+-- self-verified, finished result; `data` holds the step journal + critic rounds (resume = replay it).
+CREATE TABLE IF NOT EXISTS runs (
+  run_id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  cursor INTEGER NOT NULL DEFAULT 0,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_runs_project ON runs(project_id);
+
 -- Methodology engine (spec/methodology-engine-and-prototyping.md): user-defined
 -- methodology specs + the LLM-judged gate decisions recorded per phase.
 CREATE TABLE IF NOT EXISTS methodologies (
