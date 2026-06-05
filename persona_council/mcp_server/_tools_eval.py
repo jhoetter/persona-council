@@ -144,3 +144,16 @@ def register_eval(mcp):
         output quality is tracked over time — a regression signal for the methodology itself."""
         t = time.perf_counter()
         return _env("score_run", services.score_run(project_id), t)
+
+    # ----- F5 evidence integration (provenance) — relocated here (M3) -----
+    @mcp.tool()
+    def brief_evidence_check(persona_id: str) -> dict[str, Any]:
+        """GATHER profile claims + attached evidence to validate synthesis against reality."""
+        t = time.perf_counter()
+        return _env("brief_evidence_check", services.brief_evidence_check(persona_id), t)
+
+    @mcp.tool()
+    def record_evidence_check(persona_id: str, result: dict[str, Any]) -> dict[str, Any]:
+        """Persist provenance verdict: confirmed/contradicted/unsupported; flags contradictions."""
+        t = time.perf_counter()
+        return _env("record_evidence_check", services.record_evidence_check(persona_id, result), t)

@@ -9,36 +9,8 @@ from ._env import _env
 
 
 def register_council(mcp):
-    # ================= Inspection (existing) =================
-    @mcp.tool()
-    def get_current_state(persona_id: str, at_time: str | None = None) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("get_current_state", services.get_current_state(persona_id, at_time), t)
-
-    @mcp.tool()
-    def get_calendar(persona_id: str, date: str | None = None) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("get_calendar", services.get_calendar(persona_id, date), t)
-
-    @mcp.tool()
-    def get_calendar_period(persona_id: str, date: str | None = None, view: str = "day") -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("get_calendar_period", services.get_calendar_period(persona_id, date, view), t)
-
-    @mcp.tool()
-    def get_activity(activity_id: str) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("get_activity", services.get_activity(activity_id), t)
-
-    @mcp.tool()
-    def summarize_persona_period(persona_id: str, start_date: str | None = None, end_date: str | None = None, lens: str | None = None) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("summarize_persona_period", services.summarize_persona_period(persona_id, start_date, end_date, lens), t)
-
-    @mcp.tool()
-    def extract_pain_points(persona_id: str, start_date: str | None = None, end_date: str | None = None) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("extract_pain_points", services.extract_pain_points(persona_id, start_date, end_date), t)
+    # M3 — persona timeline/activity reads (get_current_state/get_calendar/get_calendar_period/
+    # get_activity/summarize_persona_period/extract_pain_points) moved to _tools_simulation (memory).
 
     # ================= Council =================
     @mcp.tool()
@@ -80,16 +52,7 @@ def register_council(mcp):
         t = time.perf_counter()
         return _env("list_councils", services.list_councils(), t)
 
-    # ================= Evidence / export =================
-    @mcp.tool()
-    def attach_evidence(persona_id: str, source_type: str, content_or_path: str, notes: str | None = None) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("attach_evidence", services.attach_evidence(persona_id, source_type, content_or_path, notes), t)
-
-    @mcp.tool()
-    def export_persona(persona_id: str, format: str = "json") -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("export_persona", services.export_persona(persona_id, format), t)
+    # M3 — attach_evidence / export_persona (persona-scoped) moved to _tools_personas.
 
     # M2 — export_logs / export_snapshot / import_snapshot are operator backup/debug actions, CLI-only.
 

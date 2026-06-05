@@ -65,3 +65,16 @@ def register_personas(mcp):
     def generate_avatar(persona_id: str, style: str | None = None) -> dict[str, Any]:
         t = time.perf_counter()
         return _env("generate_avatar", generate_persona_avatar(persona_id, style), t)
+
+    # ----- persona evidence + export — relocated here (M3) -----
+    @mcp.tool()
+    def attach_evidence(persona_id: str, source_type: str, content_or_path: str, notes: str | None = None) -> dict[str, Any]:
+        """Attach a real-world SOURCE (doc/url/note) to a persona to ground its claims."""
+        t = time.perf_counter()
+        return _env("attach_evidence", services.attach_evidence(persona_id, source_type, content_or_path, notes), t)
+
+    @mcp.tool()
+    def export_persona(persona_id: str, format: str = "json") -> dict[str, Any]:
+        """Export one persona (profile + SOUL/memory) as json/markdown."""
+        t = time.perf_counter()
+        return _env("export_persona", services.export_persona(persona_id, format), t)

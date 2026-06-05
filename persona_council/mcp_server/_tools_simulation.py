@@ -167,3 +167,49 @@ def register_simulation(mcp):
         """Render + return MEMORY.md: active projects (timelines), open threads, digests."""
         t = time.perf_counter()
         return _env("get_persona_memory", services.get_persona_memory(persona_id), t)
+
+    # ----- F3 autonomous loop driver (month bundles) — relocated here (M3) -----
+    @mcp.tool()
+    def brief_month(persona_id: str, month: str) -> dict[str, Any]:
+        """GATHER context to author a whole month bundle (period plan + sample days + digest),
+        chained on the prior month. Then record_month_bundle."""
+        t = time.perf_counter()
+        return _env("brief_month", services.brief_month(persona_id, month), t)
+
+    @mcp.tool()
+    def record_month_bundle(persona_id: str, month: str, bundle: dict[str, Any]) -> dict[str, Any]:
+        """Persist a host-authored month bundle through the full loop (plan->sample days->
+        simulate->consolidate->digest->embed)."""
+        t = time.perf_counter()
+        return _env("record_month_bundle", services.record_month_bundle(persona_id, month, bundle), t)
+
+    # ----- Persona timeline / activity reads — relocated here (M3) -----
+    @mcp.tool()
+    def get_current_state(persona_id: str, at_time: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_current_state", services.get_current_state(persona_id, at_time), t)
+
+    @mcp.tool()
+    def get_calendar(persona_id: str, date: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_calendar", services.get_calendar(persona_id, date), t)
+
+    @mcp.tool()
+    def get_calendar_period(persona_id: str, date: str | None = None, view: str = "day") -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_calendar_period", services.get_calendar_period(persona_id, date, view), t)
+
+    @mcp.tool()
+    def get_activity(activity_id: str) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("get_activity", services.get_activity(activity_id), t)
+
+    @mcp.tool()
+    def summarize_persona_period(persona_id: str, start_date: str | None = None, end_date: str | None = None, lens: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("summarize_persona_period", services.summarize_persona_period(persona_id, start_date, end_date, lens), t)
+
+    @mcp.tool()
+    def extract_pain_points(persona_id: str, start_date: str | None = None, end_date: str | None = None) -> dict[str, Any]:
+        t = time.perf_counter()
+        return _env("extract_pain_points", services.extract_pain_points(persona_id, start_date, end_date), t)

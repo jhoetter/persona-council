@@ -119,32 +119,7 @@ def register_prototypes(mcp):
 
     # M3 — the delete_* CRUD tools moved to _tools_research.py (their project/artifact domain).
 
-    # ----- F3 autonomous loop driver -----
-    @mcp.tool()
-    def brief_month(persona_id: str, month: str) -> dict[str, Any]:
-        """GATHER context to author a whole month bundle (period plan + sample days + digest),
-        chained on the prior month. Then record_month_bundle."""
-        t = time.perf_counter()
-        return _env("brief_month", services.brief_month(persona_id, month), t)
-
-    @mcp.tool()
-    def record_month_bundle(persona_id: str, month: str, bundle: dict[str, Any]) -> dict[str, Any]:
-        """Persist a host-authored month bundle through the full loop (plan→sample days→
-        simulate→consolidate→digest→embed)."""
-        t = time.perf_counter()
-        return _env("record_month_bundle", services.record_month_bundle(persona_id, month, bundle), t)
-
-    # ----- F5 evidence integration -----
-    @mcp.tool()
-    def brief_evidence_check(persona_id: str) -> dict[str, Any]:
-        """GATHER profile claims + attached evidence to validate synthesis against reality."""
-        t = time.perf_counter()
-        return _env("brief_evidence_check", services.brief_evidence_check(persona_id), t)
-
-    @mcp.tool()
-    def record_evidence_check(persona_id: str, result: dict[str, Any]) -> dict[str, Any]:
-        """Persist provenance verdict: confirmed/contradicted/unsupported; flags contradictions."""
-        t = time.perf_counter()
-        return _env("record_evidence_check", services.record_evidence_check(persona_id, result), t)
+    # M3 — brief_month/record_month_bundle moved to _tools_simulation; brief_evidence_check/
+    # record_evidence_check moved to _tools_eval (their domains).
 
     # M2 — backfill_embeddings / prune_memory are MAINTENANCE actions, CLI-only (off the agent surface).
