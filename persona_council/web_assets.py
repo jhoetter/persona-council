@@ -206,7 +206,7 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 /* Project detail = full-bleed graph hero */
 .main>section:has(.proj){flex:1;min-height:0;padding:0;display:flex;flex-direction:column;overflow:hidden}
 .proj{flex:1;min-height:0;display:flex;flex-direction:column}
-.proj-head{flex-shrink:0;padding:22px 30px 12px}
+.proj-head{flex-shrink:0;width:100%;max-width:1000px;margin:0 auto;padding:22px 24px 12px}
 .proj-head .stats{margin:0 0 14px}
 .proj-head .ptoolbar{margin:0}
 .proj-graph{flex:1;min-height:0;display:flex}
