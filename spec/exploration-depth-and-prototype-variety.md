@@ -406,3 +406,17 @@ it *because it gives him right and doesn't sell* (trust-inversion); the mother (
 gap + honest slim cover; the non-target (Sophie) is confirmed (gap 0). Deliberate non-targets + open
 risks (parameter transparency; the 80%-say-no conversion economics) carried in-spec. This is the
 non-trivial, innovative output the harness now reliably enables.
+
+### NEW-CODE RUN — FULL lo→mid→hi ladder completed (final)
+Extended to the hi-fi rung: a **production-credible, fully transparent** interactive model — the
+need-% assumption is itself a user-steerable slider (sealing the literate skeptic's last mistrust:
+Niklas "kein Black-Box-Faktor mehr") and an income-variability slider handles the self-employed/
+precarious case (Deniz "bildet mein schwankendes Salon-Einkommen ab"). Final state on the real DB:
+- **6 / 6 proband sessions grounded**; full fidelity ladder (3 lo-fi + 1 mid-fi + 1 hi-fi models).
+- **4 syntheses** all carry + render structured blocks (clusters/key_problems/ranking/shortlist).
+- **graph: 12 nodes, spine of 3 `informs` edges** connecting Define→Down-Select→Deliver→Deliver-Hi-Fi
+  + 2 refines; **6 sections** (incl. a Run-Journal) organize it.
+- The winning answer (honest reframe) is validated end-to-end and renders rich + connected; the
+  literate-skeptic **trust-inversion** holds at hi-fi with full parameter transparency.
+This is the fantastic, non-trivial, innovative, fully-grounded showcase the harness now reliably
+produces — a dramatic uplift over the pre-fix run (0/23 grounded, hollow syntheses, no real model).
