@@ -355,8 +355,8 @@ details.sec[open]>summary::before{transform:rotate(90deg)}
 .daycell h4{margin:0 0 6px;font-size:13px}.count{font-size:12px;color:var(--muted)}
 .hour{border-top:1px solid var(--line-2);padding:6px 8px;color:var(--muted);font-size:12px;min-height:52px}
 .slot{border-top:1px solid var(--line-2);min-height:52px;padding:5px 8px}
-.block{display:block;background:var(--panel-2);border-radius:7px;padding:7px 9px;margin:0 0 6px}.block::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:1px}
-.block.focus::before{background:var(--green)}.block.interruption::before{background:var(--red)}.block.admin::before{background:var(--amber)}
+.calendar .block,.daycell .block{display:block;background:var(--panel-2);border-radius:7px;padding:7px 9px;margin:0 0 6px}.calendar .block::before,.daycell .block::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:1px}
+.daycell .block.focus::before,.calendar .block.focus::before{background:var(--green)}.daycell .block.interruption::before,.calendar .block.interruption::before{background:var(--red)}.daycell .block.admin::before,.calendar .block.admin::before{background:var(--amber)}
 .block strong{display:block}.block .meta{color:var(--muted);font-size:12px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
 .tabs a{border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--panel);font-size:12.5px}.tabs a.active{background:var(--ink);color:var(--bg)}

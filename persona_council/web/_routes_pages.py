@@ -418,7 +418,7 @@ def register_pages(app) -> None:
                           f'<p style="font-size:1.1em;margin:.35em 0">&bdquo;{_esc(motion)}&ldquo;</p>'
                           f'<p class="muted small">{help_}</p></div></div>') if motion else ""
             sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
-        main = (f'<div class="hero"><h1>{_esc(session["prompt"])}</h1>'
+        main = (f'<div class="hero" id="sec-question"><h1>{_esc(session["prompt"])}</h1>'
                 f'<p class="sub">{t("council_kicker_" + mode, n=n_voices)} · {_esc(session["selection_reason"])}</p></div>'
                 f'{lead_block}'
                 f'<div class="callout"><span class="emj">{_icon("bulb")}</span>'
@@ -444,7 +444,10 @@ def register_pages(app) -> None:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((session["prompt"][:50], None))
         rel = _relations_html(store, f"council:{session_id}", proj["id"] if proj else None)
-        return _layout(council_title, _doc(main + rel, rail=rail), store,
+        crail = [("sec-question", t("question")), ("stimmen", t("voices"))]
+        if rel:
+            crail.append(("sec-relations", t("relations")))
+        return _layout(council_title, _doc(main + rel, rail=rail) + _page_rail(crail), store,
                        crumbs=crumbs, active="projects",
                        actions=_star("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))
 
