@@ -1,6 +1,14 @@
 # Exhaustive, Self-Verifying Runs (ESV) — build-ready specification
 
-> **Status:** SPEC (build-ready). The detailed design for the three big-leverage moves in
+> **Status:** ✅ IMPLEMENTED 2026-06-05 (ESV0–ESV6, suite green, pushed). ESV1 auto-organization
+> (`derive_sections`+`scaffold_meta_report`); ESV2 completeness critic + rubric + concepts-as-data;
+> ESV3 resumable run object + keyed prototype sessions; ESV4 the deterministic RunLoop driver
+> (`run_step`/`inject_work`) + loop-until-dry critic gate (the keystone) + the host-skill rewrite;
+> ESV5 the `journey` type + `spa-journey` + `chart`/`verdict`/`timeline` + evaluator comparison ops;
+> ESV6 `cohort_memory_depth`/`memory_depth` + `score_run` + the pipeline regression test. Each shipped
+> with tests; the driver is unit-tested end-to-end via a deterministic stub (OD-4: completes a
+> methodology, the critic loop injects work then converges, a killed run resumes identically).
+> Originally a build-ready SPEC; the design below stands as the reference. The detailed design for the three big-leverage moves in
 > `spec/harness-leverage-roadmap.md`, plus the supporting work, broken into ordered milestones with
 > data models, tool signatures, control flow, and acceptance criteria. **North star:** one HMW prompt
 > → a resumable, multi-agent run that keeps going until an *independent critic* says it is exhaustive
