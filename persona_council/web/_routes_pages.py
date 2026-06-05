@@ -16,6 +16,7 @@ from ._synthesis import (
 from ._graph import _graph_interactive, _plan_html, _outline_html
 from ..presentation import glyph_icon
 from ._detail import _relations_html, _properties_html
+from ._rail import _page_rail
 
 
 def _projects_page() -> str:
@@ -694,13 +695,20 @@ def register_pages(app) -> None:
             ("dot", t("created"), _esc(note.get("created_at", "")[:10])),
             ("projects", t("project"), proj_link),
         ])
-        body = (f'<div class="page"><div class="card">'
+        nrel = _relations_html(store, f"note:{note_id}", proj["id"])
+        body = (f'<div class="page"><div class="card" id="sec-content">'
                 f'<div style="margin-bottom:8px"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
                 f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(klabel)}</span></div>'
                 f'<h1 class="h1">{_esc(note.get("title",""))}</h1>'
                 f'<div class="es-prose" style="margin-top:10px">{_md(note.get("text",""))}</div>'
                 f'<div class="muted small" style="margin-top:14px">{_esc(note.get("created_at","")[:10])}</div></div>'
-                f'{nprops}{_relations_html(store, f"note:{note_id}", proj["id"])}</div>')
+                f'{nprops}{nrel}</div>')
+        nrail = [("sec-content", klabel)]
+        if nprops:
+            nrail.append(("sec-properties", t("properties")))
+        if nrel:
+            nrail.append(("sec-relations", t("relations")))
+        body += _page_rail(nrail)
         return _layout(note.get("title") or klabel, body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (klabel, None)],
                        active="projects")
@@ -736,7 +744,7 @@ def register_pages(app) -> None:
             f'<span class="muted small">{_esc(p.get("version",""))} · {_esc(slug)}</span></h1>'
             f'<p class="lead"><a class="btn" href="{src}" target="_blank">{_icon("projects")} {t("open_in_new_tab")} {_icon("external")}</a></p>'
             f'<div class="protoframe"><iframe src="{src}" title="{_esc(p["name"])}" loading="lazy"></iframe></div>'
-            f'<div class="card" style="margin-top:16px"><b>{t("prototypes_h")} · {t("sessions")} ({len(sessions)})</b>'
+            f'<div class="card" id="sec-sessions" style="margin-top:16px"><b>{t("prototypes_h")} · {t("sessions")} ({len(sessions)})</b>'
             f'<div style="margin-top:8px">{sessions_html}</div></div>')
         concept_in = []
         if proj:                                              # the concept that realises this prototype
@@ -747,12 +755,18 @@ def register_pages(app) -> None:
                 concept_in = []
         n_grounded = sum(1 for s in sessions if s.get("grounded_verified"))
         proj_link = (f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>' if proj else "—")
-        body += _properties_html([
+        prop_html = _properties_html([
             ("square", t("fidelity"), _esc(_ap.get("disc") or _ap.get("label") or "")),
             ("personas", t("sessions"), str(len(sessions))),
             ("check", t("grounded_yes"), f"{n_grounded}/{len(sessions)}" if sessions else "—"),
             ("projects", t("project"), proj_link),
         ])
-        body += _relations_html(store, f"prototype:{p['id']}", p.get("project_id"), extra_in=concept_in)
-        body += "</div>"
+        rel_html = _relations_html(store, f"prototype:{p['id']}", p.get("project_id"), extra_in=concept_in)
+        body += prop_html + rel_html + "</div>"
+        rail = [("sec-sessions", t("sessions"))]
+        if prop_html:
+            rail.append(("sec-properties", t("properties")))
+        if rel_html:
+            rail.append(("sec-relations", t("relations")))
+        body += _page_rail(rail)
         return _layout(p["name"], body, store, crumbs=crumbs, active="projects")
