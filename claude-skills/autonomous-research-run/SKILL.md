@@ -22,8 +22,14 @@ You almost never read a full council/synthesis yourself — you steer from `asse
 
 ## The lean loop (repeat)
 ```
-a = assess_project(project)                  # the pulse: recommendation + gaps + saturation + open gates
-if a.recommendation == "complete": break
+a = assess_project(project)                  # the pulse: recommendation + gaps + saturation + finish
+if a.recommendation == "finish":             # gates passed but NOT a finished project — do NOT stop:
+    # organize + conclude + hand off (this is what makes it a finished project, not a starting point):
+    #   • create phase/theme SECTIONS (Discover/Define/Solution/Prototype-ladder/Deliver) if a.finish.organized is false
+    #   • author the rich terminal CONCLUSION synthesis if a.finish.concluded is false
+    #   • author the META-REPORT (outline→sections→export) if a.finish.handed_off is false
+    continue                                  # re-assess; only `complete` (finish.finished) ends the run
+if a.recommendation == "complete": break      # complete == finish.finished == organized + concluded + handed-off
 if budget exhausted: converge & break
 
 n = next_action(project)                     # the ready step, FULLY loaded — your only per-step read
@@ -59,11 +65,16 @@ Authoring per bucket (always a SUBAGENT, grounded in `n`):
   winner = honest check") and keep them in a "Run-Journal" section. This is durable external memory
   so YOU stay lean.
 
-## Stop criteria (HX7 — don't run forever, don't stop arbitrarily)
-Converge/stop when ANY: `assess_project.recommendation == "complete"`; `saturation.hint ==
-"converging"` AND open_questions empty; K consecutive councils add no new theme (theme-novelty
-saturation); or the iteration budget is hit (then drive the remaining verifies to a Deliver synthesis
-+ roadmap and finish honestly, noting what was capped).
+## Stop criteria (HX7 — don't run forever, don't stop arbitrarily, don't stop EARLY)
+**"Gates passed" ≠ "finished".** A run is DONE only when `assess_project.finish.finished` is true —
+i.e. the project is ORGANIZED (sections), CONCLUDED (a substantial terminal solution-presentation
+synthesis), and HANDED-OFF (a meta-report). `recommendation == "finish"` means the plan's gates are
+met but the project is still a *starting point*; keep going (organize + conclude + meta-report) — do
+NOT report done. Only then converge/stop when ANY: `recommendation == "complete"`; `saturation.hint ==
+"converging"` AND open_questions empty; K consecutive councils add no new theme; or the iteration
+budget is hit (then still finish: organize + Deliver synthesis + meta-report + roadmap, honestly noting
+what was capped). Also heed `assess_project.novelty` — if the solution space is "narrow", push for a
+bolder, more experienceable concept before converging.
 
 ## Output
 `export_plan_md` (the analyze→act→verify log) + the section overlays (themes + phases) + the Deliver
