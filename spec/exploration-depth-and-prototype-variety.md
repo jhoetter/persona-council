@@ -151,6 +151,43 @@ and test a Non-Fit motion") and have `next_action`'s act-guidance mention it whe
 exploratory. The engine stays tag-agnostic; the technique lives in suggestion DATA. Generalizes to any
 domain (stress-test any thesis with its most likely refuters).
 
+### GAP-3 — DEFECT: the synthesis payload validator silently drops the methodology's structured convergence fields ⚠️⚠️ (highest-priority harness fix)
+**Observed live:** the Define answer node (`synthesis_6eec08bfbceca0fb`) is an **empty shell** —
+`clusters`, `key_problems`, `gesamtbild`, `positionierung`, `segmente` all empty — even though the **5
+cited Discover councils are deep** (OBS-3/OBS-4). Root cause is a harness defect, not (only) agent
+discipline: `llm_simulation/_validators.py::validate_synthesis_payload` returns a **fixed whitelist**
+(`arc_narrative, gesamtbild, positionierung, handlungsempfehlungen, segmente, references, voices,
+citations`) that **omits `clusters`, `key_problems`, `ranking`, `shortlist`** — the exact structured
+fields the deep seed intents instruct the agent to author:
+- `verify__define.intent`: *"Author payload.clusters [{label, member_node_ids, insight}] +
+  payload.key_problems."*
+- `verify__lofi_select.intent`: *"Author payload.ranking [{prototype_id, score_rationale}] +
+  payload.shortlist."*
+These fields **exist on the Synthesis model** (get_synthesis returns `clusters:[] key_problems:[]
+ranking:[] shortlist:[]`, so they *render*), but `record_synthesis` runs the payload through
+`validate_synthesis_payload`, which **discards them on write**. So a methodology's affinity map /
+key-problems / lo-fi ranking / shortlist — its core convergence outputs — are silently lost; the
+ANSWER artifact is hollow while the substance is stranded in council exec-summaries. This is the
+"thin synthesis" anti-pattern resurfacing **structurally**, and it is methodology-agnostic damage.
+*Compounding agent-discipline note:* the agent ALSO left `gesamtbild`/`positionierung` empty (those DO
+survive validation), so it under-authored the prose POV too — but even a perfectly disciplined agent
+following the intent would lose its clusters/key_problems to the validator.
+*Proposed (general — NOT hardcoded DT):*
+- **FIX-A (harness, do first):** stop dropping structured blocks. Either extend the validator to pass
+  `clusters/key_problems/ranking/shortlist` through (they already exist + render), or — more general —
+  give the synthesis payload an extensible `structured`/`blocks` object the methodology defines,
+  validated *loosely* (size caps, no vocabulary). Then ANY methodology's convergence output survives,
+  regardless of its tags. This is the single highest-leverage fix found so far.
+- **FIX-B (honesty gate):** `record_synthesis` should **soft-warn** (and/or the verify gate flag) when
+  a synthesis payload is near-empty (no prose AND no structured blocks) — promote the existing
+  `assess_project` thin-synthesis signal onto the WRITE path so a hollow answer can't silently pass a
+  converge step. (Matches `harness-run-observations.md`'s proposed record_synthesis soft-warning.)
+- **FIX-C (contract):** add a "seed-intent ↔ payload-schema" consistency check — a seed intent must
+  only instruct payload fields the schema persists. Today they disagree.
+*Why it matters:* this is precisely the gap between "deep understanding" (present, in councils) and a
+"rich, explorable answer" (absent). Without FIX-A, even an excellent run renders thin POV/deliverable
+nodes — the user-visible disappointment, despite good work underneath.
+
 ## Watch list (to confirm as the run proceeds)
 - **WATCH-1 — Discover breadth shape.** ✅ resolved positively (see OBS-3): a few rich multi-persona
   councils per angle, spectrum-sampled, memory-grounded. (Kept on the list as a regression check for
