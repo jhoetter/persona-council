@@ -386,4 +386,15 @@ def record_prototype_session(persona_id, prototype_id, session_id, date_value, r
         memory_written = True
     except Exception:
         memory_written = False
-    return {"prototype_session": sess, "grounded_verified": grounded, "memory_written": memory_written}
+    out = {"prototype_session": sess, "grounded_verified": grounded, "memory_written": memory_written}
+    if not grounded:
+        # GAP-5: an unverified session is soft evidence — make it visible (and the gate now requires a
+        # GROUNDED session when the harness can verify), instead of silently passing as "real usage".
+        msg = ("UNVERIFIED_SESSION: no observed-state log for this session_id, so the reaction is NOT "
+               "verified against real usage.")
+        if _browser.available():
+            msg += (" Playwright IS available here — open the prototype (proto_open/proto_act/proto_read) "
+                    "and record from the SAME session_id; the log is now retained across proto_close, so a "
+                    "real drive will verify. An unverified session does NOT satisfy a session_of_tags gate.")
+        out["warnings"] = [msg]
+    return out

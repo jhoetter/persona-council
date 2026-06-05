@@ -185,6 +185,17 @@ class _Session(threading.Thread):
 
 
 _SESSIONS: dict[str, _Session] = {}
+# Logs retained PAST close() so a proband session still verifies its observed states after the browser
+# is torn down (spec/exploration-depth-and-prototype-variety GAP-5). Without this, the clean
+# drive→close→record order destroyed the groundedness evidence and every session recorded unverified.
+_RETAINED_LOGS: dict[str, list[dict[str, Any]]] = {}
+_MAX_RETAINED = 128
+
+
+def _retain_log(session_id: str, log: list[dict[str, Any]]) -> None:
+    _RETAINED_LOGS[session_id] = list(log)[-400:]
+    while len(_RETAINED_LOGS) > _MAX_RETAINED:
+        _RETAINED_LOGS.pop(next(iter(_RETAINED_LOGS)))
 
 
 def open_session(url: str, prototype_id: str | None = None, persona_id: str | None = None) -> dict[str, Any]:
@@ -220,6 +231,7 @@ def close(session_id: str) -> dict[str, Any]:
     s = _SESSIONS.pop(session_id, None)
     if not s:
         return {"closed": False}
+    _retain_log(session_id, s.log)   # keep the observed-states log so a later record_* still verifies
     try:
         s.send("close", timeout=10)
     except Exception:
@@ -234,4 +246,6 @@ def list_sessions() -> list[dict[str, Any]]:
 
 def session_log(session_id: str) -> list[dict[str, Any]] | None:
     s = _SESSIONS.get(session_id)
-    return list(s.log) if s else None
+    if s:
+        return list(s.log)
+    return list(_RETAINED_LOGS[session_id]) if session_id in _RETAINED_LOGS else None

@@ -277,3 +277,49 @@ def test_grep_gate_no_hardcoded_bucket_kind_vocabulary():
     for lit in ('== "council"', '== "synthesis"', '{"council"', '{"synthesis"',
                 '"kind": "council"', '"kind": "synthesis"'):
         assert lit not in wsrc, f"web.py must not hardcode evidence-kind literal {lit}"
+
+
+# --------------------------------------------------------------------------- GAP-5: groundedness
+
+def test_browser_log_retained_past_close_for_grounding():
+    """GAP-5: a session's observed-state log survives close() so a proband reaction recorded AFTER
+    closing the browser still verifies (the clean drive→close→record order no longer loses evidence)."""
+    from persona_council import browser
+    browser._RETAINED_LOGS.clear()
+    sid = "psession_test_retain"
+    browser._retain_log(sid, [{"kind": "snapshot", "refs": ["r1"], "text": "Du hast die Hand drauf"}])
+    log = browser.session_log(sid)            # not in _SESSIONS, but retained
+    assert log and log[0]["refs"] == ["r1"]
+
+
+def test_ungrounded_proband_session_warns_and_blocks_gate(store, tmp_path, monkeypatch):
+    """GAP-5: an unverified proband session (no observed-state log) is flagged on write AND does not
+    satisfy a session_of_tags gate when the harness can verify; a grounded session clears it."""
+    import persona_council.prototypes as P
+    monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "protos")
+    from persona_council import plan as PL, services, browser
+    monkeypatch.setattr(browser, "available", lambda: True)
+    proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    concept = {"title": "P", "summary": "", "start": "a", "screens": [
+        {"id": "a", "title": "A", "elements": [{"kind": "text", "id": "t", "label": "x"}]}]}
+    art = services.scaffold_artifact("g5-proto", "G5", concept, type="prototype", tags=["lofi"],
+                                     project_id=pid, store=store)
+    # record a session with a session_id that has NO browser log -> grounded False + warning
+    out = services.record_prototype_session("p1", art["id"], "no-such-session", "2026-06-05",
+        {"summary": "ok", "observed_state_refs": ["x"], "verdict": "ok"}, store=store)
+    assert out["grounded_verified"] is False
+    assert any("UNVERIFIED_SESSION" in w for w in out.get("warnings", []))
+    # a verify task requiring a session of `lofi` is blocked while only the ungrounded session exists
+    vtask = {"id": "v", "bucket": "verify", "capability": "decide", "consumes": [],
+             "requires": {"session_of_tags": ["lofi"]}}
+    plan = {"project_id": pid, "tasks": [vtask]}
+    PL.validate_plan(plan)
+    unmet = PL.verify_unmet(plan, PL.task(plan, "v"), store)
+    assert any("GROUNDED" in u for u in unmet), unmet
+    # a verified session of the same artifact clears the groundedness gap
+    store.insert_prototype_session({"id": "ps_grounded", "persona_id": "p1", "prototype_id": art["id"],
+        "session_id": "s", "date": "2026-06-05", "reaction": {}, "observed_state_refs": ["x"],
+        "created_at": "2026-06-05T00:00:00+00:00", "grounded_verified": True})
+    unmet2 = PL.verify_unmet(plan, PL.task(plan, "v"), store)
+    assert not any("GROUNDED" in u for u in unmet2), unmet2

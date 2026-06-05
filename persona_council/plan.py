@@ -320,9 +320,27 @@ def verify_unmet(plan: dict[str, Any], vtask: dict[str, Any], store: Store) -> l
         if not M._project_artifacts_with(store, pid, tg):
             unmet.append(f"need >= 1 artifact tagged `{tg}`")
     for tg in req["session_of_tags"]:
-        if not M._sessions_of(store, pid, tg):
+        sess = M._sessions_of(store, pid, tg)
+        if not sess:
             unmet.append(f"need >= 1 recorded session of an artifact tagged `{tg}`")
+        elif _grounding_verifiable() and not any(s.get("grounded_verified") for s in sess):
+            # GAP-5: when the harness CAN verify, an unverified session is not real-usage evidence —
+            # a converge can't pass its proband-test gate on it. Degrades gracefully where Playwright
+            # is unavailable (then any recorded session counts, as before).
+            unmet.append(f"need >= 1 GROUNDED session of `{tg}` — {len(sess)} recorded but none verified "
+                         f"against real observed usage; drive the prototype (proto_open/proto_act) and "
+                         f"cite states you actually saw, then record")
     return unmet
+
+
+def _grounding_verifiable() -> bool:
+    """True when the Playwright harness is available, so an ungrounded proband session is a real gap
+    (not just a degraded-environment artefact). Lazy import avoids a hard browser dependency."""
+    try:
+        from . import browser as _browser
+        return bool(_browser.available())
+    except Exception:
+        return False
 
 
 def complete_task(project_id: str, task_id: str, store: Store | None = None) -> dict[str, Any]:
@@ -486,6 +504,17 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
             if len(body) < 200:
                 gaps.append(f"{tsk['title']}: synthesis is thin/empty — fill gesamtbild/positionierung "
                             f"(the synthesis IS the answer; don't leave it only in notes)")
+    # proband-session groundedness (GAP-5): unverified sessions mean the "personas really USED it"
+    # evidence is soft — surface it so a long run doesn't converge on unverified usage.
+    try:
+        psess = [s for s in store.list_prototype_sessions()
+                 if (store.get_prototype(s.get("prototype_id", "")) or {}).get("project_id") == project_id]
+        ungrounded = [s for s in psess if not s.get("grounded_verified")]
+        if psess and ungrounded:
+            gaps.append(f"{len(ungrounded)}/{len(psess)} proband session(s) ungrounded (not verified "
+                        f"against real observed usage) — re-test by driving the prototype so the evidence is real")
+    except Exception:
+        pass
     ready = ready_tasks(plan)
     complete = is_complete(plan)
     if complete:
