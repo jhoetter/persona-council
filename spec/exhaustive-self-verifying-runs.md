@@ -304,6 +304,66 @@ sections all present. *Acceptance:* scores persist + the regression test guards 
 - **ESV6 — Eval harness + deeper memory (D.2/D.3).** Scoring, the pipeline regression test, the
   memory-depth signal + `deepen_cohort`. *(medium)*
 
+## 8. OPEN DESIGN DECISIONS (resolve before ESV4 — the driver)
+ESV1–ESV3 are build-ready as specified. The following are genuine forks, not details; ESV4 (the
+driver) and the critic loop depend on them. Each lists the fork + a recommended default.
+
+**OD-1 — How does a DETERMINISTIC driver dispatch Claude subagents? (the load-bearing one).** The
+locked rule forbids in-process LLM authoring, so the driver cannot author; it must *orchestrate Claude*.
+A pure-Python `RunLoop` engine has no way to spawn a Claude subagent (that is a Claude-Code primitive).
+Three options: (a) the driver IS a Claude-Code **Workflow script / skill** — agent-invoked, uses
+`agent()`/Task to spawn step subagents; "deterministic" then means the *control flow* is deterministic,
+not that it runs without Claude; (b) **engine-emits-specs**: a Python `RunLoop` returns the next
+"dispatch spec" + accepts the result back, and the host (a thin Claude skill) executes each spawn and
+calls back — the engine stays pure/testable, the host does the LLM I/O; (c) a standalone service that
+shells out to `claude -p` per step. *Recommendation:* **(b)** — a pure `RunLoop` engine
+(`next()`/`record_result()`/`resume()`, fully unit-testable with a stub) wrapped by a thin skill that
+does the actual subagent spawns. Keeps the engine deterministic + testable AND honors the rule. This
+choice reshapes A.3; pin it first.
+
+**OD-2 — Concurrency safety of parallel act fan-out on the shared plan.** `add_task`/`link_evidence`
+are read-modify-write on one plan JSON document; parallel subagents racing them will lose writes.
+Options: (a) **serialize plan mutations** through the driver (subagents return evidence, the driver
+applies add_task/link sequentially after the parallel authoring) — simplest, safe; (b) per-task append
+with optimistic-concurrency/retry; (c) a row-per-task plan model. *Recommendation:* **(a)** — fan out
+the *authoring* (councils/prototypes/sessions, which write to their own tables safely), but the driver
+applies the *plan* mutations sequentially. Cleanly removes the race.
+
+**OD-3 — Concepts must become FIRST-CLASS structured data.** The critic's `concepts_not_prototyped`
+breadth-candidate can't be computed today: ideate concepts live as free text in `frame.questions`.
+Decision: add a lightweight structured concept record (e.g. notes tagged `concept` with
+`{id,title,lens,artifact_kind,prototyped:bool}`, or a `concepts` block on the ideate frame) so the
+critic + the novelty signal can reason over them. *Recommendation:* concept = a `note` with a
+`concept` kind + a `prototype_id` link when built; cheap, reuses notes, makes the gap computable.
+(Affects B.2 frame computation; small but needs deciding.)
+
+**OD-4 — Driver testability without an LLM.** Acceptance like "one subagent per step, resumes
+identically" can't drive real Claude in CI. We need a **deterministic authoring stub** for the
+`RunLoop` (ironically, the role the retired `StubAuthoringBackend` played) — a test double that
+returns canned evidence per step so the engine's loop/resume/critic-gate are unit-testable. *Recommend:*
+ship a `tests` stub backend with the engine (OD-1 option b makes this clean: the engine takes a
+`record_result` callback; tests feed canned results).
+
+**OD-5 — Budget semantics + critic non-convergence.** Define `budget` units (recommend: **step count**
+primary, optional token ceiling), enforcement (driver stops dispatching past budget, then runs the
+finish steps + a honest "capped" note), and a critic **max-rounds** cap so an over-eager critic can't
+loop forever (recommend: K=2 dry rounds to pass; hard cap of e.g. 4 critic rounds, then finish with the
+remaining `missing` recorded as open questions). Pin the numbers in config/data, not code.
+
+**OD-6 — Integration with the existing front door.** Does ESV **replace** `autonomous-research-run`
+or wrap it? *Recommendation:* the `RunLoop` engine becomes the core; `autonomous-research-run` becomes
+the thin host skill over it (OD-1b), and `compose-research-plan` hands off to it unchanged. One loop,
+not two.
+
+**Smaller spec tightenings (can be settled in-PR, not blocking):** evaluator boolean/comparison
+precedence + short-circuit (C.4); the chart x-sweep must not clobber a real input of the same id;
+`spa-journey`/`spa-model` should share one renderer JS (build-time include) rather than copy; exact
+`derive_sections` label derivation from step names; `memory_depth` thresholds as data.
+
+**Net:** ESV1 (auto-org), ESV2 (critic tools), ESV3 (resumable writes + run object) can start now as
+specified. **OD-1..OD-5 should be decided before ESV4** (they reshape the driver + critic loop). OD-1
+is the one to settle first.
+
 ## 7. Definition of done for the program
 One HMW prompt → the `esv-run` driver produces, **resumably and without context exhaustion**, a project
 that an **independent critic** certifies exhaustive (rubric all ≥ threshold, no `missing`), that is
