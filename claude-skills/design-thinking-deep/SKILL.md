@@ -6,58 +6,72 @@ description: Run the FULL deep design-thinking process (double_diamond_deep) at 
 # design-thinking-deep
 
 The deep variant of `methodology-run`, on the `double_diamond_deep` **constellation** (three linked
-diamonds, expressed as a DAG of tagged steps). The engine enforces the SHAPE and is tag-agnostic;
+diamonds). A methodology only SEEDS the **research PLAN** — the single engine: a DAG of tasks bucketed
+**analyze / act / verify** (since HX3 there is one engine; the old constellation runtime was retired
+— see `spec/hx3-engine-collapse.md`). The plan enforces the SHAPE + gates and is tag-agnostic;
 **I (the host) and my subagents author every word** via MCP — **never call an LLM API for text**
 (OpenAI = embeddings + images only). "At scale" = **parallel subagent fan-out**, not a server-side
-loop. Specs: `spec/methodology-constellations.md` (the model) + `spec/deep-design-thinking-and-diamond.md`.
+loop. Specs: `spec/research-plan-engine.md` + `spec/methodology-constellations.md` +
+`spec/deep-design-thinking-and-diamond.md`.
 
 ## Setup — a real cohort
 Author **12–16 segmented personas** (record_persona; host-authored) spanning age × life-stage ×
-attitude × channel × region + 2–3 provider-side roles. Then:
+attitude × channel × region + 2–3 provider-side roles. Then seed the plan:
 ```
-start_methodology_project "<title>" "<HMW>" double_diamond_deep --persona … (all of them)
+start_project "<title>" "<HMW>" --methodology double_diamond_deep --persona … (all of them)
+# seeds a `frame` analyze task per fan step + a gated `verify` task per decide step.
 ```
 
-## The loop (brief_next drives it; one Synthesis per node; six steps)
-For each ready step, `brief_next`; then:
+## The loop (`next_action`/`brief_next` drives it; one Synthesis per converge; six steps)
+For each ready task, `next_action`; then by bucket:
 
-**Fan steps (explore) — FAN OUT WIDE (this is the diamond):**
-- `discover`: spawn **one subagent per persona** (in parallel batches), each loads its own
-  `persona-context` and reacts (pain-discovery) → `record_node` per persona. 12–16 nodes.
-- `ideate`: spawn **one subagent per solution idea** → `record_node` per idea; build
-  **several lo-fi prototypes** (`scaffold_prototype --template spa-sketch`, fidelity=lofi).
-- `refine`: build **mid-fi** prototype(s) of the shortlist (`--template spa-min`, fidelity=midfi);
-  one node per refinement angle.
-- Then a host `record_judgment(<step>, "divergence_complete", evidence_refs=[council_ids])` and `advance`.
+**analyze (frame) — understand before concluding:**
+- `frame__discover` / `frame__ideate` / `frame__refine`: read persona memory (their simulated days)
+  + prior evidence, author the research questions/angles → `record_frame(questions, hypotheses,
+  memory_refs)` (≥1 question + ≥1 memory ref). This opens the diamond.
+
+**act — FAN OUT WIDE (this is the diamond; breadth = angles × persona diversity):**
+- discover: spawn subagents (parallel batches) each loading its own `persona-context` and reacting
+  (pain-discovery); assemble a FEW **real multi-persona councils** per angle → `add_task("act",
+  "explore", "<angle>", consumes=[frame__discover])` + `link_evidence(kind="council")` +
+  `complete_task`. (Several councils of many personas — NOT one council per persona.)
+- ideate: one act task per solution angle; build **several lo-fi prototypes** (`scaffold_artifact(...,
+  type="prototype", tags=["lofi"])`, consuming `frame__ideate`) + `link_evidence(kind="artifact")`.
+- refine: build **mid-fi** prototype(s) of the shortlist (`tags=["midfi"]`, consuming `frame__refine`).
 - Stop fanning out by your own judgment (evidence-backed) — never a fixed count.
 
-**Decide steps — cluster / decide (record_decision):**
-- `define`: **affinity-cluster** the discover fan into themes; author payload with
-  `clusters:[{label, member_node_ids, insight}]` + `key_problems:[…]`; `record_decision` (role
-  key-problems).
-- `lofi_select`: personas **USE each lo-fi prototype** via Playwright (`run_prototype` →
-  `brief_prototype_session` → `proto_open`/`proto_act` → `record_prototype_session`); then
-  down-select: author `ranking:[{prototype_id, score_rationale}]` + `shortlist:[…]`; `record_decision`.
-  (Its `requires.session_of_tags:["lofi"]` is matched by tag-equality to the lo-fi prototypes.)
-- `deliver`: personas **USE the mid-fi** prototype (`session_of_tags:["midfi"]`); synthesize the
-  **solution presentation** (winning concept, who-wins + non-targets, validated pain-solvers,
-  evidence trail, open risks, spec); `record_decision` (role solution-presentation), `advance` → complete.
+**verify — cluster / decide behind an evidence gate (one synthesis per waist):**
+- `verify__define`: **affinity-cluster** the discover fan; author a synthesis payload with
+  `clusters:[{label, member_node_ids, insight}]` + `key_problems:[…]` → `record_synthesis` +
+  `link_evidence(kind="synthesis")` + `record_judgment("divergence_complete", …)` + `complete_task`.
+- `verify__lofi_select`: personas **USE each lo-fi prototype** via Playwright (`run_prototype` →
+  `brief_prototype_session` → `proto_open`/`proto_act` → `record_prototype_session`); then a synthesis
+  with `ranking:[{prototype_id, score_rationale}]` + `shortlist:[…]`; judge + complete. (Its
+  `requires.session_of_tags:["lofi"]` is matched by tag-equality to the lo-fi prototypes' sessions.)
+- `verify__deliver`: personas **USE the mid-fi** prototype (`session_of_tags:["midfi"]`); synthesize
+  the **solution presentation** (winning concept, who-wins + non-targets, validated pain-solvers,
+  evidence trail, open risks, spec); `assess_progress(delta="beantwortet")` + `complete_task`.
+
+A verify task is **gated**: it cannot complete until its act fan has ≥`min_inputs` distinct act
+tasks with evidence, a decided `gate_tag` judgment exists, and any required artifacts/sessions exist.
+So you cannot skip the work or conclude early.
 
 ## Parallelism & cost (host judgment)
 - Fan out subagents in **parallel batches** (e.g. 4–6 at a time). Each subagent does its OWN
-  `persona-context` load + reaction; you assemble councils + exploration nodes.
-- Breadth target: discover ≈ one node per persona; ideate ≈ 4–8 ideas; lo-fi ≈ 3–5 prototypes;
-  mid-fi ≈ 1–2. Adjust to the problem; log when you cap.
+  `persona-context` load + reaction; you assemble the multi-persona councils + act tasks.
+- Breadth target: discover ≈ a few real councils across the segments; ideate ≈ 4–8 ideas; lo-fi ≈
+  3–5 prototypes; mid-fi ≈ 1–2. Adjust to the problem; `log`/note when you cap.
 
 ## Real prototypes (lo-fi → mid-fi)
-- Lo-fi: `scaffold_prototype(slug,name,concept,template="spa-sketch")` — sketchy, cheap, several.
-- Mid-fi: `scaffold_prototype(... template="spa-min")` of the shortlisted concept.
+- Lo-fi: `scaffold_artifact(slug, name, concept, type="prototype", tags=["lofi"])` — cheap, several.
+- Mid-fi: `scaffold_artifact(... tags=["midfi"])` of the shortlisted concept.
 - Always tested for real via the Playwright harness; reactions grounded in the session log.
 
 ## Output
 Three real diamonds in the project graph (wide discover fan → key problems → wide ideate fan →
-shortlist → refine → solution presentation), real lo-fi + mid-fi prototypes, and a Meta-Report =
-the **solution presentation**. See it in the web inspector's methodology strip + diamond view.
+shortlist → refine → solution presentation), real lo-fi + mid-fi prototypes, `export_plan_md` as the
+analyze/act/verify log, and a Meta-Report = the **solution presentation**. See it in the web
+inspector's methodology strip + diamond view.
 
 ## Hard rule
 No LLM text-generation, ever. Host/subagents author all text via MCP. OpenAI key = embeddings +

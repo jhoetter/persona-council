@@ -100,9 +100,12 @@ research", "Problem exploration", "Solution space" — wire the autonomous loop 
 > `next_action` (the ready step fully loaded — grounding / framed-questions+diverse-participants /
 > fan+gate — one compact call per iteration). ✅ **HX4** the `autonomous-research-run` skill (the lean
 > host/subagent loop) — folding in **HX5** (sections + a notes run-journal keep it self-organizing)
-> and **HX7** (saturation/budget stop criteria, with the `saturation` hint from HX1). Remaining:
-> ◑ **HX3** canonicalize the plan engine / retire the constellation runtime duplication; ◑ **HX6**
-> resumable/re-runnable evidence ids (the E2E id-remap pain). These two are larger refactors.
+> and **HX7** (saturation/budget stop criteria, with the `saturation` hint from HX1).
+> **Implemented (2026-06-05):** ✅ **HX3** plan.py is the single engine — the constellation runtime
+> (`runtime.py` + the `phase_log` engine inside `methodology.py` + its MCP/CLI surface) is retired;
+> methodologies are now ONLY plan seeds (`spec/hx3-engine-collapse.md`). ✅ **HX6** (substantially):
+> deterministic `key` on `record_council`/`record_synthesis` (+ slug-idempotent artifacts) gives
+> resumable/replayable evidence ids. Remaining: HX6 could extend keys to the other graph writers.
 
 - **HX1 — Project meta-assessment (`assess_project`).** A read-only, evidence-cited project digest:
   coverage by phase/kind, open questions, contradictions, **saturation signal** (are recent councils
@@ -114,10 +117,12 @@ research", "Problem exploration", "Solution space" — wire the autonomous loop 
   question + **suggested diverse participants** (segment-spread, not keyword) + which renderer to
   build; for verify → the fan to consolidate + the gate to satisfy. Turns each iteration into one
   gather→author→persist. Build on `brief_next` + `coverage_hint` + memory recall.
-- **HX3 — Canonicalize the plan engine; methodologies = plan seeds.** Make plan.py the single engine;
-  express constellations as plan seeds (already do via `seed_plan_from_methodology`); add a plan-loop
-  driver (HX4) and forward/retire the constellation runtime path. Remove the duplication that splits
-  the autonomous driver from the used engine.
+- **HX3 — Canonicalize the plan engine; methodologies = plan seeds.** ✅ DONE (2026-06-05,
+  `spec/hx3-engine-collapse.md`). plan.py is the single engine; constellations are plan seeds
+  (`seed_plan_from_methodology`); the constellation runtime (`runtime.py` + the `phase_log` engine in
+  `methodology.py` + its MCP/CLI surface) is retired and `methodology.py` is now a spec/registry +
+  structural-helper module. Subagents see ONE engine surface; the project graph derives solely from
+  the plan.
 - **HX4 — Autonomous plan-loop skill + a subagent AuthoringBackend.** A documented skill (and/or a
   thin `PlanLoopBackend`) that: loops `next_action` → dispatches ONE subagent to author the step →
   persists → `assess_project` every K steps to decide continue/branch/converge → maintains sections
@@ -146,15 +151,15 @@ Three things stand between "primitives + lean tools" and "drop an HMW, walk away
    explicit and documented. Remaining polish: a tiny `plan_blueprint` convenience that returns a
    starting constellation for a chosen inquiry-type (options only; the agent still decides).
 
-2. **HX3 — collapse the two engines.** The methodology-constellation engine (methodology.py +
-   runtime.py) and the research-plan engine (plan.py) model the same thing twice; the only autonomous
-   driver (`run_methodology`) is on the *unused* one, with a stub backend. **Plan: make plan.py
-   canonical** — methodologies are *only* plan seeds (`seed_plan_from_methodology`, already the path);
-   the autonomous loop is the `autonomous-research-run` skill over the plan engine (host/subagent —
-   the locked rule forbids an in-process backend); forward `run_methodology`/`record_node`/
-   `record_decision` to plan-engine equivalents and mark the constellation runtime legacy. This is the
-   biggest debt: it removes duplicate concepts (steps/diamonds vs frames/tasks/verifies), shrinks
-   context, and gives ONE loop. Medium-large refactor; gate with the full suite + characterization.
+2. **HX3 — collapse the two engines.** ✅ DONE (2026-06-05, `spec/hx3-engine-collapse.md`). The
+   methodology-constellation runtime (methodology.py phase_log engine + runtime.py) duplicated the
+   research-plan engine (plan.py); the only autonomous driver (`run_methodology`) was on the *unused*
+   one with a stub backend. **plan.py is now canonical** — methodologies are *only* plan seeds
+   (`seed_plan_from_methodology`); the autonomous loop is the `autonomous-research-run` skill over the
+   plan engine (host/subagent — no in-process backend); `runtime.py` + the constellation
+   `record_node`/`record_decision`/`advance`/`get_methodology_state` MCP/CLI surface were removed and
+   `start_methodology_project`/`set_project_methodology` now forward to plan seeding. ONE loop;
+   duplicate concepts (steps/diamonds vs frames/tasks/verifies) gone; suite green.
 
 3. **HX6 — resumable / replayable runs.** Evidence ids embed a timestamp, so a long run can't be
    resumed cleanly and a project can't be replayed (the E2E needed id-remapping). **Plan:** optional
@@ -167,8 +172,9 @@ collapsed "Belege"); ✅ notes render (`/notes/{id}`, clickable); ✅ graph read
 theme outlines, wider nodes, longer labels); ✅ project **Pulse** in the web.
 
 **Sequence to "done":** ship `compose-research-plan` + `autonomous-research-run` as the front door
-(done) → exercise a real autonomous long run end-to-end and fix what chafes → HX3 (one engine) → HX6
-(resumable) → then a 50+-iteration run from one prompt is routine and well-documented.
+(done) → exercise a real autonomous long run end-to-end and fix what chafes (done) → HX3 (one engine,
+done) → HX6 (resumable, substantially done) → then a 50+-iteration run from one prompt is routine and
+well-documented.
 
 ## 4. Are we getting there?
 **Yes on substance, not yet on autonomy.** The run demonstrates every primitive at quality and the

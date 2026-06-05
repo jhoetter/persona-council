@@ -85,7 +85,8 @@ NEXT run. Recommended: re-run the same HMW and re-verify the four syntheses rend
 Develop has ≥2 prototypes/angles, and councils render their turns.
 
 ## Still to spec (deliberate, not done)
-- **HX3** collapse the two engines (the last big refactor).
+- ~~**HX3** collapse the two engines (the last big refactor).~~ ✅ DONE (2026-06-05) —
+  plan.py is the single engine; the constellation runtime is retired (`spec/hx3-engine-collapse.md`).
 - A possible explicit **"converge" sub-step** that records+links a non-trivial synthesis before a
   verify can complete (promote F3's soft signal to a guided step), and a `record_synthesis`
   soft-warning on a near-empty payload.

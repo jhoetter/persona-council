@@ -1,5 +1,12 @@
 # Methodology Constellations — Specification
 
+> **HX3 update (2026-06-05):** the constellation is now a **plan SEED**, not a runtime. The single
+> runtime engine is the research plan (`plan.py`, analyze→act→verify); the old constellation runtime
+> (`record_node`/`record_decision`/`advance`/`get_methodology_state` + `runtime.py`) was retired. The
+> step model, tag-agnostic invariants and DAG/diamond derivation below still hold — realized through
+> `seed_plan_from_methodology` + the plan engine. See `spec/hx3-engine-collapse.md` and
+> `spec/research-plan-engine.md`. Tool names in this doc describe the historical engine.
+>
 > **Status:** IMPLEMENTED (rev.2) — milestones C1–C5 landed; full suite green. Supersedes the phase-grammar of
 > `spec/methodology-engine-and-prototyping.md` §3–§4 and `deep-design-thinking-and-diamond.md` §4,
 > and **rev.1's "capability catalog in code"** (now a *suggestion*, see §2.3).

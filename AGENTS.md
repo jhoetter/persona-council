@@ -116,20 +116,25 @@ Memory & multi-resolution simulation (gather → author → write-back):
   Stimmen panel and the self-contained `export_synthesis` (md/json) for downstream agents.
 - Portability: `export_snapshot`/`import_snapshot` (data/export is the one
   portable artifact; it is gitignored/local-only, as is the SQLite DB runtime)
-- Methodology engine — tag-driven CONSTELLATIONS (structure-enforcing + LLM-judged; ZERO
-  hardcoded vocabularies): a methodology is a DAG of steps carrying OPEN TAGS (capability/role/
-  artifact-type/gate are free strings). `list_methodologies`/`get_methodology`/
-  `start_methodology_project`/`set_project_methodology`, the frontier loop
-  `brief_next`→`record_node`→`record_judgment`(free `gate_tag`)→`record_decision`→`advance`, and
-  `get_methodology_state`. The engine is tag-agnostic: it enforces only the DAG (`consumes`),
-  integer `min_inputs`, tag-equality references, and evidence-backed judgment PRESENCE — never tag
-  membership. Shape (diverge/converge/diamonds/branches/loops) is DERIVED from structure + node
-  counts. Common building blocks are SUGGESTED as data via `suggest_capabilities`/`suggest_roles`/
-  `suggest_artifact_types`/`suggest_methodologies` — recommendations, not constraints; adopt, tweak,
-  or invent your own tags. Legacy `phases` specs + old tool names (brief_phase/record_exploration/
-  record_convergence/advance_phase) still work as aliases. Autonomous loop: `run_methodology`.
-  Spec: `spec/methodology-constellations.md`. Authoring a new methodology = author a constellation
-  of tagged steps in JSON (no code).
+- Research-plan engine — the SINGLE runtime engine (structure-enforcing + LLM-judged; ZERO hardcoded
+  vocabularies): a per-project DAG of analyze→act→verify **tasks**, each bound to a free `capability`
+  and referencing the evidence it produced. `start_project` (freeform: one root `frame` task; or
+  `methodology=…`: seed the constellation), then the per-iteration loop `next_action`/`brief_next` →
+  author the step → `add_task`/`record_frame`/`link_evidence`/`record_judgment`(free `gate_tag`) →
+  `complete_task`, with `assess_project`/`assess_progress` for the read-only meta-assessment.
+  Tag-agnostic: it enforces only the DAG (`consumes`), integer `min_inputs`, tag-equality references,
+  and evidence-backed judgment PRESENCE — never tag membership. Shape (diverge/converge/diamonds/
+  branches/loops) is DERIVED from the task DAG + recorded evidence.
+- Methodologies = tag-driven CONSTELLATION **plan seeds**: a methodology is a DAG of steps carrying
+  OPEN TAGS (capability/role/artifact-type/gate are free strings). `list_methodologies`/
+  `get_methodology`/`start_methodology_project`/`set_project_methodology` SEED a plan from the
+  constellation (a `frame` analyze task per fan step, a gated `verify` task per decide step); the plan
+  engine then drives it. Common building blocks are SUGGESTED as data via `suggest_capabilities`/
+  `suggest_roles`/`suggest_artifact_types`/`suggest_methodologies` — recommendations, not constraints;
+  adopt, tweak, or invent your own tags. Authoring a new methodology = author a constellation of
+  tagged steps in JSON (no code). Since HX3 there is ONE engine (the plan); the old constellation
+  runtime (`record_node`/`record_decision`/`advance`/`get_methodology_state`) was retired — see
+  `spec/hx3-engine-collapse.md`. Specs: `spec/methodology-constellations.md`, `spec/research-plan-engine.md`.
 - Prototypes (real, minimal, local apps agents can use): `scaffold_prototype` (concept→clickable
   SPA), `register_prototype`, `list_prototypes`, `run_prototype`/`stop_prototype`; the Playwright
   harness `proto_open`/`proto_act`/`proto_read`/`proto_close` lets a persona drive the REAL app,
@@ -161,11 +166,12 @@ Run `make skills` once (symlinks `claude-skills/*` into gitignored
 `.claude/skills/`). Skills are thin orchestration playbooks; the methodology
 lives in `spec/`.
 
-- `methodology-run` — facilitate a tag-driven methodology constellation (Double Diamond, d.school
-  micro-cycle, Lean/JTBD, … or any you author) over the graph: genuinely fan out (`record_node`)
-  then decide behind an evidence-backed gate (`record_decision`), incl. build/test steps where
-  personas USE a real app via Playwright. The engine enforces the shape; you author the
-  text. Autonomous variant: `run_methodology`. Spec: `methodology-constellations.md`.
+- `methodology-run` — drive a plan-based methodology constellation (Double Diamond, d.school
+  micro-cycle, Lean/JTBD, … or any you author) over the graph via the analyze→act→verify plan loop:
+  genuinely fan out act tasks (real councils / built+tested prototypes) then converge behind an
+  evidence-backed gate (`record_judgment` + a `record_synthesis`), incl. build/test steps where
+  personas USE a real app via Playwright. The plan engine enforces the shape; you author the text.
+  Specs: `methodology-constellations.md`, `research-plan-engine.md`.
 - `simulate-cohort` — run the day/period loop for personas over months (sampling).
 - `run-council` — memory-grounded council; judicious self-research (recall only
   when it sharpens the answer); optional moderated back-and-forth with mediator
