@@ -352,3 +352,20 @@ def test_next_action_act_surfaces_ideation_lenses_for_innovation(store):
     assert {"analogy", "experienceable", "reversal"} <= lenses
     exp = next(l for l in act["ideation_lenses"] if l["tag"] == "experienceable")
     assert "model" in exp["prompt"].lower() or "simulation" in exp["prompt"].lower()
+
+
+def test_assess_project_surfaces_novelty_signal(store, tmp_path, monkeypatch):
+    """Innovation reliability: assess_project reports concept-KIND diversity + whether an interactive
+    model exists, and flags a narrow (forms-only) space so a run can push for a bolder concept."""
+    import persona_council.prototypes as PP
+    monkeypatch.setattr(PP, "prototypes_dir", lambda: tmp_path / "p")
+    proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    concept = {"title": "T", "start": "a", "screens": [{"id": "a", "title": "A", "elements": [
+        {"kind": "text", "id": "t", "label": "x"}]}]}
+    services.scaffold_artifact("only-form", "F", concept, type="survey", tags=["lofi"], project_id=pid, store=store)
+    n = services.assess_project(pid, store=store)["novelty"]
+    assert n["has_interactive_model"] is False and n["hint"].startswith("narrow")
+    services.scaffold_artifact("a-model", "M", concept, type="model", tags=["lofi"], project_id=pid, store=store)
+    n2 = services.assess_project(pid, store=store)["novelty"]
+    assert n2["has_interactive_model"] is True and n2["hint"] == "diverse"

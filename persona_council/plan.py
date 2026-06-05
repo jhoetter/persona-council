@@ -515,6 +515,25 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
                         f"against real observed usage) — re-test by driving the prototype so the evidence is real")
     except Exception:
         pass
+    # novelty signal: distinct artifact KINDS + whether an interactive `model` exists, so a run sees
+    # if its solution space is too narrow (forms only) and can push for bolder concept diversity. A
+    # descriptive hint, never a hard gate — innovation is host-judged, not enforced (no hardcoded DT).
+    try:
+        protos = store.list_prototypes(project_id)
+        kinds = sorted({(p.get("type") or "prototype") for p in protos})
+        has_model = any((p.get("type") == "model") for p in protos)
+        if protos:
+            novelty = {"artifact_kinds": kinds, "distinct_kinds": len(kinds), "has_interactive_model": has_model,
+                       "hint": ("diverse" if (len(kinds) >= 3 or has_model)
+                                else "narrow — few concept KINDS and no interactive model; consider an "
+                                     "experienceable model + a dark-horse (see next_action.act.ideation_lenses)")}
+            if novelty["hint"].startswith("narrow"):
+                gaps.append("solution space is narrow (few artifact kinds, no interactive model) — "
+                            "apply the ideation lenses for a bolder, more experienceable concept")
+        else:
+            novelty = {"artifact_kinds": [], "distinct_kinds": 0, "has_interactive_model": False, "hint": "no artifacts yet"}
+    except Exception:
+        novelty = {}
     ready = ready_tasks(plan)
     complete = is_complete(plan)
     if complete:
@@ -539,6 +558,7 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
         "open_questions": oqs,
         "saturation": {"act_done": n_act, "councils": n_council, "syntheses": n_syn,
                        "hint": ("converging" if n_syn and n_act <= n_syn * 2 else "still diverging")},
+        "novelty": novelty,
         "gaps": gaps,
         "ready": [t["id"] for t in ready],
         "next": brief_next(project_id, store=store).get("instructions", ""),
