@@ -477,7 +477,7 @@ def register_pages(app) -> None:
         return _projects_page()
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
-    def project_detail(project_id: str, view: str = "list", group: str = "round") -> str:
+    def project_detail(project_id: str, view: str = "list") -> str:
         store = Store()
         try:
             graph = services.get_project_graph(project_id, store=store)
@@ -590,17 +590,14 @@ def register_pages(app) -> None:
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
                  "document.addEventListener('click',function(e){"
                  "if(!p.hidden&&!p.contains(e.target)&&e.target!==b)p.hidden=true;});})();</script>")
-        # Primary view = the LINEAR-STYLE OUTLINE (clean, grouped, never overlaps). The spatial graph
-        # is a secondary toggle. The filter toolbar + floating panel belong to the graph view only.
+        # THE project view = the Linear-style ROUND-grouped OUTLINE (clean, chronological, relationships
+        # via indentation + hover-highlight). The spatial graph is retired from the UI but still reachable
+        # by URL (?view=graph) — code kept, just unlinked — so nothing is destroyed and it's reversible.
         is_graph = view == "graph"
-        view_toggle = (f'<div class="viewtoggle">'
-                       f'<a class="vt{"" if is_graph else " on"}" href="?view=list">{_icon("squareRows")} {t("view_outline")}</a>'
-                       f'<a class="vt{" on" if is_graph else ""}" href="?view=graph">{_icon("projects")} {t("view_graph")}</a></div>')
-        head_tools = toolbar if is_graph else f'<div class="ptoolbar">{view_toggle}<span class="spacer"></span>{meta_btn}</div>'
-        head_tools = (f'<div class="ptoolbar">{view_toggle}<span class="spacer"></span></div>{toolbar}'
-                      if is_graph else head_tools)
+        head_tools = (f'<div class="ptoolbar"><span class="spacer"></span></div>{toolbar}'
+                      if is_graph else f'<div class="ptoolbar"><span class="spacer"></span>{meta_btn}</div>')
         main_view = (f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>{panel}{oq_js}'
-                     if is_graph else f'<div class="outlinecard">{_outline_html(graph, group)}</div>')
+                     if is_graph else f'<div class="outlinecard">{_outline_html(graph)}</div>')
         body = (
             f'<div class="proj">'
             f'<div class="proj-head"><h1 class="h1">{_esc(proj["title"])}</h1>'

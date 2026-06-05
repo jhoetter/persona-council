@@ -124,19 +124,17 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ol-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .olrow .ol-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .olrow .ol-kind{color:var(--faint);font-size:11.5px;flex-shrink:0;white-space:nowrap}
-.ol-groupby{display:flex;align-items:center;gap:4px;max-width:1000px;margin:6px auto 0;padding:0 24px}
-.ol-gbl{font-size:12px;color:var(--faint);margin-right:4px}
-.ol-gb{font-size:12px;color:var(--muted);text-decoration:none;padding:3px 10px;border-radius:6px}
-.ol-gb:hover{background:var(--hover)}
-.ol-gb.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
 .ol-gl.ol-round{color:var(--muted)}
 .ol-cnt{font-size:11px;color:var(--faint);font-weight:600;background:var(--panel-2);border-radius:10px;padding:1px 7px;margin-left:2px}
 .ol-ptag{flex-shrink:0;width:74px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
+.ol-flat{padding-top:4px}
+.olrow.ol-tw{position:relative}
+.olrow.ol-tw::before{content:"";position:absolute;left:24px;top:0;bottom:50%;width:11px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line);border-bottom-left-radius:5px}
+/* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
+.outline .olrow{transition:opacity .12s,background .12s}
+.outline .olrow.rel{background:var(--accent-weak)}
+.outline .olrow.dim{opacity:.32}
 /* view toggle (Outline / Graph) */
-.viewtoggle{display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:2px}
-.viewtoggle .vt{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:6px;font-size:12.5px;color:var(--muted);text-decoration:none}
-.viewtoggle .vt .ic{width:14px;height:14px}
-.viewtoggle .vt.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.10);font-weight:600}
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}
 .rgseclab-t{font-size:12.5px;font-weight:700;letter-spacing:.01em}
