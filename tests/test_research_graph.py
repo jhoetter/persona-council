@@ -155,3 +155,34 @@ def test_synthesis_preserves_structured_blocks_and_warns_when_thin(store):
     # a truly empty synthesis warns (soft, non-blocking)
     thin = services.record_synthesis("Empty", "hmw", [], {}, store=store)
     assert any("SYNTHESIS_THIN" in w for w in thin.get("warnings", []))
+
+
+def test_derive_sections_and_scaffold_meta_report_finish_by_construction(store):
+    """ESV1: derive_sections organizes a completed methodology project (phase + prototype + deliver +
+    run-journal sections, idempotent) and scaffold_meta_report seeds a meta-report — together flipping
+    assess_project.finish to organized + handed-off, so a finished run is organized BY CONSTRUCTION."""
+    proj = services.start_project("ESV1", "hmw?", "double_diamond", persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__discover", ["q?"], memory_refs=["m1"], store=store)
+    for cid in ("c1", "c2"):
+        store.insert_council_session({"id": cid, "created_at": "2026-06-05T00:00:00+00:00", "prompt": "p",
+            "persona_ids": ["p1"], "turns": [], "votes": [], "proposal": "", "summary": "",
+            "exec_summary": "e", "selection_reason": "x"})
+        a = services.add_task(pid, "act", "explore", f"angle {cid}", consumes=["frame__discover"], store=store)
+        services.link_evidence(pid, a["id"], {"kind": "council", "id": cid}, store=store)
+    services.record_judgment(pid, "verify__define", "divergence_complete", True, "ok", evidence_refs=["c1", "c2"], store=store)
+    syn = services.record_synthesis("Define POV", "hmw", ["c1", "c2"],
+                                    {"gesamtbild": "G" * 250, "positionierung": "P" * 250}, key="t:define", store=store)
+    services.link_evidence(pid, "verify__define", {"kind": "synthesis", "id": syn["id"]}, store=store)
+    services.complete_task(pid, "verify__define", store=store)
+    assert services.assess_project(pid, store=store)["finish"]["organized"] is False
+    out = services.derive_sections(pid, store=store)
+    assert "Discover" in out["created"] and "Deliver — Conclusion" in out["created"]
+    services.scaffold_meta_report(pid, store=store)
+    f = services.assess_project(pid, store=store)["finish"]
+    assert f["organized"] is True and f["handed_off"] is True
+    # idempotent: re-deriving doesn't duplicate
+    n1 = len(services.list_sections(pid, store=store))
+    services.derive_sections(pid, store=store)
+    assert len(services.list_sections(pid, store=store)) == n1
+    assert services.scaffold_meta_report(pid, store=store)["id"]  # returns existing, no error

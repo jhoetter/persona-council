@@ -109,3 +109,19 @@ def register_sections(mcp):
         """Delete a note node from the project."""
         t = time.perf_counter()
         return _env("delete_note", services.delete_note(project_id, note_id), t)
+
+    # ----- ESV1: auto-organization (a finished run is organized + handed-off BY CONSTRUCTION) -----
+    @mcp.tool()
+    def derive_sections(project_id: str) -> dict[str, Any]:
+        """Auto-organize: derive persisted SECTION overlays from the plan — one per methodology phase
+        (fan + its converging waist; label from the step name), a Prototype-ladder, a Deliver/Conclusion,
+        and a Run-Journal section. Idempotent by title. Flips assess_project.finish.organized true."""
+        t = time.perf_counter()
+        return _env("derive_sections", services.derive_sections(project_id), t)
+
+    @mcp.tool()
+    def scaffold_meta_report(project_id: str) -> dict[str, Any]:
+        """Seed a meta-report OUTLINE from the project's phases so the conclusion hand-off is one author
+        step (brief_meta_section → record_meta_section). Idempotent. Flips finish.handed_off true."""
+        t = time.perf_counter()
+        return _env("scaffold_meta_report", services.scaffold_meta_report(project_id), t)

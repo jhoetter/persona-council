@@ -482,6 +482,85 @@ def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
 
 
 
+def derive_sections(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """ESV1 — auto-organization: derive persisted SECTION overlays from the plan so a finished run is
+    organized BY CONSTRUCTION (not agent-dependent). One section per methodology phase (a fan + its
+    converging waist synthesis; label from the step name — no hardcoded vocabulary), a Prototype-ladder
+    section, a Deliver/Conclusion section (the terminal verify synthesis), and a Run-Journal section
+    (note nodes). Idempotent by title (re-run updates members). Makes assess_project.finish.organized
+    flip true. (spec/exhaustive-self-verifying-runs.md §D.1)"""
+    store = store or Store()
+    graph = get_project_graph(project_id, store=store)
+    nodes = graph["nodes"]
+    steps = (graph.get("methodology_state") or {}).get("steps") or []
+    by_phase: dict[str, list[str]] = {}
+    for n in nodes:
+        by_phase.setdefault(n.get("phase", ""), []).append(n["study_id"])
+    waist_consumes = {s["key"]: s.get("consumes", []) for s in steps if not s.get("is_fan")}
+    existing = {x["title"]: x for x in list_sections(project_id, store=store)}
+    created: list[str] = []
+
+    def _upsert(title: str, kind: str, members: list[str], note: str = "") -> None:
+        members = [m for m in dict.fromkeys(members) if m]   # dedupe, preserve order
+        if not members:
+            return
+        if title in existing:
+            set_section_members(existing[title]["id"], members, store=store)
+        else:
+            create_section(project_id, title, kind=kind, member_ids=members, note=note, store=store)
+            created.append(title)
+
+    for fs in [s for s in steps if s.get("is_fan")]:
+        members = list(by_phase.get(fs["key"], []))
+        for wkey, cons in waist_consumes.items():
+            if fs["key"] in cons:
+                members += by_phase.get(wkey, [])
+        label = (fs.get("name") or fs["key"]).split("·")[-1].strip() or fs["key"]
+        _upsert(label, "phase", members, note=f"Phase: {label}")
+    protos = [p["id"] for p in graph.get("prototypes") or []]
+    _upsert("Prototypen-Leiter", "theme", protos, note="Prototypen Lo-Fi → Mid-Fi → Hi-Fi")
+    verify_syns = [n["study_id"] for n in nodes
+                   if n.get("bucket") == "verify" and str(n["study_id"]).startswith("synthesis:")]
+    if verify_syns:
+        _upsert("Deliver — Conclusion", "deliver", [verify_syns[-1]], note="Lösungspräsentation / buildbare Antwort")
+    note_ids = [n["study_id"] for n in nodes if str(n["study_id"]).startswith("note:")]
+    _upsert("Run-Journal", "invented", note_ids, note="Plan-Rationale + Iterations-Journal")
+    return {"project_id": project_id, "created": created,
+            "sections": len(list_sections(project_id, store=store))}
+
+
+def scaffold_meta_report(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """ESV1 — seed a meta-report OUTLINE from the project's phases so the conclusion hand-off is one
+    author step (brief_meta_section → record_meta_section), not authored from scratch. Makes
+    assess_project.finish.handed_off flip true. Idempotent: returns the existing report if one exists."""
+    store = store or Store()
+    existing = store.list_meta_reports(project_id)
+    if existing:
+        return existing[0]
+    graph = get_project_graph(project_id, store=store)
+    nodes = graph["nodes"]
+    steps = (graph.get("methodology_state") or {}).get("steps") or []
+    by_phase: dict[str, list[str]] = {}
+    for n in nodes:
+        by_phase.setdefault(n.get("phase", ""), []).append(n["study_id"])
+    waist_consumes = {s["key"]: s.get("consumes", []) for s in steps if not s.get("is_fan")}
+    sections = []
+    for fs in [s for s in steps if s.get("is_fan")]:
+        srcs = list(by_phase.get(fs["key"], []))
+        for wkey, cons in waist_consumes.items():
+            if fs["key"] in cons:
+                srcs += by_phase.get(wkey, [])
+        label = (fs.get("name") or fs["key"]).split("·")[-1].strip() or fs["key"]
+        sections.append({"heading": label, "intent": f"Author the {label} phase grounded in its evidence.",
+                         "theme_tags": [], "source_study_ids": [s for s in dict.fromkeys(srcs) if s]})
+    if not sections:                                  # freeform / no methodology: one catch-all section
+        sections = [{"heading": "Findings", "intent": "Author the project's findings + conclusion.",
+                     "theme_tags": [], "source_study_ids": graph.get("build_order", [])}]
+    outline = {"build_order_narrative": f"Auto-seeded outline for {graph['project'].get('title','')}.",
+               "sections": sections}
+    return record_meta_outline(project_id, outline, store=store)
+
+
 def get_research_frontier(project_id: str, store: Store | None = None) -> dict[str, Any]:
     """The anti-explosion surface: the project's still-open questions, plus a flag
     when the graph has no edges yet (studies not connected)."""
