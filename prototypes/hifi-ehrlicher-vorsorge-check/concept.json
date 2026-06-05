@@ -1,0 +1,590 @@
+{
+  "title": "Ehrlicher Vorsorge-Check",
+  "summary": "Kein Verkauf. Keine Provision. Wir rechnen mit deinen Zahlen und sagen ehrlich, ob du Einkommensschutz brauchst – meistens lautet die Antwort: nicht jetzt, nicht du.",
+  "fidelity": "hifi",
+  "start": "s1_einstieg",
+  "screens": [
+    {
+      "id": "s1_einstieg",
+      "title": "Wer hängt an deinem Einkommen?",
+      "elements": [
+        {
+          "id": "s1_intro",
+          "kind": "text",
+          "label": "Kein Verkauf. Keine Provision. In 2 Minuten eine ehrliche Einschätzung mit DEINEN Zahlen – ob du gerade überhaupt etwas brauchst. Die meisten hören von uns ein klares „nicht jetzt“. Bevor wir über Geld reden: Wer würde es finanziell spüren, wenn dein Einkommen ab morgen wegfällt?"
+        },
+        {
+          "id": "s1_b_partner",
+          "kind": "button",
+          "label": "Mein:e Partner:in lebt finanziell von meinem Einkommen mit",
+          "goto": "s2_zahlen",
+          "action": "s2_zahlen"
+        },
+        {
+          "id": "s1_b_kind",
+          "kind": "button",
+          "label": "Kind(er) hängen von meinem Einkommen ab",
+          "goto": "s2_zahlen",
+          "action": "s2_zahlen"
+        },
+        {
+          "id": "s1_b_kredit",
+          "kind": "button",
+          "label": "Wir zahlen gemeinsam einen Kredit / eine Immobilie ab",
+          "goto": "s2_zahlen",
+          "action": "s2_zahlen"
+        },
+        {
+          "id": "s1_b_niemand",
+          "kind": "button",
+          "label": "Niemand hängt von mir ab – nur ich selbst",
+          "variant": "secondary",
+          "goto": "s2_zahlen",
+          "action": "s2_zahlen"
+        },
+        {
+          "id": "tlink_s1",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s2_zahlen",
+      "title": "Deine eigenen Zahlen",
+      "elements": [
+        {
+          "id": "s2_intro",
+          "kind": "text",
+          "label": "Wir rechnen mit DEINEN Zahlen, nicht mit erfundenen Beispielwerten. Nichts wird gespeichert, alles bleibt auf deinem Gerät. (Die Felder sind mit einem realistischen Beispiel vorausgefüllt – überschreib sie mit deinen Werten.)"
+        },
+        {
+          "id": "s2_netto",
+          "kind": "input",
+          "label": "Dein monatliches Nettoeinkommen (€)",
+          "placeholder": "2.400"
+        },
+        {
+          "id": "s2_abhaengige",
+          "kind": "input",
+          "label": "Wie viele Menschen hängen finanziell an diesem Einkommen? (0 = nur du)",
+          "placeholder": "2"
+        },
+        {
+          "id": "s2_schulden",
+          "kind": "input",
+          "label": "Offene gemeinsame Schulden / Kredit in € (0 wenn keine)",
+          "placeholder": "180.000"
+        },
+        {
+          "id": "s2_ruecklagen",
+          "kind": "input",
+          "label": "Wie viele Monatsausgaben hast du als Rücklage? (Monate)",
+          "placeholder": "1,5"
+        },
+        {
+          "id": "s2_b_weiter",
+          "kind": "button",
+          "label": "Weiter → Einkommens-Risiko",
+          "goto": "s3_einkommensresilienz",
+          "action": "s3_einkommensresilienz"
+        },
+        {
+          "id": "tlink_s2",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s3_einkommensresilienz",
+      "title": "Wovon lebst du, wenn du 6+ Monate nicht arbeiten kannst?",
+      "elements": [
+        {
+          "id": "s3_intro",
+          "kind": "text",
+          "label": "Das fragen wir JEDE:N – nicht nur, wer von allein danach sucht. Die meisten denken bei „Lebensversicherung“ nur an den Todesfall. Das viel wahrscheinlichere Risiko: Du lebst, kannst aber 6+ Monate (oder dauerhaft) deinen Job nicht ausüben – Unfall, Rücken, Psyche. Wovon lebst du dann?"
+        },
+        {
+          "id": "s3_b_arbeitgeber",
+          "kind": "button",
+          "label": "Mein Arbeitgeber / eine bestehende BU zahlt lange genug weiter",
+          "goto": "s4_todesfall",
+          "action": "s4_todesfall"
+        },
+        {
+          "id": "s3_b_ruecklagen",
+          "kind": "button",
+          "label": "Ein paar Monate aus Rücklagen – danach wird es eng",
+          "goto": "s4_todesfall",
+          "action": "s4_todesfall"
+        },
+        {
+          "id": "s3_b_nichts",
+          "kind": "button",
+          "label": "Ehrlich: nichts. Fällt mein Einkommen weg, fällt alles weg",
+          "goto": "s4_todesfall",
+          "action": "s4_todesfall"
+        },
+        {
+          "id": "tlink_s3",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s4_todesfall",
+      "title": "Und wenn dir morgen etwas zustößt?",
+      "elements": [
+        {
+          "id": "s4_intro",
+          "kind": "text",
+          "label": "Zweite Frage, getrennt von der ersten: Wenn du sterben würdest – wer steht dann finanziell im Regen? Genau hier (und nur hier) ist eine schlanke Risiko-Lebensversicherung das richtige Werkzeug."
+        },
+        {
+          "id": "s4_b_angehoerige",
+          "kind": "button",
+          "label": "Menschen oder ein gemeinsamer Kredit hängen an mir – die wären ungedeckt",
+          "goto": "s_erklaerschicht",
+          "action": "s_erklaerschicht"
+        },
+        {
+          "id": "s4_b_niemand",
+          "kind": "button",
+          "label": "Niemand. Im Todesfall steht niemand finanziell im Regen",
+          "variant": "secondary",
+          "goto": "s_erklaerschicht",
+          "action": "s_erklaerschicht"
+        },
+        {
+          "id": "tlink_s4",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_erklaerschicht",
+      "title": "Risiko absichern – nicht Kapital ansparen",
+      "elements": [
+        {
+          "id": "se_c1",
+          "kind": "text",
+          "label": "RISIKO-ABSICHERUNG (das, was zu dir passen kann): Kleiner monatlicher Beitrag. Fällt dein Einkommen durch Berufsunfähigkeit oder Tod weg, fließt Geld an die, die es brauchen. Passiert nichts, ist der Beitrag „weg“ – genau wie deine KFZ-Haftpflicht. Das ist der Sinn, kein Makel."
+        },
+        {
+          "id": "se_c2",
+          "kind": "text",
+          "label": "KAPITAL-ANSPAREN (das, was dir oft verkauft wird): Sparen + Versichern in einem Produkt – hohe Kosten, magere Rendite. Empfehlen wir NICHT. Trenne beides."
+        },
+        {
+          "id": "se_c3",
+          "kind": "text",
+          "label": "Wenn überhaupt etwas, dann nur die schlanke Risiko-Variante (BU bzw. Risiko-LV) – nichts mit Sparanteil. Meist ein kleiner zweistelliger Betrag im Monat. Gleich bekommst du DEINE konkrete Zahl."
+        },
+        {
+          "id": "se_b_verdikt",
+          "kind": "button",
+          "label": "Verstanden – zeig mir mein ehrliches Verdikt",
+          "goto": "s_routing",
+          "action": "s_routing"
+        },
+        {
+          "id": "tlink_se",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_routing",
+      "title": "Dein ehrliches Verdikt",
+      "elements": [
+        {
+          "id": "sr_intro",
+          "kind": "text",
+          "label": "Auf Basis deiner Antworten gibt es genau drei mögliche ehrliche Verdikte. Wir zeigen dir das, das auf DICH zutrifft – nicht das, das uns am meisten brächte (es bringt uns nichts; siehe Geschäftsmodell). Wähle, was auf dich passt:"
+        },
+        {
+          "id": "sr_b_angehoerige",
+          "kind": "button",
+          "label": "Ja-Pfad A: Menschen/Schulden hängen an mir (Todesfall-Lücke)",
+          "goto": "s_verdikt_ja_angehoerige",
+          "action": "s_verdikt_ja_angehoerige"
+        },
+        {
+          "id": "sr_b_bu",
+          "kind": "button",
+          "label": "Ja-Pfad B: Nur mein eigenes Einkommen ist das Risiko (kein Todesfall-Bedarf)",
+          "goto": "s_verdikt_ja_bu",
+          "action": "s_verdikt_ja_bu"
+        },
+        {
+          "id": "sr_b_nein",
+          "kind": "button",
+          "label": "Nein-Pfad: weder Abhängige noch ungedecktes Einkommensrisiko",
+          "variant": "secondary",
+          "goto": "s_verdikt_nein",
+          "action": "s_verdikt_nein"
+        },
+        {
+          "id": "tlink_sr",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_verdikt_ja_angehoerige",
+      "title": "Ja – aber nur das Schlanke: Risiko-LV",
+      "elements": [
+        {
+          "id": "va_intro",
+          "kind": "text",
+          "label": "Auf Basis DEINER Eingaben: Es hängen Menschen und/oder ein gemeinsamer Kredit an deinem Einkommen. Stirbst du, stehen sie im Regen. Genau der enge Fall, für den eine schlanke Risiko-Lebensversicherung gebaut ist – für die anderen, nicht für dich selbst."
+        },
+        {
+          "id": "va_zahl",
+          "kind": "text",
+          "label": "DEINE KONKRETE ZAHL (aus deinen Angaben gerechnet): Absicherungsbedarf ≈ Kredit 180.000 € + 5 Jahre Einkommen für die Hinterbliebenen (2.400 € × 60) ≈ 324.000 € Todesfallsumme. Schlanke Risiko-LV dafür: ca. 14–22 € im Monat. Das ist die ganze Empfehlung."
+        },
+        {
+          "id": "va_c2",
+          "kind": "text",
+          "label": "WAS WIR NICHT EMPFEHLEN: keine kapitalbildende LV, keine fondsgebundene Renten-Police, kein „Rundum-Paket“. Ein Baustein, fertig. Dein eigenes Einkommen ist hier separat zu betrachten (siehe BU – falls oben relevant)."
+        },
+        {
+          "id": "va_next",
+          "kind": "text",
+          "label": "WAS JETZT PASSIERT – ohne Verkaufsdruck: Du buchst (oder eben nicht) einen 20-Minuten-Check mit einer neutralen, honorarbasierten Beratung. Kein Berater ruft von allein an, keine Telefonnummer nötig, um diese Zahl zu sehen."
+        },
+        {
+          "id": "va_b_check",
+          "kind": "button",
+          "label": "Neutralen 20-Min-Check buchen (kein Anruf, du wählst den Termin)",
+          "goto": "s_naechster_schritt",
+          "action": "s_naechster_schritt"
+        },
+        {
+          "id": "va_b_spaeter",
+          "kind": "button",
+          "label": "Jetzt nicht – später entscheiden",
+          "variant": "secondary",
+          "goto": "s_spaeter",
+          "action": "s_spaeter"
+        },
+        {
+          "id": "tlink_va",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_verdikt_ja_bu",
+      "title": "Ja – aber das ist BU, nicht Lebensversicherung",
+      "elements": [
+        {
+          "id": "vb_intro",
+          "kind": "text",
+          "label": "Auf Basis DEINER Eingaben: Es hängt NIEMAND von dir ab – aber DU lebst komplett von deiner Arbeitskraft, mit dünnen Rücklagen. Dein Risiko ist nicht der Todesfall (da steht niemand im Regen), sondern: Du kannst nicht mehr arbeiten und hast kein Einkommen mehr. Das ist ein BU-Fall, KEINE Lebensversicherung."
+        },
+        {
+          "id": "vb_zahl",
+          "kind": "text",
+          "label": "DEINE KONKRETE ZAHL (aus deinen Angaben gerechnet): Du brauchst eine BU-Rente, die deinen Lebensstandard trägt – Faustregel 70–80 % deines Nettos. Bei 2.400 € netto: BU-Rente ≈ 1.800 €/Monat. Beitrag dafür je nach Beruf/Alter: ca. 35–70 € im Monat. Das – und sonst nichts."
+        },
+        {
+          "id": "vb_c2",
+          "kind": "text",
+          "label": "AUSDRÜCKLICH NICHT: keine Risiko-Lebensversicherung (du hast keine Hinterbliebenen abzusichern), keine kapitalbildende Police. Wer dir jetzt eine klassische LV verkaufen will, hat dein Risiko nicht verstanden."
+        },
+        {
+          "id": "vb_next",
+          "kind": "text",
+          "label": "WAS JETZT PASSIERT – ohne Verkaufsdruck: 20-Minuten-Check zur BU mit neutraler, honorarbasierter Beratung (Gesundheitsfragen früh klären lohnt sich). Du wählst den Termin, niemand ruft von allein an."
+        },
+        {
+          "id": "vb_b_check",
+          "kind": "button",
+          "label": "Neutralen 20-Min-BU-Check buchen (kein Anruf, du wählst den Termin)",
+          "goto": "s_naechster_schritt",
+          "action": "s_naechster_schritt"
+        },
+        {
+          "id": "vb_b_spaeter",
+          "kind": "button",
+          "label": "Jetzt nicht – später entscheiden",
+          "variant": "secondary",
+          "goto": "s_spaeter",
+          "action": "s_spaeter"
+        },
+        {
+          "id": "tlink_vb",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_verdikt_nein",
+      "title": "Nein – du brauchst gerade nichts. Hier in Zahlen, warum.",
+      "elements": [
+        {
+          "id": "vn_intro",
+          "kind": "text",
+          "label": "Auf Basis deiner Angaben: Niemand hängt finanziell von dir ab, es gibt keinen gemeinsamen Kredit, und dein Einkommensrisiko ist gedeckt (Arbeitgeber/bestehende Absicherung oder genug Rücklagen). Eine Lebens- oder BU-Versicherung wäre für dich JETZT rausgeworfenes Geld. Lieber ehrlich, als dir etwas zu verkaufen."
+        },
+        {
+          "id": "vn_zahl",
+          "kind": "text",
+          "label": "DEINE KONKRETE ZAHL: Sinnvoller Absicherungsbedarf = 0 €/Monat. Gerechnet: Todesfall-Lücke = 0 € (keine Abhängigen, keine gemeinsamen Schulden). Einkommens-Lücke = 0 € (6+ Monate gedeckt). Eine Risiko-LV von z. B. 18 €/Monat × 12 = 216 € im Jahr wäre Geld ohne Gegenwert. Behalt es."
+        },
+        {
+          "id": "vn_c2",
+          "kind": "text",
+          "label": "WANN SICH DAS ÄNDERT (und du wiederkommen solltest): erstes Kind, gemeinsame Immobilie, Heirat mit Einkommensgefälle, Schritt in die Selbstständigkeit oder Rücklagen-Puffer unter ~3 Monate. Dann – und erst dann – rechnet sich der Check neu."
+        },
+        {
+          "id": "vn_b_anker",
+          "kind": "button",
+          "label": "Erinner mich, wenn sich meine Lage ändert (ich melde das selbst)",
+          "goto": "s_spaeter",
+          "action": "s_spaeter"
+        },
+        {
+          "id": "vn_b_neu",
+          "kind": "button",
+          "label": "Check noch einmal mit anderen Zahlen rechnen",
+          "variant": "secondary",
+          "goto": "s1_einstieg",
+          "action": "s1_einstieg"
+        },
+        {
+          "id": "tlink_vn",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_transparenz",
+      "title": "Wie wir Geld verdienen – ohne Provision, ohne Vorab-Gebühr",
+      "elements": [
+        {
+          "id": "st_intro",
+          "kind": "text",
+          "label": "Die häufigste Frage hier – und die wichtigste. Du erreichst diese Seite jederzeit über den Link unten auf jedem Schritt, ohne deinen Stand zu verlieren. Die ehrliche Antwort:"
+        },
+        {
+          "id": "st_c1",
+          "kind": "text",
+          "label": "KEINE ABSCHLUSS-PROVISION: Wir bekommen KEINEN Cent dafür, dass du eine Versicherung abschließt. Genau deshalb können wir „Nein“ sagen, ohne etwas zu verlieren. Das ist der ganze Trick – es gibt keinen zweiten."
+        },
+        {
+          "id": "st_c2",
+          "kind": "text",
+          "label": "KEINE VORAB-GEBÜHR: Dieser Check kostet dich nichts, weder vorher noch hinterher. Ein Vorab-Honorar haben wir bewusst nicht – es würde wie „noch ein Haken“ wirken."
+        },
+        {
+          "id": "st_c3",
+          "kind": "text",
+          "label": "WOMIT WIR WIRKLICH GELD VERDIENEN (konkret): (1) Verbraucherzentralen, Krankenkassen und Gewerkschaften zahlen uns eine feste Pauschale dafür, ihre Mitglieder neutral aufzuklären – unabhängig vom Abschluss. (2) Arbeitgeber lizenzieren den Check als Mitarbeiter-Benefit (B2B-Flatrate pro Jahr). (3) Buchst du eine Beratung, zahlst DU ein festes Honorar an eine unabhängige, honorarbasierte Beratung – nicht an uns, und nicht abhängig davon, ob du abschließt. In allen drei Fällen ist unser Anreiz die richtige Antwort, nie der Verkauf."
+        },
+        {
+          "id": "st_c4",
+          "kind": "text",
+          "label": "Wir zeigen bewusst KEIN Versicherer-Logo und empfehlen kein einzelnes Produkt eines einzelnen Anbieters – wir sind nicht deren Vertrieb."
+        },
+        {
+          "id": "st_b_zurueck",
+          "kind": "button",
+          "label": "Ergibt Sinn – zurück zu meinem Check",
+          "goto": "s_routing",
+          "action": "s_routing"
+        },
+        {
+          "id": "st_b_neu",
+          "kind": "link",
+          "label": "Von vorne anfangen",
+          "goto": "s1_einstieg",
+          "action": "s1_einstieg"
+        }
+      ]
+    },
+    {
+      "id": "s_naechster_schritt",
+      "title": "Dein neutraler Check – verbindlich, aber ohne Verkaufsdruck",
+      "elements": [
+        {
+          "id": "sn_intro",
+          "kind": "text",
+          "label": "Das ist der ehrliche „was jetzt“-Moment. Kein Verkauf, kein Rückruf, keine Provision im Hintergrund. Du buchst ein 20-Minuten-Gespräch mit einer unabhängigen, honorarbasierten Beratung – festes Honorar, abschlussunabhängig. Die folgenden Felder sind mit einem realistischen Beispiel vorausgefüllt."
+        },
+        {
+          "id": "sn_name",
+          "kind": "input",
+          "label": "Vorname (nur für den Termin, nichts wird weiterverkauft)",
+          "placeholder": "Jana"
+        },
+        {
+          "id": "sn_termin",
+          "kind": "select",
+          "label": "Wunschtermin (Video, 20 Min.)",
+          "options": [
+            "Di 10.06., 18:00",
+            "Mi 11.06., 12:30",
+            "Do 12.06., 19:30",
+            "Sa 14.06., 10:00"
+          ]
+        },
+        {
+          "id": "sn_thema",
+          "kind": "select",
+          "label": "Worum geht es?",
+          "options": [
+            "BU – Einkommen absichern",
+            "Risiko-LV – Angehörige absichern",
+            "Beides kurz einordnen"
+          ]
+        },
+        {
+          "id": "sn_b_buchen",
+          "kind": "button",
+          "label": "Termin verbindlich anfragen",
+          "goto": "s_bestaetigt",
+          "action": "s_bestaetigt"
+        },
+        {
+          "id": "sn_b_zurueck",
+          "kind": "button",
+          "label": "Doch lieber später",
+          "variant": "secondary",
+          "goto": "s_spaeter",
+          "action": "s_spaeter"
+        },
+        {
+          "id": "tlink_sn",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_bestaetigt",
+      "title": "Angefragt – das war's, ehrlich.",
+      "elements": [
+        {
+          "id": "sb_intro",
+          "kind": "text",
+          "label": "Deine Terminanfrage ist raus. Du bekommst eine Bestätigung mit Video-Link – kein Anruf, kein Vertrieb, keine Provision. In dem Gespräch bekommst du eine neutrale Einordnung deiner konkreten Zahl, mehr nicht. Du kannst jederzeit absagen."
+        },
+        {
+          "id": "sb_c1",
+          "kind": "text",
+          "label": "Falls du dich doch dagegen entscheidest: völlig in Ordnung. Genau dafür ist dieser Check da – die richtige Entscheidung, nicht der Abschluss."
+        },
+        {
+          "id": "sb_b_neu",
+          "kind": "button",
+          "label": "Check für jemand anderen / neue Zahlen starten",
+          "goto": "s1_einstieg",
+          "action": "s1_einstieg"
+        },
+        {
+          "id": "tlink_sb",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_spaeter",
+      "title": "Später, nicht jetzt – du bestimmst wann",
+      "elements": [
+        {
+          "id": "ss_intro",
+          "kind": "text",
+          "label": "Völlig in Ordnung. Kein Druck, kein KFZ-Moment-Verkauf. Du legst selbst den Anker – wir melden uns nicht von allein, es gibt kein verstecktes Tracking und kein automatisches „Arming“."
+        },
+        {
+          "id": "ss_b_lebenslage",
+          "kind": "button",
+          "label": "Erinner mich, wenn sich meine Lebenslage ändert (Kind, Immobilie, Heirat, Selbstständigkeit) – ich melde es selbst",
+          "goto": "s_done",
+          "action": "s_done"
+        },
+        {
+          "id": "ss_b_6m",
+          "kind": "button",
+          "label": "Erinner mich in 6 Monaten",
+          "goto": "s_done",
+          "action": "s_done"
+        },
+        {
+          "id": "ss_b_garnicht",
+          "kind": "button",
+          "label": "Gar nicht erinnern – ich komme von selbst wieder",
+          "variant": "secondary",
+          "goto": "s_done",
+          "action": "s_done"
+        },
+        {
+          "id": "tlink_ss",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    },
+    {
+      "id": "s_done",
+      "title": "Gespeichert – auf deinem Gerät, von dir gesteuert",
+      "elements": [
+        {
+          "id": "sd_intro",
+          "kind": "text",
+          "label": "Dein „Später“-Anker ist gesetzt – lokal auf deinem Gerät. Kein Berater ruft an, keine Provision im Hintergrund. Danke für deine Ehrlichkeit; du kannst jederzeit zurückkommen."
+        },
+        {
+          "id": "sd_b_neu",
+          "kind": "button",
+          "label": "Check von vorne starten",
+          "goto": "s1_einstieg",
+          "action": "s1_einstieg"
+        },
+        {
+          "id": "tlink_sd",
+          "kind": "link",
+          "label": "Wie verdient ihr Geld – ohne Provision, ohne Gebühr?",
+          "goto": "s_transparenz",
+          "action": "s_transparenz"
+        }
+      ]
+    }
+  ]
+}
