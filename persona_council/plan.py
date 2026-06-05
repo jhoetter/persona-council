@@ -545,6 +545,29 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
     }
 
 
+# Methodology-agnostic divergence nudges surfaced on act steps so concept breadth (KIND + boldness) is
+# reliable, not luck of a disciplined agent. These reference the DATA palette; no methodology vocabulary
+# or design-thinking step is hardcoded (spec/exploration-depth-and-prototype-variety GAP-2 / SPEC-A).
+_DIVERGENCE_NUDGES = [
+    "Diversify the KIND of artifact (see artifact_palette): a guided flow, a comparison, an overview, a "
+    "card interface, or an interactive MODEL (steerable numbers/curve a persona can actually drive) — "
+    "not N near-identical forms.",
+    "Include >= 1 deliberately EXTREME / unexpected concept (a 'dark-horse') to stretch the space; an "
+    "honest 'this is not for you' verdict can be a legitimate, trust-winning concept.",
+    "For an exploratory step, consider a DISCONFIRMATION council: deliberately load the segments most "
+    "likely to REJECT the premise and test a Non-Fit motion — the most honest insight often comes from "
+    "the refuters, not the supporters.",
+]
+
+
+def _artifact_palette() -> list[dict[str, Any]]:
+    try:
+        from . import presentation as _pres
+        return _pres.artifact_palette()
+    except Exception:
+        return []
+
+
 def _diverse_participants(store: Store, persona_ids: list[str], k: int = 6) -> list[str]:
     """Pick up to k personas SPREAD across a segment axis (attitude/life-stage), so a council gets
     real diversity rather than keyword-matched look-alikes (anti-steering)."""
@@ -605,6 +628,8 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
         out["act"] = {
             "framed_questions": questions[:6],
             "suggested_participants": _diverse_participants(store, persona_ids, k=6),
+            "artifact_palette": _artifact_palette(),
+            "divergence": _DIVERGENCE_NUDGES,
             "guidance": ("Add an act task per ANGLE; run a REAL multi-persona council, or "
                          "scaffold_artifact + a grounded proband session; link_evidence + complete. "
                          "Breadth = angles × persona diversity, not one council per persona."),

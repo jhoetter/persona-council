@@ -323,3 +323,18 @@ def test_ungrounded_proband_session_warns_and_blocks_gate(store, tmp_path, monke
         "created_at": "2026-06-05T00:00:00+00:00", "grounded_verified": True})
     unmet2 = PL.verify_unmet(plan, PL.task(plan, "v"), store)
     assert not any("GROUNDED" in u for u in unmet2), unmet2
+
+
+def test_next_action_act_surfaces_artifact_palette_and_divergence_nudges(store):
+    """GAP-2/SPEC-A: an act step surfaces the artifact archetype PALETTE (from data, incl. the
+    interactive `model`) + methodology-agnostic divergence nudges (diversify KIND, a dark-horse,
+    a disconfirmation council) — so concept breadth is reliable, not luck of a disciplined agent."""
+    proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__root", ["q?"], memory_refs=["m1"], store=store)
+    services.add_task(pid, "act", "explore", "angle", consumes=["frame__root"], store=store)
+    act = services.next_action(pid, store=store)["act"]
+    tags = {p["tag"] for p in act["artifact_palette"]}
+    assert {"flow", "comparison", "model"} <= tags          # varied non-form archetypes, incl. model
+    nudges = " ".join(act["divergence"]).lower()
+    assert "dark-horse" in nudges and "disconfirmation" in nudges and "model" in nudges

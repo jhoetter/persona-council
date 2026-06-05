@@ -55,7 +55,7 @@ def _hints() -> dict[str, dict[str, Any]]:
             if not tag:
                 continue
             entry = dict(item.get("presentation") or {})
-            for k in ("renderer", "default_template"):
+            for k in ("renderer", "default_template", "_note"):
                 if item.get(k):
                     entry[k] = item[k]
             out.setdefault(tag, {}).update(entry)
@@ -107,6 +107,16 @@ def discriminator_tags(type_tag: str) -> list[str]:
     """Tags declared as discriminators of an artifact type (data-driven; e.g. the fidelity
     ladder lofi/midfi/hifi under `prototype`). No fidelity vocabulary is hardcoded in code."""
     return [t for t, v in _hints().items() if v.get("_parent") == type_tag]
+
+
+def artifact_palette() -> list[dict[str, Any]]:
+    """The available artifact ARCHETYPES (top-level types with a renderer) as DATA, so the orchestrator
+    can diversify concept KIND instead of defaulting to a form — a guided flow, a comparison, an
+    overview, a card interface, an interactive MODEL (steerable numbers/curve), …. Pure suggestion;
+    invent your own by adding to suggestions/artifact_types.json."""
+    out = [{"tag": tag, "label": v.get("label") or tag, "note": v.get("_note", "")}
+           for tag, v in _hints().items() if v.get("default_template") and not v.get("_parent")]
+    return sorted(out, key=lambda x: x["tag"])
 
 
 def resolve_template(type_tag: str, tags: list[str] | None = None,

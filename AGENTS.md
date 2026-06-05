@@ -139,6 +139,13 @@ Memory & multi-resolution simulation (gather → author → write-back):
   SPA), `register_prototype`, `list_prototypes`, `run_prototype`/`stop_prototype`; the Playwright
   harness `proto_open`/`proto_act`/`proto_read`/`proto_close` lets a persona drive the REAL app,
   and `brief_prototype_session`/`record_prototype_session` fold the grounded reaction into memory.
+  Artifact archetypes are DATA (`suggestions/artifact_types.json`, surfaced as the `artifact_palette`
+  in `next_action`): a guided `flow`, a `comparison`, a `dashboard`, a `cards` interface, or an
+  interactive **`model`** (range/number inputs feeding `computed`/`bar` elements whose `formula` is
+  evaluated live — a steerable pension-gap/compounding simulation, not a static screen) — diversify
+  the KIND, don't default to a form. `record_prototype_session` returns an `UNVERIFIED_SESSION`
+  warning (and a session_of_tags gate requires a GROUNDED session) when a reaction isn't verified
+  against real observed usage — the session log is retained past `proto_close` so a real drive verifies.
   Install with `make playwright` (optional; degrades gracefully without chromium).
 - Composable graph — the graph is a canvas of composable LOW-LEVEL primitives (council · synthesis ·
   prototype · **note** · edge · **section**); the methodology/plan engine is ONE optional orchestrator,
