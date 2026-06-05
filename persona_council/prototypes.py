@@ -37,21 +37,43 @@ def _validate_concept(concept: dict[str, Any]) -> dict[str, Any]:
     screens = concept.get("screens")
     if not isinstance(screens, list) or not screens:
         raise PrototypeError("BAD_CONCEPT", "concept needs >= 1 screen")
-    ids = []
+    idset = {s["id"] for s in screens if isinstance(s, dict) and str(s.get("id", "")).strip()}
+
+    def _norm_nav(obj: dict[str, Any], where: str) -> None:
+        """Accept `goto` OR `action` as the navigation key (templates differ), normalize BOTH so any
+        renderer navigates, and REJECT a target that resolves to no screen — so a prototype can't
+        scaffold (and then get proband-tested) with a silently dead interaction (GAP-4)."""
+        tgt = str(obj.get("goto") or obj.get("action") or "").strip()
+        if not tgt:
+            return
+        if tgt not in idset:
+            raise PrototypeError("BAD_CONCEPT", f"{where} navigates to '{tgt}', which is not a screen id "
+                                                f"(dead interaction); valid screens: {sorted(idset)}")
+        obj["goto"] = obj["action"] = tgt
+
     for s in screens:
         if not isinstance(s, dict) or not str(s.get("id", "")).strip():
             raise PrototypeError("BAD_CONCEPT", "each screen needs an id")
-        ids.append(s["id"])
         for el in s.get("elements", []) or []:
             if not isinstance(el, dict) or not str(el.get("id", "")).strip():
                 raise PrototypeError("BAD_CONCEPT", "each element needs an id")
-            if el.get("kind") not in {"button", "input", "select", "text", "link"}:
+            if el.get("kind") not in _ELEMENT_KINDS:
                 raise PrototypeError("BAD_CONCEPT", f"bad element kind: {el.get('kind')}")
-            if el.get("goto") and el["goto"] not in ids and el["goto"] not in [x.get("id") for x in screens]:
-                raise PrototypeError("BAD_CONCEPT", f"element goto '{el['goto']}' is not a screen id")
-    if concept.get("start") and concept["start"] not in [s["id"] for s in screens]:
+            _norm_nav(el, f"screen '{s['id']}' element '{el['id']}'")
+        # screen-level card-like blocks (cards / options) also navigate — validate them too (the old
+        # validator ignored these, which is how a dead `action`-only card slipped through).
+        for blk in ("cards", "options"):
+            for card in s.get(blk, []) or []:
+                if isinstance(card, dict):
+                    _norm_nav(card, f"screen '{s['id']}' {blk} '{card.get('id', card.get('title',''))}'")
+    if concept.get("start") and concept["start"] not in idset:
         raise PrototypeError("BAD_CONCEPT", "start must be a screen id")
     return concept
+
+
+# Element kinds the SPA renderers understand. Extended for the interactive/computational rung
+# (range/number/computed/bar) so a prototype can be a real model, not only static screens (GAP-1).
+_ELEMENT_KINDS = {"button", "input", "select", "text", "link", "range", "number", "computed", "bar"}
 
 
 def _render_spa(name: str, concept: dict[str, Any], template: str) -> str:
