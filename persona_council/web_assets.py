@@ -148,6 +148,14 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .olth-pills{display:inline-flex;gap:5px;flex-shrink:0;margin-right:10px}
 .olth-pill{display:inline-flex;align-items:center;gap:5px;padding:1px 9px 1px 7px;border-radius:11px;background:var(--panel-2);color:var(--muted);font-size:11px;font-weight:500;white-space:nowrap}
 .olth-pill i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* relations block on detail pages (Linear progressive disclosure) */
+.relcard{margin-top:16px}
+.relh{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.relgrp{margin-bottom:10px}
+.rellbl{font-size:11px;font-weight:600;color:var(--muted);margin:6px 0 3px}
+.relrow{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:13px}
+.relrow:hover{background:var(--hover)}
+.relrow .relt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* view toggle (Outline / Graph) */
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}

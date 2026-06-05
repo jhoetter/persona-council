@@ -32,6 +32,47 @@ def _projects_page() -> str:
     return _layout(t("projects"), body, store, crumbs=[(t("projects"), None)], active="projects")
 
 
+def _relations_html(store, study_id: str, proj_id: str | None,
+                    extra_in: list | None = None, extra_out: list | None = None) -> str:
+    """Linear-style RELATIONS block for a detail page (progressive disclosure: precise links live HERE,
+    not in the list). Built from the project graph's real plan-evidence edges — what this was BASED ON
+    (incoming) and what it FEEDS INTO (outgoing) — plus any caller-supplied extra links (e.g. a prototype's
+    concept). Returns "" when there's nothing to show."""
+    incoming, outgoing = list(extra_in or []), list(extra_out or [])
+    if proj_id:
+        try:
+            g = services.get_project_graph(proj_id, store=store)
+        except Exception:
+            g = None
+        if g:
+            nmap = {n["study_id"]: n for n in g["nodes"]}
+            for e in g.get("edges", []):
+                if e.get("to_study") == study_id and e.get("from_study") in nmap:
+                    incoming.append(nmap[e["from_study"]])
+                elif e.get("from_study") == study_id and e.get("to_study") in nmap:
+                    outgoing.append(nmap[e["to_study"]])
+            cur = nmap.get(study_id)
+            if cur and cur.get("prototype_id"):               # concept → its prototype (not a graph edge)
+                pr = next((p for p in g.get("prototypes", []) if p["id"] == cur["prototype_id"]), None)
+                if pr:
+                    outgoing.append({"href": f'/prototypes/{pr["slug"]}', "title": pr["name"],
+                                     "color": "#00897b", "kind_label": t("prototypes_h")})
+
+    def grp(label, ns):
+        if not ns:
+            return ""
+        rows = "".join(
+            f'<a class="relrow" href="{_esc(n.get("href", ""))}">'
+            f'<span class="ol-dot" style="background:{n.get("color", "#9aa0a6")}"></span>'
+            f'<span class="relt">{_esc(n.get("title", ""))}</span>'
+            f'<span class="muted small">{_esc(n.get("kind_label", n.get("kind", "")))}</span></a>'
+            for n in ns)
+        return f'<div class="relgrp"><div class="rellbl">{_esc(label)}</div>{rows}</div>'
+
+    blocks = grp(t("rel_based_on"), incoming) + grp(t("rel_feeds_into"), outgoing)
+    return f'<div class="card relcard"><div class="relh">{t("relations")}</div>{blocks}</div>' if blocks else ""
+
+
 # ----------------------------- calendar helpers ----------------------------- #
 def _calendar_html(persona_id: str, day: str, blocks: list[dict]) -> str:
     by_hour: dict[int, list[dict]] = {h: [] for h in range(7, 20)}
@@ -437,7 +478,8 @@ def register_pages(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((session["prompt"][:50], None))
-        return _layout(council_title, _doc(main, rail=rail), store,
+        rel = _relations_html(store, f"council:{session_id}", proj["id"] if proj else None)
+        return _layout(council_title, _doc(main + rel, rail=rail), store,
                        crumbs=crumbs, active="projects",
                        actions=_star("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))
 
@@ -469,7 +511,8 @@ def register_pages(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((syn["title"], None))
-        return _layout(syn["title"], _synthesis_html(store, syn), store,
+        rel = _relations_html(store, f"synthesis:{synthesis_id}", proj["id"] if proj else None)
+        return _layout(syn["title"], _synthesis_html(store, syn) + rel, store,
                        crumbs=crumbs, active="projects", actions=actions)
 
     @app.get("/projects", response_class=HTMLResponse)
@@ -678,7 +721,8 @@ def register_pages(app) -> None:
                 f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(klabel)}</span></div>'
                 f'<h1 class="h1">{_esc(note.get("title",""))}</h1>'
                 f'<div class="es-prose" style="margin-top:10px">{_md(note.get("text",""))}</div>'
-                f'<div class="muted small" style="margin-top:14px">{_esc(note.get("created_at","")[:10])}</div></div></div>')
+                f'<div class="muted small" style="margin-top:14px">{_esc(note.get("created_at","")[:10])}</div></div>'
+                f'{_relations_html(store, f"note:{note_id}", proj["id"])}</div>')
         return _layout(note.get("title") or klabel, body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (klabel, None)],
                        active="projects")
@@ -715,5 +759,14 @@ def register_pages(app) -> None:
             f'<p class="lead"><a class="btn" href="{src}" target="_blank">{_icon("projects")} {t("open_in_new_tab")} {_icon("external")}</a></p>'
             f'<div class="protoframe"><iframe src="{src}" title="{_esc(p["name"])}" loading="lazy"></iframe></div>'
             f'<div class="card" style="margin-top:16px"><b>{t("prototypes_h")} · {t("sessions")} ({len(sessions)})</b>'
-            f'<div style="margin-top:8px">{sessions_html}</div></div></div>')
+            f'<div style="margin-top:8px">{sessions_html}</div></div>')
+        concept_in = []
+        if proj:                                              # the concept that realises this prototype
+            try:
+                g = services.get_project_graph(p["project_id"], store=store)
+                concept_in = [n for n in g["nodes"] if n.get("prototype_id") == p["id"]]
+            except Exception:
+                concept_in = []
+        body += _relations_html(store, f"prototype:{p['id']}", p.get("project_id"), extra_in=concept_in)
+        body += "</div>"
         return _layout(p["name"], body, store, crumbs=crumbs, active="projects")

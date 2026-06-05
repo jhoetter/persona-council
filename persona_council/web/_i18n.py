@@ -40,7 +40,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen", "prototypes_h": "Artefakte",
         "no_projects": "Noch keine Projekte. Lege eines an oder backfille deine Synthesen (CLI: research-backfill).",
         "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
-        "type_h": "Typ", "tags_h": "Tags", "clear_filter": "zurücksetzen", "legend": "Legende", "groups_toggle": "Gruppen ein/aus (Themen & Phasen-Hüllen)", "round_n": "Runde {n}",
+        "type_h": "Typ", "tags_h": "Tags", "clear_filter": "zurücksetzen", "legend": "Legende", "groups_toggle": "Gruppen ein/aus (Themen & Phasen-Hüllen)", "round_n": "Runde {n}", "relations": "Beziehungen", "rel_based_on": "Basiert auf", "rel_feeds_into": "Fließt ein in",
         "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Synthese.",
         # graph canvas controls
         "graph_hint": "Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen",
@@ -190,7 +190,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "meta_report": "Meta-Report", "open_questions_h": "Open questions", "prototypes_h": "Artifacts",
         "no_projects": "No projects yet. Create one or backfill your syntheses (CLI: research-backfill).",
         "themes_h": "Themes", "build_order_h": "Build order",
-        "type_h": "Type", "tags_h": "Tags", "clear_filter": "clear", "legend": "Legend", "groups_toggle": "Toggle groups (theme & phase hulls)", "round_n": "Round {n}",
+        "type_h": "Type", "tags_h": "Tags", "clear_filter": "clear", "legend": "Legend", "groups_toggle": "Toggle groups (theme & phase hulls)", "round_n": "Round {n}", "relations": "Relations", "rel_based_on": "Based on", "rel_feeds_into": "Feeds into",
         "no_councils": "No councils yet.", "no_synthesis": "No synthesis yet.",
         # graph canvas controls
         "graph_hint": "drag · pan background · pinch / ⌘+scroll to zoom · F to fit",
