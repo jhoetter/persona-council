@@ -13,7 +13,7 @@ from ._components import (
 from ._synthesis import (
     _area, _vote_label, _sentiment_section, _synthesis_html, _persona_voices_html,
 )
-from ._graph import _graph_interactive, _plan_html
+from ._graph import _graph_interactive, _plan_html, _outline_html
 from ..presentation import glyph_icon
 
 
@@ -477,7 +477,7 @@ def register_pages(app) -> None:
         return _projects_page()
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
-    def project_detail(project_id: str) -> str:
+    def project_detail(project_id: str, view: str = "list") -> str:
         store = Store()
         try:
             graph = services.get_project_graph(project_id, store=store)
@@ -590,13 +590,23 @@ def register_pages(app) -> None:
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
                  "document.addEventListener('click',function(e){"
                  "if(!p.hidden&&!p.contains(e.target)&&e.target!==b)p.hidden=true;});})();</script>")
+        # Primary view = the LINEAR-STYLE OUTLINE (clean, grouped, never overlaps). The spatial graph
+        # is a secondary toggle. The filter toolbar + floating panel belong to the graph view only.
+        is_graph = view == "graph"
+        view_toggle = (f'<div class="viewtoggle">'
+                       f'<a class="vt{"" if is_graph else " on"}" href="?view=list">{_icon("squareRows")} {t("view_outline")}</a>'
+                       f'<a class="vt{" on" if is_graph else ""}" href="?view=graph">{_icon("projects")} {t("view_graph")}</a></div>')
+        head_tools = toolbar if is_graph else f'<div class="ptoolbar">{view_toggle}<span class="spacer"></span>{meta_btn}</div>'
+        head_tools = (f'<div class="ptoolbar">{view_toggle}<span class="spacer"></span></div>{toolbar}'
+                      if is_graph else head_tools)
+        main_view = (f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>{panel}{oq_js}'
+                     if is_graph else f'<div class="outlinecard">{_outline_html(graph)}</div>')
         body = (
             f'<div class="proj">'
             f'<div class="proj-head"><h1 class="h1">{_esc(proj["title"])}</h1>'
             f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
-            f'{toolbar}</div>'
-            f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>'
-            f'{panel}{oq_js}'
+            f'{head_tools}</div>'
+            f'{main_view}'
             f'</div>')
         return _layout(proj["title"], body, store, crumbs=[(t("projects"), "/projects"), (proj["title"], None)], active="projects")
 

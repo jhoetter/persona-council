@@ -110,6 +110,25 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgphase-sub{fill:var(--muted);font-size:11px}
 .rground-sep{stroke:var(--line);stroke-width:1;stroke-dasharray:3 7;opacity:.7}
 .rground-label{fill:var(--muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+/* Linear-style project OUTLINE (primary view) — grouped, collapsible, never overlaps */
+.outlinecard{flex:1;overflow:auto;padding:8px 0 40px}
+.outline{max-width:1000px;margin:0 auto;padding:0 24px}
+.ol-phase{border-bottom:1px solid var(--line-2)}
+.ol-phase>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:13px 6px;font-size:13.5px;position:sticky;top:0;background:var(--bg);z-index:1}
+.ol-phase>summary::-webkit-details-marker{display:none}
+.ol-phase>summary .ol-gl{color:var(--accent);font-size:12px;width:14px;text-align:center}
+.ol-phase>summary b{font-weight:650;letter-spacing:-.01em}
+.ol-rlabel{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);padding:10px 6px 4px 34px}
+.olrow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:13px}
+.olrow:hover{background:var(--hover)}
+.ol-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.olrow .ol-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.olrow .ol-kind{color:var(--faint);font-size:11.5px;flex-shrink:0;white-space:nowrap}
+/* view toggle (Outline / Graph) */
+.viewtoggle{display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:2px}
+.viewtoggle .vt{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:6px;font-size:12.5px;color:var(--muted);text-decoration:none}
+.viewtoggle .vt .ic{width:14px;height:14px}
+.viewtoggle .vt.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.10);font-weight:600}
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}
 .rgseclab-t{font-size:12.5px;font-weight:700;letter-spacing:.01em}
