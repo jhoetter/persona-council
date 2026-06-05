@@ -15,13 +15,14 @@ PALETTE_CSS = r"""
 .cmdk[hidden]{display:none}
 .cmdk{position:fixed;inset:0;z-index:200;display:flex;align-items:flex-start;justify-content:center}
 .cmdk-bd{position:absolute;inset:0;background:rgba(0,0,0,.5)}
-.cmdk-panel{position:relative;margin-top:12vh;width:min(620px,92vw);max-height:74vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden}
-.cmdk-in{width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:15px;padding:15px 18px;outline:none;font-family:inherit}
+.cmdk-panel{position:relative;margin-top:12vh;width:min(600px,92vw);max-height:74vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden}
+.cmdk-in{width:100%;border:0;border-radius:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:15px;padding:14px 16px;font-family:inherit}
+.cmdk-in:focus,.cmdk-in:focus-visible{outline:none;box-shadow:none}
 .cmdk-in::placeholder{color:var(--faint)}
-.cmdk-list{flex:1;overflow:auto;padding:6px 6px 8px}
+.cmdk-list{flex:1;overflow:auto;padding:6px}
 .cmdk-empty{color:var(--muted);font-size:13px;padding:26px;text-align:center}
-.cmdk-sec{font-size:11px;color:var(--faint);font-weight:600;letter-spacing:.04em;padding:10px 12px 4px}
-.cmdk-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--ink);cursor:pointer}
+.cmdk-sec{font-size:11px;color:var(--faint);font-weight:600;letter-spacing:.04em;padding:10px 10px 4px}
+.cmdk-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;text-decoration:none;color:var(--ink);cursor:pointer}
 .cmdk-item.sel{background:var(--hover)}
 .cmdk-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--muted)}
 .cmdk-dot[data-t=project]{background:#7a5ed1}.cmdk-dot[data-t=persona]{background:#3d7fc4}
@@ -30,7 +31,7 @@ PALETTE_CSS = r"""
 .cmdk-dot[data-t=note]{background:#b87a25}
 .cmdk-t{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-sub{flex:none;max-width:40%;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cmdk-foot{display:flex;gap:18px;padding:8px 14px;border-top:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:11.5px}
+.cmdk-foot{display:flex;gap:18px;padding:8px 16px;border-top:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:11.5px}
 .cmdk-foot kbd{font-family:inherit;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px;color:var(--ink);font-size:11px}
 """
 
