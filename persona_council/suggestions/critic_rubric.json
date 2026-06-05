@@ -1,0 +1,20 @@
+{
+  "kind": "critic_rubric",
+  "note": "The adversarial completeness/quality rubric the project must clear before a run is DONE (ESV §B). Each dimension is scored 0-5 by an INDEPENDENT critic subagent; `threshold` is the minimum to pass. `probe` is the generative question the critic asks to find missing work. Pure data — tune the bar here, no code change, no hardcoded methodology vocabulary.",
+  "dimensions": [
+    {"key": "exploration_depth", "threshold": 4,
+     "probe": "Is the problem space genuinely explored across distinct angles AND the premise interrogated (a disconfirmation council)? Which angle is still unexplored?"},
+    {"key": "segment_breadth", "threshold": 4,
+     "probe": "Which persona SEGMENTS were never sampled in any council? An unsampled segment is missing breadth."},
+    {"key": "concept_novelty", "threshold": 4,
+     "probe": "Are there non-obvious concepts (≥1 unexpected mechanism, ≥1 experienceable model, ≥1 dark-horse), or only incremental forms? Which lens is unused?"},
+    {"key": "evidence_groundedness", "threshold": 4,
+     "probe": "Are claims grounded in real councils + GROUNDED proband sessions, not asserted? Which claim/prototype is untested?"},
+    {"key": "honesty_anti_steering", "threshold": 4,
+     "probe": "Did it keep deliberate non-targets + honest open risks, or rationalize the brief? Where is it over-claiming?"},
+    {"key": "iteration", "threshold": 3,
+     "probe": "Was the winning concept iterated on real feedback across the fidelity ladder, or one-shot? Which fidelity rung / refinement is missing?"},
+    {"key": "finish", "threshold": 4,
+     "probe": "Is the project organized (sections), concluded (a substantial solution-presentation), and handed-off (a meta-report)?"}
+  ]
+}

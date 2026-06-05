@@ -92,11 +92,21 @@ def register_sections(mcp):
 
     # ----- Note nodes: lightweight first-class observation primitive (no methodology required) -----
     @mcp.tool()
-    def create_note(project_id: str, text: str, title: str = "") -> dict[str, Any]:
-        """Create a lightweight observation NOTE node in the project graph — the atomic unit for
-        affinity work. Notes are first-class nodes (groupable into sections, linkable by edges)."""
+    def create_note(project_id: str, text: str, title: str = "", kind: str = "note",
+                    data: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Create a lightweight observation NOTE node — the atomic unit for affinity work. `kind` is a
+        free tag (default 'note'); a `concept` note carries structured `data`
+        {title, lens, artifact_kind, prototype_id|null} so the completeness critic can track the
+        solution space (set prototype_id via set_note_data once the concept is built)."""
         t = time.perf_counter()
-        return _env("create_note", services.create_note(project_id, text, title), t)
+        return _env("create_note", services.create_note(project_id, text, title, kind, data), t)
+
+    @mcp.tool()
+    def set_note_data(note_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+        """Merge keys into a note's `data` — e.g. set a concept note's `prototype_id` once you build it,
+        so the completeness critic stops flagging it as un-prototyped."""
+        t = time.perf_counter()
+        return _env("set_note_data", services.set_note_data(note_id, patch), t)
 
     @mcp.tool()
     def list_notes(project_id: str) -> dict[str, Any]:

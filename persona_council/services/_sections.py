@@ -171,8 +171,12 @@ def _notes(project: dict) -> list[dict]:
     return ns
 
 
-def create_note(project_id: str, text: str, title: str = "", store=None) -> dict[str, Any]:
-    """Create a lightweight observation note node in the project graph (no methodology required)."""
+def create_note(project_id: str, text: str, title: str = "", kind: str = "note",
+                data: dict[str, Any] | None = None, store=None) -> dict[str, Any]:
+    """Create a lightweight observation note node in the project graph (no methodology required).
+    `kind` is a free tag (default 'note'); a `concept` note carries structured `data`
+    {title, lens, artifact_kind, prototype_id|null} so the completeness critic + novelty signal can
+    reason over the solution space (ESV/OD-3). `data` is a small free dict (capped)."""
     store = store or Store()  # noqa: F821
     project = _require_research_project(store, project_id)  # noqa: F821
     if not str(text).strip():
@@ -180,11 +184,26 @@ def create_note(project_id: str, text: str, title: str = "", store=None) -> dict
     now = utc_now_iso()  # noqa: F821
     note = {"id": stable_id("note", project["id"], text, now),  # noqa: F821
             "title": (str(title).strip() or str(text).strip()[:60])[:120],
-            "text": str(text).strip()[:2000], "created_at": now}
+            "text": str(text).strip()[:2000], "kind": str(kind or "note").strip()[:40],
+            "data": dict(list((data or {}).items())[:20]), "created_at": now}
     _notes(project).append(note)
     project["updated_at"] = now
     store.upsert_research_project(project)
     return note
+
+
+def set_note_data(note_id: str, patch: dict[str, Any], store=None) -> dict[str, Any]:
+    """Merge keys into a note's `data` (e.g. set a concept note's prototype_id once built), so the
+    completeness critic stops flagging that concept as un-prototyped (ESV/OD-3)."""
+    store = store or Store()  # noqa: F821
+    for project in store.list_research_projects():  # noqa: F821
+        for n in _notes(project):
+            if n.get("id") == note_id:
+                n["data"] = {**(n.get("data") or {}), **dict(list((patch or {}).items())[:20])}
+                project["updated_at"] = utc_now_iso()  # noqa: F821
+                store.upsert_research_project(project)
+                return n
+    raise KeyError(f"Unknown note: {note_id}")
 
 
 def list_notes(project_id: str, store=None) -> list[dict[str, Any]]:

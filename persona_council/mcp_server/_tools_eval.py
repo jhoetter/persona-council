@@ -111,3 +111,21 @@ def register_eval(mcp):
         report + an anomaly per flagged outlier persona."""
         t = time.perf_counter()
         return _env("record_cohort_critic", services.record_cohort_critic(verdict), t)
+
+    # ----- ESV §B: adversarial completeness/quality critic (gates "done") -----
+    @mcp.tool()
+    def brief_completeness_critic(project_id: str) -> dict[str, Any]:
+        """GATHER a computed exhaustiveness snapshot for an INDEPENDENT critic: coverage + the
+        generative breadth_candidates (segments/angles/concepts/risks/fidelity-rungs missing) + novelty
+        + groundedness + finish + the rubric. The critic scores each dimension + lists concrete `missing`
+        work; the driver turns each into real work and re-runs until dry."""
+        t = time.perf_counter()
+        return _env("brief_completeness_critic", services.brief_completeness_critic(project_id), t)
+
+    @mcp.tool()
+    def record_completeness_critic(project_id: str, verdict: dict[str, Any]) -> dict[str, Any]:
+        """Persist the independent critic verdict {scores, passed, missing[{kind,what,why,
+        suggested_action}], rationale, evidence_refs}. Honesty gate: cannot be passed=true while
+        `missing` is non-empty or a rubric dimension is below threshold."""
+        t = time.perf_counter()
+        return _env("record_completeness_critic", services.record_completeness_critic(project_id, verdict), t)

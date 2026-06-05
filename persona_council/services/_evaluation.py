@@ -317,3 +317,140 @@ def record_evidence_check(persona_id: str, result: dict[str, Any], store: Store 
 # Portable snapshot export of generated state → data/export/ (local-only)#
 # (DB stays gitignored; this is the diffable, reproducible artifact).    #
 # ===================================================================== #
+
+
+# ===================== ESV §B — adversarial completeness / quality critic =====================
+from ..config import suggestions_dir as _suggestions_dir  # noqa: E402
+
+
+def _completeness_rubric() -> list[dict[str, Any]]:
+    """The rubric dimensions + thresholds + probes (DATA: suggestions/critic_rubric.json)."""
+    p = _suggestions_dir() / "critic_rubric.json"
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    out = []
+    for d in data.get("dimensions", []) or []:
+        if d.get("key"):
+            out.append({"key": d["key"], "threshold": int(d.get("threshold", 4)), "probe": d.get("probe", "")})
+    return out
+
+
+def _seg_label(p: dict[str, Any]) -> str:
+    s = p.get("segment") or {}
+    return str(s.get("einstellung") or s.get("lebensphase") or s.get("customer_type") or p.get("slug") or "")
+
+
+def brief_completeness_critic(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """GATHER a COMPUTED exhaustiveness snapshot (no LLM) for an INDEPENDENT critic subagent to judge:
+    coverage, the generative `breadth_candidates` (segments/angles/concepts/risks/fidelity-rungs that
+    are missing), novelty, groundedness, finish, and the rubric. The critic authors a verdict; the
+    driver turns each `missing` item into real work and re-runs until dry (spec/ESV §B)."""
+    store = store or Store()
+    graph = get_project_graph(project_id, store=store)               # noqa: F821 (bound)
+    plan = get_plan(project_id, store=store) or {"tasks": []}        # noqa: F821
+    a = assess_project(project_id, store=store)                      # noqa: F821
+    project = graph["project"]
+    persona_ids = project.get("persona_ids", [])
+    seg_pool: dict[str, list[str]] = {}
+    for pid in persona_ids:
+        p = store.get_persona(pid)
+        if p:
+            seg_pool.setdefault(_seg_label(p), []).append(pid)
+    councils = [n for n in graph["nodes"] if str(n["study_id"]).startswith("council:")]
+    engaged: set[str] = set()
+    for n in councils:
+        c = store.get_council_session(str(n["study_id"]).split(":", 1)[1]) or {}
+        engaged.update(c.get("persona_ids", []))
+    engaged_segments = {s for s, ps in seg_pool.items() if any(x in engaged for x in ps)}
+    frame_tasks = [t for t in plan["tasks"] if t.get("capability") == "frame" and t.get("status") == "done"]
+    acted_frames = {c for t in plan["tasks"] if t.get("bucket") == "act"
+                    and any(r.get("kind") != "frame" for r in t.get("produces", [])) for c in t.get("consumes", [])}
+    concept_notes = [n for n in list_notes(project_id, store=store) if n.get("kind") == "concept"]  # noqa: F821
+    risks = [o["text"] for o in store.list_open_questions(project_id) if o.get("status") == "open"]
+    declared_fids: set[str] = set()
+    for t in plan["tasks"]:
+        for tg in (t.get("requires", {}) or {}).get("session_of_tags", []) or []:
+            declared_fids.add(tg)
+    present_fids = {(p.get("fidelity") or "") for p in graph.get("prototypes") or []}
+    sessions = [x for x in store.list_prototype_sessions()
+                if (store.get_prototype(x.get("prototype_id", "")) or {}).get("project_id") == project_id]
+    frame = {
+        "goal": project.get("goal", ""), "methodology": project.get("methodology", ""),
+        "coverage": {"councils": len(councils),
+                     "syntheses": sum(1 for n in graph["nodes"] if str(n["study_id"]).startswith("synthesis:")),
+                     "prototypes": len(graph.get("prototypes") or []), "personas_engaged": len(engaged),
+                     "personas_total": len(persona_ids), "segments_engaged": sorted(engaged_segments)},
+        "breadth_candidates": {
+            "segments_not_in_any_council": sorted(set(seg_pool) - engaged_segments),
+            "frames_without_act": [t["id"] for t in frame_tasks if t["id"] not in acted_frames],
+            "concepts_not_prototyped": [n.get("title") or n["id"] for n in concept_notes
+                                        if not (n.get("data") or {}).get("prototype_id")],
+            "risks_not_tested": risks[:10],
+            "fidelity_rungs_missing": sorted(declared_fids - present_fids - {""})},
+        "novelty": a.get("novelty", {}),
+        "groundedness": {"sessions": len(sessions), "grounded": sum(1 for x in sessions if x.get("grounded_verified"))},
+        "finish": a.get("finish", {}), "open_questions": risks[:10],
+        "rubric": _completeness_rubric(),
+    }
+    instructions = (
+        "Adversarially judge whether this design-research project is EXHAUSTIVE and finished. Score each "
+        "rubric dimension 0-5 (>= its threshold to pass). Then list every concrete `missing` piece of work "
+        "from breadth_candidates (and anything else you spot) as {kind, what, why, suggested_action} — "
+        "kind ∈ {segment, angle, concept, risk, fidelity_rung, finish}. Be a skeptic: default to passed=false "
+        "if ANY segment/angle/concept/risk is unexplored or the project isn't organized+concluded+handed-off. "
+        "Then call record_completeness_critic(project_id, verdict). You CANNOT pass with non-empty missing.")
+    return {"project_id": project_id, "schema": "completeness_critic", "frame": frame, "instructions": instructions}
+
+
+def validate_completeness_verdict(verdict: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(verdict, dict):
+        raise ValueError("completeness verdict must be a JSON object")
+    rubric = {d["key"] for d in _completeness_rubric()}
+    scores = {}
+    for k, v in (verdict.get("scores") or {}).items():
+        try:
+            scores[str(k)[:60]] = max(0, min(5, int(v)))
+        except Exception:
+            continue
+    missing = []
+    for m in (verdict.get("missing") or [])[:50]:
+        if not isinstance(m, dict) or not str(m.get("what", "")).strip():
+            continue
+        missing.append({"kind": str(m.get("kind", "")).strip()[:40], "what": str(m["what"]).strip()[:300],
+                        "why": str(m.get("why", "")).strip()[:300],
+                        "suggested_action": str(m.get("suggested_action", "")).strip()[:300]})
+    thresholds = {d["key"]: d["threshold"] for d in _completeness_rubric()}
+    rubric_ok = all(scores.get(k, 0) >= thr for k, thr in thresholds.items()) if thresholds else True
+    passed = bool(verdict.get("passed")) and rubric_ok and not missing
+    return {"scores": scores, "passed": passed, "missing": missing,
+            "rationale": str(verdict.get("rationale", "")).strip()[:4000],
+            "evidence_refs": [str(r).strip()[:80] for r in (verdict.get("evidence_refs") or []) if str(r).strip()][:50],
+            "rubric_ok": rubric_ok}
+
+
+def record_completeness_critic(project_id: str, verdict: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
+    """Persist an INDEPENDENT critic verdict. Honesty gate: a verdict cannot be `passed` while it still
+    lists `missing` work OR while a rubric dimension is below threshold."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)           # noqa: F821
+    v = validate_completeness_verdict(verdict)
+    if verdict.get("passed") and (v["missing"] or not v["rubric_ok"]):
+        raise ValueError("completeness verdict cannot be passed=true while `missing` is non-empty or a "
+                         "rubric dimension is below threshold (honesty: you can't pass with open gaps)")
+    now = utc_now_iso()
+    rec = {"id": stable_id("completeness", project["id"], now), "project_id": project["id"],  # noqa: F821
+           "scores": v["scores"], "passed": v["passed"], "missing": v["missing"],
+           "rationale": v["rationale"], "evidence_refs": v["evidence_refs"], "created_at": now}
+    project.setdefault("critic_reports", []).append(rec)
+    project["updated_at"] = now
+    store.upsert_research_project(project)
+    return rec
+
+
+def list_completeness_critics(project_id: str, store: Store | None = None) -> list[dict[str, Any]]:
+    store = store or Store()
+    return list(_require_research_project(store, project_id).get("critic_reports", []))  # noqa: F821

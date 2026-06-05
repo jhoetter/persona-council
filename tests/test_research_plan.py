@@ -386,3 +386,32 @@ def test_assess_project_finish_readiness_gate(store, tmp_path, monkeypatch):
     assert a["complete"] is True and a["recommendation"] == "finish"
     assert a["finish"]["organized"] is False and a["finish"]["finished"] is False
     assert any("organized" in g for g in a["gaps"])
+
+
+def test_completeness_critic_surfaces_gaps_and_refuses_dishonest_pass(store):
+    """ESV2: brief_completeness_critic computes concrete `missing` candidates (un-prototyped concepts,
+    un-sampled segments via OD-3 concept notes); record_completeness_critic refuses a passed=true that
+    still lists missing or has a sub-threshold rubric dim (honesty gate)."""
+    import pytest
+    proj = services.start_project("ESV2", "hmw?", None, persona_ids=[], store=store)
+    pid = proj["id"]
+    services.create_note(pid, "a bold concept", "Dark-horse", kind="concept",
+                         data={"lens": "reversal", "artifact_kind": "flow", "prototype_id": None}, store=store)
+    b = services.brief_completeness_critic(pid, store=store)
+    assert "breadth_candidates" in b["frame"] and "rubric" in b["frame"]
+    assert b["frame"]["breadth_candidates"]["concepts_not_prototyped"] == ["Dark-horse"]
+    with pytest.raises(ValueError):                               # can't pass with open missing
+        services.record_completeness_critic(pid, {"passed": True, "missing": [{"kind": "concept", "what": "x"}],
+                                                  "scores": {}}, store=store)
+    with pytest.raises(ValueError):                               # can't pass with a sub-threshold dim
+        services.record_completeness_critic(pid, {"passed": True, "missing": [],
+                                                  "scores": {"exploration_depth": 1}}, store=store)
+    rec = services.record_completeness_critic(pid, {"passed": False, "missing": [
+        {"kind": "concept", "what": "build the dark-horse", "suggested_action": "scaffold + test it"}],
+        "scores": {"exploration_depth": 3}, "rationale": "thin"}, store=store)
+    assert rec["passed"] is False and rec["missing"][0]["kind"] == "concept"
+    # once the concept is marked built, it drops out of the gap
+    note = [n for n in services.list_notes(pid, store=store) if n.get("kind") == "concept"][0]
+    services.set_note_data(note["id"], {"prototype_id": "prototype_x"}, store=store)
+    b2 = services.brief_completeness_critic(pid, store=store)
+    assert b2["frame"]["breadth_candidates"]["concepts_not_prototyped"] == []
