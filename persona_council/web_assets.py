@@ -212,18 +212,18 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 
 /* ---- generic ---- */
 h1,h2,h3,h4{color:var(--ink)}
-.h1{font-size:26px;line-height:1.18;letter-spacing:-.02em;margin:0 0 6px;font-weight:700}
-.lead{color:var(--muted);font-size:14.5px;margin:0 0 18px;max-width:70ch}
+.h1{font-size:21px;line-height:1.25;letter-spacing:-.018em;margin:0 0 4px;font-weight:600}
+.lead{color:var(--muted);font-size:13.5px;margin:0 0 16px;max-width:74ch;line-height:1.5}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 11px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;min-height:30px;transition:background 120ms,border-color 120ms}
 .btn:hover{background:var(--hover)}
 .btn.active{background:var(--sel);color:var(--ink);border-color:var(--line)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
 .btn.primary:hover{filter:brightness(1.06)}
 :focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
-.card{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:14px}
+.card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:15px 16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
 .card h3{margin:0 0 8px;font-size:14px}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.two{grid-template-columns:1.1fr 1fr}
-.pill{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:5px;padding:2px 8px;margin:2px;background:var(--panel-2);color:var(--muted);font-size:11.5px;font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:6px;padding:2px 8px;margin:2px;background:var(--panel-2);color:var(--muted);font-size:11.5px;font-weight:500}
 
 /* ---- labels / avatars (G5) ---- */
 .lbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:6px;padding:2px 8px;white-space:nowrap}
@@ -249,12 +249,13 @@ h1,h2,h3,h4{color:var(--ink)}
 /* ---- linear list rows (G3) ---- */
 .group{margin:18px 0 2px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-weight:600}
 .group .cnt{color:var(--muted);font-weight:500}
-.rows{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--panel)}
-.row{display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line-2);min-height:36px}
+.rows{border:0;border-top:1px solid var(--line-2);background:transparent}
+.row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-bottom:1px solid var(--line-2);min-height:40px;border-radius:7px;transition:background 110ms}
 .row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
+.row>svg.ic,.row>.ic{color:var(--faint);flex-shrink:0;width:16px;height:16px}.row:hover>svg.ic{color:var(--muted)}
 .row .title{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .row .sub{color:var(--muted);font-size:12px;flex-shrink:0}
-.row .right{display:flex;align-items:center;gap:10px;flex-shrink:0;color:var(--muted);font-size:12.5px}
+.row .right{display:flex;align-items:center;gap:11px;flex-shrink:0;color:var(--faint);font-size:12px}
 .votebar{display:inline-flex;height:6px;width:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line)}
 .votebar i{display:block;height:100%}
 
