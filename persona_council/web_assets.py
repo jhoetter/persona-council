@@ -150,8 +150,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .olth-pill{display:inline-flex;align-items:center;gap:5px;padding:1px 9px 1px 7px;border-radius:11px;background:var(--panel-2);color:var(--muted);font-size:11px;font-weight:500;white-space:nowrap}.olth-pill i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 /* relations block on detail pages (Linear progressive disclosure) */
 .relcard{margin-top:16px}
-.relh{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;display:flex;align-items:center;gap:6px}.relh svg{width:13px;height:13px}
-.h1ic{display:inline-flex;vertical-align:-3px;margin-right:7px}.h1ic svg{width:19px;height:19px}
+.relh{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;display:flex;align-items:center;gap:6px}.relh svg{width:13px;height:13px}.h1ic{display:inline-flex;vertical-align:-3px;margin-right:7px}.h1ic svg{width:19px;height:19px}
 .relgrp{margin-bottom:10px}
 .rellbl{font-size:11px;font-weight:600;color:var(--muted);margin:6px 0 3px}
 .relrow{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:13px}
@@ -262,8 +261,7 @@ h1,h2,h3,h4{color:var(--ink)}
 .rico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;border-radius:6px;background:var(--panel-2)}
 .rico svg{width:15px;height:15px}
 .h1cnt{font-size:14px;font-weight:500;color:var(--faint);margin-left:7px;vertical-align:middle}
-.list-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 0;color:var(--muted);text-align:center}
-.list-empty svg{width:26px;height:26px;color:var(--faint)}
+.list-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 0;color:var(--muted);text-align:center}.list-empty svg{width:26px;height:26px;color:var(--faint)}
 .row .title{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .row .sub{color:var(--muted);font-size:12px;flex-shrink:0}
 .row .right{display:flex;align-items:center;gap:11px;flex-shrink:0;color:var(--faint);font-size:12px}
