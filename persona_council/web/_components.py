@@ -215,7 +215,8 @@ def _empty_state(title: str, message: str) -> str:
 
 
 _EDGE_COLORS = {"spawned_from": "#6b7cff", "refines": "#34a853", "contrasts": "#ea4335",
-                "depends_on": "#a142f4", "duplicates": "#9aa0a6", "answers": "#f29900"}
+                "depends_on": "#a142f4", "duplicates": "#9aa0a6", "answers": "#f29900",
+                "informs": "#5e6ad2"}  # the diamond-to-diamond spine (GAP-6)
 _THEME_PALETTE = ["#6b7cff", "#34a853", "#f29900", "#a142f4", "#ea4335", "#00897b", "#5f6368", "#d81b60"]
 
 

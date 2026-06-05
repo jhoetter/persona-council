@@ -417,6 +417,7 @@ def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
     nodes.sort(key=lambda n: n.get("created_at", ""))
     # edges: each verify task's synthesis consolidates its act fan's councils (refines)
     edges: list[dict[str, Any]] = []
+    node_ids = {n["study_id"] for n in nodes}
     for t in plan["tasks"]:
         if t["bucket"] != "verify":
             continue
@@ -427,6 +428,34 @@ def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
                 if fr["kind"] in ("council", "synthesis"):
                     edges.append({"from_study": f"{fr['kind']}:{fr['id']}",
                                   "to_study": f"synthesis:{syn['id']}", "type": "refines", "rationale": ""})
+    # SPINE (GAP-6): connect each diamond's converging synthesis to the upstream diamonds' syntheses
+    # that feed it, so the full double-diamond reads as ONE connected flow (Define→Select→Deliver→…)
+    # rather than isolated, edge-less diamonds. Without this, a diamond whose fan is prototypes/sessions
+    # (not councils) has no incoming edge and floats disconnected ("no lines").
+    syn_of_verify = {t["id"]: next((r["id"] for r in t["produces"] if r["kind"] == "synthesis"), None)
+                     for t in plan["tasks"] if t["bucket"] == "verify"}
+
+    def _upstream_verifies(task_id: str, acc: set[str]) -> None:
+        ct = _plan.task(plan, task_id)
+        for c in (ct.get("consumes") or []) if ct else []:
+            cc = _plan.task(plan, c)
+            if not cc:
+                continue
+            if cc["bucket"] == "verify":
+                acc.add(cc["id"])
+            else:
+                _upstream_verifies(c, acc)
+
+    for t in plan["tasks"]:
+        if t["bucket"] != "verify" or not syn_of_verify.get(t["id"]):
+            continue
+        ups: set[str] = set()
+        _upstream_verifies(t["id"], ups)
+        for up in ups:
+            up_syn, this_syn = syn_of_verify.get(up), syn_of_verify[t["id"]]
+            if up_syn and up_syn != this_syn and f"synthesis:{up_syn}" in node_ids:
+                edges.append({"from_study": f"synthesis:{up_syn}", "to_study": f"synthesis:{this_syn}",
+                              "type": "informs", "rationale": ""})
     ms = _plan_methodology_state(project, plan, store)
     if ms:
         step_tags = {s["key"]: list(s.get("tags") or []) for s in ms["steps"]}

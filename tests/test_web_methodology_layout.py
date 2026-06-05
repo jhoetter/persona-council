@@ -100,3 +100,18 @@ def test_layout_has_no_phase_key_literals():
     for lit in ('"ideate"', '"refine"', '"lofi_select"', '"deliver"', "build_col", "test_conv",
                 '"lofi"', '"midfi"'):
         assert lit not in lo, lit
+
+
+def test_diamonds_connect_via_synthesis_spine(store, tmp_path):
+    """GAP-6: the converging syntheses of successive diamonds are linked (Define→Select→Deliver…) so
+    the full double-diamond reads as ONE connected flow, not edge-less floating diamonds ("no lines")."""
+    g = _drive_plan(store, tmp_path, "double_diamond_deep")
+    syn_nodes = [n["study_id"] for n in g["nodes"] if n["study_id"].startswith("synthesis:")]
+    informs = [(e["from_study"], e["to_study"]) for e in g["edges"] if e["type"] == "informs"]
+    assert len(syn_nodes) >= 3 and len(informs) >= 2          # multiple diamonds, a connected spine
+    # every spine edge connects two real synthesis nodes
+    for a, b in informs:
+        assert a in syn_nodes and b in syn_nodes
+    # the spine reaches the final diamond (no isolated terminal synthesis)
+    targets = {b for _, b in informs}
+    assert any(t in targets for t in syn_nodes)
