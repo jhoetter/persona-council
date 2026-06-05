@@ -42,8 +42,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .nav a .ic{color:var(--faint)}
 .nav a:hover{background:var(--hover)}
 .nav a.active{background:var(--sel);color:var(--ink);font-weight:600}
+.nav a.active::before{content:'';position:absolute;left:-8px;top:7px;bottom:7px;width:2.5px;border-radius:0 3px 3px 0;background:var(--accent)}
 .nav a.active .ic{color:var(--accent)}
-.navhead{font-size:11px;letter-spacing:.02em;color:var(--faint);margin:16px 9px 5px;font-weight:600}
+.navhead{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);margin:18px 9px 6px;font-weight:650}
 .sb-quick{display:flex;flex-direction:column;gap:1px}
 .sb-quick a{display:block;padding:5px 9px;border-radius:6px;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sb-quick a:hover{background:var(--hover);color:var(--ink)}
