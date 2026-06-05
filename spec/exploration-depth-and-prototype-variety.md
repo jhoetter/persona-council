@@ -188,6 +188,38 @@ following the intent would lose its clusters/key_problems to the validator.
 "rich, explorable answer" (absent). Without FIX-A, even an excellent run renders thin POV/deliverable
 nodes — the user-visible disappointment, despite good work underneath.
 
+### OBS-5 — Ideate produced 8 distinct, insight-driven concepts incl. a real dark-horse ✅ (resolves WATCH-3)
+The agent (via a subagent) authored an 8-concept cloud, each tied to a specific Discover insight, then
+selected **5 varied NON-form types** for lo-fi ("flow / comparison / mapper / trigger-card / dashboard
+— no forms", the agent's own words):
+1. "Brauchst du das überhaupt?" — honest self-check that can end in **NO**; 2. "Risiko vs. Kapital, in
+deinen Worten" — jargon-killer (language-barrier insight); 3. "Später, nicht jetzt" — trigger that
+**refuses the KFZ moment**; 4. "Null Provision" — €-commission transparency (distrust insight); 5.
+"Flexibler Sicherheits-Puffer" — reframes to pausable liquidity (precarious-present insight); 6. "Wer
+hängt von dir ab?" — relational **mapper visualizing the €-gap if income stops**; 7. **"Das ist nichts
+für dich"** — explicit **self-disqualification verdict** for non-targets (a genuine dark-horse/
+provocation); 8. "Peer-Verbraucherzentrale" — neutral second-opinion.
+*Why it matters:* this is the variety + boldness the user wanted — concept-KIND diversity, an explicit
+"no forms" stance, and an unprompted provocation. *Evidence-discipline highlight:* the seductive
+"compounding simulation / teach them early-investing" concept is **correctly ABSENT** — Discover
+refuted that premise (the literate already grasp compounding and reject LV), so chasing it would be
+anti-evidence. The agent stayed honest. WATCH-3 resolves positively.
+*Bearing on GAP-2:* a STRONG agent diversified kind + produced a provocation **without** harness help,
+so GAP-2 is less acute than feared — but it's currently **agent-dependent**. The proposed fix (surface
+the artifact palette + invite ≥1 provocation, as DATA) would make this *reliable* rather than luck of
+a disciplined agent.
+*Bearing on GAP-1:* concept C6 ("visualize the €-gap if your income stopped") and C4 (€-commission
+breakdown) *want* live computation/visualization — exactly the renderer ceiling. The acid test is how
+they get BUILT next (real interactive viz vs. faked static cards). → WATCH-4.
+
+### OBS-6 (method) — observability caveats for this monitoring
+Two things to keep honest while watching: (a) my MCP server and the worker's are **separate processes
+on one SQLite file**, so `list_*` reads lag the worker's writes by seconds — I verify ground truth via
+a fresh `Store()` and on-disk `concept.json`. (b) the `tail | grep` monitor matches tool *names* in
+ANY new line, so an agent `ToolSearch`/skill-load line that merely NAMES `scaffold_prototype` fires a
+false "prototype built" event — every milestone is reconciled against the DB/disk before I record it.
+*(Not a product finding; a note so the tracker's claims stay grounded.)*
+
 ## Watch list (to confirm as the run proceeds)
 - **WATCH-1 — Discover breadth shape.** ✅ resolved positively (see OBS-3): a few rich multi-persona
   councils per angle, spectrum-sampled, memory-grounded. (Kept on the list as a regression check for
