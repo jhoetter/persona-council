@@ -104,8 +104,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgphase-label{fill:var(--ink);font-size:15px;font-weight:700;letter-spacing:-.01em}
 .rgphase-sub{fill:var(--muted);font-size:11px}
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
-.rgsec-label{font-size:13px;font-weight:650;letter-spacing:.01em;opacity:.92}
-.rgsec-kind{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;fill:var(--muted);opacity:.8}
+.rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}
+.rgseclab-t{font-size:12.5px;font-weight:700;letter-spacing:.01em}
+.rgseclab-k{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;fill:var(--muted)}
 .protoframe{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);height:620px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
 .protoframe iframe{width:100%;height:100%;border:0;display:block}
 .strow{padding:9px 0;border-bottom:1px solid var(--line)}.strow:last-child{border-bottom:0}
@@ -222,7 +223,7 @@ h1,h2,h3,h4{color:var(--ink)}
 .hero h1{font-size:30px;line-height:1.13;letter-spacing:-.022em;margin:0 0 8px;font-weight:720}
 .hero h1 svg{width:24px;height:24px;color:var(--accent)}
 .hero .sub{color:var(--muted);font-size:15px;margin:0 0 4px;max-width:64ch}
-.callout{display:flex;gap:11px;border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--accent-weak);border-radius:10px;padding:13px 15px;margin:18px 0}
+.callout{display:flex;align-items:flex-start;gap:11px;border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--accent-weak);border-radius:10px;padding:13px 15px;margin:18px 0}
 .callout .emj{color:var(--accent);display:inline-flex;align-items:center;padding-top:1px}
 .callout .emj svg{width:18px;height:18px}
 .callout p{margin:0}
@@ -262,6 +263,9 @@ details.sec[open]>summary::before{transform:rotate(90deg)}
 .turn-who{display:inline-flex;align-items:center;gap:7px;color:var(--ink);text-decoration:none}
 .turn-who:hover b{color:var(--accent)}
 .turn-ctx{flex-basis:100%;margin:2px 0 0;font-style:italic}
+/* a persona's multiple answers stack in one card, separated by a hairline */
+.turn-ans+.turn-ans{margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)}
+.turn-ans>p{margin:0}
 .turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
 .turn-input summary{cursor:pointer}
 .detail{max-width:980px}.thought{font-size:15px;border-left:3px solid var(--ink);padding:9px 12px;background:var(--panel-2);border-radius:0 6px 6px 0}
@@ -455,11 +459,19 @@ _RGRAPH_JS = """<script>
     var cls='rgsection '+(s.phase?'rgsection-phase':'rgsection-theme');
     var poly=el('polygon',{points:pts,'class':cls,style:'fill:'+s.color+';stroke:'+s.color});
     poly.setAttribute('data-section', s.id); gS.appendChild(poly);
-    var sx=s.lx+12;
-    if(s.glyph){ var si=iconEl(s.glyph, sx, s.ly+22-11, 13, s.color); if(si){ gS.appendChild(si); sx+=18; } }
-    var lab=el('text',{x:sx,y:(s.ly+22),'class':'rgsec-label',style:'fill:'+s.color});
-    lab.textContent=s.label; gS.appendChild(lab);
-    if(s.kind){ var k=el('text',{x:(s.lx+12),y:(s.ly+38),'class':'rgsec-kind'}); k.textContent=s.kind; gS.appendChild(k); }
+    // Group label as a readable PILL floating just above the hull's top-left, so it
+    // never overlaps the nodes inside the group (it used to sit on the first node).
+    var chip=el('g',{'class':'rgseclab'}); gS.appendChild(chip);
+    var PADX=10, CH=24, cx=PADX;
+    var rect=el('rect',{x:0,y:0,height:CH,rx:8,'class':'rgseclab-bg',style:'stroke:'+s.color}); chip.appendChild(rect);
+    if(s.glyph){ var si=iconEl(s.glyph, cx, CH/2-7, 14, s.color); if(si){ chip.appendChild(si); cx+=19; } }
+    var lab=el('text',{x:cx,y:CH/2,'class':'rgseclab-t','dominant-baseline':'central',style:'fill:'+s.color});
+    lab.textContent=s.label; chip.appendChild(lab);
+    var lw=0; try{lw=lab.getComputedTextLength();}catch(_){} cx+=lw;
+    if(s.kind){ cx+=8; var k=el('text',{x:cx,y:CH/2,'class':'rgseclab-k','dominant-baseline':'central'});
+      k.textContent=s.kind; chip.appendChild(k); var kw=0; try{kw=k.getComputedTextLength();}catch(_){} cx+=kw; }
+    rect.setAttribute('width', cx+PADX);
+    chip.setAttribute('transform','translate('+(s.lx+4)+','+(s.ly-CH-6)+')');
   }); }
 
   // ---- edges (bezier, depth-aware) ----

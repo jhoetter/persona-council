@@ -286,7 +286,7 @@ def register_pages(app) -> None:
         session = store.get_council_session(session_id)
         if not session:
             return _layout(t("not_found"), _empty_state(t("council_not_found"), t("runtime_maybe_cleared")), store, active="councils")
-        voices_detail_h = t("voices_in_detail", n=len(session["turns"]))
+        voices_detail_h = t("voices_in_detail", n=len({tn.get("persona_id") for tn in session["turns"] if tn.get("persona_id")}))
         proposal_short_h = t("proposal_short_summary")
         proposal_h = t("proposal"); summary_h = t("summary")
         sentiment_title = t("sentiment_this_council")
@@ -295,28 +295,53 @@ def register_pages(app) -> None:
         # Each voice shows WHO the persona is + the life-context that shaped them (the per-persona
         # "input") and any recorded input snapshot, so you can see what each was given → what they said.
         pmap = {pid: store.get_persona(pid) for pid in session.get("persona_ids", [])}
-        turns = []
-        for tn in session["turns"]:
-            body = tn.get("content") or tn.get("text") or tn.get("message") or ""   # tolerate turn-body field variants
-            mod = " mod" if (tn.get("speaker") == "Moderator" or tn.get("stance") in ("moderation", "moderator") or tn.get("type") == "moderator") else ""
-            stance = _label(tn["stance"], _stance_color(tn.get("stance", ""))) if tn.get("stance") else ""
-            p = pmap.get(tn.get("persona_id"))
-            if p:
-                seg = p.get("segment") or {}
-                desc = " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
-                    or (p.get("source_description") or "")[:130]
-                head = (f'<a href="/personas/{_esc(p["id"])}" class="turn-who">{_avatar(p, 26)}'
-                        f'<b>{_esc(p.get("display_name") or tn.get("speaker", ""))}</b></a> {stance}'
-                        f'<div class="muted small turn-ctx">{_esc(desc)}</div>')
-            else:
-                head = f'<b>{_esc(tn.get("speaker", ""))}</b> {stance}'
+
+        def _is_mod(tn: dict) -> bool:
+            return (tn.get("speaker") == "Moderator" or tn.get("stance") in ("moderation", "moderator")
+                    or tn.get("type") == "moderator")
+
+        def _answer_html(tn: dict) -> str:
+            """One answer (a single turn): optional input snapshot, the text, concerns, memory refs."""
+            body = tn.get("content") or tn.get("text") or tn.get("message") or ""   # tolerate body field variants
             given = tn.get("input") or tn.get("context_given") or ""
             given_html = (f'<details class="turn-input"><summary class="muted small">{t("council_input_given")}</summary>'
                           f'<p class="muted small" style="white-space:pre-wrap">{_esc(given)}</p></details>') if given else ""
             concerns = "".join(f'<p class="muted small">• {_esc(q)}</p>' for q in (tn.get("questions_or_pushback") or [])[:4])
             mrefs = (tn.get("memory_refs") or tn.get("memory_used") or [])[:3]
             mem = (f'<p class="muted small">{_icon("memory")} {t("council_drew_on")}: ' + ", ".join(_esc(m) for m in mrefs) + '</p>') if mrefs else ""
-            turns.append(f'<div class="turn{mod}"><div class="hd">{head}</div>{given_html}<p>{_esc(body)}</p>{concerns}{mem}</div>')
+            return f'<div class="turn-ans">{given_html}<p>{_esc(body)}</p>{concerns}{mem}</div>'
+
+        # One card PER PERSONA: a persona answering several questions used to render as several
+        # identical-header blocks (confusing). Group a persona's turns into a single card with their
+        # answers stacked; moderator turns stand on their own.
+        grouped: list[tuple] = []     # (persona_id|None, [turns], is_mod)
+        idx_of: dict = {}
+        for tn in session["turns"]:
+            pid = tn.get("persona_id")
+            if _is_mod(tn) or not pid:
+                grouped.append((pid, [tn], _is_mod(tn)))
+            elif pid in idx_of:
+                grouped[idx_of[pid]][1].append(tn)
+            else:
+                idx_of[pid] = len(grouped)
+                grouped.append((pid, [tn], False))
+
+        turns = []
+        for pid, tns, is_mod in grouped:
+            p = pmap.get(pid)
+            stance_src = next((x for x in tns if x.get("stance") and not _is_mod(x)), None)
+            stance = _label(stance_src["stance"], _stance_color(stance_src["stance"])) if stance_src else ""
+            if p:
+                seg = p.get("segment") or {}
+                desc = " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
+                    or (p.get("source_description") or "")[:130]
+                head = (f'<a href="/personas/{_esc(p["id"])}" class="turn-who">{_avatar(p, 26)}'
+                        f'<b>{_esc(p.get("display_name") or tns[0].get("speaker", ""))}</b></a> {stance}'
+                        f'<div class="muted small turn-ctx">{_esc(desc)}</div>')
+            else:
+                head = f'<b>{_esc(tns[0].get("speaker", ""))}</b> {stance}'
+            answers = "".join(_answer_html(tn) for tn in tns)
+            turns.append(f'<div class="turn{" mod" if is_mod else ""}"><div class="hd">{head}</div>{answers}</div>')
         turns_html = (f'<p class="muted small" style="margin:-4px 0 12px">{t("council_voices_help")}</p>'
                       '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>")
         exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
