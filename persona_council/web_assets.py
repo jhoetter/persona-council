@@ -710,7 +710,6 @@ _RGRAPH_JS = """<script>
 </script>"""
 
 _SYN_STYLE = r"""<style>
-.syn-wrap{max-width:920px;margin:0 auto;padding:2px 0 90px}
 .syn-head h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;font-weight:650;margin:0 0 8px}
 .syn-goal{color:var(--muted);font-size:15px;line-height:1.5;max-width:72ch;margin:0 0 14px}
 .syn-meta{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
@@ -753,14 +752,6 @@ _SYN_STYLE = r"""<style>
 .cc-es h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:10px 0 4px}
 .cc-es p{margin:0 0 7px}.cc-es ul{margin:0 0 7px;padding-left:18px}
 .cc-jump{font-weight:600;color:var(--accent);font-size:13px}
-.syn-rail{position:fixed;right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;z-index:40;padding:10px 4px;align-items:flex-end}
-.syn-rail .tick{display:flex;align-items:center;justify-content:flex-end;gap:10px;height:6px;text-decoration:none}
-.tk-bar{width:18px;height:2px;border-radius:2px;background:var(--ink);opacity:.30;transition:width .14s,opacity .14s,background .14s}
-.syn-rail .tick:hover .tk-bar{opacity:.75;width:28px}
-.syn-rail .tick.active .tk-bar{opacity:1;width:28px;background:var(--accent)}
-.tk-label{font-size:12px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 10px;white-space:nowrap;opacity:0;transform:translateX(8px);transition:opacity .14s,transform .14s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.12)}
-.syn-rail .tick:hover .tk-label{opacity:1;transform:none}
-.syn-rail .tick.active .tk-label{color:var(--accent);border-color:var(--accent)}
 .syn-main [id]{scroll-margin-top:26px}
 .ei-wrap{margin:6px 0 22px}
 .ei-plot{position:relative;width:100%;max-width:600px;aspect-ratio:560/420;margin:0 auto 10px}
@@ -786,15 +777,4 @@ _SYN_STYLE = r"""<style>
 @media(max-width:1180px){.syn-rail{display:none}}
 @media(max-width:740px){.cgrid{grid-template-columns:1fr}.syn-head h1{font-size:21px}}
 </style>"""
-
-_SYN_SCRIPT = r"""<script>(function(){
-var sc=document.querySelector('section');
-var ticks=[].slice.call(document.querySelectorAll('.syn-rail .tick'));
-if(!ticks.length)return;
-var map={};ticks.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
-var obs=new IntersectionObserver(function(es){es.forEach(function(en){
-var el=map[en.target.id];if(en.isIntersecting&&el){ticks.forEach(function(t){t.classList.remove('active');});el.classList.add('active');}});},
-{root:sc||null,rootMargin:'0px 0px -72% 0px',threshold:0});
-ticks.forEach(function(a){var t=document.getElementById(a.getAttribute('href').slice(1));if(t)obs.observe(t);});
-})();</script>"""
 

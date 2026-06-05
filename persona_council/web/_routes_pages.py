@@ -484,15 +484,17 @@ def register_pages(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((syn["title"], None))
-        rel = _relations_html(store, f"synthesis:{synthesis_id}", proj["id"] if proj else None)
+        rel = _relations_html(store, f"synthesis:{synthesis_id}", proj["id"] if proj else None, aside=True)
         props = _properties_html([
             ("check", t("status"), t("done") if syn.get("status", "done") == "done" else t("running")),
             ("councils", t("councils"), str(len(syn.get("council_ids", [])))),
             ("dot", t("created"), _esc(syn.get("created_at", "")[:10])),
             ("projects", t("project"),
              (f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>' if proj else "—")),
-        ])
-        return _layout(syn["title"], _synthesis_html(store, syn, after=props + rel), store,
+        ], aside=True)
+        content, toc = _synthesis_html(store, syn)
+        body = _doc(content, rail=props + rel) + _page_rail(toc)
+        return _layout(syn["title"], body, store,
                        crumbs=crumbs, active="projects", actions=actions)
 
     @app.get("/projects", response_class=HTMLResponse)

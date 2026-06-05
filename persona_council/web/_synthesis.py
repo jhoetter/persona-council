@@ -7,7 +7,7 @@ from ..storage import Store
 from ._i18n import t
 from ._components import (
     _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _rec_item, _rec_row_n,
-    _effort_impact, _star, _SYN_STYLE, _SYN_SCRIPT,
+    _effort_impact, _star, _SYN_STYLE,
 )
 
 
@@ -331,7 +331,7 @@ def _persona_voices_html(store: Store, pid: str) -> str:
 # --------------------------- synthesis report --------------------------- #
 
 
-def _synthesis_html(store: Store, syn: dict, after: str = "") -> str:
+def _synthesis_html(store: Store, syn: dict):
     done = syn.get("status", "done") == "done"
     sec = []  # (id, short_label, html)
     # 1) Executive Summary — large prose, no box
@@ -442,10 +442,8 @@ def _synthesis_html(store: Store, syn: dict, after: str = "") -> str:
     head = (f'<header class="syn-head"><h1>{_esc(syn["title"])}</h1>'
             f'<div class="syn-meta">{"".join(mchips)}</div></header>')
 
-    ticks = "".join(f'<a class="tick" href="#{sid}"><span class="tk-label">{_esc(lbl)}</span><span class="tk-bar"></span></a>'
-                    for sid, lbl, _ in sec)
-    rail = f'<nav class="syn-rail" aria-label="{_esc(t("sections"))}">{ticks}</nav>'
     main = head + "".join(h for _, _, h in sec)
-    # Properties/Relations cards (passed by the caller) live INSIDE the same centred column as the
-    # content — otherwise they render full-width and visibly misalign with the 920px article above.
-    return _SYN_STYLE + f'<div class="syn-wrap"><div class="syn-main">{main}</div>{after}{rail}</div>' + _SYN_SCRIPT
+    # Unified detail shell: the caller wraps this content in _doc (content column + Properties/Relations
+    # aside) and renders the section minimap via _page_rail(toc) — same as every other detail page.
+    toc = [(sid, lbl) for sid, lbl, _ in sec]
+    return _SYN_STYLE + f'<div class="syn-main">{main}</div>', toc

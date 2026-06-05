@@ -122,8 +122,9 @@ def test_synthesis_preserves_structured_blocks_and_warns_when_thin(store):
                                      synthesis_id=got["id"], store=store)
     assert services.get_synthesis(rec2["id"], store=store)["key_problems"] == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
     # web + export surface the structured content
-    html = web._synthesis_html(store, got)
+    html, toc = web._synthesis_html(store, got)
     assert "Sprachbarriere" in html and "Shortlist" in html and "proto_a" in html
+    assert toc and all(len(item) == 2 for item in toc)
     md = services.export_synthesis(got["id"], "md", store=store)
     assert "Sprachbarriere" in md and "proto_a" in md
     # a truly empty synthesis warns (soft, non-blocking)
