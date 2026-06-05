@@ -220,6 +220,40 @@ ANY new line, so an agent `ToolSearch`/skill-load line that merely NAMES `scaffo
 false "prototype built" event — every milestone is reconciled against the DB/disk before I record it.
 *(Not a product finding; a note so the tracker's claims stay grounded.)*
 
+### OBS-7 — Lo-fi prototypes are varied + on-insight + genuinely non-form ✅ (resolves WATCH-4 positively)
+5 lo-fi prototypes across **4 distinct templates**, each tied to a Discover insight: `lofi-honest-check`
+(spa-flow, 8-screen branching triage that can end in NO), `lofi-risiko-vs-kapital` (spa-comparison,
+real side-by-side `columns` for the language-barrier insight), `lofi-dependents-map` (spa-cards,
+tap-who-depends-on-you → verdict, can end "0 € — spar dir die Beiträge"), `lofi-zero-commission`
+(spa-dashboard, €-commission breakdown), `lofi-later-trigger` (spa-cards, "refuse the KFZ moment"
+trigger). No questionnaire/forms. The agent delivered concept-KIND variety + boldness.
+
+### GAP-1 — CONFIRMED IN PRACTICE (concrete evidence) ⚠️⚠️
+`lofi-dependents-map` is the proof. The concept aspires to "tippe an, wer eine Lücke hätte … wir zeigen
+DIE EURO-LÜCKE" — a personalized model. Because the renderer can't compute, it degraded into **4 static
+result screens with HARDCODED euro figures** (`~1.400 €` Partner, `~1.100 €` Kind, `0 €` Niemand) — the
+gap is pre-baked per branch, not derived from any user input. A real version needs income input → a
+computed gap → a bar/curve. This is exactly the ceiling FIX-A targets; the run *wanted* the simulation
+and was forced to fake it. (The seductive "compounding simulation" never appeared — correctly, since
+Discover refuted that premise — but the SAME missing primitive would have blocked it too.)
+
+### GAP-4 — DEFECT: concept↔template navigation-key mismatch isn't validated; a "dead" prototype still scaffolds + gets proband-tested ⚠️
+`lofi-later-trigger` (the trigger-card concept) was scaffolded with **spa-cards**, whose card renderer
+reads only `card.goto`. But the concept's cards navigate via `card.action` (a key only **spa-dashboard**
+honors). Net: its core interaction — arming a "later" trigger — **does not navigate** in the assigned
+template, yet a `record_prototype_session` was recorded against it. So a proband "tested" a prototype
+whose main action is dead, and nothing caught it.
+*Proposed (general):* (a) **normalize card navigation** — every card-bearing template should accept
+both `goto` and `action` (and a single canonical key going forward); (b) **scaffold_artifact validates
+nav reachability** — every interactive element's target must resolve to a screen, else reject/warn
+(no silent dead interactions); (c) optionally, the proband-session groundedness check could note when
+the observed states never advanced past the start screen. Methodology-agnostic (any prototype).
+
+### PREDICT-1 — the next converge (lofi_select) will hit GAP-3 again
+`verify__lofi_select.intent` says "Author payload.ranking + payload.shortlist" — both are in the set
+`validate_synthesis_payload` DROPS (GAP-3). Expect another hollow down-select synthesis (ranking/
+shortlist lost). Watching to confirm the defect is systemic across converge steps, not a one-off.
+
 ## Watch list (to confirm as the run proceeds)
 - **WATCH-1 — Discover breadth shape.** ✅ resolved positively (see OBS-3): a few rich multi-persona
   councils per angle, spectrum-sampled, memory-grounded. (Kept on the list as a regression check for
@@ -229,8 +263,8 @@ false "prototype built" event — every milestone is reconciled against the DB/d
   Define *synthesis* artifact itself to confirm the POV is authored rich (not stranded in councils).
 - **WATCH-3 — Ideate breadth.** ≥4–8 *distinct-kind* concepts before down-select, or premature collapse
   to one obvious idea?
-- **WATCH-4 — Prototype distinctness.** Do lo-fi prototypes feel like different experiences, or
-  near-identical screens? Does anything approach a simulation/experiential concept (and hit GAP-1)?
+- **WATCH-4 — Prototype distinctness.** ✅ resolved positively (OBS-7): 5 varied non-form prototypes
+  across 4 templates. Surfaced GAP-1 (faked simulation) + GAP-4 (dead-nav) concretely.
 - **WATCH-5 — Hi-fi honesty.** Does the final spec keep deliberate non-targets + an honest
   validated-vs-open ledger (anti-steering survives to the end)?
 
