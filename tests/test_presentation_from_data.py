@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from persona_council import methodology as M
 from persona_council import presentation as P
 from persona_council import prototypes, services, web
 

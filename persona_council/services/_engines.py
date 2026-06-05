@@ -77,18 +77,6 @@ from ..methodology import (  # noqa: E402
     list_methodologies,
     get_methodology,
     register_methodology,
-    start_methodology_project,
-    set_project_methodology,
-    brief_next,
-    brief_phase,
-    record_node,
-    record_exploration,
-    record_judgment,
-    record_decision,
-    record_convergence,
-    advance,
-    advance_phase,
-    get_methodology_state,
 )
 from ..suggestions import (  # noqa: E402
     suggest_capabilities,
@@ -117,13 +105,15 @@ def start_project(title: str, goal: str, methodology: str | None = None,
                   store: Store | None = None) -> dict[str, Any]:
     """Unified project entry: create a research project + seed its plan. With a methodology the plan
     is seeded from the constellation (analyze/act/verify scaffolding); freeform seeds one root frame
-    task (analyze, dischargeable). The methodology engine binding is kept for back-compat."""
+    task (analyze, dischargeable). The plan is the single engine (HX3); a methodology only seeds it."""
     store = store or Store()
     project = create_research_project(title, goal=goal, persona_ids=persona_ids,
                                       description=description, store=store)
     if methodology:
         spec = get_methodology(methodology, store=store)
-        set_project_methodology(project["id"], methodology, store=store)   # phase_log (back-compat)
+        project["methodology"] = methodology
+        project["updated_at"] = utc_now_iso()
+        store.upsert_research_project(project)
         plan = _plan.seed_plan_from_methodology(project["id"], goal, spec)
     else:
         root = {"id": "frame__root", "title": "Frame the inquiry", "bucket": "analyze",
@@ -187,35 +177,46 @@ def next_action(project_id, store: Store | None = None) -> dict[str, Any]:
     return _plan.next_action(project_id, store=store)
 
 
-# brief_next + record_judgment DISPATCH: plan-driven when the project has a plan, else the legacy
-# methodology engine. (These names were imported from .methodology above; redefined here to dispatch.)
+def start_methodology_project(title: str, goal: str, methodology_key: str,
+                              persona_ids: list[str] | None = None, description: str = "",
+                              store: Store | None = None) -> dict[str, Any]:
+    """Back-compat entry: a methodology only SEEDS the plan now (HX3). Forwards to start_project."""
+    return start_project(title, goal, methodology=methodology_key, persona_ids=persona_ids,
+                         description=description, store=store)
 
 
 
-_m_brief_next = brief_next            # the methodology engine's router (legacy fallback)
-
-
-
-_m_record_judgment = record_judgment
-
-
-
-def brief_next(project_id: str, store: Store | None = None) -> dict[str, Any]:  # noqa: F811
+def set_project_methodology(project_id: str, methodology_key: str,
+                            store: Store | None = None) -> dict[str, Any]:
+    """Bind an existing research project to a methodology by (re)seeding its plan from the
+    constellation (the plan is the single engine; HX3)."""
     store = store or Store()
-    if _plan.get_plan(project_id, store=store) is not None:
-        return _plan.brief_next(project_id, store=store)
-    return _m_brief_next(project_id, store=store)
+    project = store.get_research_project(project_id)
+    if not project:
+        raise MethodologyError("UNKNOWN_PROJECT", f"Unknown research project: {project_id}")
+    spec = get_methodology(methodology_key, store=store)
+    project["methodology"] = methodology_key
+    project["updated_at"] = utc_now_iso()
+    store.upsert_research_project(project)
+    plan = _plan.seed_plan_from_methodology(project_id, project.get("goal", ""), spec)
+    _plan.save_plan(plan, store=store)
+    return store.get_research_project(project_id)
 
 
 
-def record_judgment(project_id, task_id_or_step, gate_tag, decided, rationale,  # noqa: F811
+# brief_next + record_judgment: thin forwards to the plan engine (the project's single engine; HX3).
+
+
+
+def brief_next(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    return _plan.brief_next(project_id, store=store)
+
+
+
+def record_judgment(project_id, task_id, gate_tag, decided, rationale,
                     evidence_refs=None, store: Store | None = None) -> dict[str, Any]:
-    store = store or Store()
-    if _plan.get_plan(project_id, store=store) is not None:
-        return _plan.record_judgment(project_id, task_id_or_step, gate_tag, decided, rationale,
-                                     evidence_refs, store=store)
-    return _m_record_judgment(project_id, task_id_or_step, gate_tag, decided, rationale,
-                              evidence_refs, store=store)
+    return _plan.record_judgment(project_id, task_id, gate_tag, decided, rationale,
+                                 evidence_refs, store=store)
 
 
 

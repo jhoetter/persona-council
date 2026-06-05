@@ -8,11 +8,11 @@ from ._env import _env
 
 
 def register_methodology(mcp):
-    # ============ Methodology engine: tag-driven constellations (structure+LLM-judged) ============
-    # A methodology = a DAG of steps carrying OPEN TAGS. The engine is tag-agnostic; common
-    # building blocks are SUGGESTED as data (suggest_*), never enforced. See
-    # spec/methodology-constellations.md. Old tool names (brief_phase/record_exploration/
-    # record_convergence/advance_phase) remain as aliases.
+    # ============ Methodologies: tag-driven constellation SEEDS for the plan engine ============
+    # A methodology = a DAG of steps carrying OPEN TAGS. It is purely data: starting one SEEDS the
+    # research plan (analyze/act/verify) — the single runtime engine is the plan (see _tools_plan +
+    # spec/hx3-engine-collapse.md). Common building blocks are SUGGESTED as data (suggest_*), never
+    # enforced. See spec/methodology-constellations.md.
     @mcp.tool()
     def suggest_capabilities() -> dict[str, Any]:
         """SUGGESTED capability tags (explore/cluster/decide/build/test/synthesize, …) for a step's
@@ -55,88 +55,34 @@ def register_methodology(mcp):
     @mcp.tool()
     def start_methodology_project(title: str, goal: str, methodology_key: str,
                                   persona_ids: list[str] | None = None, description: str = "") -> dict[str, Any]:
-        """Create a research project bound to a methodology (the goal is the How-Might-We)."""
+        """Create a research project and SEED its analyze/act/verify plan from a methodology (the goal
+        is the How-Might-We). Equivalent to start_project(methodology=...); then drive it via the plan
+        tools (next_action / brief_next / add_task / record_frame / link_evidence / complete_task)."""
         t = time.perf_counter()
         return _env("start_methodology_project",
                     services.start_methodology_project(title, goal, methodology_key, persona_ids, description), t)
 
     @mcp.tool()
     def set_project_methodology(project_id: str, methodology_key: str) -> dict[str, Any]:
-        """Bind an existing research project to a methodology (resets the frontier to the roots)."""
+        """Bind an existing research project to a methodology by (re)seeding its plan from the
+        constellation. The plan is the single engine; drive it via the plan tools."""
         t = time.perf_counter()
         return _env("set_project_methodology", services.set_project_methodology(project_id, methodology_key), t)
 
     @mcp.tool()
     def brief_next(project_id: str) -> dict[str, Any]:
-        """GATHER what the ready frontier needs now: the primary ready step (+ the full ready set),
-        its tags, strategy, unmet `requires`, consumed nodes. The engine's heartbeat — a fan step:
-        record_node each + judge its gate_tag; a decide step: record_decision."""
+        """GATHER what the plan's ready frontier needs now: the primary ready task (+ the full ready
+        set), its bucket/capability, consumed frames, and unmet gates. The plan router — for richer
+        per-iteration grounding use next_action."""
         t = time.perf_counter()
         return _env("brief_next", services.brief_next(project_id), t)
 
     @mcp.tool()
-    def brief_phase(project_id: str) -> dict[str, Any]:
-        """Alias of brief_next, shaped like the legacy single-step brief."""
-        t = time.perf_counter()
-        return _env("brief_phase", services.brief_phase(project_id), t)
-
-    @mcp.tool()
-    def record_node(project_id: str, title: str, council_ids: list[str], payload: dict[str, Any],
-                    start_input: str = "", step_id: str | None = None) -> dict[str, Any]:
-        """Record ONE exploration node (a synthesis over council(s)) against a ready fan step."""
-        t = time.perf_counter()
-        return _env("record_node",
-                    services.record_node(project_id, title, council_ids, payload, start_input, step_id=step_id), t)
-
-    @mcp.tool()
-    def record_exploration(project_id: str, title: str, council_ids: list[str], payload: dict[str, Any],
-                           start_input: str = "") -> dict[str, Any]:
-        """Alias of record_node."""
-        t = time.perf_counter()
-        return _env("record_exploration",
-                    services.record_exploration(project_id, title, council_ids, payload, start_input), t)
-
-    @mcp.tool()
-    def record_judgment(project_id: str, step_id: str, gate_tag: str, decided: bool, rationale: str,
+    def record_judgment(project_id: str, task_id: str, gate_tag: str, decided: bool, rationale: str,
                         evidence_refs: list[str] | None = None) -> dict[str, Any]:
-        """Record an evidence-backed LLM gate judgment on a step. `gate_tag` is a FREE tag (e.g.
-        divergence_complete, or whatever the consuming decide step requires). The engine requires
-        its presence to decide but never dictates its content or a number."""
+        """Record an evidence-backed LLM gate judgment on a plan TASK (usually a verify task). `gate_tag`
+        is a FREE tag (e.g. divergence_complete, or whatever the verify task requires). The engine
+        requires its presence to complete the verify but never dictates its content or a number."""
         t = time.perf_counter()
         return _env("record_judgment",
-                    services.record_judgment(project_id, step_id, gate_tag, decided, rationale, evidence_refs), t)
-
-    @mcp.tool()
-    def record_decision(project_id: str, title: str, from_node_ids: list[str], payload: dict[str, Any],
-                        start_input: str = "", step_id: str | None = None) -> dict[str, Any]:
-        """Consolidate a fan into one decision node on a ready decide step (validates the invariants)."""
-        t = time.perf_counter()
-        return _env("record_decision",
-                    services.record_decision(project_id, title, from_node_ids, payload, start_input, step_id=step_id), t)
-
-    @mcp.tool()
-    def record_convergence(project_id: str, title: str, from_node_ids: list[str], payload: dict[str, Any],
-                           start_input: str = "") -> dict[str, Any]:
-        """Alias of record_decision."""
-        t = time.perf_counter()
-        return _env("record_convergence",
-                    services.record_convergence(project_id, title, from_node_ids, payload, start_input), t)
-
-    @mcp.tool()
-    def advance(project_id: str, step_id: str | None = None) -> dict[str, Any]:
-        """Mark a ready step complete and recompute the frontier (or loop back); errors if a
-        decide step has no decision node yet."""
-        t = time.perf_counter()
-        return _env("advance", services.advance(project_id, step_id), t)
-
-    @mcp.tool()
-    def advance_phase(project_id: str) -> dict[str, Any]:
-        """Alias of advance (primary ready step)."""
-        t = time.perf_counter()
-        return _env("advance_phase", services.advance_phase(project_id), t)
-
-    @mcp.tool()
-    def get_methodology_state(project_id: str) -> dict[str, Any]:
-        """Step-by-step progress: status, node counts, judgments, decision nodes, tags, the DAG."""
-        t = time.perf_counter()
-        return _env("get_methodology_state", services.get_methodology_state(project_id), t)
+                    services.record_judgment(project_id, task_id, gate_tag, decided, rationale, evidence_refs), t)

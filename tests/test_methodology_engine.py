@@ -1,9 +1,10 @@
-"""Methodology engine — tag-driven constellations (spec/methodology-constellations.md).
+"""Methodologies — tag-driven constellation specs (spec/methodology-constellations.md).
 
-Structure enforced, dynamics LLM-judged, ZERO hardcoded vocabularies. A decide step cannot
-record until its consumed fan has >= min_inputs nodes AND a decided gate judgment; the graph
-comes out wide->narrow->wide->narrow; no numeric dynamic threshold exists; capability/role/
-artifact-type are OPEN TAGS (an invented tag loads and runs); non-alternating DAG shapes work.
+Since HX3 (spec/hx3-engine-collapse.md) a methodology is a SPEC + REGISTRY that SEEDS the plan
+engine — the single runtime engine is the plan (its analyze/act/verify gating is covered in
+test_research_plan.py). Here: specs validate with ZERO hardcoded vocabularies; an invented
+capability/role/gate tag loads; a non-alternating DAG with a non-prototype artifact requirement
+seeds a correct plan; bad/cyclic specs are rejected.
 """
 from __future__ import annotations
 
@@ -12,19 +13,8 @@ from pathlib import Path
 import pytest
 
 from persona_council import methodology as M
+from persona_council import plan as PL
 from persona_council import services
-
-
-def _council(store, cid: str) -> str:
-    store.insert_council_session({
-        "id": cid, "created_at": "2026-06-01T00:00:00+00:00", "prompt": "P?",
-        "persona_ids": ["p1"], "turns": [], "votes": [], "proposal": "", "summary": "",
-        "exec_summary": "exec", "selection_reason": "x"})
-    return cid
-
-
-def _payload(text: str) -> dict:
-    return {"gesamtbild": text, "arc_narrative": text}
 
 
 # --------------------------------------------------------------------------- C1: tags
@@ -34,26 +24,28 @@ def test_builtins_load_and_validate(store):
     assert {"double_diamond", "double_diamond_deep", "dschool_micro", "lean_jtbd"} <= keys
     dd = M.get_methodology("double_diamond", store=store)
     # shape is derived from structure: explore (fan) then decide (waist), alternating here
-    assert [M._mode(s) for s in dd["steps"]] == ["diverge", "converge", "diverge", "converge"]
+    assert [M._is_decide(s) for s in dd["steps"]] == [False, True, False, True]
 
 
 def test_no_hardcoded_vocabularies_in_engine_source():
-    """C1 acceptance: no closed capability/role/breadth/judgment/artifact SET remains in code."""
+    """C1 acceptance: no closed capability/role/breadth/judgment/artifact SET remains in code, and
+    the structural helpers do not special-case any artifact tag."""
     import inspect
     src = Path(M.__file__).read_text()
     for banned in ("DIVERGE_ROLES", "CONVERGE_ROLES", "ROLES =", "JUDGMENT_KINDS", "FIDELITIES", "MODES ="):
         assert banned not in src, banned
-    # the INVARIANTS must be artifact-type-generic: no literal artifact string special-cased.
-    # (The legacy phases->steps translator may still name old strings — that is back-compat glue,
-    # not an invariant.)
-    for fn in (M.record_decision, M.brief_next):
-        s = inspect.getsource(fn)
-        for lit in ('"prototype"', "'prototype'", '"prototype_session"', '"survey"', '"lofi"', '"midfi"'):
-            assert lit not in s, f"{fn.__name__} hardcodes artifact tag {lit}"
+    # the structural invariant helper must be artifact-type-generic: no literal artifact string
+    # special-cased. (_phases_to_steps may still name old strings — back-compat glue, not an
+    # invariant; _artifact_tags may DEFAULT an untyped artifact's type tag — a data default, not a
+    # closed set.)
+    s = inspect.getsource(M._is_decide)
+    for lit in ('"prototype"', "'prototype'", '"prototype_session"', '"survey"', '"lofi"', '"midfi"'):
+        assert lit not in s, f"_is_decide hardcodes artifact tag {lit}"
 
 
-def test_invented_capability_and_artifact_tags_load(store):
-    """An invented capability tag + an invented gate tag validate & run (tag-agnostic)."""
+def test_invented_capability_and_gate_tags_load_and_seed(store):
+    """An invented capability + an invented FREE gate tag validate, register, and seed a plan where
+    the decide step becomes a gated verify task carrying that free gate tag (tag-agnostic)."""
     spec = {
         "key": "invented", "name": "Invented", "description": "d", "when_to_use": "w",
         "steps": [
@@ -67,21 +59,17 @@ def test_invented_capability_and_artifact_tags_load(store):
     M.register_methodology(spec, store=store)
     got = M.get_methodology("invented", store=store)
     assert [s["tags"] for s in got["steps"]] == [["divine-the-vibe"], ["crystallize"]]
-    proj = M.start_methodology_project("Inv", "g", "invented", store=store)
-    pid = proj["id"]
-    _council(store, "c1"); _council(store, "c2")
-    e1 = M.record_node(pid, "A", ["c1"], _payload("a"), store=store)
-    e2 = M.record_node(pid, "B", ["c2"], _payload("b"), store=store)
-    M.advance(pid, "scout", store=store)
-    with pytest.raises(M.MethodologyError) as e:
-        M.record_decision(pid, "Land", [e1["id"], e2["id"]], _payload("v"), store=store)
-    assert e.value.code == "MISSING_GATE_JUDGMENT"      # enforced by the FREE gate tag name
-    M.record_judgment(pid, "scout", "vibes_are_clear", True, "clear", evidence_refs=["c1"], store=store)
-    dec = M.record_decision(pid, "Land", [e1["id"], e2["id"]], _payload("v"), store=store)
-    assert dec["role"] == "the-vibe"
+    proj = services.start_methodology_project("Inv", "g", "invented", store=store)   # forwards to start_project
+    plan = services.get_plan(proj["id"], store=store)
+    frame = PL.task(plan, "frame__scout")
+    verify = PL.task(plan, "verify__land")
+    assert frame["bucket"] == "analyze" and frame["capability"] == "frame"
+    assert verify["bucket"] == "verify" and verify["consumes"] == ["frame__scout"]
+    assert verify["requires"]["gate_tag"] == "vibes_are_clear"   # the FREE gate tag is carried through
+    assert verify["requires"]["min_inputs"] == 2
 
 
-# --------------------------------------------------------------------------- C2: engine
+# --------------------------------------------------------------------------- C2: validation
 
 def test_bad_spec_rejected(store):
     with pytest.raises(M.MethodologyError):  # missing steps
@@ -99,76 +87,10 @@ def test_cycle_rejected(store):
                                                {"id": "b", "name": "B", "consumes": ["a"]}]})
 
 
-def test_decide_blocked_until_breadth_and_judgment(store):
-    proj = M.start_methodology_project("DD", "How might we test the engine?", "double_diamond", store=store)
-    pid = proj["id"]
-    b = M.brief_next(pid, store=store)
-    assert b["step"] == "discover" and b["mode"] == "diverge"
-
-    _council(store, "c1")
-    e1 = M.record_node(pid, "Pain A", ["c1"], _payload("pain a"), store=store)
-
-    # define isn't ready until discover completes -> out of order
-    with pytest.raises(M.MethodologyError) as e:
-        M.record_decision(pid, "Define", [e1["id"]], _payload("core"), store=store)
-    assert e.value.code == "PHASE_OUT_OF_ORDER"
-
-    M.advance(pid, "discover", store=store)
-    assert M.brief_next(pid, store=store)["step"] == "define"
-    with pytest.raises(M.MethodologyError) as e:
-        M.record_decision(pid, "Define", [e1["id"]], _payload("core"), store=store)
-    assert e.value.code == "BREADTH_TOO_LOW"
-
-
-def test_full_diverge_converge_happy_path(store):
-    proj = M.start_methodology_project("DD", "How might we test the engine?", "double_diamond", store=store)
-    pid = proj["id"]
-    _council(store, "c1"); _council(store, "c2")
-    e1 = M.record_node(pid, "Pain A", ["c1"], _payload("pain a"), store=store)
-    e2 = M.record_node(pid, "Pain B", ["c2"], _payload("pain b"), store=store)
-    M.advance(pid, "discover", store=store)  # -> define
-
-    with pytest.raises(M.MethodologyError) as e:
-        M.record_decision(pid, "Define", [e1["id"], e2["id"]], _payload("core"), store=store)
-    assert e.value.code == "MISSING_GATE_JUDGMENT"
-
-    M.record_judgment(pid, "discover", "divergence_complete", True,
-                      "Two distinct pains; no new cluster emerging.", evidence_refs=["c1", "c2"], store=store)
-    conv = M.record_decision(pid, "Define · POV", [e1["id"], e2["id"]], _payload("the core problem"), store=store)
-    assert conv["mode"] == "converge" and conv["role"] == "point-of-view"
-
-    graph = services.get_project_graph(pid, store=store)
-    refines = [(x["from_study"], x["to_study"]) for x in graph["edges"] if x["type"] == "refines"]
-    assert (e1["id"], conv["id"]) in refines and (e2["id"], conv["id"]) in refines
-
-    M.advance(pid, "define", store=store)  # -> develop (fan)
-    assert M.brief_next(pid, store=store)["step"] == "develop"
-
-    st = M.get_methodology_state(pid, store=store)
-    by = {p["key"]: p for p in st["steps"]}
-    assert by["discover"]["exploration_count"] == 2          # wide
-    assert by["define"]["convergence_node"] == conv["id"]    # narrow (the waist)
-
-
-def test_legacy_aliases_still_work(store):
-    """brief_phase/record_exploration/record_convergence/advance_phase remain as aliases."""
-    proj = M.start_methodology_project("DD", "g", "double_diamond", store=store)
-    pid = proj["id"]
-    assert M.brief_phase(pid, store=store)["phase"] == "discover"
-    _council(store, "c1"); _council(store, "c2")
-    e1 = M.record_exploration(pid, "A", ["c1"], _payload("a"), store=store)
-    e2 = M.record_exploration(pid, "B", ["c2"], _payload("b"), store=store)
-    M.advance_phase(pid, store=store)
-    M.record_judgment(pid, "discover", "divergence_complete", True, "ok", evidence_refs=["c1"], store=store)
-    conv = M.record_convergence(pid, "Def", [e1["id"], e2["id"]], _payload("c"), store=store)
-    assert conv["role"] == "point-of-view"
-
-
-def test_non_alternating_dag_with_nonprototype_artifact(store, tmp_path, monkeypatch):
+def test_non_alternating_dag_with_nonprototype_artifact_seeds(store):
     """C2 acceptance: a NON-alternating shape (one fan feeding two parallel decides) and a
-    NON-prototype artifact type (a `survey`) run end-to-end — zero code changes."""
-    from persona_council import prototypes as _proto
-    monkeypatch.setattr(_proto, "prototypes_dir", lambda: tmp_path)  # keep the repo prototypes/ clean
+    NON-prototype artifact requirement (a `survey`) validate and seed a correct plan — zero code
+    changes. Both decides consume the one frame; one carries a session-of-`survey` gate."""
     spec = {
         "key": "branchy", "name": "Branchy", "description": "d", "when_to_use": "w",
         "steps": [
@@ -184,32 +106,18 @@ def test_non_alternating_dag_with_nonprototype_artifact(store, tmp_path, monkeyp
         ],
     }
     M.register_methodology(spec, store=store)
-    proj = M.start_methodology_project("Br", "g", "branchy", persona_ids=["p1"], store=store)
-    pid = proj["id"]
-    _council(store, "c1"); _council(store, "c2")
-    e1 = M.record_node(pid, "x", ["c1"], _payload("x"), store=store)
-    e2 = M.record_node(pid, "y", ["c2"], _payload("y"), store=store)
-    # a NON-prototype artifact tagged "survey" + a recorded session of it
-    proto = services.scaffold_prototype("br-survey", "Survey", {"title": "S", "summary": "",
-        "start": "home", "screens": [{"id": "home", "title": "H", "elements": [
-            {"kind": "text", "id": "t", "label": "done"}]}]},
-        project_id=pid, fidelity="survey", store=store)
-    services.record_prototype_session("p1", proto["id"], "offline", "2026-06-01",
-        {"summary": "ok", "observed_state_refs": ["done"], "verdict": "ok"}, store=store)
-    M.record_judgment(pid, "scan", "scanned_enough", True, "enough", evidence_refs=["c1"], store=store)
-    M.advance(pid, "scan", store=store)
-    ready = set(M.brief_next(pid, store=store)["ready"])
-    assert ready == {"pick_a", "pick_b"}            # NON-alternating: two parallel decides at once
-    da = M.record_decision(pid, "A", [e1["id"], e2["id"]], _payload("a"), step_id="pick_a", store=store)
-    db = M.record_decision(pid, "B", [e1["id"], e2["id"]], _payload("b"), step_id="pick_b", store=store)
-    assert da["role"] == "pov-a" and db["role"] == "pov-b"   # survey + session satisfied pick_b
+    proj = services.start_methodology_project("Br", "g", "branchy", persona_ids=["p1"], store=store)
+    plan = services.get_plan(proj["id"], store=store)
+    a, b = PL.task(plan, "verify__pick_a"), PL.task(plan, "verify__pick_b")
+    assert a["consumes"] == ["frame__scan"] and b["consumes"] == ["frame__scan"]   # two parallel decides
+    assert a["requires"]["gate_tag"] == "scanned_enough"
+    assert b["requires"]["session_of_tags"] == ["survey"]   # non-prototype artifact requirement carried
 
 
 def test_no_hardcoded_dynamic_threshold():
-    """A4: the engine must not encode a numeric saturation/min-count that decides dynamics.
-    Breadth comparisons use the spec-provided `min_inputs` variable, not a literal."""
+    """A4: the module must not encode a numeric saturation/min-count that decides dynamics. The only
+    literal is the structural ">= 2 steps" spec check; breadth lives in the plan via `min_inputs`."""
     import re
     src = Path(M.__file__).read_text()
     nums = re.findall(r"len\([^)]*\)\s*<\s*(\d+)", src)
-    # the only literal is the structural ">= 2 steps" spec check; breadth uses `min_inputs`.
     assert all(n == "2" for n in nums), f"unexpected dynamic threshold literal(s): {nums}"

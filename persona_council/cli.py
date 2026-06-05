@@ -357,22 +357,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("methodology-suggest")
     p.add_argument("kind", nargs="?", default="capabilities",
                    choices=["capabilities", "roles", "artifact-types", "methodologies"])
-    # constellation stepping (canonical names); phase-* remain as back-compat aliases
+    # plan router (the single engine); gate-judgment on a verify task
     p = sub.add_parser("next-brief"); p.add_argument("project_id")
-    p = sub.add_parser("step-node"); p.add_argument("project_id"); p.add_argument("title"); p.add_argument("file"); p.add_argument("--step")
-    p = sub.add_parser("step-decide"); p.add_argument("project_id"); p.add_argument("title"); p.add_argument("file"); p.add_argument("--step")
-    p = sub.add_parser("step-advance"); p.add_argument("project_id"); p.add_argument("--step")
-    p = sub.add_parser("phase-brief"); p.add_argument("project_id")
-    p = sub.add_parser("phase-explore"); p.add_argument("project_id"); p.add_argument("title"); p.add_argument("file")
-    p = sub.add_parser("phase-judge")
-    p.add_argument("project_id"); p.add_argument("phase_key"); p.add_argument("kind")
-    p.add_argument("--decided", default="true"); p.add_argument("--rationale", default=""); p.add_argument("--ref", action="append", dest="refs")
-    p = sub.add_parser("phase-converge"); p.add_argument("project_id"); p.add_argument("title"); p.add_argument("file")
-    p = sub.add_parser("phase-advance"); p.add_argument("project_id")
     p = sub.add_parser("step-judge")
     p.add_argument("project_id"); p.add_argument("step_id"); p.add_argument("gate_tag")
     p.add_argument("--decided", default="true"); p.add_argument("--rationale", default=""); p.add_argument("--ref", action="append", dest="refs")
-    p = sub.add_parser("methodology-state"); p.add_argument("project_id")
     # Research-plan engine (plan-driven analyze/act/verify)
     p = sub.add_parser("project-start")
     p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--methodology")
@@ -417,7 +406,6 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("session-brief"); p.add_argument("persona_id"); p.add_argument("prototype_id")
     p = sub.add_parser("session-record")
     p.add_argument("persona_id"); p.add_argument("prototype_id"); p.add_argument("session_id"); p.add_argument("date"); p.add_argument("file")
-    p = sub.add_parser("run-methodology"); p.add_argument("project_id"); p.add_argument("--max-steps", type=int, default=40)
     # Deletes (CRUD: delete via CLI/MCP only)
     p = sub.add_parser("research-delete"); p.add_argument("project_id")
     p = sub.add_parser("research-remove-study"); p.add_argument("project_id"); p.add_argument("study_id")
@@ -672,32 +660,17 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "methodology-get":
             _print(services.get_methodology(args.key))
         elif args.command == "methodology-start":
-            _print(services.start_methodology_project(args.title, args.goal, args.methodology, args.personas, args.description))
+            _print(services.start_project(args.title, args.goal, args.methodology, args.personas, args.description))
         elif args.command == "methodology-suggest":
             fn = {"capabilities": services.suggest_capabilities, "roles": services.suggest_roles,
                   "artifact-types": services.suggest_artifact_types,
                   "methodologies": services.suggest_methodologies}[args.kind]
             _print(fn())
-        elif args.command in ("next-brief", "phase-brief"):
-            _print(services.brief_next(args.project_id) if args.command == "next-brief"
-                   else services.brief_phase(args.project_id))
-        elif args.command in ("step-node", "phase-explore"):
-            d = json.loads(Path(args.file).read_text(encoding="utf-8"))
-            _print(services.record_node(args.project_id, args.title, d["council_ids"], d["payload"],
-                                        d.get("start_input", ""), step_id=getattr(args, "step", None)))
-        elif args.command in ("phase-judge", "step-judge"):
-            sid = getattr(args, "phase_key", None) or args.step_id
-            gate = getattr(args, "kind", None) or args.gate_tag
-            _print(services.record_judgment(args.project_id, sid, gate,
+        elif args.command == "next-brief":
+            _print(services.brief_next(args.project_id))
+        elif args.command == "step-judge":
+            _print(services.record_judgment(args.project_id, args.step_id, args.gate_tag,
                                             args.decided.lower() == "true", args.rationale, args.refs))
-        elif args.command in ("step-decide", "phase-converge"):
-            d = json.loads(Path(args.file).read_text(encoding="utf-8"))
-            _print(services.record_decision(args.project_id, args.title, d["from_node_ids"], d["payload"],
-                                            d.get("start_input", ""), step_id=getattr(args, "step", None)))
-        elif args.command in ("step-advance", "phase-advance"):
-            _print(services.advance(args.project_id, getattr(args, "step", None)))
-        elif args.command == "methodology-state":
-            _print(services.get_methodology_state(args.project_id))
         elif args.command == "project-start":
             _print(services.start_project(args.title, args.goal, args.methodology, args.personas, args.description))
         elif args.command == "plan-get":
@@ -755,11 +728,6 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.brief_prototype_session(args.persona_id, args.prototype_id))
         elif args.command == "session-record":
             _print(services.record_prototype_session(args.persona_id, args.prototype_id, args.session_id, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
-        elif args.command == "run-methodology":
-            # Structural/offline driver (deterministic stub). Real, grounded runs are host-driven
-            # via the design-thinking-deep / methodology-run skills (no in-process LLM authoring).
-            from . import runtime as _rt
-            _print(_rt.run_methodology(args.project_id, backend=_rt.StubAuthoringBackend(), max_steps=args.max_steps))
         elif args.command == "research-delete":
             _print(services.delete_research_project(args.project_id))
         elif args.command == "research-remove-study":

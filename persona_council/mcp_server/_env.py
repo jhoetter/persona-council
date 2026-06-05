@@ -41,16 +41,14 @@ _NEXT: dict[str, dict[str, Any]] = {
     "record_synthesis": {"name": "export_synthesis", "reason": "render the stakeholder report"},
     "brief_council": {"name": "record_council", "reason": "author the turns + synthesis, then persist the council"},
     "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
-    # --- methodology engine: tag-driven constellations (spec/methodology-constellations.md) ---
+    # --- methodologies = plan SEEDS; the runtime engine is the plan (spec/hx3-engine-collapse.md) ---
     "list_methodologies": {"name": "get_methodology", "reason": "inspect a constellation's steps before starting"},
-    "get_methodology": {"name": "start_methodology_project", "reason": "bind a project to this methodology"},
-    "start_methodology_project": {"name": "brief_next", "reason": "gather what the ready frontier needs"},
-    "set_project_methodology": {"name": "brief_next", "reason": "gather what the ready frontier needs"},
-    "brief_next": {"name": "record_node", "reason": "fan step: record_node each; decide step: record_decision"},
-    "record_node": {"name": "record_judgment", "reason": "more nodes, or judge the fan's gate_tag"},
-    "record_judgment": {"name": "advance", "reason": "advance the fan once its gate judgment is recorded"},
-    "record_decision": {"name": "advance", "reason": "advance to recompute the frontier"},
-    "advance": {"name": "brief_next", "reason": "gather what the next ready step needs"},
+    "get_methodology": {"name": "start_methodology_project", "reason": "seed a plan from this methodology"},
+    "start_methodology_project": {"name": "next_action", "reason": "load the next ready plan step fully"},
+    "set_project_methodology": {"name": "next_action", "reason": "load the next ready plan step fully"},
+    "brief_next": {"name": "next_action", "reason": "load the ready task fully (grounding + participants + gate)"},
+    "next_action": {"name": "complete_task", "reason": "author the step (frame/council/synthesis), persist, then complete"},
+    "record_judgment": {"name": "complete_task", "reason": "complete the verify once its gate judgment is recorded"},
     "suggest_capabilities": {"name": "suggest_methodologies", "reason": "browse suggested step/whole-methodology templates"},
     # --- prototypes + harness ---
     "scaffold_prototype": {"name": "run_prototype", "reason": "start the generated app locally"},

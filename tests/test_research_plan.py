@@ -265,21 +265,6 @@ def test_no_hardcoded_progress_metric_threshold():
 
 # --------------------------------------------------------------------------- R8: migration + gate
 
-def test_legacy_methodology_project_still_renders(store):
-    """A project created via the legacy methodology engine (no plan) renders the old graph path."""
-    from persona_council import methodology as M
-    proj = M.start_methodology_project("Legacy", "hmw?", "double_diamond", persona_ids=["p1"], store=store)
-    pid = proj["id"]
-    assert services.get_plan(pid, store=store) is None          # no plan -> legacy
-    _council(store, "lg1"); _council(store, "lg2")
-    e1 = M.record_node(pid, "A", ["lg1"], {"gesamtbild": "a"}, store=store)
-    e2 = M.record_node(pid, "B", ["lg2"], {"gesamtbild": "b"}, store=store)
-    g = services.get_project_graph(pid, store=store)            # legacy synthesis graph
-    assert {n["study_id"] for n in g["nodes"]} == {e1["id"], e2["id"]}
-    assert "kind" not in g["nodes"][0]                          # legacy nodes have no evidence kind
-    assert "rgdata" in web._graph_interactive(g)
-
-
 def test_grep_gate_no_hardcoded_bucket_kind_vocabulary():
     """R8: no closed bucket/capability/kind VOCABULARY in the engine, and no kind PRESENTATION
     literal in the UI (kind presentation comes from suggestions/evidence_kinds.json via present()).

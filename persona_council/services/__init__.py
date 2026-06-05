@@ -125,19 +125,17 @@ _REGISTRY = _collect_public_symbols()
 _REGISTRY["brief_next"] = _engines.brief_next
 _REGISTRY["record_judgment"] = _engines.record_judgment
 
-# The methodology / suggestions / plan-engine / prototype seam names were module
-# globals of the original services.py (imported into it from .methodology etc.).
-# Submodules reference some of them by bare name (e.g. _research uses
-# get_methodology_state), so they must be part of the bound registry too.
+# The methodology-registry / suggestions / plan-engine / prototype seam names were module
+# globals of the original services.py. Submodules reference some of them by bare name, so they
+# must be part of the bound registry too. The constellation runtime was retired (HX3): a
+# methodology only SEEDS the plan (start_methodology_project/set_project_methodology forward to it).
 for _eng_name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
-    "start_methodology_project", "set_project_methodology", "brief_phase", "record_node",
-    "record_exploration", "record_decision", "record_convergence", "advance", "advance_phase",
-    "get_methodology_state",
+    "start_methodology_project", "set_project_methodology",
     "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_methodologies",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
-    "_plan", "_proto", "_browser", "_m_brief_next", "_m_record_judgment",
+    "_plan", "_proto", "_browser",
 ):
     _REGISTRY[_eng_name] = getattr(_engines, _eng_name)
 del _eng_name
@@ -156,18 +154,15 @@ for _mod in _SUBMODULES:
 for _name, _value in _REGISTRY.items():
     globals()[_name] = _value
 
-# Re-export the methodology / suggestions / plan-engine / prototype seam names
+# Re-export the methodology-registry / suggestions / plan-engine / prototype seam names
 # that the original services.py exposed (they live on _engines after its imports).
 for _name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
-    "start_methodology_project", "set_project_methodology", "brief_phase", "record_node",
-    "record_exploration", "record_decision", "record_convergence", "advance", "advance_phase",
-    "get_methodology_state",
+    "start_methodology_project", "set_project_methodology",
     "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_methodologies",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser",
-    "_m_brief_next", "_m_record_judgment",
 ):
     globals()[_name] = getattr(_engines, _name)
 

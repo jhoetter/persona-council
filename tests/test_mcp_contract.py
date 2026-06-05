@@ -49,10 +49,12 @@ def test_expected_tools_registered():
         # deletes (CRUD complete via MCP):
         "delete_research_project", "remove_study_from_project", "unlink_studies",
         "delete_synthesis", "delete_council", "delete_persona",
-        # methodology engine (data-driven, structure+LLM-judged):
+        # methodologies = plan SEEDS (the single runtime engine is the plan; HX3):
         "list_methodologies", "get_methodology", "start_methodology_project",
-        "set_project_methodology", "brief_phase", "record_exploration", "record_judgment",
-        "record_convergence", "advance_phase", "get_methodology_state",
+        "set_project_methodology", "brief_next", "record_judgment",
+        # research-plan engine (analyze/act/verify):
+        "start_project", "get_plan", "add_task", "record_frame", "link_evidence",
+        "complete_task", "next_action", "assess_project", "assess_progress",
         # prototypes + Playwright harness:
         "scaffold_prototype", "register_prototype", "list_prototypes", "get_prototype",
         "run_prototype", "stop_prototype", "delete_prototype",
