@@ -600,16 +600,15 @@ def scaffold_meta_report(project_id: str, store: Store | None = None) -> dict[st
     by_phase: dict[str, list[str]] = {}
     for n in nodes:
         by_phase.setdefault(n.get("phase", ""), []).append(n["study_id"])
-    waist_consumes = {s["key"]: s.get("consumes", []) for s in steps if not s.get("is_fan")}
+    # one section PER PHASE in order (fans AND verifies) — Discover/Define/Ideate/Down-Select/Refine/
+    # Deliver — so the outline tells the WHOLE story, not just the diverge phases.
     sections = []
-    for fs in [s for s in steps if s.get("is_fan")]:
-        srcs = list(by_phase.get(fs["key"], []))
-        for wkey, cons in waist_consumes.items():
-            if fs["key"] in cons:
-                srcs += by_phase.get(wkey, [])
-        label = (fs.get("name") or fs["key"]).split("·")[-1].strip() or fs["key"]
-        sections.append({"heading": label, "intent": f"Author the {label} phase grounded in its evidence.",
-                         "theme_tags": [], "source_study_ids": [s for s in dict.fromkeys(srcs) if s]})
+    for s in steps:
+        srcs = [x for x in dict.fromkeys(by_phase.get(s["key"], [])) if x]
+        label = (s.get("name") or s["key"]).split("·")[-1].strip() or s["key"]
+        role = "diverge" if s.get("is_fan") else "converge"
+        sections.append({"heading": label, "theme_tags": [], "source_study_ids": srcs,
+                         "intent": f"Author the {label} phase ({role}) grounded in its evidence + what it produced."})
     if not sections:                                  # freeform / no methodology: one catch-all section
         sections = [{"heading": "Findings", "intent": "Author the project's findings + conclusion.",
                      "theme_tags": [], "source_study_ids": graph.get("build_order", [])}]
