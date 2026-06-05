@@ -120,12 +120,44 @@ working at the council layer. Keep; the remaining risk is downstream (Ideate/pro
 mechanism hasn't explicitly surfaced yet; the adjacent "abstract future vs concrete present" tension
 has. Watch whether Define/Ideate makes the "make the invisible future *experienceable*" move (→ GAP-1).
 
+### OBS-4 — Anti-steering held AND produced a premise-REFUTING, non-obvious insight ✅✅ (resolves WATCH-2 strongly)
+The agent ran **5** Discover councils (beyond the min-2 gate), including a dedicated **premise-check /
+disconfirmation council** (`council_1934c7c29fef8c16`) that deliberately loaded the *skeptics &
+Non-Fit candidates* (its `selection_reason`: "Ziel war NICHT, dass sie sich zur LV warmreden, sondern
+ehrlich zu prüfen, für wen LV strukturell ein Non-Fit ist") and a **provider-insider** council on the
+<1% conversion + Frühstorno root-cause. Result: **6/6 SUPPORT "Non-Fit"**, with a mechanism-level,
+*premise-refuting* finding that is exactly the "detail you wouldn't first expect":
+- It is **not** an awareness/explanation gap that more education fixes — it is a **structural product
+  mismatch** (cost-drag, decades-long lock-in, liquidity, values), and the rejection reasons are
+  *"Voraussetzungen, keine Verhandlungsmasse"*.
+- **The compounding insight appears — inverted.** The financially-literate reject LV *because* they
+  understand compounding ("Kosten wirken über den Zinseszins jahrzehntelang nach — das Argument GEGEN
+  teure lange Verträge"; Niklas computed opportunity cost in Interactive Brokers). The naïve
+  hypothesis ("teach them compounding → they'll want LV") is **falsified by the evidence**; the real
+  cleavage is structural-Non-Fit (literate) vs word/relational-security barrier (illiterate).
+- The agent honestly concludes "begeistern für LV" is the **wrong goal for 4/6** and reframes toward
+  the underlying need (flexible/transparent/pausable provision; liquidity buffer; honest
+  Risiko-vs-Kapital distinction). Anti-steering survived a leading HMW.
+*Why it matters:* this is the strongest possible evidence against premature/shallow convergence — the
+methodology let the agent *reject the brief's premise on evidence* rather than rationalize it. WATCH-2
+resolves very positively.
+
+### SPEC-A — Generalizable: surface a "disconfirmation / load-the-skeptics" council as a DATA-driven angle ✅ (small, high-value)
+What made OBS-4 possible was the agent *choosing* to run a council that deliberately samples the
+**disconfirming** voices against a vote-motion. This is a reusable anti-steering technique for ANY
+methodology/ inquiry — not a DT term. *Proposed (data, not code):* add it to the suggestion registry
+(e.g. a suggested capability/angle "disconfirm: load the segments most likely to reject the premise
+and test a Non-Fit motion") and have `next_action`'s act-guidance mention it when a step's intent is
+exploratory. The engine stays tag-agnostic; the technique lives in suggestion DATA. Generalizes to any
+domain (stress-test any thesis with its most likely refuters).
+
 ## Watch list (to confirm as the run proceeds)
 - **WATCH-1 — Discover breadth shape.** ✅ resolved positively (see OBS-3): a few rich multi-persona
   councils per angle, spectrum-sampled, memory-grounded. (Kept on the list as a regression check for
   the seed's "one exploration per persona/segment" wording, which could still mislead a future run.)
-- **WATCH-2 — Define reframe.** Does the POV reach a *mechanism-level* reframe (why the topic is
-  invisible/irrelevant and what experience would change it) or restate the brief?
+- **WATCH-2 — Define reframe.** ✅ resolved strongly (see OBS-4): a premise-refuting, mechanism-level
+  reframe (structural Non-Fit vs word/relational barrier; compounding inverted). Still want to read the
+  Define *synthesis* artifact itself to confirm the POV is authored rich (not stranded in councils).
 - **WATCH-3 — Ideate breadth.** ≥4–8 *distinct-kind* concepts before down-select, or premature collapse
   to one obvious idea?
 - **WATCH-4 — Prototype distinctness.** Do lo-fi prototypes feel like different experiences, or
