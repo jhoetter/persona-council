@@ -30,24 +30,10 @@ def register_research(mcp):
         t = time.perf_counter()
         return _env("get_project_graph", services.get_project_graph(project_id), t)
 
-    @mcp.tool()
-    def add_study_to_project(project_id: str, study_id: str, theme_tags: list[str] | None = None) -> dict[str, Any]:
-        """Attach an EXISTING synthesis (study) as a node in an EXISTING project graph
-        (optionally with theme_tags). Use link_studies to connect it to other studies."""
-        t = time.perf_counter()
-        return _env("add_study_to_project", services.add_study_to_project(project_id, study_id, theme_tags), t)
-
-    @mcp.tool()
-    def set_study_themes(project_id: str, study_id: str, tags: list[str]) -> dict[str, Any]:
-        """Assign LLM-derived theme tags to a study (grows the project's theme vocabulary)."""
-        t = time.perf_counter()
-        return _env("set_study_themes", services.set_study_themes(project_id, study_id, tags), t)
-
-    @mcp.tool()
-    def link_studies(project_id: str, from_study_id: str, to_study_id: str, type: str, rationale: str = "") -> dict[str, Any]:
-        """Add a typed edge between two studies (spawned_from|refines|contrasts|depends_on|duplicates|answers)."""
-        t = time.perf_counter()
-        return _env("link_studies", services.link_studies(project_id, from_study_id, to_study_id, type, rationale), t)
+    # M1 — the pre-HX3 constellation study-graph tools (add_study_to_project / set_study_themes /
+    # link_studies) are RETIRED from the agent surface: the plan engine (add_task / link_evidence /
+    # record_frame) is the single graph-building path. The service fns remain for internal callers +
+    # the CLI (spec/mcp-surface-cleanup.md M1).
 
     @mcp.tool()
     def record_open_questions(project_id: str, questions: list[str], study_id: str | None = None) -> dict[str, Any]:

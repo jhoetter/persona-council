@@ -52,15 +52,8 @@ def register_methodology(mcp):
         t = time.perf_counter()
         return _env("get_methodology", services.get_methodology(key), t)
 
-    @mcp.tool()
-    def start_methodology_project(title: str, goal: str, methodology_key: str,
-                                  persona_ids: list[str] | None = None, description: str = "") -> dict[str, Any]:
-        """Create a research project and SEED its analyze/act/verify plan from a methodology (the goal
-        is the How-Might-We). Equivalent to start_project(methodology=...); then drive it via the plan
-        tools (next_action / brief_next / add_task / record_frame / link_evidence / complete_task)."""
-        t = time.perf_counter()
-        return _env("start_methodology_project",
-                    services.start_methodology_project(title, goal, methodology_key, persona_ids, description), t)
+    # start_methodology_project — RETIRED (a back-compat alias for start_project(methodology=...); M1).
+    # Use start_project with methodology=<key>. The service fn remains for back-compat callers.
 
     @mcp.tool()
     def set_project_methodology(project_id: str, methodology_key: str) -> dict[str, Any]:

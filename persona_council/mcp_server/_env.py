@@ -29,7 +29,7 @@ _NEXT: dict[str, dict[str, Any]] = {
     "record_eval_critic": {"name": "evaluate_simulation_full", "reason": "combined structural+semantic top verdict"},
     "brief_cohort_critic": {"name": "record_cohort_critic", "reason": "persist the cohort outlier verdict you authored"},
     "backfill_project_from_syntheses": {"name": "get_project_graph", "reason": "inspect the freshly-built project graph"},
-    "create_research_project": {"name": "add_study_to_project", "reason": "attach studies as graph nodes"},
+    "create_research_project": {"name": "start_run", "reason": "create the run object, then loop run_step"},
     "brief_meta_report": {"name": "record_meta_outline", "reason": "persist the outline you derived from the graph"},
     "record_meta_outline": {"name": "brief_meta_section", "reason": "author each section grounded in its source studies"},
     "brief_meta_section": {"name": "record_meta_section", "reason": "persist the authored section + citations"},
@@ -43,8 +43,7 @@ _NEXT: dict[str, dict[str, Any]] = {
     "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
     # --- methodologies = plan SEEDS; the runtime engine is the plan (spec/hx3-engine-collapse.md) ---
     "list_methodologies": {"name": "get_methodology", "reason": "inspect a constellation's steps before starting"},
-    "get_methodology": {"name": "start_methodology_project", "reason": "seed a plan from this methodology"},
-    "start_methodology_project": {"name": "next_action", "reason": "load the next ready plan step fully"},
+    "get_methodology": {"name": "start_project", "reason": "start_project(methodology=<key>) seeds the plan"},
     "set_project_methodology": {"name": "next_action", "reason": "load the next ready plan step fully"},
     "brief_next": {"name": "next_action", "reason": "load the ready task fully (grounding + participants + gate)"},
     "next_action": {"name": "complete_task", "reason": "author the step (frame/council/synthesis), persist, then complete"},

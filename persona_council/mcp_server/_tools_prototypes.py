@@ -118,17 +118,7 @@ def register_prototypes(mcp):
         t = time.perf_counter()
         return _env("delete_research_project", services.delete_research_project(project_id), t)
 
-    @mcp.tool()
-    def remove_study_from_project(project_id: str, study_id: str) -> dict[str, Any]:
-        """Detach a study (synthesis) from a project (drops its edges there); keeps the synthesis."""
-        t = time.perf_counter()
-        return _env("remove_study_from_project", services.remove_study_from_project(project_id, study_id), t)
-
-    @mcp.tool()
-    def unlink_studies(project_id: str, from_study_id: str, to_study_id: str, type: str | None = None) -> dict[str, Any]:
-        """Remove an edge (or all edges) between two studies in a project."""
-        t = time.perf_counter()
-        return _env("unlink_studies", services.unlink_studies(project_id, from_study_id, to_study_id, type), t)
+    # remove_study_from_project / unlink_studies — RETIRED (legacy study-graph; M1). CLI keeps them.
 
     @mcp.tool()
     def delete_synthesis(synthesis_id: str) -> dict[str, Any]:

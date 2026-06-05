@@ -42,15 +42,14 @@ def test_expected_tools_registered():
         "evaluate_cohort_diversity", "brief_cohort_critic", "record_cohort_critic",
         # research graph + meta-report:
         "create_research_project", "list_research_projects", "get_project_graph",
-        "add_study_to_project", "set_study_themes", "link_studies",
         "backfill_project_from_syntheses",
         "brief_meta_report", "record_meta_outline", "brief_meta_section",
         "record_meta_section", "export_meta_report",
         # deletes (CRUD complete via MCP):
-        "delete_research_project", "remove_study_from_project", "unlink_studies",
+        "delete_research_project",
         "delete_synthesis", "delete_council", "delete_persona",
         # methodologies = plan SEEDS (the single runtime engine is the plan; HX3):
-        "list_methodologies", "get_methodology", "start_methodology_project",
+        "list_methodologies", "get_methodology",
         "set_project_methodology", "brief_next", "record_judgment",
         # research-plan engine (analyze/act/verify):
         "start_project", "get_plan", "add_task", "record_frame", "link_evidence",
@@ -63,3 +62,9 @@ def test_expected_tools_registered():
     }
     missing = expected - names
     assert not missing, f"MCP tools missing: {sorted(missing)}"
+    # M1 — the pre-HX3 constellation study-graph tools + the start_methodology_project alias are
+    # RETIRED from the agent surface (the plan engine is the single graph path). Guard against regress.
+    retired = {"add_study_to_project", "set_study_themes", "link_studies", "remove_study_from_project",
+               "unlink_studies", "start_methodology_project"}
+    leaked = retired & names
+    assert not leaked, f"retired legacy tools still registered: {sorted(leaked)}"
