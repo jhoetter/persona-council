@@ -59,9 +59,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "ov_concepts": "Konzepte", "ov_prototypes": "Prototypen", "ov_grounded": "Grounded Sessions",
         "ov_open": "Offene Fragen", "ov_no_answer": "Noch keine abschließende Antwort — Lauf nicht beendet.",
         # council framing
-        "council_motion": "Zur Debatte gestellte These",
-        "council_motion_help": "Jede Stimme reagiert auf diese These — Zustimmung, bedingt oder Ablehnung.",
-        "council_finding": "Was dieser Council ergab",
+        "council_kicker": "Explorativer Council · {n} segment-diverse Stimmen",
+        "council_motion": "Untersuchte These",
+        "council_motion_help": "{n} Personas reagieren aus ihrer GELEBTEN ERFAHRUNG: bestätigt die These (dafür), teils (bedingt) oder widerlegt sie (dagegen). Es ist keine Abstimmung über eine Entscheidung — es ist, was sie tatsächlich erleben. Die Erkenntnis steht darunter.",
+        "council_reactions_h": "Reaktion auf die These",
+        "council_finding": "Erkenntnis aus diesem Council",
         # vote labels
         "vote_support": "Befürwortend", "vote_maybe": "Bedingt",
         "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
@@ -196,8 +198,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "ov_concepts": "Concepts", "ov_prototypes": "Prototypes", "ov_grounded": "Grounded sessions",
         "ov_open": "Open questions", "ov_no_answer": "No conclusion yet — run not finished.",
         # council framing
-        "council_motion": "The motion put to the council",
-        "council_motion_help": "Each voice responds to this motion — for, conditional, or against.",
+        "council_kicker": "Exploratory council · {n} segment-diverse voices",
+        "council_motion": "The hypothesis investigated",
+        "council_motion_help": "{n} personas react from their LIVED EXPERIENCE: confirms the hypothesis (for), partly (conditional), or refutes it (against). This is not a decision vote — it is what they actually experience. The insight is below.",
+        "council_reactions_h": "Reaction to the hypothesis",
         "council_finding": "What this council found",
         # vote labels
         "vote_support": "For", "vote_maybe": "Conditional",

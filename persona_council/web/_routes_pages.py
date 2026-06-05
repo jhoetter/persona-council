@@ -302,14 +302,17 @@ def register_pages(app) -> None:
         turns_html = '<div style="display:grid;gap:12px">' + "".join(turns) + "</div>"
         exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
         sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
-        # the MOTION the personas respond to — surfaced FIRST so the For/Conditional/Against votes have
-        # their question; the exec-summary below it is labelled as the council's FINDING (the result).
+        # A council investigates ONE hypothesis by gathering N diverse personas' lived-experience
+        # reactions. Lead with the hypothesis (so the For/Conditional/Against reactions have their
+        # question) + how to read it; the exec-summary is the FINDING. (UX: "what is the question?")
+        n_voices = len(session.get("persona_ids", []))
         motion = (session.get("proposal") or "").strip()
         motion_block = (f'<div class="callout motion"><span class="emj">{_icon("compass")}</span>'
                         f'<div><strong>{t("council_motion")}</strong>'
-                        f'<p style="font-size:1.08em;margin:.35em 0">&bdquo;{_esc(motion)}&ldquo;</p>'
-                        f'<p class="muted small">{t("council_motion_help")}</p></div></div>') if motion else ""
-        main = (f'<div class="hero"><h1>{_esc(session["prompt"])}</h1><p class="sub">{_esc(session["selection_reason"])}</p></div>'
+                        f'<p style="font-size:1.1em;margin:.35em 0">&bdquo;{_esc(motion)}&ldquo;</p>'
+                        f'<p class="muted small">{t("council_motion_help", n=n_voices)}</p></div></div>') if motion else ""
+        main = (f'<div class="hero"><h1>{_esc(session["prompt"])}</h1>'
+                f'<p class="sub">{t("council_kicker", n=n_voices)} · {_esc(session["selection_reason"])}</p></div>'
                 f'{motion_block}'
                 f'<div class="callout"><span class="emj">{_icon("bulb")}</span>'
                 f'<div><strong>{t("council_finding")}</strong>{exec_html}</div></div>'
@@ -317,7 +320,7 @@ def register_pages(app) -> None:
                 f'<div class="sec" id="stimmen"><h2>{voices_detail_h}</h2>{turns_html}</div>'
                 f'<details class="sec"><summary>{summary_h}</summary><div class="card"><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
         vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
-        rail = (f'<h4>{vote_h}</h4>'
+        rail = (f'<h4>{t("council_reactions_h")}</h4>'
                 + "".join(f'<div class="prop"><span class="k">{_vote_label(k)}</span><span class="v">{vc[k]}</span></div>' for k in vc)
                 + f'<div class="prop"><span class="k">{personas_h}</span><span class="v">{len(session.get("persona_ids", []))}</span></div>'
                 + f'<div class="prop"><span class="k">{created_h}</span><span class="v">{_esc(session["created_at"][:10])}</span></div>')
