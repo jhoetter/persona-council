@@ -331,7 +331,7 @@ def _persona_voices_html(store: Store, pid: str) -> str:
 # --------------------------- synthesis report --------------------------- #
 
 
-def _synthesis_html(store: Store, syn: dict) -> str:
+def _synthesis_html(store: Store, syn: dict, after: str = "") -> str:
     done = syn.get("status", "done") == "done"
     sec = []  # (id, short_label, html)
     # 1) Executive Summary — large prose, no box
@@ -363,14 +363,15 @@ def _synthesis_html(store: Store, syn: dict) -> str:
                   f'<p class="muted small" style="margin:6px 0 10px">{t("evidence_decoupled_note")}</p>'
                   f'<div class="ref-list">{"".join(ref_rows)}</div></details>')
     rec_items = [_rec_item(x) for x in syn.get("handlungsempfehlungen", [])]
-    chart = _effort_impact(rec_items)
-    if chart:
-        body = chart  # hover popovers replace the list
-    else:
-        rows = "".join(_rec_row_n(i, t, a, n) for i, (t, a, n) in enumerate(rec_items, 1)) or '<p class="muted">—</p>'
-        body = f'<div class="reclist">{rows}</div>'
-    sec.append(("empfehlungen", t("recommendations"),
-                f'<div class="block" id="empfehlungen"><h2 class="bh">{t("recommendations")}</h2>{body}</div>'))
+    if rec_items:
+        chart = _effort_impact(rec_items)
+        if chart:
+            body = chart  # hover popovers replace the list
+        else:
+            rows = "".join(_rec_row_n(i, t, a, n) for i, (t, a, n) in enumerate(rec_items, 1))
+            body = f'<div class="reclist">{rows}</div>'
+        sec.append(("empfehlungen", t("recommendations"),
+                    f'<div class="block" id="empfehlungen"><h2 class="bh">{t("recommendations")}</h2>{body}</div>'))
     if syn.get("positionierung"):
         sec.append(("positionierung", t("positioning"),
                     f'<div class="block" id="positionierung"><h2 class="bh">{t("positioning")}</h2><div class="es-prose sm">{_md(syn["positionierung"])}</div></div>'))
@@ -408,22 +409,25 @@ def _synthesis_html(store: Store, syn: dict) -> str:
         sent = _sentiment_section(store, syn_sessions, title=t("sentiment_over_chain"), per_council=True)
         if sent:
             sec.append(("stimmen", t("voices"), f'<div class="block" id="stimmen">{sent}</div>'))
-    # supporting analysis
-    segs = "".join(
-        f'<div class="segrow"><div><strong>{_esc(s.get("segment",""))}</strong><br><span class="muted">{_esc(s.get("why",""))}</span></div>'
-        f'{_label(s.get("stance",""), _stance_color(s.get("stance","")))}</div>' for s in syn.get("segmente", [])
-    ) or '<p class="muted">—</p>'
-    sec.append(("segmente", t("segments"), f'<div class="block" id="segmente"><h2 class="bh">{t("segments")}</h2>{segs}</div>'))
-    ps = "".join(f'<div class="psolve">{_srcchips(_esc(x))}</div>' for x in syn.get("pain_solvers", [])) or '<p class="muted">—</p>'
-    sec.append(("painsolver", "Pain-Solver", f'<div class="block" id="painsolver"><h2 class="bh">{t("validated_pain_solvers")}</h2>{ps}</div>'))
+    # supporting analysis (omit when empty — an empty section reads as a broken box)
+    if syn.get("segmente"):
+        segs = "".join(
+            f'<div class="segrow"><div><strong>{_esc(s.get("segment",""))}</strong><br><span class="muted">{_esc(s.get("why",""))}</span></div>'
+            f'{_label(s.get("stance",""), _stance_color(s.get("stance","")))}</div>' for s in syn["segmente"]
+        )
+        sec.append(("segmente", t("segments"), f'<div class="block" id="segmente"><h2 class="bh">{t("segments")}</h2>{segs}</div>'))
+    if syn.get("pain_solvers"):
+        ps = "".join(f'<div class="psolve">{_srcchips(_esc(x))}</div>' for x in syn["pain_solvers"])
+        sec.append(("painsolver", "Pain-Solver", f'<div class="block" id="painsolver"><h2 class="bh">{t("validated_pain_solvers")}</h2>{ps}</div>'))
     if syn.get("offene_fragen"):
         of = "".join(f'<div class="psolve">{_esc(x)}</div>' for x in syn["offene_fragen"])
         sec.append(("offene", t("open_questions"), f'<div class="block" id="offene"><h2 class="bh">{t("open_questions_next_study")}</h2>{of}</div>'))
     if belege:                       # cited evidence (councils) — demoted, near the end, collapsible
         sec.append(belege)
-    # arc (collapsed)
-    sec.append(("bogen", t("course"),
-                f'<details class="block" id="bogen"><summary class="bh" style="cursor:pointer">{t("arc_course")}</summary><div class="es-prose sm">{_md(_srcchips(syn.get("arc_narrative","")))}</div></details>'))
+    # arc (collapsed) — only when there is a narrative; an empty <details> reads as a broken box
+    if (syn.get("arc_narrative") or "").strip():
+        sec.append(("bogen", t("course"),
+                    f'<details class="block" id="bogen"><summary class="bh" style="cursor:pointer">{t("arc_course")}</summary><div class="es-prose sm">{_md(_srcchips(syn["arc_narrative"]))}</div></details>'))
 
     # ---- slim meta strip (replaces the old Eigenschaften rail) ----
     cs = Counter(v.get("sentiment", "neutral") for v in syn.get("voices", []))
@@ -442,4 +446,6 @@ def _synthesis_html(store: Store, syn: dict) -> str:
                     for sid, lbl, _ in sec)
     rail = f'<nav class="syn-rail" aria-label="{_esc(t("sections"))}">{ticks}</nav>'
     main = head + "".join(h for _, _, h in sec)
-    return _SYN_STYLE + f'<div class="syn-wrap"><div class="syn-main">{main}</div>{rail}</div>' + _SYN_SCRIPT
+    # Properties/Relations cards (passed by the caller) live INSIDE the same centred column as the
+    # content — otherwise they render full-width and visibly misalign with the 920px article above.
+    return _SYN_STYLE + f'<div class="syn-wrap"><div class="syn-main">{main}</div>{after}{rail}</div>' + _SYN_SCRIPT

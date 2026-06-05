@@ -303,9 +303,9 @@ h1,h2,h3,h4{color:var(--ink)}
 .sec>h2,.sec>summary{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600}
 details.sec{padding-top:18px}
 details.sec>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px}
-details.sec>summary::-webkit-details-marker{display:none}
-details.sec>summary::before{content:"\\25b8";color:var(--muted);transition:transform 150ms;font-size:11px}
-details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>summary::-webkit-details-marker,details.block>summary.bh::-webkit-details-marker{display:none}
+details.sec>summary::before,details.block>summary.bh::before{content:"\\25b8";color:var(--muted);transition:transform 150ms;font-size:11px}
+details.sec[open]>summary::before,details.block[open]>summary.bh::before{transform:rotate(90deg)}
 .doc-main p{max-width:74ch}.es-prose,.detail{overflow-wrap:break-word}.es-prose pre,pre{overflow-x:auto;max-width:100%}.es-prose img,.detail img{max-width:100%;height:auto}.es-prose .mdtable{display:block;overflow-x:auto}
 .rec{display:grid;grid-template-columns:74px 1fr;gap:13px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line-2)}
 .rec:last-child{border-bottom:0}
@@ -725,7 +725,7 @@ _SYN_STYLE = r"""<style>
 .es-prose ul{margin:0 0 15px;padding-left:20px;max-width:74ch}.es-prose li{margin:0 0 6px}
 .block{margin:40px 0 0;padding-top:26px;border-top:1px solid var(--line)}
 .block>.bh{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:0 0 16px;display:flex;align-items:center;gap:8px}
-.block>.bh .cnt{color:var(--accent);background:var(--accent-weak);border-radius:20px;padding:1px 9px;font-size:11px}
+.block>.bh .cnt{color:var(--accent);background:var(--accent-weak);border-radius:20px;padding:1px 9px;font-size:11px}details.block>summary.bh{cursor:pointer;margin-bottom:0}details.block[open]>summary.bh{margin-bottom:16px}
 .syn-main section{padding:0;overflow:visible}
 .syn-main .block{margin-top:40px;padding-top:26px}
 .qa-q{font-size:19px;line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 20px}

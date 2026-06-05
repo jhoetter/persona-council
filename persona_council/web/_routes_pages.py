@@ -489,7 +489,7 @@ def register_pages(app) -> None:
             ("projects", t("project"),
              (f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>' if proj else "—")),
         ])
-        return _layout(syn["title"], _synthesis_html(store, syn) + props + rel, store,
+        return _layout(syn["title"], _synthesis_html(store, syn, after=props + rel), store,
                        crumbs=crumbs, active="projects", actions=actions)
 
     @app.get("/projects", response_class=HTMLResponse)
