@@ -111,13 +111,26 @@ def discriminator_tags(type_tag: str) -> list[str]:
 
 def resolve_template(type_tag: str, tags: list[str] | None = None,
                      explicit: str | None = None) -> str | None:
-    """Resolve a renderer template for an artifact from DATA: an explicit template wins; else a
-    discriminator tag that maps to a template; else the type's default_template; else None."""
+    """Resolve a renderer template for an artifact from DATA. Precedence: an explicit template wins;
+    else a discriminator OF THIS TYPE that a tag matches (the fidelity ladder under `prototype`); else
+    the type's own default_template; else a global tag→template match (back-compat for a tag used as a
+    standalone type). Scoping discriminators to the type prevents a shared discriminator tag (e.g.
+    `midfi`) on one type from hijacking another type's template."""
     if explicit:
         return explicit
     hints = _hints()
+    # 1) a discriminator declared UNDER type_tag (e.g. prototype's lofi/midfi/hifi)
+    for tg in (tags or []):
+        h = hints.get(tg) or {}
+        if h.get("template") and h.get("_parent") == type_tag:
+            return h["template"]
+    # 2) the type's own default renderer (a model tagged `midfi` stays spa-model, self-theming)
+    own_default = (hints.get(type_tag) or {}).get("default_template")
+    if own_default:
+        return own_default
+    # 3) back-compat: a tag that itself maps to a template
     for tg in (tags or []):
         tmpl = (hints.get(tg) or {}).get("template")
         if tmpl:
             return tmpl
-    return (hints.get(type_tag) or {}).get("default_template")
+    return None

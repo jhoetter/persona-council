@@ -42,6 +42,14 @@
       "discriminators": []
     },
     {
+      "tag": "model",
+      "renderer": "spa",
+      "default_template": "spa-model",
+      "presentation": {"label": "Interaktives Modell", "short": "Modell", "icon": "projects", "color": "#7b61ff", "glyph": "∿"},
+      "_note": "An INTERACTIVE/computational prototype: range/number inputs feed `computed` + `bar` elements whose `formula` is evaluated live (e.g. a pension-gap or compounding model the persona can actually steer). The spa-model template self-themes from concept.fidelity, so a lofi/midfi/hifi tag styles it without a separate template.",
+      "discriminators": []
+    },
+    {
       "tag": "survey",
       "renderer": "spa",
       "default_template": "spa-min",

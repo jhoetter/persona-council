@@ -115,3 +115,25 @@ def test_dead_string_nav_rejected_and_action_alias_normalized(store, tmp_path, m
     concept = json.loads((tmp_path / "p" / "okp" / "concept.json").read_text())
     card = concept["screens"][0]["cards"][0]
     assert card["goto"] == "real" and card["action"] == "real"   # action string normalized to goto
+
+
+def test_interactive_model_prototype_scaffolds_with_live_formula(store, tmp_path, monkeypatch):
+    """GAP-1: a `model` artifact type renders an INTERACTIVE prototype — range/number inputs feeding
+    `computed`/`bar` elements whose `formula` is evaluated live (a steerable model, e.g. a pension
+    gap / compounding), not a static screen. Data-driven: the type resolves from artifact_types.json."""
+    import persona_council.prototypes as P
+    monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "p")
+    from persona_council import services, presentation
+    assert presentation.resolve_template("model", ["midfi"]) == "spa-model"   # from DATA
+    concept = {"title": "Rentenluecke", "summary": "Steuere deine Sparrate", "start": "m",
+               "fidelity": "midfi", "screens": [{"id": "m", "title": "Modell", "elements": [
+        {"kind": "range", "id": "rate", "label": "Euro/Monat", "min": 0, "max": 500, "step": 10, "value": 100, "suffix": " EUR"},
+        {"kind": "range", "id": "jahre", "label": "Jahre", "min": 0, "max": 45, "value": 40},
+        {"kind": "computed", "id": "summe", "label": "Eingezahlt", "formula": "rate*12*jahre", "suffix": " EUR", "decimals": 0},
+        {"kind": "bar", "id": "ziel", "label": "Richtung Ziel", "formula": "rate*12*jahre", "max": "200000", "suffix": " EUR"}]}]}
+    services.scaffold_artifact("model1", "Modell", concept, type="model", tags=["midfi"], store=store)
+    html = (tmp_path / "p" / "model1" / "index.html").read_text()
+    assert "evalFormula" in html and "computedEls" in html        # the no-eval evaluator is shipped
+    saved = json.loads((tmp_path / "p" / "model1" / "concept.json").read_text())
+    el = {e["id"]: e for e in saved["screens"][0]["elements"]}
+    assert el["summe"]["formula"] == "rate*12*jahre" and el["ziel"]["kind"] == "bar"  # formula preserved
