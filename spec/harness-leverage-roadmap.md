@@ -2,6 +2,10 @@
 
 > Question (user): what genuine improvements would be really high-leverage for the harness? This is a
 > prioritized, honest answer grounded in what repeatedly goes wrong across real runs — not a wishlist.
+>
+> **→ Build-ready detailed spec: `spec/exhaustive-self-verifying-runs.md` (ESV)** — data models, tool
+> signatures, control flow, acceptance criteria, and the ordered milestones (ESV1–ESV6) that implement
+> the top 3 below + the supporting moves. This doc is the *why/priority*; ESV is the *how*.
 
 ## The recurring failure mode (the root cause)
 Every shortfall we've hit — "shallow", "not exhaustive", "stops at a good starting point", "no
