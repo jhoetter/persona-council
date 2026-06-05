@@ -308,18 +308,24 @@ sections all present. *Acceptance:* scores persist + the regression test guards 
 ESV1–ESV3 are build-ready as specified. The following are genuine forks, not details; ESV4 (the
 driver) and the critic loop depend on them. Each lists the fork + a recommended default.
 
-**OD-1 — How does a DETERMINISTIC driver dispatch Claude subagents? (the load-bearing one).** The
-locked rule forbids in-process LLM authoring, so the driver cannot author; it must *orchestrate Claude*.
-A pure-Python `RunLoop` engine has no way to spawn a Claude subagent (that is a Claude-Code primitive).
-Three options: (a) the driver IS a Claude-Code **Workflow script / skill** — agent-invoked, uses
-`agent()`/Task to spawn step subagents; "deterministic" then means the *control flow* is deterministic,
-not that it runs without Claude; (b) **engine-emits-specs**: a Python `RunLoop` returns the next
-"dispatch spec" + accepts the result back, and the host (a thin Claude skill) executes each spawn and
-calls back — the engine stays pure/testable, the host does the LLM I/O; (c) a standalone service that
-shells out to `claude -p` per step. *Recommendation:* **(b)** — a pure `RunLoop` engine
-(`next()`/`record_result()`/`resume()`, fully unit-testable with a stub) wrapped by a thin skill that
-does the actual subagent spawns. Keeps the engine deterministic + testable AND honors the rule. This
-choice reshapes A.3; pin it first.
+**OD-1 — How does a DETERMINISTIC driver dispatch Claude subagents? → DECIDED: (b).** (2026-06-05, with
+user.) The locked rule forbids in-process LLM authoring, so the driver cannot author or spawn; it must
+*be executed by* a Claude Code host agent that does the spawns. Option (c) `claude -p` is **rejected**
+(would burn API tokens). The driver is therefore a **pure-Python `RunLoop` engine + a thin host skill**:
+- **Engine (pure, deterministic, unit-testable, NO LLM, NO spawning):**
+  `run_step(run_id) -> {kind, spec|done, …}` (bundles `assess_project` + `next_action` + the journal +
+  the finish/critic gate into one deterministic call that returns the next *dispatch spec* or `done`);
+  `record_result(run_id, step_id, evidence_ids)` (checkpoint); `resume(run_id)` (replay the journal).
+- **Host skill (the Claude Code agent you trigger today):** runs `loop: s=run_step; if s.done break;
+  SPAWN ONE subagent(s.spec) via the Agent/Task tool; record_result(...)`. The **subagent spawn is the
+  exact same Claude-Code primitive used today** — ESV changes *who decides the control flow* (the
+  engine, deterministically), not *how an agent is triggered* (still the host via the Agent tool).
+This is **the same trigger model as `autonomous-research-run` today** (agent loops next_action → spawn
+subagent → persist); ESV only hardens the control flow (journal + resume + critic gate + finish gate)
+into the engine so the agent can't drift or stop early. **Caveat:** ESV always needs a Claude Code
+agent session present to perform the spawns (as today) — it is NOT a headless Python daemon; truly
+unattended runs still mean a Claude Code session, never `claude -p`. This reshapes A.3 (the driver
+pseudocode is the *host skill*; the loop primitives are engine calls).
 
 **OD-2 — Concurrency safety of parallel act fan-out on the shared plan.** `add_task`/`link_evidence`
 are read-modify-write on one plan JSON document; parallel subagents racing them will lose writes.
