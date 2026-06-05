@@ -126,6 +126,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .olrow .ol-kind{color:var(--faint);font-size:11.5px;flex-shrink:0;white-space:nowrap}
 .ol-gl.ol-round{color:var(--muted)}
 .ol-cnt{font-size:11px;color:var(--faint);font-weight:600;background:var(--panel-2);border-radius:10px;padding:1px 7px;margin-left:2px}
+.ol-rcap{font-size:13px;font-weight:400;color:var(--muted);margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ol-ptag{flex-shrink:0;width:74px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
 .ol-flat{padding-top:4px}
 .olrow.ol-tw{position:relative}

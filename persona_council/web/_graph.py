@@ -670,6 +670,23 @@ def _outline_html(graph: dict) -> str:
                 f'<span class="olth-pills">{pills}</span>'
                 f'<span class="ol-kind">{_esc(it["kind"])}</span></a>')
 
+    # ROUND CAPTION (Linear: a group header should carry MEANING) — the essence of each round's most
+    # converged output (its highest-depth synthesis, else its highest-depth node). Derived from the
+    # node titles, never hardcoded; turns "Round 1 · 9" into the iteration's actual story.
+    def _essence(title: str) -> str:
+        parts = title.split(":")
+        cand = parts[-1].strip() if len(parts) > 1 and len(parts[-1].strip()) > 12 else title.strip()
+        return cand[:96] + ("…" if len(cand) > 96 else "")
+
+    round_cap: dict[int, str] = {}
+    for r in range(nrounds):
+        # the round's most-converged node = its deepest phase node (a verify/decide synthesis sits at the
+        # diamond's waist, i.e. max depth); no kind literal needed (and none allowed in the UI).
+        pool = [n for n in nodes if node_round.get(n["study_id"]) == r and n.get("phase", "") in pmeta]
+        best = max(pool, key=lambda n: depth_of.get(n.get("phase", ""), -1), default=None)
+        if best:
+            round_cap[r] = _essence(best.get("title", ""))
+
     out = []
     if themes:                                                # theme filter bar (cross-cutting lens)
         chips = "".join(
@@ -683,8 +700,10 @@ def _outline_html(graph: dict) -> str:
             ris = sorted((it for it in items if it["round"] == r), key=lambda it: (it["po"], it["order"]))
             if not ris:
                 continue
+            cap = round_cap.get(r, "")
+            capH = f'<span class="ol-rcap">— {_esc(cap)}</span>' if cap else ""
             out.append(f'<details class="ol-phase" open><summary><span class="ol-gl ol-round">↻</span>'
-                       f'<b>{t("round_n", n=r + 1)}</b> <span class="ol-cnt">{len(ris)}</span></summary>'
+                       f'<b>{t("round_n", n=r + 1)}</b> <span class="ol-cnt">{len(ris)}</span>{capH}</summary>'
                        f'{"".join(row(it) for it in ris)}</details>')
     else:
         ris = sorted(items, key=lambda it: (it["po"], it["order"]))
