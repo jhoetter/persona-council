@@ -35,8 +35,14 @@ For each ready task, `next_action`; then by bucket:
   (pain-discovery); assemble a FEW **real multi-persona councils** per angle → `add_task("act",
   "explore", "<angle>", consumes=[frame__discover])` + `link_evidence(kind="council")` +
   `complete_task`. (Several councils of many personas — NOT one council per persona.)
-- ideate: one act task per solution angle; build **several lo-fi prototypes** (`scaffold_artifact(...,
-  type="prototype", tags=["lofi"])`, consuming `frame__ideate`) + `link_evidence(kind="artifact")`.
+- ideate: **push for genuine innovation, not incremental tweaks.** Apply the creativity lenses in
+  `next_action.act.ideation_lenses` (cross-domain analogy, make-the-invisible-EXPERIENCEABLE→an
+  interactive `model`, provocation/reversal, extreme-user, mechanism-transfer, hybrid, subtract,
+  honest anti-goal) — at least ONE concept must carry a mechanism you didn't expect at the start.
+  One act task per solution angle; build **several lo-fi prototypes** DIVERSE IN KIND
+  (`scaffold_artifact(..., type="model"|"prototype"|"comparison"|"flow"|…, tags=["lofi"])`, consuming
+  `frame__ideate`) + `link_evidence(kind="artifact")`. Check `assess_project.novelty` — if it says
+  "narrow", you're building forms; add an experienceable model + a dark-horse.
 - refine: build **mid-fi** prototype(s) of the shortlist (`tags=["midfi"]`, consuming `frame__refine`).
 - Stop fanning out by your own judgment (evidence-backed) — never a fixed count.
 
