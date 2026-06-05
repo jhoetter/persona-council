@@ -478,3 +478,137 @@ def finish_run(run_id: str, status: str = "finished", store: Store | None = None
     r["updated_at"] = utc_now_iso()
     store.upsert_run(r)
     return {"run_id": run_id, "status": status, "steps": len(r["steps"])}
+
+
+# ===================== ESV §A.3 — the deterministic RunLoop engine (the keystone) =====================
+# A pure, deterministic brain (NO LLM, NO spawning): the host skill loops `run_step(run_id)` →
+# spawns ONE subagent per returned dispatch (the SAME Agent-tool primitive used today) → records the
+# result → repeat. run_step bundles assess_project + next_action + the deterministic finish work +
+# the loop-until-dry critic gate, so the agent can't drift or stop early, and a killed run resumes from
+# the live plan state. K=2 dry critic rounds to pass; hard cap of 4 rounds (OD-5).
+_RUN_K_DRY = 2
+_RUN_MAX_CRITIC = 4
+
+
+def _rl_trailing_dry(rounds: list[dict[str, Any]]) -> int:
+    n = 0
+    for r in reversed(rounds):
+        if r.get("passed"):
+            n += 1
+        else:
+            break
+    return n
+
+
+def _rl_frame(plan: dict[str, Any], hint: str = "") -> str | None:
+    frames = [t for t in plan["tasks"] if t.get("capability") == "frame"]
+    if hint:
+        m = [t for t in frames if hint in t["id"] or hint in (t.get("step", "") or "")]
+        if m:
+            return m[-1]["id"]
+    return frames[0]["id"] if frames else None
+
+
+def inject_work(project_id: str, missing: dict[str, Any], store: Store | None = None) -> bool:
+    """Turn one critic `missing` item into REAL plan work (deterministic, open tags). segment/angle →
+    an act council under the discover frame; concept/fidelity_rung → an act build under the ideate
+    frame; risk → an open question; anything else → an open question so it stays visible."""
+    store = store or Store()
+    plan = _plan.get_plan(project_id, store=store) or {"tasks": []}
+    kind = str(missing.get("kind", "")).lower()
+    what = str(missing.get("what", "more work")).strip()[:120] or "more work"
+    if kind in ("concept", "fidelity_rung"):
+        frame = _rl_frame(plan, "ideate") or _rl_frame(plan)
+        if frame:
+            add_task(project_id, "act", "build", f"[critic] {what}", consumes=[frame], store=store)
+            return True
+    if kind in ("segment", "angle"):
+        frame = _rl_frame(plan, "discover") or _rl_frame(plan)
+        if frame:
+            add_task(project_id, "act", "explore", f"[critic] {what}", consumes=[frame], store=store)
+            return True
+    record_open_questions(project_id, [f"[{kind or 'gap'}] {what}"], store=store)  # noqa: F821 (bound)
+    return True
+
+
+def _rl_inject_pending(project_id: str, run: dict[str, Any], store: Store) -> int:
+    """If the latest critic round was NOT passed and its gaps haven't been injected, inject them."""
+    rounds = run.get("critic_rounds", [])
+    if not rounds or run.get("injected_for", 0) >= len(rounds):
+        return 0
+    if rounds[-1].get("passed"):
+        run["injected_for"] = len(rounds); store.upsert_run(run); return 0
+    reports = (store.get_research_project(project_id) or {}).get("critic_reports", [])
+    missing = reports[-1].get("missing", []) if reports else []
+    cnt = sum(1 for m in missing if inject_work(project_id, m, store=store))
+    run["injected_for"] = len(rounds); run["updated_at"] = utc_now_iso(); store.upsert_run(run)
+    return cnt
+
+
+def _rl_summary(project_id: str, store: Store) -> dict[str, Any]:
+    g = get_project_graph(project_id, store=store)  # noqa: F821 (bound)
+    sessions = [x for x in store.list_prototype_sessions()
+                if (store.get_prototype(x.get("prototype_id", "")) or {}).get("project_id") == project_id]
+    return {"councils": sum(1 for n in g["nodes"] if str(n["study_id"]).startswith("council:")),
+            "syntheses": sum(1 for n in g["nodes"] if str(n["study_id"]).startswith("synthesis:")),
+            "prototypes": len(g.get("prototypes") or []), "sections": len(g.get("sections") or []),
+            "grounded_sessions": sum(1 for x in sessions if x.get("grounded_verified")),
+            "total_sessions": len(sessions)}
+
+
+def _rl_dispatch(run: dict[str, Any], n: dict[str, Any]) -> dict[str, Any]:
+    return {"kind": n["bucket"], "step_id": n["task"], "key": run_key(run["run_id"], n["task"]),
+            "next_action": n, "directive": n.get("instructions", "")}
+
+
+def run_step(run_id: str, store: Store | None = None) -> dict[str, Any]:
+    """The deterministic brain. Returns the next dispatch for the host to execute:
+    {kind: analyze|act|verify, step_id, key, next_action, directive} → spawn ONE authoring subagent
+    then checkpoint_step; {kind: critic, brief} → spawn an INDEPENDENT critic then record_critic_round;
+    {kind: done, status, summary} → stop. Deterministic finish work (organize + meta-report outline +
+    critic-gap injection) is done inline. Idempotent / resumable: it reads the live plan state."""
+    store = store or Store()
+    run = store.get_run(run_id)
+    if not run:
+        raise PlanError("UNKNOWN_RUN", f"unknown run: {run_id}")
+    pid = run["project_id"]
+    budget = run.get("budget")
+    if budget is not None and len(run.get("steps", [])) >= budget:
+        derive_sections(pid, store=store); scaffold_meta_report(pid, store=store)  # noqa: F821 (bound)
+        finish_run(run_id, "capped", store=store)
+        return {"kind": "done", "status": "capped", "summary": _rl_summary(pid, store)}
+    _rl_inject_pending(pid, run, store)
+    a = assess_project(pid, store=store)
+    rec = a["recommendation"]
+    if rec in ("frame", "act", "converge"):
+        n = next_action(pid, store=store)
+        if not n.get("complete"):
+            return _rl_dispatch(run, n)
+    if rec == "finish" or (a["complete"] and not a["finish"]["finished"]):
+        if not a["finish"].get("organized"):
+            derive_sections(pid, store=store)              # noqa: F821 (bound)
+        if not a["finish"].get("handed_off"):
+            scaffold_meta_report(pid, store=store)          # noqa: F821 (bound)
+        a = assess_project(pid, store=store)
+        if not a["finish"].get("concluded"):
+            terminal = next((t["id"] for t in reversed((_plan.get_plan(pid, store=store) or {}).get("tasks", []))
+                             if t["bucket"] == "verify"), None)
+            return {"kind": "verify", "step_id": "__conclusion__", "key": run_key(run_id, "conclusion"),
+                    "terminal_verify": terminal,
+                    "directive": ("Author a RICH terminal solution-presentation synthesis (record_synthesis: "
+                                  "gesamtbild + positionierung + pain_solvers + ranking/shortlist; the answer, "
+                                  "who-wins + deliberate non-targets, validated solvers, build spec) and "
+                                  f"link_evidence it to the terminal verify task `{terminal}`.")}
+    if a["complete"] and a["finish"]["finished"]:
+        rounds = run.get("critic_rounds", [])
+        if _rl_trailing_dry(rounds) >= _RUN_K_DRY:
+            finish_run(run_id, "finished", store=store)
+            return {"kind": "done", "status": "finished", "summary": _rl_summary(pid, store)}
+        if len(rounds) >= _RUN_MAX_CRITIC:
+            finish_run(run_id, "capped", store=store)
+            return {"kind": "done", "status": "capped", "summary": _rl_summary(pid, store)}
+        return {"kind": "critic", "run_id": run_id, "brief": brief_completeness_critic(pid, store=store),  # noqa: F821
+                "directive": ("Spawn an INDEPENDENT critic subagent: author the verdict from the brief, call "
+                              "record_completeness_critic(project_id, verdict) then record_critic_round.")}
+    finish_run(run_id, "stopped", store=store)
+    return {"kind": "done", "status": "stopped", "summary": _rl_summary(pid, store)}

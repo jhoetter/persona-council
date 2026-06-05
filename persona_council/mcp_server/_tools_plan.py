@@ -120,3 +120,20 @@ def register_plan(mcp):
         """Mark the run finished/stopped."""
         t = time.perf_counter()
         return _env("finish_run", services.finish_run(run_id, status), t)
+
+    @mcp.tool()
+    def run_step(run_id: str) -> dict[str, Any]:
+        """The ESV driver's brain (deterministic). Returns the next dispatch to execute:
+        {kind: analyze|act|verify, step_id, key, next_action, directive} → spawn ONE authoring subagent
+        then checkpoint_step; {kind: critic, brief} → spawn an INDEPENDENT critic then
+        record_completeness_critic + record_critic_round; {kind: done, status, summary} → stop.
+        Loop run_step until kind=='done'. Resumable: it reads the live plan state."""
+        t = time.perf_counter()
+        return _env("run_step", services.run_step(run_id), t)
+
+    @mcp.tool()
+    def inject_work(project_id: str, missing: dict[str, Any]) -> dict[str, Any]:
+        """Turn one critic `missing` item {kind, what, ...} into a real plan task/open-question (the
+        driver does this automatically; exposed for manual gap-filling)."""
+        t = time.perf_counter()
+        return _env("inject_work", {"injected": services.inject_work(project_id, missing)}, t)

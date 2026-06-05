@@ -18,25 +18,30 @@ You almost never read a full council/synthesis yourself — you steer from `asse
    if not). Reuse an existing cohort when present.
 2. **Project**: `start_project "<title>" "<HMW>" --methodology <key> --persona …` (double_diamond /
    double_diamond_deep / d.school / lean_jtbd, or freeform). The plan seeds analyze/act/verify.
-3. **Set a budget**: a max iteration count (e.g. 50) and/or "stop when saturated".
+3. **Run object**: `run = start_run(project_id, budget=<steps>)`. Resume an interrupted run with
+   `start_run(project_id, run_id=run.run_id)` — it replays the journal, no lost work.
 
-## The lean loop (repeat)
+## The lean loop — YOU ARE THE THIN HOST OVER THE DETERMINISTIC ENGINE (ESV)
+The engine (`run_step`) decides the control flow; you only execute its dispatches by spawning ONE
+subagent each (the same Agent-tool trigger as always) and recording the result. This is what stops a
+run ending at "a good starting point": the engine does the deterministic finish work (sections + the
+meta-report outline + critic-gap injection) itself, and only the independent **critic** — not your
+own judgment — ends the run.
 ```
-a = assess_project(project)                  # the pulse: recommendation + gaps + saturation + finish
-if a.recommendation == "finish":             # gates passed but NOT a finished project — do NOT stop:
-    # organize + conclude + hand off (this is what makes it a finished project, not a starting point):
-    #   • create phase/theme SECTIONS (Discover/Define/Solution/Prototype-ladder/Deliver) if a.finish.organized is false
-    #   • author the rich terminal CONCLUSION synthesis if a.finish.concluded is false
-    #   • author the META-REPORT (outline→sections→export) if a.finish.handed_off is false
-    continue                                  # re-assess; only `complete` (finish.finished) ends the run
-if a.recommendation == "complete": break      # complete == finish.finished == organized + concluded + handed-off
-if budget exhausted: converge & break
-
-n = next_action(project)                     # the ready step, FULLY loaded — your only per-step read
-dispatch ONE subagent to author n (below); it persists via MCP and returns ONLY ids + 1 line
-# you never read the authored text; the DB + plan.md + sections hold it
+run = start_run(project_id, budget=50)
+while True:
+    s = run_step(run.run_id)                 # the brain: assess + next_action + finish + critic gate
+    if s.kind == "done": break               # status: finished | capped | stopped — the run is over
+    if s.kind == "critic":
+        spawn ONE INDEPENDENT critic subagent on s.brief → it authors the verdict, calls
+        record_completeness_critic(project_id, verdict) then record_critic_round(run_id, passed, len(missing))
+        continue                             # the engine injects each `missing` gap as real work next loop
+    # else s.kind ∈ {analyze, act, verify}: author ONE step (below), grounded in s.next_action, keyed by s.key
+    spawn ONE subagent to author s → it persists via MCP and returns ONLY ids + 1 line
+    checkpoint_step(run.run_id, {task_id: s.step_id, bucket: s.kind, key: s.key, evidence: [...], summary: "…"})
+# you never read the authored text; the DB + plan.md + sections + the meta-report hold it
 ```
-Authoring per bucket (always a SUBAGENT, grounded in `n`):
+Authoring per dispatch (always a SUBAGENT, grounded in `s.next_action`):
 - **analyze (frame)** → subagent reads cited persona memory + prior syntheses (from `n.grounding`),
   authors research questions, calls `record_frame`. Returns the frame id.
 - **act** → for each ANGLE in `n.act.framed_questions`, subagent runs a REAL multi-persona council
