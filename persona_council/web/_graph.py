@@ -108,52 +108,68 @@ def _methodology_layout(graph: dict) -> dict | None:
     for s in steps:
         dep(s["key"])
     COLW, ROWH, X0, AXIS = 600, 124, 40, 340
-    by_step: dict[str, list] = {}
-    for n in graph["nodes"]:
-        by_step.setdefault(n.get("phase", ""), []).append(n)
-    col_x = {s["key"]: X0 + depth[s["key"]] * COLW for s in steps}
-    pos: dict[str, tuple] = {}
-    fan_half: dict[str, float] = {}
-    is_fan: dict[str, bool] = {}
-    for s in steps:
-        sk = s["key"]
-        ns = sorted(by_step.get(sk, []), key=lambda n: n.get("created_at", ""))
-        k = len(ns)
-        # a diamond emerges only once a fan actually HAS nodes (no empty silhouettes)
-        is_fan[sk] = k > 1 or (s.get("is_fan") and k >= 1)
-        for i, n in enumerate(ns):
-            pos[n["study_id"]] = (col_x[sk], AXIS + (i - (k - 1) / 2.0) * ROWH)
-        fan_half[sk] = (((k - 1) / 2.0) * ROWH + 64) if k else 64
     maxdepth = max(depth.values(), default=0)
+    depth_of = {s["key"]: depth[s["key"]] for s in steps}
+    # ROUND / iteration inference: a new round begins when the flow returns to the ROOT phase (depth 0)
+    # AFTER it has reached the terminal phase (max depth) — i.e. a real Deliver→Discover loop. Rounds
+    # are laid out as vertical SWIMLANES so iterative loops read top-to-bottom and don't pile up.
+    node_round: dict[str, int] = {}
+    rnd, reached_end = 0, False
+    for n in sorted(graph["nodes"], key=lambda n: n.get("created_at", "")):
+        d = depth_of.get(n.get("phase", ""))
+        if d is not None:
+            if d == 0 and reached_end:
+                rnd += 1; reached_end = False
+            if d >= maxdepth:
+                reached_end = True
+        node_round[n["study_id"]] = rnd
+    nrounds = max(node_round.values(), default=0) + 1
+    col_x = {s["key"]: X0 + depth[s["key"]] * COLW for s in steps}
+    by_step: dict[str, list] = {}
+    by_cell: dict[tuple, list] = {}                           # (phase, round) -> nodes (one fan per cell)
+    for n in graph["nodes"]:
+        ph = n.get("phase", "")
+        by_step.setdefault(ph, []).append(n)
+        by_cell.setdefault((ph, node_round[n["study_id"]]), []).append(n)
+    is_fan: dict[str, bool] = {s["key"]: (len(by_step.get(s["key"], [])) > 1) or bool(s.get("is_fan"))
+                               for s in steps}
+    BAND = max((len(v) for v in by_cell.values()), default=1) * ROWH + 170   # height of one iteration lane
+    pos: dict[str, tuple] = {}
+    for (ph, r), ns in by_cell.items():
+        if ph not in col_x:
+            continue
+        ns = sorted(ns, key=lambda n: n.get("created_at", ""))
+        k = len(ns)
+        base = AXIS + r * BAND
+        for i, n in enumerate(ns):
+            pos[n["study_id"]] = (col_x[ph], base + (i - (k - 1) / 2.0) * ROWH)
     extra_x, j = X0 + (maxdepth + 1) * COLW, 0
     for n in graph["nodes"]:
         if n["study_id"] not in pos:
             pos[n["study_id"]] = (extra_x, AXIS + j * ROWH); j += 1
-    # Faint silhouette per fan step = the CONVEX HULL of the fan's own nodes plus its bracketing
-    # waist nodes (the single-node steps it consumes / that consume it). This is purely structural:
-    # it becomes a diamond when a fan sits between two waists, a wedge for a root/terminal fan, and a
-    # correct polygon for branches — it never fabricates a "diamond" where the DAG isn't diamond-shaped.
+    # Faint diamond silhouette per (fan step, ROUND): the convex hull of that round's fan plus its
+    # bracketing waist nodes IN THE SAME ROUND — so every iteration gets its own clean diamond.
     consumers: dict[str, list[str]] = {s["key"]: [] for s in steps}
     for s in steps:
         for c in s.get("consumes", []):
             consumers.setdefault(c, []).append(s["key"])
     diamonds = []
-    for s in steps:
-        sk = s["key"]
-        if not is_fan.get(sk):
+    for (ph, r), ns in by_cell.items():
+        s = by_id.get(ph)
+        if not s or not is_fan.get(ph) or not ns:
             continue
-        node_ids = [n["study_id"] for n in by_step.get(sk, [])]
-        if not node_ids:
-            continue
+        node_ids = [n["study_id"] for n in ns]
         anchors: list[str] = []
-        for c in s.get("consumes", []):                       # bracket: upstream WAIST steps
+        for c in s.get("consumes", []):                       # bracket: upstream WAIST (same round)
             if not is_fan.get(c):
-                anchors += [n["study_id"] for n in by_step.get(c, [])]
-        for o in consumers.get(sk, []):                       # bracket: downstream WAIST steps
+                anchors += [n["study_id"] for n in by_cell.get((c, r), [])]
+        for o in consumers.get(ph, []):                       # bracket: downstream WAIST (same round)
             if not is_fan.get(o):
-                anchors += [n["study_id"] for n in by_step.get(o, [])]
+                anchors += [n["study_id"] for n in by_cell.get((o, r), [])]
         pts = []
         for sid in node_ids + anchors:
+            if sid not in pos:
+                continue
             x, y = pos[sid]
             pts += [(x, y), (x + _NW, y), (x, y + _NH), (x + _NW, y + _NH)]
         hull = _convex_hull(pts)
@@ -197,7 +213,12 @@ def _methodology_layout(graph: dict) -> dict | None:
                       and n.get("prototype_id") == pr["id"]), None)
         src = cnote or _match(pr.get("name", ""), bk)
         cx = (col_x[bk] + _NW + col_x[nxt]) / 2 - PW / 2
-        base = pos[src["study_id"]][1] if (src and not cnote) else AXIS
+        if cnote:                                                    # round-aware: place in the cnote's lane
+            base = AXIS + node_round.get(cnote["study_id"], 0) * BAND
+        elif src:
+            base = pos[src["study_id"]][1]
+        else:
+            base = AXIS
         cy2 = base
         while round(cy2) in used_y.get(round(cx), set()):
             cy2 += 70
@@ -221,10 +242,12 @@ def _methodology_layout(graph: dict) -> dict | None:
     # un-prototyped concept notes: stack them in the ideation column (their plan_graph edge to the
     # down-select synthesis then renders) so no concept floats in the far-right dump.
     ideate_x = col_x.get(build_steps[0]["key"], X0) if build_steps else X0
-    st = 0
+    st: dict[int, int] = {}
     for n in graph["nodes"]:
         if n.get("note_kind") == "concept" and not n.get("prototype_id"):
-            pos[n["study_id"]] = (ideate_x, AXIS - 150 - st * 72); st += 1
+            r = node_round.get(n["study_id"], 0)
+            pos[n["study_id"]] = (ideate_x, AXIS + r * BAND - 150 - st.get(r, 0) * 72)
+            st[r] = st.get(r, 0) + 1
     # Q3: clean PHASE-COLUMN HEADERS — one labelled lane per step in flow order, so the left→right
     # double-diamond is explicit (not inferred from overlapping hulls). Top sits above all nodes.
     miny = min((y for _x, y in pos.values()), default=AXIS)
@@ -232,8 +255,11 @@ def _methodology_layout(graph: dict) -> dict | None:
                    "x": col_x[s["key"]] + _NW / 2, "is_fan": bool(s.get("is_fan")),
                    "i": i + 1, "top": miny - 58}
                   for i, s in enumerate(sorted(steps, key=lambda s: depth[s["key"]]))]
+    # ITERATION lanes: a "Runde N" label per round on the far left (only when the run actually looped).
+    round_lanes = ([{"label": f"Runde {r + 1}", "x": X0 - 4, "y": AXIS + r * BAND}
+                    for r in range(nrounds)] if nrounds > 1 else [])
     return {"pos": pos, "diamonds": diamonds, "proto_pos": proto_pos, "proto_edges": proto_edges,
-            "proto_w": PW, "phase_cols": phase_cols}
+            "proto_w": PW, "phase_cols": phase_cols, "round_lanes": round_lanes, "node_round": node_round}
 
 
 def _graph_interactive(graph: dict) -> str:
@@ -332,7 +358,11 @@ def _graph_interactive(graph: dict) -> str:
     # coexist with free theme sections (a node can be in a derived phase AND user themes). When
     # present, these replace the unlabeled diamond silhouettes.
     phase_sections = []
-    if ml and graph.get("methodology_state"):
+    _nrounds = max((ml.get("node_round") or {}).values(), default=0) + 1 if ml else 1
+    # Single-iteration runs get the labelled phase hulls. When the run LOOPED (multiple rounds), those
+    # hulls would span the swimlanes ugly — so we keep the per-round DIAMONDS + phase headers + round
+    # lane labels instead, which read cleanly top-to-bottom.
+    if ml and graph.get("methodology_state") and _nrounds == 1:
         steps = graph["methodology_state"].get("steps") or []
         by_phase: dict[str, list] = {}
         for n in nodes:
@@ -362,6 +392,7 @@ def _graph_interactive(graph: dict) -> str:
             diamonds = []                              # one mechanism: labeled phases replace diamonds
     jsections = phase_sections + jsections             # phases behind, user themes on top
     jphases = (ml.get("phase_cols") if ml else None) or []
+    jrounds = (ml.get("round_lanes") if ml else None) or []
     # Icon path bodies for the notation/markers the graph JS renders inline (glyph icon
     # names arrive on nodes/sections; the renderer looks each up here). Single source of
     # truth: persona-icons. Small fixed set, sent once per graph.
@@ -372,7 +403,7 @@ def _graph_interactive(graph: dict) -> str:
     iconpaths = {n: _ICON_REGULAR[n]["body"] for n in _GRAPH_ICON_NAMES if n in _ICON_REGULAR}
     # Bump _LAYOUT_VERSION whenever the layout algorithm changes → stale saved drags are dropped.
     data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds, "sections": jsections,
-                       "phases": jphases, "iconpaths": iconpaths,
+                       "phases": jphases, "rounds": jrounds, "iconpaths": iconpaths,
                        "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION},
                       ensure_ascii=False)
     hint = t("graph_hint")
@@ -394,7 +425,7 @@ def _graph_interactive(graph: dict) -> str:
           '<circle cx="1.2" cy="1.2" r="1.1" fill="var(--line-2)"/></pattern>'
         + '</defs>'
         + '<rect id="rgbg" x="0" y="0" width="100%" height="100%" fill="url(#rggrid)"/>'
-        + '<g id="rgroot"><g id="rgphases"></g><g id="rgsections"></g><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
+        + '<g id="rgroot"><g id="rgrounds"></g><g id="rgphases"></g><g id="rgsections"></g><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
         + f'<div class="rghint">{hint}</div>'
         + '<div class="rgctrls">'
           f'<div class="rgzl" id="rgzl">100%</div>'

@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kurz ehrlich: Was ist für dich GERADE wirklich dran? (v0.3)</title>
+<style>
+  :root{--ink:#1c1e21;--muted:#6b7177;--line:#e7e7e3;--panel:#fff;--bg:#f7f7f5;--accent:#2f6f9f;--good:#2f8f5b;--warn:#b06a1d;}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  header{padding:16px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  h1{font-size:18px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin-top:3px}
+  .badge{display:inline-block;font-size:11px;color:var(--good);border:1px solid var(--good);border-radius:6px;padding:1px 6px;margin-top:6px}
+  main{max-width:720px;margin:0 auto;padding:22px}
+  .screen{display:none}
+  .screen.active{display:block}
+  .screen h2{font-size:17px;margin:0 0 12px}
+  p{margin:0 0 12px;max-width:62ch}
+  label.q{display:block;font-size:14px;color:var(--muted);margin:0 0 6px}
+  select,input[type=range]{font:inherit;width:100%;max-width:420px}
+  select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:8px;max-width:480px;margin:0 0 16px}
+  .opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:11px 13px;cursor:pointer;background:#fff}
+  .opt:hover{border-color:var(--accent)}
+  .opt.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:#f2f8fd}
+  .opt input{margin-top:3px}
+  .opt b{display:block}
+  .opt span{color:var(--muted);font-size:13px}
+  button.go{font:inherit;border:none;background:var(--accent);color:#fff;border-radius:9px;padding:10px 18px;cursor:pointer;font-weight:600}
+  button.go.secondary{background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:400}
+  button.go:disabled{opacity:.4;cursor:not-allowed}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:16px 18px;margin:0 0 14px}
+  .card.acute{border-color:var(--warn);background:#fdf6ee}
+  .card.no{border-color:var(--good);background:#f1f9f4}
+  .card h3{margin:0 0 8px;font-size:15px}
+  .pill{display:inline-block;font-size:12px;border-radius:20px;padding:2px 10px;margin-bottom:8px}
+  .pill.acute{background:#f6e4cf;color:var(--warn)}
+  .pill.no{background:#d9efe1;color:var(--good)}
+  .nover{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px;margin-top:6px}
+  .model{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff;margin:12px 0}
+  .model .field{margin:0 0 12px}
+  .model .field .v{font-weight:600;color:var(--accent)}
+  .gap{font-size:22px;font-weight:700;margin:4px 0}
+  .gap small{font-size:12px;color:var(--muted);font-weight:400}
+  #chart{width:100%;max-width:480px;height:120px;display:block;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .open{background:#fff8e6;border:1px solid #e8d48a;border-radius:8px;padding:10px 12px;font-size:13px;margin-top:10px}
+  .open b{color:var(--warn)}
+  .progress{font-size:12px;color:var(--muted);margin-bottom:10px}
+  /* v0.3 — konkrete Monatszahl, transparent hergeleitet */
+  .price{border:1px solid var(--warn);border-radius:10px;background:#fff;padding:13px 15px;margin:12px 0}
+  .price .num{font-size:26px;font-weight:800;color:var(--warn);line-height:1.1}
+  .price .num small{font-size:13px;font-weight:600;color:var(--muted)}
+  .price .deriv{font-size:12px;color:var(--muted);margin-top:8px}
+  .price .deriv summary{cursor:pointer;color:var(--accent);font-weight:600}
+  .price .deriv ul{margin:7px 0 0;padding-left:18px}
+  .src{font-size:11px;color:var(--muted);margin-top:6px}
+  .src a{color:var(--accent)}
+  /* v0.3 — sichtbar begrenzte, abbrechbare Abhängigkeits-Weiche */
+  .branchbox{border:1px dashed var(--warn);border-radius:10px;background:#fffaf3;padding:12px 14px;margin:14px 0}
+  .branchstep{font-size:12px;color:var(--warn);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .hardend{border:1px solid var(--good);background:#f1f9f4;border-radius:10px;padding:12px 14px;margin:12px 0;font-size:14px}
+  .hardend b{color:var(--good)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kurz ehrlich: Was ist für dich GERADE wirklich dran?</h1>
+  <div class="sub">Nach dem KFZ-Abschluss · kein Verkauf, kein Abschluss, kein Rückruf</div>
+  <div class="badge">An diesem Check verdient die HUK keinen Cent · v0.3</div>
+</header>
+<main>
+
+  <!-- INTRO -->
+  <section class="screen active" data-id="intro">
+    <h2>Auto geregelt. Kurz was Ehrliches?</h2>
+    <p>Deine KFZ-Versicherung ist abgeschlossen — fertig, nichts weiter nötig.</p>
+    <p>Wir nutzen den Moment <b>nicht</b>, um dir noch etwas zu verkaufen. Stattdessen: ein paar ehrliche Fragen — was ist bei dir GERADE wirklich dran? Danach sagen wir dir geradeheraus, was für dich heute Sinn macht und was nicht. Das Ergebnis richtet sich nach <b>deinen</b> Antworten, nicht nach einem Standard-Text.</p>
+    <p class="nover">Transparenz: kein Abschluss, kein Anruf, kein Berater meldet sich. Du steuerst alles selbst.</p>
+    <div class="row">
+      <button class="go" id="intro_go">Okay, los</button>
+      <button class="go secondary" id="intro_skip">Nein danke, schließen</button>
+    </div>
+  </section>
+
+  <!-- Q1 abhängig? (die Weiche) -->
+  <section class="screen" data-id="q_dep">
+    <div class="progress">Frage 1 von 3 · die wichtigste</div>
+    <h2>Hängt jemand von dir ab?</h2>
+    <p>Gibt es heute jemanden, dem finanziell etwas fehlen würde, wenn dir morgen etwas passiert oder du länger ausfällst?</p>
+    <div class="opts" id="dep_opts">
+      <label class="opt"><input type="radio" name="dep" value="none" aria-label="Nein, nur ich"><span><b>Nein, nur ich</b><span>Niemand ist auf mein Einkommen angewiesen.</span></span></label>
+      <label class="opt"><input type="radio" name="dep" value="partner" aria-label="Partner/in"><span><b>Partner/in</b><span>Wir bauen gemeinsam etwas auf / gemeinsamer Kredit.</span></span></label>
+      <label class="opt"><input type="radio" name="dep" value="child" aria-label="Kind / Familie, die ich versorge"><span><b>Kind / Familie, die ich versorge</b><span>Mindestens ein Mensch hängt direkt an mir.</span></span></label>
+    </div>
+    <button class="go" id="dep_go" disabled>Weiter</button>
+  </section>
+
+  <!-- Q2 Einkommen / Lage -->
+  <section class="screen" data-id="q_income">
+    <div class="progress">Frage 2 von 3</div>
+    <h2>Wie sicher fühlt sich dein Einkommen an?</h2>
+    <p>Wenn dein Einkommen wegbricht — wie lange trägt euch ein Polster?</p>
+    <div class="opts" id="inc_opts">
+      <label class="opt"><input type="radio" name="inc" value="tight" aria-label="Eng oder unsicher"><span><b>Eng / unsicher</b><span>Befristet oder kein Polster, jeder Euro zählt.</span></span></label>
+      <label class="opt"><input type="radio" name="inc" value="stable" aria-label="Stabil, aber dünn"><span><b>Stabil, aber dünn</b><span>Läuft, aber kein dickes Polster.</span></span></label>
+      <label class="opt"><input type="radio" name="inc" value="solid" aria-label="Sicher, ich kann zurücklegen"><span><b>Sicher, ich kann zurücklegen</b><span>Ich habe Spielraum.</span></span></label>
+    </div>
+    <button class="go" id="inc_go" disabled>Weiter</button>
+  </section>
+
+  <!-- Q3 Optimierer? -->
+  <section class="screen" data-id="q_type">
+    <div class="progress">Frage 3 von 3</div>
+    <h2>Wie tickst du beim Thema Geld?</h2>
+    <p>Damit wir dir das Ergebnis in der Sprache zeigen, die für dich passt.</p>
+    <div class="opts" id="type_opts">
+      <label class="opt"><input type="radio" name="type" value="simple" aria-label="Halt's einfach"><span><b>Halt's einfach</b><span>Sag mir klar, was Sache ist.</span></span></label>
+      <label class="opt"><input type="radio" name="type" value="numbers" aria-label="Ich will die Zahlen selbst sehen"><span><b>Ich will die Zahlen selbst sehen</b><span>Gib mir Stellschrauben und Annahmen, ich rechne mit.</span></span></label>
+    </div>
+    <button class="go" id="type_go" disabled>Ehrliches Ergebnis zeigen</button>
+  </section>
+
+  <!-- RESULT (dynamisch befüllt) -->
+  <section class="screen" data-id="result">
+    <div id="result_body"></div>
+    <div class="row">
+      <button class="go secondary" id="res_branch" style="display:none">Was kostet so ein schlanker Schutz? (1 Schritt, abbrechbar)</button>
+      <button class="go secondary" id="res_numbers" style="display:none">Zahlen-Pfad öffnen</button>
+      <button class="go" id="res_go">Weiter</button>
+    </div>
+  </section>
+
+  <!-- DEPENDENCY BRANCH — sichtbar BEGRENZT, jederzeit abbrechbar, hartes Ende -->
+  <section class="screen" data-id="branch">
+    <div class="branchbox">
+      <div class="branchstep">Genau 1 Schritt · danach ist Schluss</div>
+      <h2 style="margin:0 0 8px">Was kostet der schlanke Schutz — konkret pro Monat?</h2>
+      <p>Kein Trichter, kein Abschluss. Eine ehrliche Hausnummer für eine <b>reine Risiko-Lebensversicherung</b> (Risikoschutz, kein Sparvertrag), damit du nicht im Ungefähren bleibst.</p>
+
+      <div class="price">
+        <div class="num" id="price_num">~ 7 € <small>/ Monat</small></div>
+        <div id="price_for">für 100.000 € Schutz · 20 Jahre Laufzeit</div>
+        <details class="deriv">
+          <summary>Wie kommen wir auf diese Zahl? (aufklappen)</summary>
+          <ul>
+            <li><b>Annahme zu dir:</b> ca. 30 Jahre, Nichtraucher/in, gesund — passend zu deiner Lebensphase. Bei anderem Alter/Status ändert sich der Beitrag.</li>
+            <li><b>Schutzhöhe:</b> 100.000 € Todesfall-Summe (grobe Faustregel: ~3–5 Netto-Jahresgehälter, damit eure laufenden Kosten ein paar Jahre gedeckt sind). Mehr/weniger Summe → linear mehr/weniger Beitrag.</li>
+            <li><b>Quelle der Hausnummer:</b> HUK24 bewirbt eine Risiko-LV „ab 3,61 €/Monat" als günstigsten Einstieg; ein realistischer Beitrag für 100.000 €/20 Jahre für eine ~30-jährige Nichtraucherin liegt typischerweise im <b>einstelligen €-Bereich pro Monat</b>. Wir runden ehrlich auf ~7 €.</li>
+            <li><b>Was die Zahl NICHT ist:</b> kein verbindliches Angebot. Dein echter Beitrag hängt von Gesundheitsfragen und Tarif ab — das rechnen wir dir nicht schön.</li>
+          </ul>
+          <div class="src">Quelle/Annahme: HUK24 Risikolebensversicherung, „ab 3,61 €/Monat" (Stand 2026) ·
+            <a href="https://www.huk24.de/risikolebensversicherung" target="_blank" rel="noopener">huk24.de/risikolebensversicherung</a></div>
+        </details>
+      </div>
+
+      <p style="font-size:13px;color:var(--muted);margin-bottom:4px">Das ist alles, was wir dir hier zeigen. Keine zweite Frage, keine Abschluss-Strecke, kein eingebauter Verkaufstrichter.</p>
+    </div>
+
+    <div class="hardend">
+      <b>Das war's — kein Anruf, kein Abo.</b> Du hast eine Zahl, mehr wolltest du nicht. Wenn du das später wirklich willst, kommst <i>du</i> auf uns zu — nicht umgekehrt.
+    </div>
+
+    <div class="row">
+      <button class="go secondary" id="branch_back">Zurück zum Ergebnis</button>
+      <button class="go" id="branch_go">Verstanden, weiter</button>
+    </div>
+  </section>
+
+  <!-- NUMBERS / MODEL (für Optimierer, abwählbar) -->
+  <section class="screen" data-id="numbers">
+    <h2>Zahlen-Pfad: deine Lücke, deine Annahmen</h2>
+    <p>Steuerbar und ehrlich. Wir rechnen vor deinen Augen — kein Blackbox-„Ergebnis". Was wir <b>nicht</b> sicher wissen, sagen wir auch.</p>
+    <div class="model">
+      <div class="field"><label class="q">Netto-Einkommen / Monat: <span class="v" id="v_income">3.800 €</span></label>
+        <input type="range" id="m_income" min="1500" max="9000" step="100" value="3800"></div>
+      <div class="field"><label class="q">Monatl. Sparrate, die du absichern willst: <span class="v" id="v_save">600 €</span></label>
+        <input type="range" id="m_save" min="0" max="2500" step="50" value="600"></div>
+      <div class="field"><label class="q">Jahre bis zum Ziel: <span class="v" id="v_years">25</span></label>
+        <input type="range" id="m_years" min="5" max="40" step="1" value="25"></div>
+      <div class="field"><label class="q">Angenommene reale Rendite p.a.: <span class="v" id="v_ret">5,0 %</span></label>
+        <input type="range" id="m_ret" min="0" max="9" step="0.5" value="5"></div>
+      <canvas id="chart" width="480" height="120"></canvas>
+      <div class="gap" id="gap_out">—</div>
+      <div class="open">
+        <b>Offen &amp; prüfbar (von uns nicht versteckt):</b>
+        <ul style="margin:6px 0 0;padding-left:18px">
+          <li id="open_cost">Laufende Verwaltungskosten einer Versicherung: branchenweit im Schnitt <b id="open_cost_v">~2,25 %</b> der Beiträge p.a. <span class="src" style="display:inline">(GDV-/Branchenschnitt, Verwaltungskostenquote ~2,25 %; <b>illustrative Annahme</b>, dein konkreter Tarif kann darüber/darunter liegen — frag uns nach der ER deines Tarifs).</span></li>
+          <li>Hinzu kommen <b>Abschluss-/Vertriebskosten</b> (typisch 1–2 % der Beiträge p.a. als Provision) — bei einem reinen ETF-Sparplan fallen die <b>nicht</b> an. Das ist der ehrliche Unterschied, nicht eine geschönte Gesamtzahl.</li>
+          <li>Steuer: Ertragsanteil/Teilfreistellung hängt von deiner Lage ab — wir rechnen sie dir nicht schön.</li>
+          <li>Diese Kurve ist ein reiner ETF-Vergleich ohne Produktmantel. Ein Versicherungsmantel lohnt nur, wenn er nach Kosten <i>mehr</i> bringt — bei reinem Sparen meistens nicht.</li>
+        </ul>
+        <div class="src" style="margin-top:8px">Quelle/Annahme Kostenquote: durchschnittliche Verwaltungskostenquote deutscher Lebensversicherer ~2,25 % der Beiträge (Branchenschnitt). Keine produkt-spezifische Zusage.</div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="go secondary" id="num_back">Brauche ich nicht — zurück</button>
+      <button class="go" id="num_go">Weiter</button>
+    </div>
+  </section>
+
+  <!-- REMINDER (nutzergesteuert) -->
+  <section class="screen" data-id="merker">
+    <h2>Nur wenn DU willst: ehrlicher Wiederanstoß</h2>
+    <p>Nichts kommt „von allein wieder". Wenn du magst, legst <b>du</b> fest, woran und wann wir dich erinnern dürfen. Kein stiller Verkauf, kein Newsletter, keine Lead-Liste — eine ehrliche Erinnerung, jederzeit löschbar.</p>
+    <label class="q" id="merk_label" for="merk_sel">Erinnere mich</label>
+    <select id="merk_sel" aria-label="Erinnere mich">
+      <option value="self">Gar nicht, ich melde mich selbst</option>
+      <option value="3m">In 3 Monaten kurz nachfragen</option>
+      <option value="move">Wenn ich zusammenziehe</option>
+      <option value="job">Beim ersten festen Job / Verbeamtung</option>
+      <option value="child">Wenn ein Kind geplant/da ist</option>
+      <option value="review">Jährlicher 2-Min-Recheck, von mir bestätigt</option>
+    </select>
+    <p class="nover" id="merk_echo" style="margin-top:12px"></p>
+    <button class="go" id="merk_go" style="margin-top:8px">Fertig</button>
+  </section>
+
+  <!-- ENDE -->
+  <section class="screen" data-id="ende">
+    <h2>Das war's. Wirklich.</h2>
+    <p id="ende_line">Kein Haken, kein Rückruf. Dein Auto ist versichert, dein Geld bleibt bei dir.</p>
+    <p class="nover">Falls du am echten Lebens-Moment bist: dann sind wir ehrlich für dich da. Bis dahin: nichts müssen.</p>
+  </section>
+
+  <!-- SKIP -->
+  <section class="screen" data-id="skip">
+    <h2>Alles gut.</h2>
+    <p>Kein Problem — dein Auto ist versichert, mehr braucht es gerade nicht. Schönen Tag.</p>
+  </section>
+
+</main>
+<script>
+(function(){
+  var state = {dep:null, inc:null, type:null, reminder:'self'};
+  function show(id){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.toggle('active', s.dataset.id===id); });
+    window.scrollTo(0,0);
+  }
+  function wireGroup(name, key, btnId){
+    var btn = document.getElementById(btnId);
+    document.querySelectorAll('input[name="'+name+'"]').forEach(function(r){
+      r.addEventListener('change', function(){
+        state[key] = r.value;
+        document.querySelectorAll('input[name="'+name+'"]').forEach(function(x){ x.closest('.opt').classList.toggle('sel', x.checked); });
+        if(btn) btn.disabled = false;
+      });
+    });
+  }
+  wireGroup('dep','dep','dep_go');
+  wireGroup('inc','inc','inc_go');
+  wireGroup('type','type','type_go');
+
+  document.getElementById('intro_go').onclick = function(){ show('q_dep'); };
+  document.getElementById('intro_skip').onclick = function(){ show('skip'); };
+  document.getElementById('dep_go').onclick = function(){ show('q_income'); };
+  document.getElementById('inc_go').onclick = function(){ show('q_type'); };
+  document.getElementById('type_go').onclick = function(){ buildResult(); show('result'); };
+
+  // ---- DYNAMIC RESULT ----
+  function buildResult(){
+    var body = document.getElementById('result_body');
+    var dep = state.dep, inc = state.inc;
+    var html = '';
+    var acute = (dep==='child' || dep==='partner');
+    if(acute){
+      var who = dep==='child' ? 'dein Kind / deine Familie' : 'dein/e Partner/in';
+      html += '<div class="card acute"><span class="pill acute">Für euch JETZT relevant</span>';
+      html += '<h3>Ehrlich: hier hängt jemand an dir — das ist heute dran.</h3>';
+      html += '<p>Du hast gesagt, dass '+who+' auf dich angewiesen ist. Dann ist die ehrliche Antwort <b>nicht</b> „lass die Finger davon". Wenn dir etwas zustößt oder du lange ausfällst, steht '+who+' ohne dein Einkommen da. <b>Das</b> ist euer echtes Risiko — nicht die Rente in 40 Jahren.</p>';
+      if(inc==='tight'){
+        html += '<p>Und gerade weil es bei euch eng ist: Es geht <b>nicht</b> um ein großes, teures Produkt. Es geht um einen <b>schlanken, bestandsfesten Risikoschutz</b> — eine Risiko-Lebens-/Grundabsicherung, die genau das auffängt und sonst nichts. Klein anfangen ist ehrlicher als nichts.</p>';
+      } else {
+        html += '<p>Konkret heißt das: ein <b>schlanker Risikoschutz</b>, der im Ernstfall '+who+' auffängt — keine 40-Jahre-Sparbüchse, sondern reiner Schutz für den Fall der Fälle.</p>';
+      }
+      html += '<p><b>Und was kostet das?</b> Eine ehrliche Hausnummer: <b>rund 7 € im Monat</b> für 100.000 € Schutz über 20 Jahre (ca. 30 J., Nichtraucher/in). Das ist <b>weniger als ein Streaming-Abo</b> — und keine 40-Jahre-Bindung. Wie wir auf die Zahl kommen, kannst du gleich Schritt für Schritt nachsehen.</p>';
+      html += '<p><b>Bestandsfest &amp; pausierbar:</b> Du kannst klein anfangen, die Beiträge bei Geldknappheit pausieren und später anpassen — ohne dass der Schutz wegbricht. Kein Vertrag, der dich 40 Jahre festnagelt.</p>';
+      html += '<div class="nover">Das ist eine ehrliche Einordnung, kein Abschluss und keine Drückerei. Du entscheidest, ob und wann. HUK verdient an diesem Check nichts, und es ruft niemand an.</div></div>';
+    } else {
+      html += '<div class="card no"><span class="pill no">Brauchst du gerade nicht</span>';
+      html += '<h3>Ehrlich: eine Vorsorge brauchst du heute nicht.</h3>';
+      html += '<p>Du hast gesagt, dass niemand finanziell von dir abhängt. Dann ist dein echtes Risiko gerade konkreter und näher als die Rente: ein kaputtes Auto, das den Job kostet, ein Monat krank ohne Polster. Eine klassische Lebensversicherung legt dein Geld 40 Jahre fest und löst keines dieser Heute-Probleme.</p>';
+      if(inc==='solid'){
+        html += '<p>Du hast Spielraum — wenn du etwas tun willst, dann <b>flexibel selbst</b> (breit gestreut, jederzeit verfügbar), nicht in einem teuren Mantel, der dich bindet. Schau dir dafür gern unten den Zahlen-Pfad an.</p>';
+      } else {
+        html += '<p>Ehrlich: lass die Finger von einem langen Vertrag, solange niemand von dir abhängt. Bau dir lieber ein verfügbares Polster auf.</p>';
+      }
+      html += '<div class="nover">Der echte Moment kommt, wenn jemand von dir abhängt oder dein Einkommen eure Zukunft trägt. Dann lohnt das Gespräch — nicht heute.</div></div>';
+    }
+    body.innerHTML = html;
+
+    // dependency branch entry: only for acute case (visibly bounded, abortable)
+    var bbtn = document.getElementById('res_branch');
+    bbtn.style.display = acute ? 'inline-block' : 'none';
+
+    // numbers entry: offered to everyone, prominent for "numbers" type
+    var nbtn = document.getElementById('res_numbers');
+    nbtn.style.display = 'inline-block';
+    nbtn.textContent = state.type==='numbers' ? 'Zahlen selbst durchrechnen' : 'Zahlen-Pfad ansehen (optional)';
+  }
+  document.getElementById('res_branch').onclick = function(){ show('branch'); };
+  document.getElementById('res_numbers').onclick = function(){ show('numbers'); };
+  document.getElementById('res_go').onclick = function(){ show('merker'); };
+
+  // ---- DEPENDENCY BRANCH ----
+  document.getElementById('branch_back').onclick = function(){ show('result'); };
+  document.getElementById('branch_go').onclick = function(){ show('merker'); };
+
+  // ---- LIVE MODEL ----
+  function fmt(n){ return n.toLocaleString('de-DE', {maximumFractionDigits:0}); }
+  function recompute(){
+    var inc = +document.getElementById('m_income').value;
+    var save = +document.getElementById('m_save').value;
+    var years = +document.getElementById('m_years').value;
+    var ret = +document.getElementById('m_ret').value/100;
+    document.getElementById('v_income').textContent = fmt(inc)+' €';
+    document.getElementById('v_save').textContent = fmt(save)+' €';
+    document.getElementById('v_years').textContent = years;
+    document.getElementById('v_ret').textContent = (ret*100).toFixed(1).replace('.',',')+' %';
+    var months = years*12, rm = ret/12;
+    var fv = rm===0 ? save*months : save*((Math.pow(1+rm,months)-1)/rm);
+    var contrib = save*months;
+    var growth = fv - contrib;
+    document.getElementById('gap_out').innerHTML = 'Endsumme ~<b>'+fmt(fv)+' €</b> <small>· davon eingezahlt '+fmt(contrib)+' €, Zinseffekt '+fmt(growth)+' €</small>';
+    drawChart(save, rm, months, fv);
+  }
+  function drawChart(save, rm, months, fvMax){
+    var c = document.getElementById('chart'); if(!c.getContext) return;
+    var ctx = c.getContext('2d'); var W=c.width, H=c.height; ctx.clearRect(0,0,W,H);
+    function val(m){ return rm===0 ? save*m : save*((Math.pow(1+rm,m)-1)/rm); }
+    var maxv = Math.max(val(months), save*months, 1);
+    ctx.strokeStyle='#c9ccd1'; ctx.lineWidth=1.5; ctx.beginPath();
+    for(var i=0;i<=months;i+=Math.max(1,Math.floor(months/120))){ var x=8+(W-16)*(i/months); var y=H-8-(H-16)*((save*i)/maxv); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke();
+    ctx.strokeStyle='#2f6f9f'; ctx.lineWidth=2; ctx.beginPath();
+    for(var j=0;j<=months;j+=Math.max(1,Math.floor(months/120))){ var x2=8+(W-16)*(j/months); var y2=H-8-(H-16)*(val(j)/maxv); if(j===0)ctx.moveTo(x2,y2); else ctx.lineTo(x2,y2);} ctx.stroke();
+  }
+  ['m_income','m_save','m_years','m_ret'].forEach(function(id){ var e=document.getElementById(id); if(e) e.addEventListener('input', recompute); });
+  document.getElementById('num_back').onclick = function(){ show('result'); };
+  document.getElementById('num_go').onclick = function(){ show('merker'); };
+
+  // ---- REMINDER ----
+  var merkSel = document.getElementById('merk_sel');
+  function echoReminder(){
+    state.reminder = merkSel.value;
+    var map = {
+      self:'Alles klar — wir melden uns gar nicht. Du behältst die Kontrolle.',
+      '3m':'Notiert: in 3 Monaten eine kurze, ehrliche Nachfrage — kein Verkauf, nur „hat sich was geändert?".',
+      move:'Notiert: wir stupsen dich erst an, wenn du zusammenziehst — und nur dann.',
+      job:'Notiert: erst beim ersten festen Job / der Verbeamtung. Bis dahin Ruhe.',
+      child:'Notiert: erst wenn ein Kind geplant oder da ist — dann ist es ehrlich relevant.',
+      review:'Notiert: ein jährlicher 2-Min-Recheck, den DU bestätigen musst. Sonst passiert nichts.'
+    };
+    document.getElementById('merk_echo').textContent = map[merkSel.value]||'';
+  }
+  merkSel.onchange = echoReminder; echoReminder();
+  document.getElementById('merk_go').onclick = function(){
+    document.getElementById('ende_line').textContent = state.reminder==='self'
+      ? 'Kein Haken, kein Rückruf. Dein Geld bleibt bei dir — und du meldest dich, wenn du willst.'
+      : 'Kein Haken, kein Rückruf. Wir erinnern dich genau zu dem Anlass, den DU gewählt hast — und an nichts sonst.';
+    show('ende');
+  };
+
+  recompute();
+})();
+</script>
+</body>
+</html>

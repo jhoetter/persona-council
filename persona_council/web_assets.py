@@ -103,6 +103,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgphase-guide{stroke:var(--line);stroke-width:1;stroke-dasharray:2 8;opacity:.5}
 .rgphase-label{fill:var(--ink);font-size:15px;font-weight:700;letter-spacing:-.01em}
 .rgphase-sub{fill:var(--muted);font-size:11px}
+.rground-sep{stroke:var(--line);stroke-width:1;stroke-dasharray:3 7;opacity:.7}
+.rground-label{fill:var(--muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}
 .rgseclab-t{font-size:12.5px;font-weight:700;letter-spacing:.01em}
@@ -451,6 +453,17 @@ _RGRAPH_JS = """<script>
       var gw=0; try{gw=g.getComputedTextLength();}catch(_){}
       var gi=iconEl(p.is_fan?'diamond':'diamondFilled', p.x-gw/2-15, p.top+18-9, 11);
       if(gi) gP.appendChild(gi);
+    });
+  }
+  // ---- iteration swimlanes: "Runde N" labels + faint separators between rounds (only if looped) ----
+  var gR=document.getElementById('rgrounds');
+  if(gR && D.rounds && D.rounds.length>1){
+    var xs2=D.nodes.map(function(n){return n.x;});
+    var xmn=Math.min.apply(null,xs2.concat([0]))-44, xmx=Math.max.apply(null,xs2.concat([0]))+300;
+    D.rounds.forEach(function(r,idx){
+      if(idx>0){ var midY=(r.y+D.rounds[idx-1].y)/2;
+        var ln=el('line',{x1:xmn,y1:midY,x2:xmx,y2:midY,'class':'rground-sep'}); gR.appendChild(ln); }
+      var lab=el('text',{x:xmn,y:r.y-4,'class':'rground-label'}); lab.textContent=r.label; gR.appendChild(lab);
     });
   }
   var gS=document.getElementById('rgsections');
