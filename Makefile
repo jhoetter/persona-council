@@ -24,9 +24,14 @@ install:
 	$(UV) sync
 	@echo "installed - run 'make dev' for :$(WEB_PORT) or 'make dev-forwarded' for :$(FORWARDED_WEB_PORT)"
 
+# --reload is scoped to the Python source: without --reload-dir the stat-poller
+# walks the whole tree every 250ms (.venv/, data/ with its constantly-changing
+# SQLite WAL, prototypes/) and pegs a CPU, which can wedge the server over time.
 dev: kill-ports
 	@echo "→ Web   http://127.0.0.1:$(WEB_PORT)"
-	$(UV) run python -m uvicorn 'persona_council.web:create_app' --factory --reload --host 127.0.0.1 --port $(WEB_PORT)
+	$(UV) run python -m uvicorn 'persona_council.web:create_app' --factory --reload \
+	  --reload-dir persona_council --reload-exclude '*/data/*' \
+	  --host 127.0.0.1 --port $(WEB_PORT)
 
 # Forwarded dev profile for viewing this machine through an SSH tunnel.
 #   ssh -L $(FORWARDED_WEB_PORT):127.0.0.1:$(FORWARDED_WEB_PORT) <host>
