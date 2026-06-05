@@ -120,6 +120,27 @@ def parent_project_of_study(study_id: str, store: Store | None = None) -> dict[s
 
 
 
+def project_conclusion(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """The project's ANSWER for the overview: the terminal verify's synthesis + the winning prototype
+    (the shortlisted one, else the most recently built). Lives in the service layer so the web UI stays
+    free of hardcoded kind/fidelity vocabulary."""
+    store = store or Store()
+    plan = _plan.get_plan(project_id, store=store) or {"tasks": []}
+    term = next((tk for tk in reversed(plan["tasks"]) if tk.get("bucket") == "verify"), None)
+    syn = None
+    if term:
+        sid = next((r["id"] for r in term.get("produces", []) if r.get("kind") == "synthesis"), None)
+        syn = store.get_synthesis(sid) if sid else None
+    protos = list_prototypes_artifacts(project_id, store=store)
+    win = None
+    if syn:
+        shortlist = syn.get("shortlist") or []
+        win = next((p for p in protos if p.get("id") in shortlist), None)
+    if not win and protos:
+        win = max(protos, key=lambda p: p.get("created_at", ""))   # most recent build = most refined
+    return {"synthesis": syn, "winning_prototype": win}
+
+
 def parent_study_of_council(council_id: str, store: Store | None = None) -> dict[str, Any] | None:
     """Reverse lookup: which synthesis (study) folds in this council?"""
     store = store or Store()

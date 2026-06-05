@@ -492,14 +492,8 @@ def register_pages(app) -> None:
         n_grounded = sum(1 for x in all_sess if x.get("grounded_verified"))
         stats = (f'{t("ov_concepts")}: <b>{n_concepts}</b> · {t("ov_prototypes")}: <b>{len(protos)}</b> · '
                  f'{t("ov_grounded")}: <b>{n_grounded}/{len(all_sess)}</b> · {t("ov_open")}: <b>{len(oqs)}</b>')
-        plan_ = services.get_plan(proj["id"], store=store) or {"tasks": []}
-        term = next((tk for tk in reversed(plan_["tasks"]) if tk["bucket"] == "verify"), None)
-        ans = None
-        if term:
-            sidx = next((r["id"] for r in term["produces"] if r["kind"] == "synthesis"), None)
-            ans = store.get_synthesis(sidx) if sidx else None
-        _fid = {"hifi": 3, "midfi": 2, "lofi": 1}
-        win = max(protos, key=lambda p: _fid.get(p.get("fidelity"), 0), default=None) if protos else None
+        concl = services.project_conclusion(proj["id"], store=store)
+        ans, win = concl["synthesis"], concl["winning_prototype"]
         ans_text = (ans or {}).get("gesamtbild", "") or (ans or {}).get("positionierung", "")
         if ans_text:
             btns = f'<a class="btn" href="/syntheses/{_esc(ans["id"])}">{t("ov_full_solution")} →</a>'
