@@ -11,28 +11,47 @@ from ..config import ui_language, SUPPORTED_LANGUAGES
 # held in a contextvar so the module-level render helpers can read it     #
 # without threading it through every function. Generated CONTENT keeps    #
 # its own content_language; this only switches the surrounding UI.        #
+#                                                                         #
+# Contract (enforced by tests/test_i18n.py):                              #
+#   - STRINGS covers exactly SUPPORTED_LANGUAGES.                          #
+#   - every language defines the SAME key set with the SAME {placeholders}.#
+#   - every t("literal") used in the codebase resolves to a defined key.   #
+# Add a string by adding the key to EVERY language table, never inline.    #
 # ===================================================================== #
+
+# Ultimate fallback when a key is missing in the active language (should not
+# happen — the parity test guards it — but keeps render robust in prod).
+FALLBACK_LANGUAGE = "en"
 
 _UI_LANG: contextvars.ContextVar[str | None] = contextvars.ContextVar("ui_lang", default=None)
 
 STRINGS: dict[str, dict[str, str]] = {
     "de": {
-        "overview": "Übersicht", "personas": "Personas", "councils": "Councils",
+        "personas": "Personas", "councils": "Councils",
         "syntheses": "Synthesen", "favorites": "Favoriten", "mark_with_star": "Mit Stern markieren",
-        "theme_toggle": "Theme wechseln", "sidebar": "Sidebar", "repo": "Repo",
-        "lang_toggle": "Sprache: Deutsch (zu English wechseln)", "lang_short": "EN",
-        "back_to_overview": "Zur Übersicht",
-        "overview_lead": "Synthetische Kundenpersonas, ihre simulierten Arbeitstage, Councils und Synthese-Reports.",
+        "sidebar": "Sidebar", "repo": "Repo", "breadcrumb_aria": "Seitenposition",
+        "settings": "Einstellungen", "theme": "Erscheinungsbild", "language": "Sprache",
+        "theme_light": "Hell", "theme_dark": "Dunkel", "theme_system": "System",
         "personas_lead": "{n} synthetische Kundenprofile.",
         "councils_lead": "Memory-geerdete Persona-Debatten.",
         "syntheses_lead": "Studien-Bögen über Council-Ketten — die Reports.",
         "projects": "Projekte",
         "projects_lead": "Forschungs-Graphen: Studien (Synthesen) als Knoten, getaggt und verkettet.",
-        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen", "prototypes_h": "Artefakte",
+        "meta_report": "Meta-Report", "open_questions_h": "Offene Fragen", "prototypes_h": "Artefakte",
         "no_projects": "Noch keine Projekte. Lege eines an oder backfille deine Synthesen (CLI: research-backfill).",
-        "source_studies": "Quell-Studien", "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
-        "filter": "Filter", "type_h": "Typ", "tags_h": "Tags", "clear_filter": "zurücksetzen", "legend": "Legende",
+        "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
+        "type_h": "Typ", "tags_h": "Tags", "clear_filter": "zurücksetzen", "legend": "Legende",
         "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Synthese.",
+        # graph canvas controls
+        "graph_hint": "Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen",
+        "graph_fit": "Einpassen (F)", "graph_reset": "Layout zurücksetzen (R)",
+        "graph_zoom_in": "Zoom in (+)", "graph_zoom_out": "Zoom out (−)",
+        # sections / prototype detail
+        "section": "Abschnitt", "no_members": "Keine Mitglieder.", "n_nodes": "{n} Knoten",
+        "pulse": "Pulse", "gaps": "Gaps", "saturation": "Sättigung",
+        "sessions": "Sessions", "no_sessions": "keine Sessions",
+        "grounded_yes": "✓ grounded", "grounded_no": "○ unbestätigt",
+        "open_in_new_tab": "In neuem Tab öffnen ↗",
         "export_pdf": "Export PDF",
         # generic / not-found
         "not_found": "Nicht gefunden",
@@ -44,7 +63,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "synthesis_not_found": "Synthese nicht gefunden",
         "activity_not_found": "Aktivität nicht gefunden",
         # star
-        "favorite": "Favorit", "mark_as_favorite": "Als Favorit markieren",
+        "favorite": "Favorit", "mark_as_favorite": "Als Favorit markieren", "unstar": "Stern entfernen",
         # recommendations / effort-impact
         "effort_value": "Aufwand {a}/5 · Nutzen {n}/5",
         "ei_high_leverage": "hoher Hebel", "ei_worthwhile": "lohnend",
@@ -55,11 +74,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "no_data": "Keine Daten.",
         # project overview ("story")
         "ov_question": "Die Frage", "ov_path": "Der Weg", "ov_answer": "Die Antwort",
-        "ov_full_solution": "Vollständige Lösung", "ov_view_proto": "Prototyp ansehen",
+        "ov_full_solution": "Vollständige Lösung",
         "ov_concepts": "Konzepte", "ov_prototypes": "Prototypen", "ov_grounded": "Grounded Sessions",
         "ov_open": "Offene Fragen", "ov_no_answer": "Noch keine abschließende Antwort — Lauf nicht beendet.",
         # council framing
-        "council_kicker": "Explorativer Council · {n} segment-diverse Stimmen",
         "council_motion": "Untersuchte These",
         "council_motion_help": "{n} Personas reagieren aus ihrer GELEBTEN ERFAHRUNG: bestätigt die These (dafür), teils (bedingt) oder widerlegt sie (dagegen). Es ist keine Abstimmung über eine Entscheidung — es ist, was sie tatsächlich erleben. Die Erkenntnis steht darunter.",
         "council_reactions_h": "Reaktion auf die These",
@@ -108,7 +126,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "question": "Frage",
         "councils_overview": "Referenzierte Councils (Belege)",
         "evidence_decoupled_note": "Diese Synthese ist eigenständig. Councils sind zitierte Evidenz — kein Bestandteil der Synthese (entkoppelt).",
-        "jump_into_council": "In den Council springen →",
         "recommendations": "Handlungsempfehlungen",
         "positioning": "Positionierung",
         "voices": "Stimmen",
@@ -121,7 +138,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "open_questions_next_study": "Offene Fragen / Nächste Studie",
         "course": "Verlauf", "arc_course": "Bogen / Verlauf",
         "sections": "Abschnitte",
-        "exec_summary_marker": "Exec-Summary",
         "completed": "Abgeschlossen", "running": "läuft",
         "iterations": "Iterationen",
         "voices_meta": "Stimmen: {s}",
@@ -141,8 +157,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "size": "Größe", "tools": "Tools", "memory": "Memory", "open": "öffnen",
         "n_projects": "{n} Projekte", "n_open": "{n} offen",
         "not_simulated_yet": "noch nicht simuliert",
-        "simulated_activities": "simulierte Aktivitäten",
-        "latest_synthesis": "Neueste Synthese · {n} Councils",
         # activity detail
         "what_happened": "Was geschah", "thought": "Gedanke",
         "conversation": "Konversation", "none_f": "Keine.",
@@ -167,22 +181,31 @@ STRINGS: dict[str, dict[str, str]] = {
         "outdated": "überholt", "since": "seit",
     },
     "en": {
-        "overview": "Overview", "personas": "Personas", "councils": "Councils",
+        "personas": "Personas", "councils": "Councils",
         "syntheses": "Syntheses", "favorites": "Favorites", "mark_with_star": "Mark with a star",
-        "theme_toggle": "Toggle theme", "sidebar": "Sidebar", "repo": "Repo",
-        "lang_toggle": "Language: English (switch to German)", "lang_short": "DE",
-        "back_to_overview": "Back to overview",
-        "overview_lead": "Synthetic customer personas, their simulated workdays, councils and synthesis reports.",
+        "sidebar": "Sidebar", "repo": "Repo", "breadcrumb_aria": "Page position",
+        "settings": "Settings", "theme": "Appearance", "language": "Language",
+        "theme_light": "Light", "theme_dark": "Dark", "theme_system": "System",
         "personas_lead": "{n} synthetic customer profiles.",
         "councils_lead": "Memory-grounded persona debates.",
         "syntheses_lead": "Study arcs across council chains — the reports.",
         "projects": "Projects",
         "projects_lead": "Research graphs: studies (syntheses) as nodes, tagged and linked.",
-        "graph": "Graph", "meta_report": "Meta-Report", "open_questions_h": "Open questions", "prototypes_h": "Artifacts",
+        "meta_report": "Meta-Report", "open_questions_h": "Open questions", "prototypes_h": "Artifacts",
         "no_projects": "No projects yet. Create one or backfill your syntheses (CLI: research-backfill).",
-        "source_studies": "Source studies", "themes_h": "Themes", "build_order_h": "Build order",
-        "filter": "Filter", "type_h": "Type", "tags_h": "Tags", "clear_filter": "clear", "legend": "Legend",
+        "themes_h": "Themes", "build_order_h": "Build order",
+        "type_h": "Type", "tags_h": "Tags", "clear_filter": "clear", "legend": "Legend",
         "no_councils": "No councils yet.", "no_synthesis": "No synthesis yet.",
+        # graph canvas controls
+        "graph_hint": "drag · pan background · pinch / ⌘+scroll to zoom · F to fit",
+        "graph_fit": "Fit to view (F)", "graph_reset": "Reset layout (R)",
+        "graph_zoom_in": "Zoom in (+)", "graph_zoom_out": "Zoom out (−)",
+        # sections / prototype detail
+        "section": "Section", "no_members": "No members.", "n_nodes": "{n} nodes",
+        "pulse": "Pulse", "gaps": "Gaps", "saturation": "Saturation",
+        "sessions": "Sessions", "no_sessions": "no sessions",
+        "grounded_yes": "✓ grounded", "grounded_no": "○ unconfirmed",
+        "open_in_new_tab": "Open in new tab ↗",
         "export_pdf": "Export PDF",
         # generic / not-found
         "not_found": "Not found",
@@ -194,7 +217,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "synthesis_not_found": "Synthesis not found",
         "activity_not_found": "Activity not found",
         # star
-        "favorite": "Favorite", "mark_as_favorite": "Mark as favorite",
+        "favorite": "Favorite", "mark_as_favorite": "Mark as favorite", "unstar": "Unstar",
         # recommendations / effort-impact
         "effort_value": "Effort {a}/5 · Value {n}/5",
         "ei_high_leverage": "high leverage", "ei_worthwhile": "worthwhile",
@@ -205,11 +228,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "no_data": "No data.",
         # project overview ("story")
         "ov_question": "The question", "ov_path": "The path", "ov_answer": "The answer",
-        "ov_full_solution": "Full solution", "ov_view_proto": "View prototype",
+        "ov_full_solution": "Full solution",
         "ov_concepts": "Concepts", "ov_prototypes": "Prototypes", "ov_grounded": "Grounded sessions",
         "ov_open": "Open questions", "ov_no_answer": "No conclusion yet — run not finished.",
         # council framing
-        "council_kicker": "Exploratory council · {n} segment-diverse voices",
         "council_motion": "The hypothesis investigated",
         "council_motion_help": "{n} personas react from their LIVED EXPERIENCE: confirms the hypothesis (for), partly (conditional), or refutes it (against). This is not a decision vote — it is what they actually experience. The insight is below.",
         "council_reactions_h": "Reaction to the hypothesis",
@@ -258,7 +280,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "question": "Question",
         "councils_overview": "Referenced councils (evidence)",
         "evidence_decoupled_note": "This synthesis stands alone. Councils are cited evidence — not part of the synthesis (decoupled).",
-        "jump_into_council": "Jump into the council →",
         "recommendations": "Recommendations",
         "positioning": "Positioning",
         "voices": "Voices",
@@ -271,7 +292,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "open_questions_next_study": "Open questions / Next study",
         "course": "Course", "arc_course": "Arc / Course",
         "sections": "Sections",
-        "exec_summary_marker": "Exec summary",
         "completed": "Completed", "running": "running",
         "iterations": "Iterations",
         "voices_meta": "Voices: {s}",
@@ -291,8 +311,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "size": "Size", "tools": "Tools", "memory": "Memory", "open": "open",
         "n_projects": "{n} projects", "n_open": "{n} open",
         "not_simulated_yet": "not simulated yet",
-        "simulated_activities": "simulated activities",
-        "latest_synthesis": "Latest synthesis · {n} councils",
         # activity detail
         "what_happened": "What happened", "thought": "Thought",
         "conversation": "Conversation", "none_f": "None.",
@@ -320,12 +338,20 @@ STRINGS: dict[str, dict[str, str]] = {
 
 
 def _lang() -> str:
+    """The active UI language: per-request contextvar, else the persisted setting."""
     return _UI_LANG.get() or ui_language()
 
 
 def t(key: str, **kw: object) -> str:
-    lang = _lang() if _lang() in STRINGS else "en"
-    value = STRINGS[lang].get(key) or STRINGS["en"].get(key, key)
+    """Translate `key` into the active UI language, formatting any `{placeholder}`s.
+
+    Falls back to FALLBACK_LANGUAGE, then to the raw key — so a missing string
+    degrades visibly rather than raising. The parity test keeps this from ever
+    firing in practice."""
+    table = STRINGS.get(_lang(), STRINGS[FALLBACK_LANGUAGE])
+    value = table.get(key)
+    if value is None:
+        value = STRINGS[FALLBACK_LANGUAGE].get(key, key)
     return value.format(**kw) if kw else value
 
 

@@ -9,7 +9,14 @@ dependencies = [
     "python-multipart>=0.0.9",
     "python-dotenv>=1.0.0",
     "uvicorn>=0.30.0",
+    "persona-icons",
 ]
+
+# Shared icon library — single source of truth lives in ../persona-icons
+# (mirrors how bim-website consumes ../bim-icons). The React website imports the
+# TSX build; the council imports the generated Python module under py/.
+[tool.uv.sources]
+persona-icons = { path = "../persona-icons/py", editable = true }
 
 [project.optional-dependencies]
 # Prototype harness (spec/methodology-engine-and-prototyping.md §7): agents drive real

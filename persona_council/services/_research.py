@@ -93,11 +93,18 @@ def create_research_project(title: str, goal: str = "", persona_ids: list[str] |
 
 
 def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
+    """Project summaries for the inspector list. Counts come from the project GRAPH —
+    the plan-evidence graph is the source of truth, and `study_ids` is empty for
+    plan-based projects, so a raw len(study_ids) would read 0. `studies` counts
+    synthesis nodes (matching the list's label); `edges` is the build-order count."""
     store = store or Store()
     out = []
     for p in store.list_research_projects():
+        graph = get_project_graph(p["id"], store=store)
         out.append({"id": p["id"], "slug": p["slug"], "title": p["title"], "goal": p.get("goal", ""),
-                    "status": p.get("status", "active"), "studies": len(p.get("study_ids", [])),
+                    "status": p.get("status", "active"),
+                    "studies": sum(1 for n in graph["nodes"] if n.get("kind") == "synthesis"),
+                    "edges": graph["counts"].get("edges", 0),
                     "themes": p.get("themes", [])})
     return out
 

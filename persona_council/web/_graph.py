@@ -4,7 +4,7 @@ import json
 import re
 
 from .. import presentation as _pres
-from ._i18n import t, _lang
+from ._i18n import t
 from ._components import (
     _esc, _icon, _artifact_present, _proto_tags, _EDGE_COLORS, _theme_color,
     _RGRAPH_JS,
@@ -366,13 +366,11 @@ def _graph_interactive(graph: dict) -> str:
     data = json.dumps({"nodes": jnodes, "edges": jedges, "diamonds": diamonds, "sections": jsections,
                        "phases": jphases, "key": graph["project"].get("id", "x"), "lv": _LAYOUT_VERSION},
                       ensure_ascii=False)
-    de = _lang() == "de"
-    hint = ("Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen"
-            if de else "drag · pan background · pinch / ⌘+scroll to zoom · F to fit")
-    fit_t = "Einpassen (F)" if de else "Fit to view (F)"
-    reset_t = "Layout zurücksetzen (R)" if de else "Reset layout (R)"
-    zin_t = "Zoom in (+)"
-    zout_t = "Zoom out (−)"
+    hint = t("graph_hint")
+    fit_t = t("graph_fit")
+    reset_t = t("graph_reset")
+    zin_t = t("graph_zoom_in")
+    zout_t = t("graph_zoom_out")
     # The canvas fills its container (CSS height:100%); this fallback only matters
     # if rendered outside the full-bleed project layout.
     maxy = max((y for _x, y in pos.values()), default=0)
@@ -456,8 +454,9 @@ def _plan_html(plan: dict, store) -> str:
     done = sum(1 for t in tasks if t["status"] == "done")
     complete = bool(tasks) and done == len(tasks)
     by_title = {t["id"]: t.get("title", t["id"]) for t in tasks}
-    STATUS = {"done": ("✓", "var(--green)"), "active": ("◐", "var(--accent)"),
-              "todo": ("○", "var(--muted)"), "blocked": ("!", "var(--red)")}
+    # Status marks are persona-icons (single source of truth); colour drives currentColor.
+    STATUS = {"done": ("check", "var(--green)"), "active": ("half", "var(--accent)"),
+              "todo": ("circle", "var(--muted)"), "blocked": ("alert", "var(--red)")}
     # Resolve evidence links by IDENTITY (which collection the ref lives in), not by a kind
     # literal — the kind LABEL comes from data via present(); storage membership is legitimate.
     _syn_ids = {s["id"] for s in store.list_syntheses()}
@@ -479,7 +478,7 @@ def _plan_html(plan: dict, store) -> str:
         return f'<span class="ev">{_esc(label)}</span>'
 
     def row(t: dict) -> str:
-        mark, clr = STATUS.get(t["status"], ("○", "var(--muted)"))
+        mark, clr = STATUS.get(t["status"], ("circle", "var(--muted)"))
         cons = " · ".join(by_title.get(c, c) for c in t.get("consumes", []))
         cons_html = f'<div class="small muted" style="margin-top:4px">⊂ {_esc(cons)}</div>' if cons else ""
         req = t.get("requires", {}) or {}
@@ -498,7 +497,7 @@ def _plan_html(plan: dict, store) -> str:
         # skip the frame self-reference (a frame task produces a ref to itself); link the rest
         evs = "".join(ev_chip(r) for r in t.get("produces", []) if r.get("id") != t["id"])
         ev_html = f'<div class="evs">{evs}</div>' if evs else ""
-        return (f'<div class="ptask"><div class="pmark" style="color:{clr}">{mark}</div>'
+        return (f'<div class="ptask"><div class="pmark" style="color:{clr}">{_icon(mark)}</div>'
                 f'<div class="pbody"><div class="prow1"><span class="ptitle">{_esc(t.get("title", t["id"]))}</span>'
                 f'{cap_html}{gates_html}</div>{cons_html}{ev_html}</div></div>')
 

@@ -497,12 +497,12 @@ def register_pages(app) -> None:
             cov = ap["coverage"]["evidence_by_kind"]
             cov_str = " · ".join(f"{k}:{v}" for k, v in cov.items())
             gaps = ap.get("gaps") or []
-            gap_str = ("<div class='muted small' style='margin-top:4px'>Gaps: "
+            gap_str = (f'<div class="muted small" style="margin-top:4px">{t("gaps")}: '
                        + "; ".join(_esc(g) for g in gaps[:4]) + "</div>") if gaps else ""
             pulse_html = (
-                f'<div class="oqp-h">Pulse</div>'
+                f'<div class="oqp-h">{t("pulse")}</div>'
                 f'<div class="strow"><span class="pill">{_esc(ap["recommendation"])}</span> '
-                f'<span class="muted small">{_esc(cov_str)} · Sättigung: {_esc(ap["saturation"]["hint"])}</span>{gap_str}</div>')
+                f'<span class="muted small">{_esc(cov_str)} · {t("saturation")}: {_esc(ap["saturation"]["hint"])}</span>{gap_str}</div>')
         except Exception:
             pulse_html = ""
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
@@ -614,8 +614,8 @@ def register_pages(app) -> None:
                         f'<div class="muted small" style="margin-top:3px">{_esc((m["summary"] or "")[:240])}</div></div>')
         note_html = f'<p class="lead">{_esc(sec.get("note",""))}</p>' if sec.get("note") else ""
         body = (f'<div class="page"><div class="card"><h1 class="h1">{_esc(sec["title"])}</h1>'
-                f'<div style="margin:6px 0 14px">{chip} <span class="muted small">{len(members)} Knoten</span></div>'
-                f'{note_html}</div><div style="margin-top:14px">{"".join(rows) or _empty_state("Section", "Keine Mitglieder.")}</div></div>')
+                f'<div style="margin:6px 0 14px">{chip} <span class="muted small">{t("n_nodes", n=len(members))}</span></div>'
+                f'{note_html}</div><div style="margin-top:14px">{"".join(rows) or _empty_state(t("section"), t("no_members"))}</div></div>')
         return _layout(sec["title"], body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
                        active="projects")
@@ -660,18 +660,18 @@ def register_pages(app) -> None:
         sl = []
         for s in sessions:
             r = s.get("reaction", {})
-            gv = "✓ grounded" if s.get("grounded_verified") else "○ unbestätigt"
+            gv = t("grounded_yes") if s.get("grounded_verified") else t("grounded_no")
             liked = "".join(f"<li>👍 {_esc(x)}</li>" for x in (r.get("liked") or [])[:3])
             fric = "".join(f"<li>⚠ {_esc(x)}</li>" for x in (r.get("friction") or [])[:3])
             sl.append(f'<div class="strow"><b>{_esc(s.get("persona_id",""))}</b> '
                       f'<span class="muted small">{gv}</span><div class="small" style="margin-top:3px">'
                       f'{_esc(str(r.get("verdict","")))}</div><ul class="small" style="margin:4px 0 0 16px">{liked}{fric}</ul></div>')
-        sessions_html = ("".join(sl)) or f'<div class="muted small">— {t("prototypes_h")}: keine Sessions —</div>'
+        sessions_html = ("".join(sl)) or f'<div class="muted small">— {t("prototypes_h")}: {t("no_sessions")} —</div>'
         body = (
             f'<div class="page"><h1 class="h1">{_esc(p["name"])} {fid} '
             f'<span class="muted small">{_esc(p.get("version",""))} · {_esc(slug)}</span></h1>'
-            f'<p class="lead"><a class="btn" href="{src}" target="_blank">{_icon("projects")} In neuem Tab öffnen ↗</a></p>'
+            f'<p class="lead"><a class="btn" href="{src}" target="_blank">{_icon("projects")} {t("open_in_new_tab")}</a></p>'
             f'<div class="protoframe"><iframe src="{src}" title="{_esc(p["name"])}" loading="lazy"></iframe></div>'
-            f'<div class="card" style="margin-top:16px"><b>{t("prototypes_h")} · Sessions ({len(sessions)})</b>'
+            f'<div class="card" style="margin-top:16px"><b>{t("prototypes_h")} · {t("sessions")} ({len(sessions)})</b>'
             f'<div style="margin-top:8px">{sessions_html}</div></div></div>')
         return _layout(p["name"], body, store, crumbs=crumbs, active="projects")

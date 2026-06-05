@@ -49,6 +49,29 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .sb-quick a:hover{background:var(--hover);color:var(--ink)}
 .sb-foot{padding:10px 14px;border-top:1px solid var(--line);font-size:12px}
 .sb-foot a{color:var(--muted)}.sb-foot a:hover{color:var(--accent)}
+/* ---- sidebar user / settings menu ---- */
+.usermenu{position:relative;border-top:1px solid var(--line);padding:8px}
+.um-trigger{width:100%;display:flex;align-items:center;gap:9px;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;cursor:pointer;color:var(--ink);font-size:13px;font-weight:500;font-family:inherit}
+.um-trigger:hover{background:var(--hover)}
+.usermenu.open .um-trigger{background:var(--hover)}
+.um-ava{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--violet));flex-shrink:0}
+.um-name{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.um-caret{color:var(--muted);display:inline-flex;transition:transform .15s var(--ease)}
+.um-caret .ic{width:16px;height:16px}
+.usermenu.open .um-caret{transform:rotate(180deg)}
+.um-pop{position:absolute;left:8px;right:8px;bottom:calc(100% + 4px);background:var(--overlay);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 44px rgba(0,0,0,.22);padding:10px;z-index:60}
+.um-pop[hidden]{display:none}
+.um-sec{margin-bottom:10px}
+.um-lbl{font-size:11px;letter-spacing:.02em;color:var(--faint);font-weight:600;margin:0 2px 6px}
+.seg{display:flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:3px}
+.segbtn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 4px;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-weight:500;text-decoration:none;font-family:inherit}
+.segbtn .ic{width:17px;height:17px}
+.segbtn:hover{color:var(--ink);background:var(--hover)}
+.segbtn.on{background:var(--panel);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.10)}
+.segbtn.on .ic{color:var(--accent)}
+.seg:not(.seg-theme) .segbtn{padding:8px 4px;font-size:12.5px;font-weight:600}
+.um-links{display:flex;gap:14px;padding:9px 2px 2px;border-top:1px solid var(--line-2);font-size:12px}
+.um-links a{color:var(--muted)}.um-links a:hover{color:var(--accent)}
 .rgwrap{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
 #rg{display:block;touch-action:none;cursor:grab}
 #rg.grabbing{cursor:grabbing}
@@ -368,7 +391,7 @@ input,select{font:inherit;border:1px solid var(--line);background:var(--panel);c
 }
 """
 
-HEAD_JS = '<script>try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>'
+HEAD_JS = '<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>'
 
 _RGRAPH_JS = """<script>
 (function(){

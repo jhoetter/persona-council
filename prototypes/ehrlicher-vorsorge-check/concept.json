@@ -1,0 +1,271 @@
+{
+  "title": "Kurz ehrlich: Was ist für dich GERADE wirklich wichtig?",
+  "summary": "Nach dem KFZ-Abschluss · kein Verkauf, kein Abschluss, kein Rückruf · HUK verdient hieran nichts",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "title": "Auto geregelt. Kurz was Ehrliches?",
+      "elements": [
+        {
+          "id": "intro_t1",
+          "kind": "text",
+          "label": "Deine KFZ-Versicherung ist abgeschlossen — fertig, nichts weiter nötig."
+        },
+        {
+          "id": "intro_t2",
+          "kind": "text",
+          "label": "Wir nutzen den Moment NICHT, um dir noch etwas zu verkaufen. Stattdessen: 2 Minuten, 5 ehrliche Fragen — was ist bei dir GERADE wirklich dran? Danach sagen wir dir geradeheraus, was für dich heute Sinn macht und was NICHT."
+        },
+        {
+          "id": "intro_t3",
+          "kind": "text",
+          "label": "Transparenz: An diesem Check verdient die HUK keinen Cent. Kein Abschluss, kein Anruf, kein Berater meldet sich."
+        },
+        {
+          "id": "intro_go",
+          "kind": "button",
+          "label": "Okay, 2 Minuten",
+          "goto": "q_auto",
+          "action": "q_auto"
+        },
+        {
+          "id": "intro_skip",
+          "kind": "button",
+          "label": "Nein danke, schließen",
+          "goto": "skip",
+          "action": "skip"
+        }
+      ]
+    },
+    {
+      "id": "q_auto",
+      "title": "1/5 · Dein Auto",
+      "elements": [
+        {
+          "id": "auto_t",
+          "kind": "text",
+          "label": "Wie wichtig ist dein Auto im Alltag — Job, Ausbildung, Mobilität?"
+        },
+        {
+          "id": "auto_sel",
+          "kind": "select",
+          "label": "Mein Auto ist...",
+          "options": [
+            "bitte wählen",
+            "Brauche ich täglich, ohne geht nichts",
+            "Wäre ärgerlich, aber ginge auch anders",
+            "Eher Hobby / selten"
+          ]
+        },
+        {
+          "id": "auto_go",
+          "kind": "button",
+          "label": "Weiter",
+          "goto": "q_miete",
+          "action": "q_miete"
+        }
+      ]
+    },
+    {
+      "id": "q_miete",
+      "title": "2/5 · Wohnen",
+      "elements": [
+        {
+          "id": "miete_t",
+          "kind": "text",
+          "label": "Wie wohnst du gerade?"
+        },
+        {
+          "id": "miete_sel",
+          "kind": "select",
+          "label": "Ich wohne...",
+          "options": [
+            "bitte wählen",
+            "Eigene Wohnung, Miete drückt",
+            "Noch zu Hause / WG, günstig",
+            "Gerade zusammengezogen"
+          ]
+        },
+        {
+          "id": "miete_go",
+          "kind": "button",
+          "label": "Weiter",
+          "goto": "q_job",
+          "action": "q_job"
+        }
+      ]
+    },
+    {
+      "id": "q_job",
+      "title": "3/5 · Job & Geld",
+      "elements": [
+        {
+          "id": "job_t",
+          "kind": "text",
+          "label": "Wie sicher fühlt sich dein Einkommen gerade an?"
+        },
+        {
+          "id": "job_sel",
+          "kind": "select",
+          "label": "Mein Einkommen ist...",
+          "options": [
+            "bitte wählen",
+            "Befristet / unsicher, jeder Euro zählt",
+            "Läuft stabil, aber kein Polster",
+            "Sicher, ich kann was zurücklegen"
+          ]
+        },
+        {
+          "id": "job_go",
+          "kind": "button",
+          "label": "Weiter",
+          "goto": "q_leben",
+          "action": "q_leben"
+        }
+      ]
+    },
+    {
+      "id": "q_leben",
+      "title": "4/5 · Wer hängt mit drin?",
+      "elements": [
+        {
+          "id": "leben_t",
+          "kind": "text",
+          "label": "Gibt es jemanden, der finanziell von dir abhängt?"
+        },
+        {
+          "id": "leben_sel",
+          "kind": "select",
+          "label": "Von mir hängt finanziell ab...",
+          "options": [
+            "bitte wählen",
+            "Nur ich, niemand sonst",
+            "Partner/in, gemeinsame Zukunft",
+            "Kind(er) / Familie, die ich versorge"
+          ]
+        },
+        {
+          "id": "leben_go",
+          "kind": "button",
+          "label": "Weiter",
+          "goto": "q_kind",
+          "action": "q_kind"
+        }
+      ]
+    },
+    {
+      "id": "q_kind",
+      "title": "5/5 · Was steht vielleicht an?",
+      "elements": [
+        {
+          "id": "kind_t",
+          "kind": "text",
+          "label": "Steht in absehbarer Zeit ein großer Lebensschritt an?"
+        },
+        {
+          "id": "kind_sel",
+          "kind": "select",
+          "label": "In Sicht ist...",
+          "options": [
+            "bitte wählen",
+            "Nichts Konkretes, läuft gerade so",
+            "Zusammenziehen / fester Job / Verbeamtung",
+            "Kind geplant / Hauskauf in Sicht"
+          ]
+        },
+        {
+          "id": "kind_go",
+          "kind": "button",
+          "label": "Ergebnis ehrlich zeigen",
+          "goto": "result",
+          "action": "result"
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "title": "Ehrlich: das ist HEUTE dein echtes Risiko",
+      "elements": [
+        {
+          "id": "res_t1",
+          "kind": "text",
+          "label": "Dein echtes Risiko gerade ist NICHT die Rente in 40 Jahren. Es ist konkreter und näher: ein kaputtes Auto, das dich den Job kostet. Ein Monat krank ohne Polster. Eine Nachzahlung, die das Konto sprengt."
+        },
+        {
+          "id": "res_t2",
+          "kind": "text",
+          "label": "Eine klassische Lebensversicherung brauchst du dafür GERADE wahrscheinlich nicht — die würde dein knappes Geld 40 Jahre festlegen und löst keines deiner Heute-Probleme. Ehrlich: lass die Finger davon, solange niemand finanziell von dir abhängt."
+        },
+        {
+          "id": "res_t3",
+          "kind": "text",
+          "label": "Der echte Moment für Absicherung deiner Arbeitskraft oder deiner Liebsten kommt später — wenn jemand von dir abhängt (Kind, gemeinsamer Kredit) oder dein Einkommen DAS ist, was deine Zukunft trägt. DANN lohnt das Gespräch, nicht heute."
+        },
+        {
+          "id": "res_go",
+          "kind": "button",
+          "label": "Verstanden — und das ist alles?",
+          "goto": "merker",
+          "action": "merker"
+        }
+      ]
+    },
+    {
+      "id": "merker",
+      "title": "Nur wenn DU willst: Merker für später",
+      "elements": [
+        {
+          "id": "merk_t1",
+          "kind": "text",
+          "label": "Kein Anruf, kein Newsletter, keine Lead-Liste. Wenn du magst, legst DU selbst fest, woran wir dich erinnern dürfen — und nur dann. Jederzeit löschbar."
+        },
+        {
+          "id": "merk_sel",
+          "kind": "select",
+          "label": "Erinnere mich (optional)...",
+          "options": [
+            "Gar nicht, ich melde mich selbst",
+            "Erst wenn ich zusammenziehe",
+            "Erst beim ersten festen Job / Verbeamtung",
+            "Erst wenn ein Kind geplant ist"
+          ]
+        },
+        {
+          "id": "merk_go",
+          "kind": "button",
+          "label": "Fertig",
+          "goto": "ende",
+          "action": "ende"
+        }
+      ]
+    },
+    {
+      "id": "ende",
+      "title": "Das war's. Wirklich.",
+      "elements": [
+        {
+          "id": "ende_t1",
+          "kind": "text",
+          "label": "Kein Haken, kein Rückruf. Dein Auto ist versichert, dein Geld bleibt bei dir, und du weißt jetzt, was heute wirklich zählt."
+        },
+        {
+          "id": "ende_t2",
+          "kind": "text",
+          "label": "Falls du irgendwann am echten Lebens-Moment bist: dann sind wir ehrlich für dich da. Bis dahin: nichts müssen."
+        }
+      ]
+    },
+    {
+      "id": "skip",
+      "title": "Alles gut.",
+      "elements": [
+        {
+          "id": "skip_t",
+          "kind": "text",
+          "label": "Kein Problem — dein Auto ist versichert, mehr braucht es gerade nicht. Schönen Tag."
+        }
+      ]
+    }
+  ]
+}

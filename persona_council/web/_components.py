@@ -5,6 +5,8 @@ import json
 import re
 from collections import Counter, defaultdict
 
+from persona_icons import icon as _persona_icon
+
 from .. import services
 from .. import presentation as _pres
 from ..storage import Store
@@ -12,31 +14,15 @@ from ..web_assets import CSS, HEAD_JS, _RGRAPH_JS, _SYN_STYLE, _SYN_SCRIPT  # no
 from ._i18n import t, _lang
 
 
-ICONS = {
-    "overview": '<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>',
-    "personas": '<svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6"/><path d="M17.5 19a5.5 5.5 0 0 0-3-4.9"/></svg>',
-    "councils": '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L4 20l1-4.5A8.5 8.5 0 1 1 21 11.5z"/></svg>',
-    "syntheses": '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
-    "projects": '<svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7l8 0M7 8l4 8M17 8l-4 8"/></svg>',
-    "memory": '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-4 4 3.5 3.5 0 0 0-1 6.8V17a3 3 0 0 0 5 2 3 3 0 0 0 5-2v-3.2A3.5 3.5 0 0 0 16 7a4 4 0 0 0-4-4z"/></svg>',
-    "panel": '<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>',
-    "sun": '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>',
-    "back": '<svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>',
-    "analytics": '<svg class="ic" viewBox="0 0 24 24"><path d="M3 21h18"/><rect x="5" y="11" width="3.4" height="7" rx="1"/><rect x="10.3" y="6" width="3.4" height="12" rx="1"/><rect x="15.6" y="13" width="3.4" height="5" rx="1"/></svg>',
-    "star": '<svg class="ic star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 17.9 6.8 20.6l1-5.8L3.5 9.7l5.9-.9z"/></svg>',
-    "bulb": '<svg class="ic" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.8 10.6c.5.5.8 1 .8 1.6V16h6v-.8c0-.6.3-1.1.8-1.6A6 6 0 0 0 12 3z"/></svg>',
-    "target": '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>',
-    "compass": '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2 5.2-5.2 2 2-5.2z"/></svg>',
-    "search": '<svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
-}
-
-
 def _esc(value: object) -> str:
     return html.escape(str(value))
 
 
 def _icon(name: str) -> str:
-    return ICONS.get(name, "")
+    # Chrome icons come from the shared persona-icons library (single source of
+    # truth in ../persona-icons; geometry authored in icons.data.mjs). Returns
+    # "" for unknown names, same as the old inline ICONS lookup.
+    return _persona_icon(name)
 
 
 _AV_COLORS = ["#3d7b5f", "#2f6f9f", "#a66b1f", "#7a5ea6", "#b3493f", "#4a7d7d", "#5a6b8a"]
@@ -80,7 +66,7 @@ def _crumbs_html(crumbs: list) -> str:
             parts.append(f'<span class="bc-cur" title="{_esc(label)}">{_esc(label)}</span>')
         if not last:
             parts.append('<span class="bc-sep" aria-hidden="true">›</span>')
-    return '<nav class="breadcrumb" aria-label="Seitenposition">' + "".join(parts) + "</nav>"
+    return f'<nav class="breadcrumb" aria-label="{_esc(t("breadcrumb_aria"))}">' + "".join(parts) + "</nav>"
 
 
 
@@ -88,16 +74,31 @@ APP_JS = """
 <script>
 (function(){
   var MIN=180,MAX=480,HIDE=32;
-  var app=document.getElementById('app'),rz=document.getElementById('rz'),tb=document.getElementById('sbt'),th=document.getElementById('thm');
+  var app=document.getElementById('app'),rz=document.getElementById('rz'),tb=document.getElementById('sbt');
   try{ if(localStorage.getItem('sidebar-open')==='false') app.classList.add('collapsed');
        var w=localStorage.getItem('sidebar-width'); if(w) app.style.setProperty('--sidebar-w',w+'px'); }catch(e){}
   function toggle(){ app.classList.toggle('collapsed');
     try{localStorage.setItem('sidebar-open',String(!app.classList.contains('collapsed')));}catch(e){} }
   if(tb) tb.addEventListener('click',toggle);
-  if(th) th.addEventListener('click',function(){
-    var cur=document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-    var nx=cur==='dark'?'light':'dark'; document.documentElement.dataset.theme=nx;
-    try{localStorage.setItem('theme',nx);}catch(e){} });
+  // ---- theme (sun / system / moon) + sidebar user menu ----
+  var um=document.getElementById('usermenu'),umb=document.getElementById('umbtn'),ump=document.getElementById('umpop');
+  function curTheme(){ try{return localStorage.getItem('theme')||'system';}catch(e){return 'system';} }
+  function markTheme(v){ document.querySelectorAll('[data-theme-set]').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-theme-set')===v); }); }
+  function applyTheme(v){
+    if(v==='light'||v==='dark') document.documentElement.dataset.theme=v;
+    else delete document.documentElement.dataset.theme;
+    try{localStorage.setItem('theme',v);}catch(e){} markTheme(v); }
+  document.querySelectorAll('[data-theme-set]').forEach(function(b){
+    b.addEventListener('click',function(){ applyTheme(b.getAttribute('data-theme-set')); }); });
+  markTheme(curTheme());
+  function setMenu(open){ if(!um) return; um.classList.toggle('open',open);
+    if(ump) ump.hidden=!open; if(umb) umb.setAttribute('aria-expanded',String(open)); }
+  if(umb) umb.addEventListener('click',function(e){ e.stopPropagation();
+    setMenu(!um.classList.contains('open')); });
+  document.addEventListener('click',function(e){
+    if(um && um.classList.contains('open') && !um.contains(e.target)) setMenu(false); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') setMenu(false); });
   var gmode=false,gt;
   document.addEventListener('keydown',function(e){
     var tag=(e.target.tagName||'').toLowerCase(); if(tag==='input'||tag==='textarea'||tag==='select') return;
@@ -136,13 +137,13 @@ APP_JS = """
     var favs=document.getElementById('favs'); if(!favs) return;
     var keys=Object.keys(m);
     favs.innerHTML='';
-    if(!keys.length){ var e=document.createElement('span'); e.className='muted small'; e.style.cssText='padding:5px 9px;display:block'; e.textContent='Mit Stern markieren'; favs.appendChild(e); return; }
+    if(!keys.length){ var e=document.createElement('span'); e.className='muted small'; e.style.cssText='padding:5px 9px;display:block'; e.textContent=__FAV_EMPTY__; favs.appendChild(e); return; }
     keys.forEach(function(k){ var f=m[k];
       var row=document.createElement('div'); row.className='favrow';
       var a=document.createElement('a'); a.href=f.href||'#'; a.title=f.label||'';
       var ic=document.createElement('span'); ic.className='favic'; ic.innerHTML=ICN[f.type]||''; a.appendChild(ic);
       a.appendChild(document.createTextNode(' '+(f.label||k)));
-      var x=document.createElement('button'); x.className='favx'; x.setAttribute('data-unstar',k); x.setAttribute('aria-label','Unstar'); x.title='Unstar'; x.textContent='\\u00d7';
+      var x=document.createElement('button'); x.className='favx'; x.setAttribute('data-unstar',k); x.setAttribute('aria-label',__UNSTAR__); x.title=__UNSTAR__; x.textContent='\\u00d7';
       row.appendChild(a); row.appendChild(x); favs.appendChild(row); });
   }
   document.addEventListener('click',function(e){
@@ -172,23 +173,56 @@ def _nav(active: str, store: Store) -> str:
     return f'<nav class="nav">{nav}</nav>{favs}'
 
 
+def _user_menu() -> str:
+    """Modern user/settings menu pinned to the bottom of the sidebar — a popover with a
+    sun/system/moon theme switch and a language switch (replaces the old topbar buttons)."""
+    cur = _lang()
+    themes = [("light", "sun", t("theme_light")), ("system", "monitor", t("theme_system")),
+              ("dark", "moon", t("theme_dark"))]
+    theme_opts = "".join(
+        f'<button type="button" class="segbtn" data-theme-set="{val}" '
+        f'title="{_esc(label)}" aria-label="{_esc(label)}">{_icon(icon)}<span>{_esc(label)}</span></button>'
+        for val, icon, label in themes
+    )
+    langs = [("de", "Deutsch", "DE"), ("en", "English", "EN")]
+    lang_opts = "".join(
+        f'<a class="segbtn{" on" if code == cur else ""}" href="?lang={code}" '
+        f'title="{_esc(full)}" aria-label="{_esc(full)}"><span>{short}</span></a>'
+        for code, full, short in langs
+    )
+    return (
+        '<div class="usermenu" id="usermenu">'
+        '<div class="um-pop" id="umpop" hidden>'
+        f'<div class="um-sec"><div class="um-lbl">{t("theme")}</div><div class="seg seg-theme">{theme_opts}</div></div>'
+        f'<div class="um-sec"><div class="um-lbl">{t("language")}</div><div class="seg">{lang_opts}</div></div>'
+        '<div class="um-links">'
+        f'<a href="/projects">{t("projects")}</a>'
+        f'<a href="https://github.com/jhoetter/persona-council" target="_blank" rel="noopener">{t("repo")}</a>'
+        '</div></div>'
+        '<button type="button" class="um-trigger" id="umbtn" aria-haspopup="true" aria-expanded="false">'
+        f'<span class="um-ava"></span><span class="um-name">{t("settings")}</span>'
+        f'<span class="um-caret">{_icon("chevron")}</span></button>'
+        '</div>'
+    )
+
+
 def _star(kind: str, ident: str, label: str, href: str) -> str:
     return (f'<button class="starbtn" data-star="{_esc(kind)}:{_esc(ident)}" data-href="{_esc(href)}" '
             f'data-label="{_esc(label)}" data-type="{_esc(kind)}" title="{_esc(t("favorite"))}" aria-label="{_esc(t("mark_as_favorite"))}">'
             f'{_icon("star")}</button>')
 
 
-_FAV_ICONS_JSON = json.dumps({"persona": ICONS["personas"], "council": ICONS["councils"], "synthesis": ICONS["syntheses"]})
+_FAV_ICONS_JSON = json.dumps({"persona": _icon("personas"), "council": _icon("councils"), "synthesis": _icon("syntheses")})
 
 
 def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
             active: str = "", actions: str = "") -> str:
     crumbs = crumbs or [(title, None)]
-    theme_btn = f'<button class="iconbtn" id="thm" title="{t("theme_toggle")}" aria-label="Theme">' + _icon("sun") + "</button>"
-    other = "en" if _lang() == "de" else "de"
-    lang_btn = (f'<a class="iconbtn" id="lang" href="?lang={other}" title="{_esc(t("lang_toggle"))}" '
-                f'aria-label="Language" style="font-size:11px;font-weight:600;text-decoration:none">{t("lang_short")}</a>')
-    app_js = APP_JS.replace("__FAV_ICONS__", _FAV_ICONS_JSON)
+    # Inject per-request translations into the static JS (client renders need them
+    # too — same __PLACEHOLDER__ -> t() pattern used for the voices chart).
+    app_js = (APP_JS.replace("__FAV_ICONS__", _FAV_ICONS_JSON)
+              .replace("__FAV_EMPTY__", json.dumps(t("mark_with_star")))
+              .replace("__UNSTAR__", json.dumps(t("unstar"))))
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_esc(title)} · Persona Council</title>
@@ -199,12 +233,12 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
   <aside class="sidebar">
     <div class="brand"><span class="mark"></span><a href="/">Persona&nbsp;Council</a></div>
     <div class="sb-scroll">{_nav(active, store)}</div>
-    <div class="sb-foot"><a href="/projects">{t("projects")}</a> · <a href="https://github.com/jhoetter/persona-council">{t("repo")}</a></div>
+    {_user_menu()}
   </aside>
   <div class="resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
   <div class="main">
     <header class="topbar"><button class="iconbtn" id="sbt" title="{t("sidebar")} ([)" aria-label="Sidebar">{_icon("panel")}</button>
-      {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}{lang_btn}{theme_btn}</span></header>
+      {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
 </div>{app_js}</body></html>"""
