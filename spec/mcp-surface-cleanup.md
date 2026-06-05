@@ -1,5 +1,14 @@
 # MCP surface cleanup — retire legacy, fix placement, signal the front door
 
+> **Status: ✅ IMPLEMENTED 2026-06-05 (suite green, pushed).** M1 retired the 6 legacy study-graph
+> tools (162→156). M2 demoted the 8 admin/maintenance tools to CLI-only (156→**148**). M3 relocated the
+> `delete_*` CRUD to its domain file (rest scoped out — zero agent impact). M4 made the proto_*/
+> prototype_* convention intentional in-code (no churn-rename). M5 rewrote the `research_guide` front
+> door (it taught the RETIRED legacy flow!) to the canonical ESV path + pointed the entry docstrings
+> (start_project/start_run) to the next step. Agent surface: 162 → 148, one graph engine, no
+> destructive admin tools, a discoverable happy path. A contract-test guard keeps the retired/admin
+> tools off the surface.
+
 > User: "make the MCP genuinely cleaner, get rid of legacy. Analyze deeply, define a spec tracker."
 > Findings from a full cross-reference of all **162** registered tools against actual skill/doc usage
 > + their service functions + their module-file placement. Tracked as M1–M5.

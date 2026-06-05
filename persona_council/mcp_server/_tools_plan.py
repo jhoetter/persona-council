@@ -14,8 +14,10 @@ def register_plan(mcp):
     @mcp.tool()
     def start_project(title: str, goal: str, methodology: str | None = None,
                       persona_ids: list[str] | None = None, description: str = "") -> dict[str, Any]:
-        """Create a project + seed its research plan (methodology -> analyze/act/verify scaffolding;
-        no methodology -> one dischargeable root frame task). The goal is the How-Might-We."""
+        """THE ENTRY POINT. Create a project + seed its research plan (methodology -> analyze/act/verify
+        scaffolding; none -> one dischargeable root frame task); the goal is the How-Might-We. NEXT:
+        start_run(project_id) then loop run_step. Read the `persona-council://guide/research` resource
+        (research_guide) for the full canonical path. (Personas should exist first — see list_personas.)"""
         t = time.perf_counter()
         return _env("start_project", services.start_project(title, goal, methodology, persona_ids, description), t)
 
@@ -93,7 +95,8 @@ def register_plan(mcp):
     @mcp.tool()
     def start_run(project_id: str, budget: int | None = None, run_id: str | None = None) -> dict[str, Any]:
         """Create (or resume) the run object that the driver advances over the plan. Returns the run +
-        its journal; pass an existing run_id to resume (idempotent)."""
+        its journal; pass an existing run_id to resume (idempotent). NEXT: loop run_step(run_id) —
+        execute each returned dispatch, then checkpoint_step — until kind=='done'."""
         t = time.perf_counter()
         return _env("start_run", services.start_run(project_id, budget, run_id), t)
 
