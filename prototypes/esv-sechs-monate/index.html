@@ -39,11 +39,11 @@
 </head>
 <body>
 <div id="lofi-banner">Lo-Fi · zum Testen, nicht final</div>
-<header><h1 id="apptitle">Sechs Monate ohne dich</h1><div class="sub" id="appsummary">Dein Haushalt — mit dir, und sechs Monate ohne dein Einkommen. Gleiche Familie, zwei Spalten. Kein Produkt, nur der Unterschied.</div></header>
+<header><h1 id="apptitle">Sechs Monate ohne dich</h1><div class="sub" id="appsummary">Gleiche Familie, zwei Spalten.</div></header>
 <nav id="nav"></nav>
 <main id="screens"></main>
 <div id="toast"></div>
-<script id="concept" type="application/json">{"title": "Sechs Monate ohne dich", "summary": "Dein Haushalt — mit dir, und sechs Monate ohne dein Einkommen. Gleiche Familie, zwei Spalten. Kein Produkt, nur der Unterschied.", "fidelity": "lofi", "start": "c", "screens": [{"id": "c", "title": "Zwei Spalten, dein Leben", "elements": [{"kind": "text", "id": "t", "label": "Der Unterschied ist das Einzige, was ein Schutz je abdecken würde."}], "columns": [{"id": "mit", "title": "Mit deinem Einkommen", "rows": [{"label": "Miete & Leben", "value": "gedeckt"}, {"label": "Kind / Angehörige", "value": "versorgt"}, {"label": "Puffer", "value": "wächst langsam"}]}, {"id": "ohne", "title": "6 Monate ohne dich", "badge": "die Lücke", "highlight": true, "rows": [{"label": "Miete & Leben", "value": "aus dem Polster — wie lange?"}, {"label": "Kind / Angehörige", "value": "hängt an anderen"}, {"label": "Puffer", "value": "schmilzt"}]}]}]}</script>
+<script id="concept" type="application/json">{"title": "Sechs Monate ohne dich", "summary": "Gleiche Familie, zwei Spalten.", "fidelity": "lofi", "start": "c", "screens": [{"id": "c", "title": "Der Unterschied", "elements": [{"kind": "text", "id": "t", "label": "Der Unterschied ist das Einzige, was ein Schutz je abdecken würde."}], "columns": [{"id": "m", "title": "Mit Einkommen", "rows": [{"label": "Miete", "value": "gedeckt"}]}, {"id": "o", "title": "6 Monate ohne", "badge": "Lücke", "highlight": true, "rows": [{"label": "Miete", "value": "aus dem Polster — wie lange?"}]}]}]}</script>
 <script>
 (function(){
   var C = JSON.parse(document.getElementById('concept').textContent);

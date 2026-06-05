@@ -191,15 +191,22 @@ def _methodology_layout(graph: dict) -> dict | None:
         bk = bs["key"]
         outs = consumers.get(bk, [])
         nxt = outs[0] if outs else bk
-        src = _match(pr.get("name", ""), bk)
+        # prefer the CONCEPT NOTE that realizes this prototype as its upstream idea (ESV: concepts are
+        # first-class; this gives the prototype an incoming edge so it doesn't float), else fuzzy-match.
+        cnote = next((n for n in graph["nodes"] if n.get("note_kind") == "concept"
+                      and n.get("prototype_id") == pr["id"]), None)
+        src = cnote or _match(pr.get("name", ""), bk)
         cx = (col_x[bk] + _NW + col_x[nxt]) / 2 - PW / 2
-        cy2 = pos[src["study_id"]][1] if src else AXIS
+        base = pos[src["study_id"]][1] if (src and not cnote) else AXIS
+        cy2 = base
         while round(cy2) in used_y.get(round(cx), set()):
             cy2 += 70
         used_y.setdefault(round(cx), set()).add(round(cy2))
         proto_pos[pr["id"]] = (cx, cy2)
+        if cnote:                                                    # place the concept just left of its prototype
+            pos[cnote["study_id"]] = (cx - COLW * 0.5, cy2)
         if src:
-            proto_edges.append((src["study_id"], pr["id"], False))   # idea → artifact (solid)
+            proto_edges.append((src["study_id"], pr["id"], False))   # idea/concept → artifact (solid)
         # tested-at: the nearest downstream decide step requiring a session of one of this artifact's tags
         test_step = None
         for s in sorted(steps, key=lambda s: depth[s["key"]]):
@@ -211,6 +218,13 @@ def _methodology_layout(graph: dict) -> dict | None:
                 test_step = s; break
         if test_step:
             proto_edges.append((pr["id"], test_step["convergence_node"], True))  # artifact → tested-at (dashed)
+    # un-prototyped concept notes: stack them in the ideation column (their plan_graph edge to the
+    # down-select synthesis then renders) so no concept floats in the far-right dump.
+    ideate_x = col_x.get(build_steps[0]["key"], X0) if build_steps else X0
+    st = 0
+    for n in graph["nodes"]:
+        if n.get("note_kind") == "concept" and not n.get("prototype_id"):
+            pos[n["study_id"]] = (ideate_x, AXIS - 150 - st * 72); st += 1
     return {"pos": pos, "diamonds": diamonds, "proto_pos": proto_pos, "proto_edges": proto_edges, "proto_w": PW}
 
 

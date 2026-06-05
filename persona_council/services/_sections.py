@@ -283,9 +283,14 @@ def note_graph_nodes(project: dict) -> list[dict[str, Any]]:
     out = []
     for n in _notes(project):
         title = n.get("title") or n.get("text", "")[:60]
-        out.append({"study_id": f"note:{n['id']}", "kind": "note", "title": title, "phase": "",
-                    "bucket": "", "created_at": n.get("created_at", ""), "council_count": 0,
-                    "voices": 0, "sentiment": {}, "recommendations": 0, "role": "", "mode": "",
-                    "theme_tags": ["note"], "color": pres["color"], "kind_label": pres["label"],
+        nkind = n.get("kind") or "note"
+        data = n.get("data") or {}
+        is_concept = nkind == "concept"
+        out.append({"study_id": f"note:{n['id']}", "kind": "note", "note_kind": nkind,
+                    "prototype_id": data.get("prototype_id"), "lens": data.get("lens", ""),
+                    "title": title, "phase": "", "bucket": "", "created_at": n.get("created_at", ""),
+                    "council_count": 0, "voices": 0, "sentiment": {}, "recommendations": 0, "role": "", "mode": "",
+                    "theme_tags": [nkind], "color": ("#a142f4" if is_concept else pres["color"]),
+                    "kind_label": ("Konzept" if is_concept else pres["label"]),
                     "href": f"/notes/{n['id']}"})
     return out
