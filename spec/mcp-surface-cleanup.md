@@ -54,6 +54,13 @@ or each into its domain file; persona/calendar tools → `_tools_personas.py`; e
 behaviour change. **Acceptance:** every tool's file matches its domain; tool count + names unchanged;
 suite green. (This is dev-clarity, not user-facing, but it's why the surface *feels* accidental.)
 
+> **Status (2026-06-05): headline relocation DONE, remainder SCOPED OUT.** The `delete_*` CRUD block
+> moved out of `_tools_prototypes.py` into `_tools_research.py` (its project/artifact domain). The
+> remaining intra-file moves (`brief_month`/`record_month_bundle` + `brief_evidence_check`/
+> `record_evidence_check` in prototypes; the persona/calendar reads in council) are **deferred**: the
+> AGENT addresses tools by NAME, not file, so file placement has **zero agent-surface impact** — it's
+> human-dev tidiness only, and the churn/risk isn't worth it right now. Names + counts unchanged.
+
 ## M4 — Standardize NAMING drift
 - Prototype tools mix prefixes: `proto_open`/`proto_read`/`proto_act`/`proto_close` +
   `list_proto_sessions` vs `run_prototype`/`scaffold_prototype`/`stop_prototype`/`get_prototype`/

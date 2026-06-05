@@ -79,3 +79,29 @@ def register_research(mcp):
         """Render the assembled meta-report (md or json)."""
         t = time.perf_counter()
         return _env("export_meta_report", services.export_meta_report(project_id, report_id, format), t)
+
+    # ----- Deletes (CRUD complete; MCP/CLI-only, never the read-only UI). Relocated here (M3): these
+    # are research-artifact deletions (project/synthesis/council/persona), not prototype tools. -----
+    @mcp.tool()
+    def delete_research_project(project_id: str) -> dict[str, Any]:
+        """Delete a project container + its edges/open-questions/meta-reports. Syntheses are kept."""
+        t = time.perf_counter()
+        return _env("delete_research_project", services.delete_research_project(project_id), t)
+
+    @mcp.tool()
+    def delete_synthesis(synthesis_id: str) -> dict[str, Any]:
+        """Delete a synthesis (study) and detach it from any project graphs."""
+        t = time.perf_counter()
+        return _env("delete_synthesis", services.delete_synthesis(synthesis_id), t)
+
+    @mcp.tool()
+    def delete_council(session_id: str) -> dict[str, Any]:
+        """Delete a council session."""
+        t = time.perf_counter()
+        return _env("delete_council", services.delete_council(session_id), t)
+
+    @mcp.tool()
+    def delete_persona(persona_id: str) -> dict[str, Any]:
+        """Delete a persona + all its persona-scoped rows and rendered SOUL/avatar files."""
+        t = time.perf_counter()
+        return _env("delete_persona", services.delete_persona(persona_id), t)

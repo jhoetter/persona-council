@@ -111,32 +111,7 @@ def register_prototypes(mcp):
         return _env("record_prototype_session",
                     services.record_prototype_session(persona_id, prototype_id, session_id, date, reaction, key), t)
 
-    # ----- Deletes (CRUD complete; delete is MCP/CLI-only, never the read-only UI) -----
-    @mcp.tool()
-    def delete_research_project(project_id: str) -> dict[str, Any]:
-        """Delete a project container + its edges/open-questions/meta-reports. Syntheses are kept."""
-        t = time.perf_counter()
-        return _env("delete_research_project", services.delete_research_project(project_id), t)
-
-    # remove_study_from_project / unlink_studies — RETIRED (legacy study-graph; M1). CLI keeps them.
-
-    @mcp.tool()
-    def delete_synthesis(synthesis_id: str) -> dict[str, Any]:
-        """Delete a synthesis (study) and detach it from any project graphs."""
-        t = time.perf_counter()
-        return _env("delete_synthesis", services.delete_synthesis(synthesis_id), t)
-
-    @mcp.tool()
-    def delete_council(session_id: str) -> dict[str, Any]:
-        """Delete a council session."""
-        t = time.perf_counter()
-        return _env("delete_council", services.delete_council(session_id), t)
-
-    @mcp.tool()
-    def delete_persona(persona_id: str) -> dict[str, Any]:
-        """Delete a persona + all its persona-scoped rows and rendered SOUL/avatar files."""
-        t = time.perf_counter()
-        return _env("delete_persona", services.delete_persona(persona_id), t)
+    # M3 — the delete_* CRUD tools moved to _tools_research.py (their project/artifact domain).
 
     # ----- F3 autonomous loop driver -----
     @mcp.tool()
