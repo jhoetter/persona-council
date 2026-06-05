@@ -568,6 +568,14 @@ def _artifact_palette() -> list[dict[str, Any]]:
         return []
 
 
+def _ideation_lenses() -> list[dict[str, Any]]:
+    try:
+        from . import presentation as _pres
+        return _pres.ideation_lenses()
+    except Exception:
+        return []
+
+
 def _diverse_participants(store: Store, persona_ids: list[str], k: int = 6) -> list[str]:
     """Pick up to k personas SPREAD across a segment axis (attitude/life-stage), so a council gets
     real diversity rather than keyword-matched look-alikes (anti-steering)."""
@@ -630,6 +638,7 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
             "suggested_participants": _diverse_participants(store, persona_ids, k=6),
             "artifact_palette": _artifact_palette(),
             "divergence": _DIVERGENCE_NUDGES,
+            "ideation_lenses": _ideation_lenses(),
             "guidance": ("Add an act task per ANGLE; run a REAL multi-persona council, or "
                          "scaffold_artifact + a grounded proband session; link_evidence + complete. "
                          "Breadth = angles × persona diversity, not one council per persona."),

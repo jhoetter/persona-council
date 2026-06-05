@@ -19,7 +19,7 @@
     },
     {
       "id": "ideate", "name": "Ideate (Lo-Fi)", "tags": ["explore", "build", "solution-options"],
-      "intent": "Generate many distinct solution concepts for the key problem(s) — one exploration per idea — then build SEVERAL lo-fi prototypes of the strongest ones, DIVERSE IN KIND (see next_action.act.artifact_palette: a guided flow, a comparison, an overview, a card interface, an interactive MODEL that lets a persona steer numbers/a curve — not N forms). Include >=1 deliberately extreme 'dark-horse' concept. Go broad before judging.",
+      "intent": "Generate many distinct solution concepts — push for genuine NON-OBVIOUS innovation, not incremental UX tweaks. Apply the creativity lenses in next_action.act.ideation_lenses (cross-domain analogy, make-the-invisible-EXPERIENCEABLE via an interactive model/simulation, provocation/reversal, extreme-user, mechanism-transfer, hybrid, subtract-the-obvious, honest anti-goal); at least ONE concept must carry a mechanism you did not expect at the start. Then build SEVERAL lo-fi prototypes DIVERSE IN KIND (next_action.act.artifact_palette: a guided flow, a comparison, an overview, a card interface, an interactive MODEL the persona steers — not N forms), including >=1 deliberately extreme 'dark-horse'. Go broad before judging.",
       "strategy": "positive-deepdive", "consumes": ["define"], "diverge_by": "solution_candidate",
       "produces": {"role": "solution-options", "artifact_type": "prototype", "more_tags": ["lofi"]}
     },

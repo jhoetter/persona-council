@@ -1,0 +1,22 @@
+{
+  "kind": "ideation_lenses",
+  "note": "SUGGESTED creativity lenses surfaced on ideation/act steps (next_action.act.ideation_lenses) to push the solution space toward NON-OBVIOUS, innovative concepts instead of incremental UX tweaks. Domain-agnostic techniques (not design-thinking vocabulary, not a closed engine enum) — adopt, adapt, or invent your own. The goal is genuine novelty: at least one concept should carry a mechanism the team did not expect at the start.",
+  "items": [
+    {"tag": "analogy", "label": "Cross-domain analogy",
+     "prompt": "Find a DIFFERENT domain that solved a structurally identical problem (gaming, fitness, dating, banking, public health, logistics) and transplant its mechanism. e.g. how do fitness apps make an invisible future (your body in 20 years) feel urgent today?"},
+    {"tag": "experienceable", "label": "Make the invisible experienceable",
+     "prompt": "If the core barrier is an abstraction the user cannot FEEL (a future, a risk, compounding, a gap), don't explain it — let them EXPERIENCE it. Build an interactive `model`/simulation (range/number inputs → a live computed outcome/curve) so they steer their own numbers and feel the consequence. This is often the single most innovative move."},
+    {"tag": "reversal", "label": "Provocation / reversal (PO)",
+     "prompt": "Invert a fixed assumption and design from the absurdity: 'what if it cost nothing', 'what if it actively refused to sell to you', 'what if the user taught it', 'what if it only appeared once a year'. Keep what survives the inversion."},
+    {"tag": "extreme_user", "label": "Extreme / edge user",
+     "prompt": "Design for the most EXTREME version of the user (the most broke, most skeptical, most time-poor, most expert). A solution that works for the extreme usually generalizes and is bolder than designing for the average."},
+    {"tag": "mechanism_transfer", "label": "Mechanism transfer from their own life",
+     "prompt": "Take a mechanism the user ALREADY trusts and uses elsewhere in their life (a habit, a ritual, a tool, a social proof loop) and transplant it onto this problem so the new thing inherits existing trust/behaviour."},
+    {"tag": "combine", "label": "Hybrid / combine two",
+     "prompt": "Fuse two individually-weak concepts into one stronger hybrid; the novelty is in the combination, not either part."},
+    {"tag": "remove", "label": "Subtract the obvious",
+     "prompt": "Take the conventional solution and REMOVE its most defining element (the form, the price, the human, the account, the pitch). What remains is often the innovative core."},
+    {"tag": "anti_goal", "label": "Honest anti-goal",
+     "prompt": "A concept whose explicit job is to tell most users 'no / not yet' and route them away can win more trust (and be more novel) than one that tries to convert everyone. Make the honest 'no' a feature."}
+  ]
+}

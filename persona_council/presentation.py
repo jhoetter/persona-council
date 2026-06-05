@@ -50,6 +50,8 @@ def _hints() -> dict[str, dict[str, Any]]:
             data = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             continue
+        if data.get("kind") == "ideation_lenses":
+            continue  # creativity lenses are not presentation tags; read via ideation_lenses()
         for item in data.get("items", []) or []:
             tag = item.get("tag")
             if not tag:
@@ -107,6 +109,23 @@ def discriminator_tags(type_tag: str) -> list[str]:
     """Tags declared as discriminators of an artifact type (data-driven; e.g. the fidelity
     ladder lofi/midfi/hifi under `prototype`). No fidelity vocabulary is hardcoded in code."""
     return [t for t, v in _hints().items() if v.get("_parent") == type_tag]
+
+
+@lru_cache(maxsize=1)
+def ideation_lenses() -> list[dict[str, Any]]:
+    """SUGGESTED creativity lenses (DATA) surfaced on ideation steps to push the solution space toward
+    non-obvious, innovative concepts (analogy, make-the-invisible-experienceable→simulation, reversal,
+    extreme-user, …). Pure suggestion; editable in suggestions/ideation_lenses.json."""
+    import json
+    p = suggestions_dir() / "ideation_lenses.json"
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    return [{"tag": i.get("tag", ""), "label": i.get("label", ""), "prompt": i.get("prompt", "")}
+            for i in data.get("items", []) or [] if i.get("prompt")]
 
 
 def artifact_palette() -> list[dict[str, Any]]:

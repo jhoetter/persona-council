@@ -338,3 +338,17 @@ def test_next_action_act_surfaces_artifact_palette_and_divergence_nudges(store):
     assert {"flow", "comparison", "model"} <= tags          # varied non-form archetypes, incl. model
     nudges = " ".join(act["divergence"]).lower()
     assert "dark-horse" in nudges and "disconfirmation" in nudges and "model" in nudges
+
+
+def test_next_action_act_surfaces_ideation_lenses_for_innovation(store):
+    """Innovation: an act step surfaces data-driven creativity lenses (analogy, make-the-invisible-
+    EXPERIENCEABLE→simulation, reversal, …) so ideation pushes for non-obvious concepts, not tweaks."""
+    proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__root", ["q?"], memory_refs=["m1"], store=store)
+    services.add_task(pid, "act", "ideate", "ideas", consumes=["frame__root"], store=store)
+    act = services.next_action(pid, store=store)["act"]
+    lenses = {l["tag"] for l in act["ideation_lenses"]}
+    assert {"analogy", "experienceable", "reversal"} <= lenses
+    exp = next(l for l in act["ideation_lenses"] if l["tag"] == "experienceable")
+    assert "model" in exp["prompt"].lower() or "simulation" in exp["prompt"].lower()
