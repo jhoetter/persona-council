@@ -133,7 +133,16 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 /* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
 .outline .olrow.rel{background:var(--accent-weak)}
-.outline .olrow.dim{opacity:.32}
+.outline .olrow.dim{opacity:.42}
+/* themes — cross-cutting labels (Linear-style): a filter bar + per-row dots; activating a theme
+   highlights its members (.rel) and dims the rest (.dim). */
+.olthemes{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:1000px;margin:4px auto 2px;padding:0 24px}
+.olth-l{font-size:12px;color:var(--faint);margin-right:2px}
+.olth-chip{display:inline-flex;align-items:center;gap:6px;max-width:230px;padding:3px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--muted);font-size:12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.olth-chip:hover{background:var(--hover)}
+.olth-chip.on{border-color:transparent;background:var(--accent-weak);color:var(--accent);font-weight:600}
+.olth-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.olth-dots{display:inline-flex;gap:3px;flex-shrink:0;margin-right:8px}
 /* view toggle (Outline / Graph) */
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}

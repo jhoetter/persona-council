@@ -636,30 +636,40 @@ def _outline_html(graph: dict) -> str:
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
                 f'/prototypes/{p["slug"]}', ideation, 0, p.get("created_at", ""))
 
-    # relationship adjacency (for hover-highlight): plan-evidence edges + concept↔prototype links
-    rel: dict[str, set] = {}
-
-    def link(a, b):
-        if a and b and a != b:
-            rel.setdefault(a, set()).add(b); rel.setdefault(b, set()).add(a)
-
-    for e in graph.get("edges", []):
-        link(e.get("from_study"), e.get("to_study"))
-    for c in concepts:
-        for p in pro_of.get(c["study_id"], []):
-            link(c["study_id"], p["id"])
+    # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
+    # "Prototypen-Leiter", "Konzepte (Ideation)" … (phase/journal sections are skipped — phase already
+    # shows as the per-row tag). Shown Linear-style: a filter bar + per-row dots; activating a theme
+    # highlights its (coherent) members and dims the rest — deliberate, not the overwhelming raw-edge hover.
+    _TH_COLORS = ["#6d5ef0", "#0f9d8f", "#e0820a", "#c0476b", "#3a7bd5", "#8a6d3b", "#4a7d7d"]
+    themes = [s for s in graph.get("sections", []) if s.get("kind") == "theme" and s.get("member_ids")]
+    th_color = {s["id"]: _TH_COLORS[i % len(_TH_COLORS)] for i, s in enumerate(themes)}
+    node_themes: dict[str, list] = {}
+    for ti, s in enumerate(themes):
+        for m in s.get("member_ids", []):
+            node_themes.setdefault(m, []).append(ti)
 
     def row(it: dict) -> str:
         h = f' href="{_esc(it["href"])}"' if it["href"] else ""
         tw = "ol-tw" if it["indent"] else ""                  # tree connector for nested rows
-        return (f'<a class="olrow {tw}" data-oid="{_esc(it["oid"])}" '
+        tis = node_themes.get(it["oid"], [])
+        dots = "".join(f'<span class="olth-dot" style="background:{th_color[themes[i]["id"]]}" '
+                       f'title="{_esc(themes[i]["title"])}"></span>' for i in tis)
+        return (f'<a class="olrow {tw}" data-oid="{_esc(it["oid"])}" data-th="{" ".join(map(str, tis))}" '
                 f'style="padding-left:{10 + it["indent"] * 26}px"{h}>'
                 f'<span class="ol-dot" style="background:{it["color"]}"></span>'
                 f'<span class="ol-ptag">{_esc(it["plabel"])}</span>'
                 f'<span class="ol-title">{_esc(it["title"])}</span>'
+                f'<span class="olth-dots">{dots}</span>'
                 f'<span class="ol-kind">{_esc(it["kind"])}</span></a>')
 
-    out = ['<div class="outline">']
+    out = []
+    if themes:                                                # theme filter bar (cross-cutting lens)
+        chips = "".join(
+            f'<button class="olth-chip" data-ti="{i}"><span class="olth-dot" '
+            f'style="background:{th_color[s["id"]]}"></span>{_esc(s["title"])}</button>'
+            for i, s in enumerate(themes))
+        out.append(f'<div class="olthemes"><span class="olth-l">{t("themes_h")}</span>{chips}</div>')
+    out.append('<div class="outline">')
     if nrounds > 1:
         for r in range(nrounds):
             ris = sorted((it for it in items if it["round"] == r), key=lambda it: (it["po"], it["order"]))
@@ -672,16 +682,20 @@ def _outline_html(graph: dict) -> str:
         ris = sorted(items, key=lambda it: (it["po"], it["order"]))
         out.append(f'<div class="ol-flat">{"".join(row(it) for it in ris)}</div>')
     out.append("</div>")
-    relj = json.dumps({k: sorted(v) for k, v in rel.items()}, ensure_ascii=False)
-    out.append(
-        "<script>(function(){var R=" + relj + ";"
-        "var rows=document.querySelectorAll('.outline .olrow[data-oid]');"
-        "function clr(){rows.forEach(function(o){o.classList.remove('rel','dim');});}"
-        "rows.forEach(function(r){"
-        "r.addEventListener('mouseenter',function(){var id=r.getAttribute('data-oid'),nb=R[id]||[];"
-        "rows.forEach(function(o){var x=o.getAttribute('data-oid');"
-        "if(x===id||nb.indexOf(x)>=0){o.classList.add('rel');o.classList.remove('dim');}"
-        "else{o.classList.add('dim');o.classList.remove('rel');}});});"
-        "r.addEventListener('mouseleave',clr);});})();</script>"
-    )
+    if themes:
+        out.append(
+            "<script>(function(){"
+            "var chips=document.querySelectorAll('.olth-chip'),rows=document.querySelectorAll('.outline .olrow[data-oid]'),act=null;"
+            "function apply(){rows.forEach(function(r){if(act===null){r.classList.remove('rel','dim');return;}"
+            "var on=(' '+r.getAttribute('data-th')+' ').indexOf(' '+act+' ')>=0;"
+            "r.classList.toggle('rel',on);r.classList.toggle('dim',!on);});}"
+            "chips.forEach(function(c){var ti=c.getAttribute('data-ti');"
+            "function hi(){if(act!==null)return;rows.forEach(function(r){var on=(' '+r.getAttribute('data-th')+' ').indexOf(' '+ti+' ')>=0;"
+            "r.classList.toggle('rel',on);r.classList.toggle('dim',!on);});}"
+            "function lo(){if(act===null)rows.forEach(function(r){r.classList.remove('rel','dim');});}"
+            "c.addEventListener('mouseenter',hi);c.addEventListener('mouseleave',lo);"
+            "c.addEventListener('click',function(){act=(act===ti?null:ti);"
+            "chips.forEach(function(x){x.classList.toggle('on',x.getAttribute('data-ti')===act);});apply();});});"
+            "})();</script>"
+        )
     return "".join(out)
