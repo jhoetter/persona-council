@@ -1,6 +1,6 @@
 # Exploration depth & prototype variety — observation tracker
 
-> **Status:** OBSERVATION LOG (build-ready findings accumulate here; not yet implemented).
+> **Status:** OBSERVATION LOG → **ALL FINDINGS IMPLEMENTED 2026-06-05** (see "IMPLEMENTED" below).
 > **Purpose:** while an autonomous agent runs a design-thinking project end-to-end, watch HOW it works
 > and capture **generalizable** harness/spec improvements so the methodology can reach surprising,
 > mechanism-level depth and build genuinely interesting prototypes — **not** collapse to "first council
@@ -34,6 +34,33 @@
    non-targets preserved (anti-steering).
 5. **Generalization.** None of the above is hardcoded; an invented methodology + invented artifact
    types would get the same depth from the same primitives.
+
+---
+
+## IMPLEMENTED (2026-06-05) — all gaps fixed, suite green, pushed
+Every fix is a DATA/capability change (no hardcoded methodology/design-thinking vocabulary); each
+landed with a regression test and a green suite. The fixes apply to FUTURE runs — the in-flight
+worker's MCP server holds the pre-fix code in memory, so re-run (or restart the server) to see them.
+- **GAP-3** ✅ — `validate_synthesis_payload` now preserves `clusters/key_problems/ranking/shortlist`;
+  `record_synthesis` threads them + keeps prior values on additive updates + returns a `SYNTHESIS_THIN`
+  warning; the web synthesis view + markdown export render them. (commit "fix(GAP-3)…")
+- **GAP-5** ✅ — browser keeps each session's observed-state log past `close()` (`_RETAINED_LOGS`), so a
+  drive→close→record still verifies; `record_prototype_session` returns `UNVERIFIED_SESSION` when
+  ungrounded while Playwright is available; a `session_of_tags` gate requires a GROUNDED session when
+  verifiable; `assess_project` surfaces the ungrounded count. (commit "fix(GAP-5)…")
+- **GAP-1** ✅ — a data-driven `model` artifact type + `spa-model` template with `range/number/computed/
+  bar` element kinds whose `formula` is evaluated live by a safe no-`eval` recursive-descent evaluator;
+  verified end-to-end via Playwright (a 100€/mo × 12 × 40y model renders 48 000 live). `resolve_template`
+  scopes discriminators to their type. (commit "feat(GAP-1)…")
+- **GAP-4** ✅ — `_validate_concept` normalizes string `goto`/`action` + validates every nav target
+  (elements AND screen-level cards/options) resolves to a real screen — no silently-dead prototype.
+  (commit "fix(GAP-4)…")
+- **GAP-2 / SPEC-A** ✅ — `next_action` act step surfaces the `artifact_palette` (from data, incl. the
+  interactive model) + methodology-agnostic divergence nudges (diversify KIND; ≥1 dark-horse; a
+  disconfirmation council). (commit "feat(GAP-2/SPEC-A)…")
+
+_Live-run progress at implementation time: reached the **mid-fi solution presentation** (18/20 tasks;
+3 syntheses, 6 prototypes incl. 1 mid-fi), hi-fi rung remaining._
 
 ---
 
