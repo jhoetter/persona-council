@@ -47,7 +47,7 @@ def register_research(mcp):
         t = time.perf_counter()
         return _env("get_research_frontier", services.get_research_frontier(project_id), t)
 
-    # M2 — backfill_project_from_syntheses is a one-time MIGRATION, CLI-only (off the agent surface).
+    # backfill_project_from_syntheses fully RETIRED (a one-time study-graph migration).
 
     # ----- Meta-Report: second-order synthesis over a whole project graph -----
     @mcp.tool()
