@@ -242,16 +242,19 @@ def register_pages(app) -> None:
             return _layout(t("not_found"), _empty_state(t("activity_not_found"), t("runtime_maybe_cleared")), store, active="personas")
         p = data["persona"]; a = data["activity"]
         alone_label = t("alone")
-        main = f"""
-        {_hero(a["task"], sub=f'{a["timestamp"]} · {a["event_type"]} · {a.get("collaboration_mode","unknown")}')}
-        <div class="grid two">
-          <div class="card"><h3>{t("what_happened")}</h3><p>{_esc(a.get("what_happened", a["summary"]))}</p></div>
-          <div class="card"><h3>{t("thought")}</h3><p class="thought">{_esc(a.get("persona_thought","—"))}</p></div></div>
-        <div class="sec"><h2>{t("conversation")}</h2>{''.join(f'<div class="quote"><strong>{_esc(c.get("speaker",""))}</strong><br>{_esc(c.get("text",""))}</div>' for c in a.get("conversation", [])) or f'<p class="muted">{t("none_f")}</p>'}</div>
-        <div class="grid"><div class="card"><h3>{t("actions")}</h3>{_pills(a.get("actions_done", [])) or '—'}</div>
-          <div class="card"><h3>{t("artifacts")}</h3>{_pills(a.get("artifacts_touched", [])) or '—'}</div>
-          <div class="card"><h3>{t("open_loops")}</h3>{_pills(a.get("open_loops", [])) or '—'}</div></div>
-        """
+        conv = [h("div", {"class_": "quote"}, h("strong", {}, c.get("speaker", "")), h("br"), c.get("text", ""))
+                for c in a.get("conversation", [])]
+        main = fragment(
+            _hero(a["task"], sub=f'{a["timestamp"]} · {a["event_type"]} · {a.get("collaboration_mode","unknown")}'),
+            h("div", {"class_": "grid two"},
+              h("div", {"class_": "card"}, h("h3", {}, t("what_happened")), h("p", {}, a.get("what_happened", a["summary"]))),
+              h("div", {"class_": "card"}, h("h3", {}, t("thought")), h("p", {"class_": "thought"}, a.get("persona_thought", "—")))),
+            h("div", {"class_": "sec"}, h("h2", {}, t("conversation")),
+              fragment(*conv) if conv else h("p", {"class_": "muted"}, t("none_f"))),
+            h("div", {"class_": "grid"},
+              h("div", {"class_": "card"}, h("h3", {}, t("actions")), raw(_pills(a.get("actions_done", [])) or "—")),
+              h("div", {"class_": "card"}, h("h3", {}, t("artifacts")), raw(_pills(a.get("artifacts_touched", [])) or "—")),
+              h("div", {"class_": "card"}, h("h3", {}, t("open_loops")), raw(_pills(a.get("open_loops", [])) or "—"))))
         props = _properties_html([
             ("personas", t("persona"), f'<a class="bc-link" href="/personas/{_esc(p["id"])}">{_esc(p["display_name"])}</a>'),
             ("square", t("tool"), _esc(a["tool"])),
@@ -405,26 +408,26 @@ def register_pages(app) -> None:
         voices_label = t("council_voices_answers") if mode == "discovery" else voices_detail_h
         if mode == "discovery":
             qs = session.get("questions") or ([session.get("prompt")] if session.get("prompt") else [])
-            qlist = "".join(f'<li>{_esc(q)}</li>' for q in qs) or f'<li class="muted">—</li>'
-            lead_block = (f'<div class="es"><div class="eyebrow">{t("council_questions_h")}</div>'
-                          f'<ul class="es-prose">{qlist}</ul>'
-                          f'<p class="muted small">{t("council_questions_help", n=n_voices)}</p></div>')
+            qlist = [h("li", {}, q) for q in qs] or [h("li", {"class_": "muted"}, "—")]
+            lead_block = h("div", {"class_": "es"}, h("div", {"class_": "eyebrow"}, t("council_questions_h")),
+                           h("ul", {"class_": "es-prose"}, qlist),
+                           h("p", {"class_": "muted small"}, t("council_questions_help", n=n_voices)))
             sentiment = ""                                    # a listening session has no vote/sentiment chart
         else:
             motion = (session.get("proposal") or "").strip()
             label = t("council_eval_h") if mode == "evaluation" else t("council_motion")
             help_ = t("council_eval_help", n=n_voices) if mode == "evaluation" else t("council_motion_help", n=n_voices)
-            lead_block = (f'<div class="es"><div class="eyebrow">{label}</div>'
-                          f'<div class="es-prose">&bdquo;{_esc(motion)}&ldquo;</div>'
-                          f'<p class="muted small">{help_}</p></div>') if motion else ""
+            lead_block = (h("div", {"class_": "es"}, h("div", {"class_": "eyebrow"}, label),
+                            h("div", {"class_": "es-prose"}, "„", motion, "“"),
+                            h("p", {"class_": "muted small"}, help_)) if motion else "")
             sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
-        main = (f'{_hero(session["prompt"], sub=council_sub, hid="sec-question")}'
-                f'{lead_block}'
-                f'{_study_lead(exec_html, vm["answer_label"])}'
-                f'{sentiment}'
-                f'<div class="sec" id="stimmen"><h2>{voices_label}</h2>{turns_html}</div>'
-                f'<details class="sec"><summary>{summary_h}</summary><div class="card"><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
+        main = fragment(
+            raw(_hero(session["prompt"], sub=council_sub, hid="sec-question")),
+            raw(lead_block), raw(_study_lead(exec_html, vm["answer_label"])), raw(sentiment),
+            h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, voices_label), raw(turns_html)),
+            h("details", {"class_": "sec"}, h("summary", {}, summary_h),
+              h("div", {"class_": "card"}, h("strong", {}, summary_h), h("p", {}, session["summary"]))))
         prop_rows = [("councils", t("type_h"), t("council_mode_" + mode)), ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
             vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
