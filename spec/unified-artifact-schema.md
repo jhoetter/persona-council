@@ -1,6 +1,6 @@
 # Unified artifact schema — one set of primitives across all artifacts
 
-Status: **proposed** (2026-06-06). Author: design analysis triggered by "we have too many data concepts
+Status: **Phase 0-2 implemented + Phase 3 backfill done** (2026-06-06). Author: design analysis triggered by "we have too many data concepts
 that are the same thing modeled differently."
 
 ## 1. The problem (root cause of the rendering inconsistency)

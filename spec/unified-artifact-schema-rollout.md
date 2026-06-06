@@ -1,7 +1,22 @@
 # Unified artifact schema — detailed rollout plan
 
-Status: **plan** (2026-06-06). Companion to `spec/unified-artifact-schema.md` (the design). This document
-is the step-by-step execution plan for all phases. Nothing here is implemented yet.
+Status: **Phase 0–2 DONE · Phase 3 backfill DONE · Phase 3 field-removal DEFERRED** (2026-06-06).
+Companion to `spec/unified-artifact-schema.md` (the design). Step-by-step execution plan for all phases.
+
+Progress:
+- ✅ **Phase 0** — `persona_council/artifacts.py` primitives + `suggestions/stance_scale.json` &
+  `finding_kinds.json` + tests.
+- ✅ **Phase 1** — read adapters + `web/_render.py` (one renderer per primitive); councils (transcript &
+  voices), synthesis finding-lists and prototype sessions all route through it. Burndown down.
+- ✅ **Phase 2** — `record_council/synthesis/prototype_session` accept + persist `statements/findings/
+  prompts` (validated); adapters PREFER native (dual-read); briefs + 5 skills carry PRIMITIVES_CONTRACT.
+- ✅ **Phase 3 (backfill)** — `scripts/migrate_to_primitives.py --apply` wrote primitives onto all 9
+  councils / 4 syntheses / 20 sessions; render verified **byte-identical** before/after (loss-free).
+- ⏸ **Phase 3 (legacy-field removal)** — DEFERRED. Removing `turns/votes/voices/key_problems/…` requires
+  rewiring every DIRECT legacy reader (council_mode derivation, vote tallies, the `_voices_panel`,
+  `_council_brief_row`, the meta-report). The adapters provide permanent dual-read, so this is the
+  plan's "only breaking step, never required for correctness" — left as a separately-gated follow-up
+  (snapshot + golden-identity per the plan below).
 
 Guiding rules for every phase:
 - **Non-breaking until the last step.** Each phase ships independently and leaves the app green.
