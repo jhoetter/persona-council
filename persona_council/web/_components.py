@@ -82,12 +82,13 @@ APP_JS = """
 <script>
 (function(){
   var MIN=180,MAX=480,HIDE=32;
-  var app=document.getElementById('app'),rz=document.getElementById('rz'),tb=document.getElementById('sbt');
+  var app=document.getElementById('app'),rz=document.getElementById('rz');
   try{ if(localStorage.getItem('sidebar-open')==='false') app.classList.add('collapsed');
        var w=localStorage.getItem('sidebar-width'); if(w) app.style.setProperty('--sidebar-w',w+'px'); }catch(e){}
   function toggle(){ app.classList.toggle('collapsed');
     try{localStorage.setItem('sidebar-open',String(!app.classList.contains('collapsed')));}catch(e){} }
-  if(tb) tb.addEventListener('click',toggle);
+  // delegated so it keeps working after an SPA swap of #main (where #sbt lives)
+  document.addEventListener('click',function(e){ if(e.target.closest&&e.target.closest('#sbt')){ e.preventDefault(); toggle(); } });
   // ---- theme (sun / system / moon) + sidebar user menu ----
   var um=document.getElementById('usermenu'),umb=document.getElementById('umbtn'),ump=document.getElementById('umpop');
   function curTheme(){ try{return localStorage.getItem('theme')||'system';}catch(e){return 'system';} }
