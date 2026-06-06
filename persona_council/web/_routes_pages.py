@@ -366,7 +366,7 @@ def register_pages(app) -> None:
         questions = session.get("questions") or []
         in_range = lambda tn: (_qidx(tn) is not None and 0 <= _qidx(tn) < len(questions))
         indexed = [tn for tn in answer_turns if in_range(tn)]
-        help_html = f'<p class="muted small" style="margin:-4px 0 12px">{t("council_voices_help")}</p>'
+        help_html = h("p", {"class_": "muted small", "style": "margin:-4px 0 12px"}, t("council_voices_help"))
 
         if questions and answer_turns and len(indexed) >= 0.6 * len(answer_turns):
             # MODERATED TRANSCRIPT — one round per moderator question: the question (moderator's voice),
@@ -378,18 +378,19 @@ def register_pages(app) -> None:
                 qts = [tn for tn in answer_turns if _qidx(tn) == qi]
                 if not qts:
                     continue
-                ans = "".join(_answer_block(pid, ts) for pid, ts in _by_persona(qts))
-                rounds.append(
-                    f'<div class="qround"><div class="qround-q">{_icon("compass")}'
-                    f'<div><div class="qround-n">{t("question")} {qi + 1}</div><p>{_esc(q)}</p></div></div>'
-                    f'<div class="qround-a">{ans}</div></div>')
+                ans = fragment(*(_answer_block(pid, ts) for pid, ts in _by_persona(qts)))
+                rounds.append(h("div", {"class_": "qround"},
+                                h("div", {"class_": "qround-q"}, raw(_icon("compass")),
+                                  h("div", {}, h("div", {"class_": "qround-n"}, f'{t("question")} {qi + 1}'), h("p", {}, q))),
+                                h("div", {"class_": "qround-a"}, ans)))
             rest = [tn for tn in answer_turns if not in_range(tn)]
             if rest:
-                ans = "".join(_answer_block(pid, ts) for pid, ts in _by_persona(rest))
-                rounds.append(f'<div class="qround"><div class="qround-q">{_icon("bulb")}'
-                              f'<div><div class="qround-n">{t("further_answers")}</div></div></div>'
-                              f'<div class="qround-a">{ans}</div></div>')
-            turns_html = help_html + '<div class="qrounds">' + "".join(rounds) + "</div>"
+                ans = fragment(*(_answer_block(pid, ts) for pid, ts in _by_persona(rest)))
+                rounds.append(h("div", {"class_": "qround"},
+                                h("div", {"class_": "qround-q"}, raw(_icon("bulb")),
+                                  h("div", {}, h("div", {"class_": "qround-n"}, t("further_answers")))),
+                                h("div", {"class_": "qround-a"}, ans)))
+            turns_html = fragment(help_html, h("div", {"class_": "qrounds"}, fragment(*rounds)))
         else:
             # FALLBACK — one clean card per persona (a persona answering several questions used to
             # render as several identical-header blocks). Moderator turns stand on their own.
@@ -403,10 +404,11 @@ def register_pages(app) -> None:
                     grouped[idx_of[pid]][1].append(tn)
                 else:
                     idx_of[pid] = len(grouped); grouped.append((pid, [tn], False))
-            cards = [f'<div class="turn{" mod" if is_mod else ""}"><div class="hd">{_persona_head(pid, tns)}</div>'
-                     + "".join(_answer_html(tn) for tn in tns) + '</div>'
+            cards = [h("div", {"class_": f'turn{" mod" if is_mod else ""}'},
+                       h("div", {"class_": "hd"}, _persona_head(pid, tns)),
+                       fragment(*(_answer_html(tn) for tn in tns)))
                      for pid, tns, is_mod in grouped]
-            turns_html = help_html + '<div style="display:grid;gap:12px">' + "".join(cards) + "</div>"
+            turns_html = fragment(help_html, h("div", {"style": "display:grid;gap:12px"}, fragment(*cards)))
         n_voices = len(session.get("persona_ids", []))
         # A council has THREE honest shapes (derived, no stored type): DISCOVERY (open questions →
         # answers, no vote — listening), EVALUATION (react to a concept), DECISION (a motion put to a
