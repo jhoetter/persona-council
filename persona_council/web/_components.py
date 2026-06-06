@@ -321,7 +321,8 @@ def _nav(active: str, store: Store) -> str:
     # Workspace = the inputs/containers; Research = the methodology-agnostic primitives any
     # methodology produces (council/concept/prototype/synthesis). (href, active-key, icon, label).
     work = [("/projects", "projects", "projects", t("projects")),
-            ("/personas", "personas", "personas", t("personas"))]
+            ("/personas", "personas", "personas", t("personas")),
+            ("/documentation", "docs", "overview", t("documentation"))]
     research = [("/notes", "note", "panel", t("notes")),
                 ("/councils", "councils", "councils", t("councils")),
                 ("/concepts", "concept", "bulb", t("concepts")),
@@ -339,9 +340,7 @@ def _nav(active: str, store: Store) -> str:
              h("div", {"class_": "sb-quick", "id": "favs"}))
     return fragment(h("nav", {"class_": "nav"}, render(work)),
                     h("div", {"class_": "navhead"}, t("library_h")),
-                    h("nav", {"class_": "nav"}, render(research)), favs,
-                    h("nav", {"class_": "nav nav-foot"},
-                      render([("/documentation", "docs", "overview", t("documentation"))])))
+                    h("nav", {"class_": "nav"}, render(research)), favs)
 
 
 def _user_menu() -> str:

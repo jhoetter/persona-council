@@ -251,5 +251,4 @@ register_css(r"""
 .doc-caps{list-style:none;margin:12px 0 0;padding:10px 0 0;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:6px}
 .doc-caps li{position:relative;padding-left:18px;font-size:var(--t-sm);color:var(--muted);line-height:1.5}
 .doc-caps li::before{content:"";position:absolute;left:3px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
-.nav-foot{margin-top:auto;padding-top:8px}
 """)
