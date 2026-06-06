@@ -600,6 +600,14 @@ def _srcchips(s: str) -> str:
     return re.sub(r"\[(C\d[^\]]*)\]", r'<span class="srcchip">\1</span>', s)
 
 
+def _prose(s: object) -> str:
+    """The ONE renderer for inline authored prose (list items, verdicts, arguments, recommendations):
+    inline Markdown (**bold**/_italic_/`code`/links) PLUS [C#] citation chips. Use this everywhere a
+    single line/paragraph of host-authored text is shown, so Markdown renders consistently and no
+    surface shows literal `**`. Multi-paragraph blocks still use _md()."""
+    return _srcchips(_md_inline(str(s)))
+
+
 def _rec_row(text: str) -> str:
     m = re.match(r"\s*\[?PRIO\s*(\d+)\]?\s*[—:\-]\s*(.*)", text, re.S)
     if m:
@@ -619,7 +627,7 @@ def _rec_item(x) -> tuple:
 def _rec_row_n(i: int, text: str, a, n) -> str:
     ax = h("span", {"class_": "axchip"}, t("effort_value", a=a, n=n)) if (a and n) else ""
     return h("div", {"class_": "rec", "id": f"rec-{i}"}, h("span", {"class_": "recnum"}, str(i)),
-             h("div", {}, raw(_srcchips(_esc(text))), ax))
+             h("div", {}, raw(_prose(text)), ax))
 
 
 _EI_LEV = {"g": ("var(--green)", "ei_high_leverage"), "a": ("var(--accent)", "ei_worthwhile"),
@@ -738,18 +746,17 @@ register_css(r"""
 .turn-ans+.turn-ans{margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)}
 .turn-ans>p{margin:0}
 /* moderated transcript: one round per moderator question (the question, then the answers) */
-.qrounds{display:flex;flex-direction:column;gap:16px}
-.qround{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
-.qround-q{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;background:var(--accent-weak);border-bottom:1px solid var(--line)}
+.qrounds{display:flex;flex-direction:column;gap:22px}
+.qround{display:flex;flex-direction:column;gap:10px}
+.qround-q{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;background:var(--accent-weak);border:1px solid var(--line);border-radius:var(--radius)}
 .qround-q>svg{color:var(--accent);flex-shrink:0;width:18px;height:18px;margin-top:1px}
 .qround-q p{margin:2px 0 0;font-weight:600;font-size:var(--t-md);line-height:1.35}
 .qround-n{font-size:var(--t-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
-.qa-ans{padding:12px 15px}
-.qa-ans+.qa-ans{border-top:1px solid var(--line-2)}
-.qa-who{margin-bottom:7px}
-.qa-ans .turn-ans+.turn-ans{margin-top:9px;padding-top:9px}
+.qround-a{display:flex;flex-direction:column;gap:10px}
 .turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
 .turn-input summary{cursor:pointer}
+/* prototype-session fields, inside the shared .turn statement card — labelled like the es-prose eyebrows */
+.sfield{margin:10px 0 0}.sfield:first-child{margin-top:2px}.sfield .eyebrow{margin:0 0 3px}.sfield .es-prose{margin:0}.sfield .es-prose p{margin:0}
 .detail{max-width:980px}.thought{font-size:var(--t-md);padding:9px 12px;background:var(--panel-2);border-radius:8px}
 .quote{padding:8px 12px;background:var(--panel-2);margin:6px 0;border-radius:8px}
 .identity{display:grid;grid-template-columns:160px 1fr;gap:20px;align-items:start}

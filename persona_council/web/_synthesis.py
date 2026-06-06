@@ -6,7 +6,7 @@ from .. import services
 from ..storage import Store
 from ._i18n import t
 from ._components import (
-    _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _rec_item, _rec_row_n,
+    _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _prose, _rec_item, _rec_row_n,
     _effort_impact, _star, _study_lead,
 )
 from ._vm import study_head
@@ -535,7 +535,7 @@ def _synthesis_html(store: Store, syn: dict):
     # down-select ranking + shortlist render as first-class answer content when present (data-driven —
     # labels via i18n, content free-text; no methodology value hardcoded).
     if syn.get("key_problems"):
-        kp = fragment(*(h("div", {"class_": "psolve"}, raw(_srcchips(_esc(x)))) for x in syn["key_problems"]))
+        kp = fragment(*(h("div", {"class_": "psolve"}, raw(_prose(x))) for x in syn["key_problems"]))
         sec.append(("keyproblems", t("key_problems"), _block("keyproblems", t("key_problems"), kp)))
     if syn.get("clusters"):
         cl = fragment(*(_segrow(c.get("label", ""), c.get("insight", "")) for c in syn["clusters"]))
@@ -544,7 +544,7 @@ def _synthesis_html(store: Store, syn: dict):
         rk = fragment(*(_segrow(r.get("prototype_id", ""), r.get("score_rationale", "")) for r in syn["ranking"]))
         sec.append(("ranking", t("ranking"), _block("ranking", t("ranking"), rk)))
     if syn.get("shortlist"):
-        sl = fragment(*(h("div", {"class_": "psolve"}, x) for x in syn["shortlist"]))
+        sl = fragment(*(h("div", {"class_": "psolve"}, raw(_prose(x))) for x in syn["shortlist"]))
         sec.append(("shortlist", t("shortlist"), _block("shortlist", t("shortlist"), sl)))
     # voices — who thinks what & why (filter/sort/shift/evidence)
     panel = _voices_panel(store, syn)
@@ -565,10 +565,10 @@ def _synthesis_html(store: Store, syn: dict):
             for s in syn["segmente"]))
         sec.append(("segmente", t("segments"), _block("segmente", t("segments"), segs)))
     if syn.get("pain_solvers"):
-        ps = fragment(*(h("div", {"class_": "psolve"}, raw(_srcchips(_esc(x)))) for x in syn["pain_solvers"]))
+        ps = fragment(*(h("div", {"class_": "psolve"}, raw(_prose(x))) for x in syn["pain_solvers"]))
         sec.append(("painsolver", "Pain-Solver", _block("painsolver", t("validated_pain_solvers"), ps)))
     if syn.get("offene_fragen"):
-        of = fragment(*(h("div", {"class_": "psolve"}, x) for x in syn["offene_fragen"]))
+        of = fragment(*(h("div", {"class_": "psolve"}, raw(_prose(x))) for x in syn["offene_fragen"]))
         sec.append(("offene", t("open_questions"), _block("offene", t("open_questions_next_study"), of)))
     if belege:                       # cited evidence (councils) — demoted, near the end, collapsible
         sec.append(belege)

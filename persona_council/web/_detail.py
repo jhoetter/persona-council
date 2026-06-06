@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from .. import services
 from ._i18n import t
-from ._components import _esc, _icon, _hero, _doc, _layout, _star  # noqa: F401
+from ._components import _esc, _icon, _hero, _doc, _layout, _star, _prose, _avatar, _label  # noqa: F401
 from ._rail import _page_rail
 from ._html import h, raw, fragment
 
@@ -58,38 +58,39 @@ def _relations_html(store, study_id: str, proj_id: str | None,
 
 
 # Reaction keys that are meta/internal (shown via the badge/header), not user-facing content.
-_SESSION_SKIP = {"persona", "fidelity", "version", "observed_state_refs", "self_authored", "session_id"}
+_SESSION_SKIP = {"persona", "fidelity", "version", "observed_state_refs", "self_authored", "session_id",
+                 "grounded_verified", "grounded"}   # grounded shows once as the header badge (session is the source)
 
 
 def _session_card(store, sess: dict) -> str:
-    """One prototype/persona session, rendered generically. The reaction schema is agent-authored
-    and varies widely (9+ shapes across the corpus), so we resolve the persona's display name and
-    render every substantive field — never cherry-pick fixed keys (which silently hides content)."""
+    """One prototype/persona session — rendered as the SAME statement card as a council voice (avatar +
+    name + grounded badge + meta), so sessions and councils read as one product. The reaction schema is
+    agent-authored and varies (9+ shapes), so we render every substantive field generically through the
+    shared _prose() renderer (Markdown + citations) — never cherry-pick fixed keys, never raw text."""
     r = sess.get("reaction") if isinstance(sess.get("reaction"), dict) else {}
     pid = sess.get("persona_id", "") or ""
-    name = r.get("persona") or ""
-    if not name and pid:                                   # data is matched — resolve slug/id → name
-        p = store.get_persona(pid)
-        name = (p or {}).get("display_name") or pid
-    gv = fragment(raw(_icon("check") if sess.get("grounded_verified") else _icon("circle")), " ",
-                  t("grounded_yes") if sess.get("grounded_verified") else t("grounded_no"))
+    p = store.get_persona(pid) if pid else None
+    name = r.get("persona") or (p or {}).get("display_name") or pid or "—"
+    grounded = bool(sess.get("grounded_verified"))         # SINGLE source of truth (the session, not the reaction)
+    badge = _label(t("grounded_yes") if grounded else t("grounded_no"), "var(--green)" if grounded else "var(--muted)")
+    meta = " · ".join(x for x in [r.get("fidelity"), r.get("version")] if x)
     fields = []
     for k, v in r.items():
-        if k in _SESSION_SKIP or v in (None, "", [], {}):
+        if k in _SESSION_SKIP or v in (None, "", [], {}):  # _SESSION_SKIP now also drops the redundant grounded_verified
             continue
         if isinstance(v, bool):
             val = raw(_icon("check") if v else _icon("circle"))
         elif isinstance(v, list):
-            val = h("ul", {"class_": "small", "style": "margin:2px 0 0 16px"}, [h("li", {}, str(x)) for x in v])
+            val = h("ul", {"class_": "es-prose sm", "style": "margin:2px 0 0 18px"},
+                    [h("li", {}, raw(_prose(x))) for x in v])
         else:
-            val = h("div", {"class_": "small"}, str(v))
-        label = k.replace("_", " ").capitalize()
-        fields.append(h("div", {"style": "margin:7px 0"},
-                        h("div", {"class_": "muted small", "style": "text-transform:uppercase;letter-spacing:.04em"}, label),
-                        val))
-    inner = fragment(*fields) if fields else h("div", {"class_": "muted small"}, "—")
-    return h("div", {"class_": "strow"}, h("b", {}, name or pid or "—"), " ",
-             h("span", {"class_": "muted small"}, gv), h("div", {"style": "margin-top:4px"}, inner))
+            val = h("div", {"class_": "es-prose sm"}, raw(_prose(v)))
+        fields.append(h("div", {"class_": "sfield"}, h("div", {"class_": "eyebrow"}, k.replace("_", " ")), val))
+    head = fragment(
+        h("div", {"class_": "turn-who"}, (_avatar(p, 26) if p else None), h("b", {}, name), " ", badge),
+        h("div", {"class_": "muted small turn-ctx"}, meta) if meta else None)
+    body = fragment(*fields) if fields else h("div", {"class_": "muted small"}, "—")
+    return h("div", {"class_": "turn"}, h("div", {"class_": "hd"}, head), body)
 
 
 def _properties_html(rows, aside: bool = False) -> str:

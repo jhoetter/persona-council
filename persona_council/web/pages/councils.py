@@ -88,7 +88,9 @@ def register_councils(app) -> None:
             return [(pid, by[pid]) for pid in order]
 
         def _answer_block(pid, tns: list) -> str:
-            return h("div", {"class_": "qa-ans"}, h("div", {"class_": "qa-who hd"}, _persona_head(pid, tns)),
+            # The SAME .turn statement card the evaluation/decision modes and prototype sessions use —
+            # discovery just groups these cards under question headers (one consistent voice primitive).
+            return h("div", {"class_": "turn"}, h("div", {"class_": "hd"}, _persona_head(pid, tns)),
                      fragment(*(_answer_html(tn) for tn in tns)))
 
         answer_turns = [tn for tn in session["turns"] if not _is_mod(tn) and tn.get("persona_id")]
