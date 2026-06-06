@@ -49,7 +49,7 @@ def _binding_names(node: ast.AST):
 def test_no_render_name_shadowing():
     web_dir = Path(web.__file__).parent
     offenders = []
-    for f in sorted(web_dir.glob("*.py")):
+    for f in sorted(web_dir.rglob("*.py")):          # rglob: also covers the web/pages/ package (R2)
         if f.name in SKIP:
             continue
         tree = ast.parse(f.read_text())

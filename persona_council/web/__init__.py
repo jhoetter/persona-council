@@ -22,7 +22,7 @@ from ._graph import (  # noqa: F401  (public surface preserved)
     _graph_layout, _graph_interactive, _graph_svg, _methodology_layout,
     _convex_hull, _expand_hull, _plan_html, _NW, _NH, _LAYOUT_VERSION,
 )
-from ._routes_pages import (  # noqa: F401  (public surface preserved)
+from .pages import (  # noqa: F401  (public surface preserved; routes split into web/pages/ — R2)
     register_pages, _projects_page, _calendar_html, _calendar_tabs,
     _event_chip, _period_calendar_html, _memory_html,
 )

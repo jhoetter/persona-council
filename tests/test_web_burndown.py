@@ -47,7 +47,7 @@ def _legacy_units(src: str) -> int:
 def test_legacy_html_burndown_ratchet():
     web_dir = Path(web.__file__).parent
     regressions = []
-    for f in sorted(web_dir.glob("*.py")):
+    for f in sorted(web_dir.rglob("*.py")):          # rglob: also covers the web/pages/ package (R2)
         if f.name == "_html.py":
             continue
         n = _legacy_units(f.read_text())
