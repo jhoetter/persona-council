@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from ._calendar import _calendar_tabs, _period_calendar_html
+from .._render import render_findings
+from ... import artifacts as _artifacts
 
 
 def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None) -> str:
@@ -117,7 +119,10 @@ def register_personas(app) -> None:
             raw(voices), activity,
             h("div", {"class_": "sec", "id": "ziele"}, h("h2", {}, t("goals")), raw(_pills(p["goals"]))),
             h("div", {"class_": "sec", "id": "pains"}, h("h2", {}, t("pain_points")),
-              raw(_pills([x["issue"] for x in data["pain_points"]] or p["pain_points"]))),
+              # structured observations (issue + opportunity + severity/evidence) → the SAME finding row
+              # as the synthesis; the plain profile list stays compact pills.
+              (raw(render_findings([_artifacts.pain_point_finding(x) for x in data["pain_points"]]))
+               if data["pain_points"] else raw(_pills(p["pain_points"])))),
             h("div", {"class_": "sec", "id": "tools"}, h("h2", {}, t("tools")), raw(_pills(p["tools"]))),
             h("div", {"class_": "sec", "id": "bez"}, h("h2", {}, t("relationships")), rel_rows),
             h("div", {"class_": "sec", "id": "cal"}, h("h2", {}, t("calendar")),

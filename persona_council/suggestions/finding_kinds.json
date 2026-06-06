@@ -10,6 +10,7 @@
     {"tag": "cluster",        "id": "clusters",     "label_key": "affinity_clusters"},
     {"tag": "segment",        "id": "segmente",     "label_key": "segments"},
     {"tag": "shortlist",      "id": "shortlist",    "label_key": "shortlist"},
-    {"tag": "ranking",        "id": "ranking",      "label_key": "ranking"}
+    {"tag": "ranking",        "id": "ranking",      "label_key": "ranking"},
+    {"tag": "pain_point",     "id": "pains",        "label_key": "pain_points"}
   ]
 }

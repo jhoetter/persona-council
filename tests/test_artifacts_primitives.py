@@ -63,3 +63,17 @@ def test_stance_label_keys_exist_in_i18n():
     de = STRINGS["de"]
     for v in (-2, -1, 0, 1, 2):
         assert A.stance_meta(v)["label_key"] in de
+
+
+def test_event_primitive_and_pain_point_finding():
+    e = A.event("p1", "2026-01-01", kind="experience", body="did X", refs=[A.ref("memory", id="m1")])
+    assert e == {"persona_id": "p1", "time": "2026-01-01", "kind": "experience", "body": "did X",
+                 "refs": [{"kind": "memory", "id": "m1"}]}
+    assert A.validate_event({"persona_id": "p1", "time": "t", "kind": "k", "body": "b"})["kind"] == "k"
+    # PainPointObservation → persona-scoped Finding (Layer 3, §5b)
+    f = A.pain_point_finding({"issue": "slow", "opportunity": "speed it up", "severity": 4,
+                              "frequency": 3, "evidence_event_ids": ["e1"]})
+    assert f["kind"] == "pain_point" and f["text"] == "slow"
+    assert f["score"] == {"severity": 4, "frequency": 3} and f["meta"]["detail"] == "speed it up"
+    assert f["refs"][0] == {"kind": "memory", "id": "e1"}
+    assert A.finding_kind("pain_point")["id"] == "pains"

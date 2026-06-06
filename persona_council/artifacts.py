@@ -149,6 +149,24 @@ def finding(text: str, *, kind: str, score: dict | int | None = None, refs: list
     return _clean({"text": text or "", "kind": kind, "score": score, "refs": list(refs), "meta": meta})
 
 
+def event(persona_id: str, time: str, *, kind: str, body: str, refs: list | tuple = (),
+          meta: dict | None = None) -> dict:
+    """A time-stamped thing in a persona's life (Layer 3 — spec/unified-artifact-schema.md §5b). Unifies
+    ExperienceEvent / CalendarEvent / DailySummary / Reflection: actor + time + kind + Markdown body + refs."""
+    return _clean({"persona_id": persona_id or "", "time": time or "", "kind": kind,
+                   "body": body or "", "refs": list(refs), "meta": meta})
+
+
+def pain_point_finding(obs: dict) -> dict:
+    """A PainPointObservation → a persona-scoped Finding (kind='pain_point'): the issue is the text, the
+    opportunity the detail, severity/frequency the score, evidence the refs (Layer 3, §5b)."""
+    sev, freq = obs.get("severity"), obs.get("frequency")
+    return finding(obs.get("issue", ""), kind="pain_point",
+                   score=({"severity": sev, "frequency": freq} if sev else None),
+                   refs=[ref("memory", id=str(e)) for e in (obs.get("evidence_event_ids") or [])],
+                   meta=({"detail": obs.get("opportunity", "")} if obs.get("opportunity") else None))
+
+
 # --------------------------------------------------------------------------- validators (Phase 2 native authoring)
 # Lenient normalizers for host-authored primitives — re-run input dicts through the constructors so a
 # recorded record is always well-shaped (stance resolved through the scale, empties dropped).
@@ -179,6 +197,12 @@ def validate_statement(d: dict) -> dict:
 def validate_finding(d: dict) -> dict:
     return finding(d.get("text", ""), kind=d.get("kind", "note"), score=d.get("score") or None,
                    refs=[validate_ref(r) for r in (d.get("refs") or [])], meta=d.get("meta") or None)
+
+
+def validate_event(d: dict) -> dict:
+    return event(d.get("persona_id", ""), d.get("time", ""), kind=d.get("kind", "event"),
+                 body=d.get("body", ""), refs=[validate_ref(r) for r in (d.get("refs") or [])],
+                 meta=d.get("meta") or None)
 
 
 # --------------------------------------------------------------------------- read adapters (legacy → primitives)
