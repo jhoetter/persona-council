@@ -730,6 +730,26 @@ def register_pages(app) -> None:
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (klabel, None)],
                        active="projects")
 
+    @app.get("/prototypes", response_class=HTMLResponse)
+    def prototypes_list() -> str:
+        store = Store()
+        rows = []
+        for p in store.list_prototypes():
+            ap = _artifact_present(p)
+            proj = store.get_research_project(p["project_id"]) if p.get("project_id") else None
+            nsess = len(store.list_prototype_sessions(prototype_id=p["id"]))
+            right = ((f'<span class="muted small">{_esc(proj["title"])}</span>' if proj else "")
+                     + (f'<span>{t("sessions")} {nsess}</span>' if nsess else "")
+                     + (f'<span class="muted small">{_esc(p["version"])}</span>' if p.get("version") else ""))
+            rows.append(f'<a class="row" href="/prototypes/{_esc(p["slug"])}"><span class="rico" style="color:{ap["color"]}">{_icon("prototype")}</span>'
+                        f'<span class="title">{_esc(p["name"])}<span class="muted small"> · {_esc(ap["disc"] or ap["label"])}</span></span>'
+                        f'<span class="right">{right}{_star("prototype", p["id"], p["name"], f"/prototypes/{p["slug"]}")}</span></a>')
+        rows_html = "".join(rows) or f'<div class="list-empty">{_icon("prototype")}<span>{t("no_prototypes")}</span></div>'
+        cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
+        body = (f'<div class="page"><h1 class="h1">{t("prototypes_h")}{cnt}</h1>'
+                f'<p class="lead">{t("prototypes_lead")}</p><div class="rows">{rows_html}</div></div>')
+        return _layout(t("prototypes_h"), body, store, crumbs=[(t("prototypes_h"), None)], active="prototype")
+
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:
         store = Store()
@@ -777,4 +797,4 @@ def register_pages(app) -> None:
         if rel_html:
             rail.append(("sec-relations", t("relations")))
         body = _doc(main, rail=prop_html + rel_html) + _page_rail(rail)
-        return _layout(p["name"], body, store, crumbs=crumbs, active="projects")
+        return _layout(p["name"], body, store, crumbs=crumbs, active="prototype")

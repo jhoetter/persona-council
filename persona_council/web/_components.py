@@ -164,7 +164,8 @@ APP_JS = """
 
 def _nav(active: str, store: Store) -> str:
     items = [("/projects", "projects", t("projects")), ("/personas", "personas", t("personas")),
-             ("/councils", "councils", t("councils")), ("/syntheses", "syntheses", t("syntheses"))]
+             ("/councils", "councils", t("councils")), ("/syntheses", "syntheses", t("syntheses")),
+             ("/prototypes", "prototype", t("prototypes_h"))]
     nav = "".join(
         f'<a href="{href}" class="{"active" if key == active else ""}">{_icon(key)}<span>{label}</span></a>'
         for href, key, label in items
