@@ -86,4 +86,5 @@ showcases the target style immediately.
 - [x] inject into `brief_synthesis` / `brief_meta_report` / `brief_meta_section`
 - [x] skills updated (5)
 - [x] suite green
-- [x] new Markdown-first design-thinking project created & viewable (scripts/seed_notgroschen_demo.py)
+- [x] new Markdown-first design-thinking project created & viewable (since purged — store reset to a
+  clean, zero-legacy slate at the user's request; new content authors natively via the primitives)
