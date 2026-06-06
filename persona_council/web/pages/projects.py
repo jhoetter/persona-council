@@ -37,7 +37,7 @@ def register_projects(app) -> None:
         if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan — opens in a right drawer
             plan_url = f'/projects/{proj["id"]}/plan'
             meta_btn = fragment(h("a", {"class_": "btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
-                                  raw(_icon("projects")), " Plan"), meta_btn)
+                                  raw(_icon("plan")), " Plan"), meta_btn)
         protos = graph.get("prototypes") or []
         # Q4: a TYPE filter row (also the LEGEND) — every node KIND present is a colored, glyph'd,
         # toggleable chip that filters the graph by type; capability/theme tags go to a 2nd muted row.
