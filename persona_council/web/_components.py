@@ -161,6 +161,66 @@ APP_JS = """
     writeStars(m); renderStars();
   });
   renderStars();
+  // After an SPA content swap (sidebar persists), re-apply star states to the new page's buttons.
+  document.addEventListener('spa:load', renderStars);
+})();
+</script>
+"""
+
+
+# SPA-style navigation (spec/design-system.md): the sidebar/topbar shell is rendered once; internal
+# link clicks fetch the target and swap ONLY #main, so the sidebar (and its favorites) never re-render
+# or flicker. Pure progressive enhancement — falls back to a full load on any error or non-HTML response.
+SPA_JS = """
+<script>
+(function(){
+  var main=document.getElementById('main');
+  if(!main || !window.history || !window.history.pushState || !window.fetch) return;
+  function runScripts(root){            // importNode'd <script>s don't execute — recreate them so they do
+    root.querySelectorAll('script').forEach(function(old){
+      var s=document.createElement('script');
+      for(var i=0;i<old.attributes.length;i++){ s.setAttribute(old.attributes[i].name, old.attributes[i].value); }
+      s.textContent=old.textContent; old.parentNode.replaceChild(s, old);
+    });
+  }
+  function syncActive(doc){             // mirror the fetched page's sidebar active-state onto the live nav
+    var on={}; doc.querySelectorAll('.sidebar .nav a.active').forEach(function(a){ on[a.getAttribute('href')]=1; });
+    document.querySelectorAll('.sidebar .nav a').forEach(function(a){ a.classList.toggle('active', !!on[a.getAttribute('href')]); });
+  }
+  function swap(html, url, push){
+    var doc=new DOMParser().parseFromString(html, 'text/html');
+    var nm=doc.getElementById('main');
+    if(!nm){ location.href=url; return; }                 // unexpected shape -> full load
+    var imp=document.importNode(nm, true);
+    main.replaceWith(imp); main=imp;
+    if(doc.title) document.title=doc.title;
+    syncActive(doc);
+    runScripts(main);
+    if(push) history.pushState({spa:1}, '', url);
+    window.scrollTo(0,0);
+    document.dispatchEvent(new CustomEvent('spa:load'));   // let app_js re-apply star states etc.
+  }
+  function navigate(url, push){
+    document.body.classList.add('spa-loading');
+    fetch(url, {headers:{'X-Requested-With':'spa'}, credentials:'same-origin'}).then(function(r){
+      var ct=r.headers.get('content-type')||'';
+      if(!r.ok || ct.indexOf('text/html')<0){ location.href=url; return; }
+      return r.text().then(function(t){ swap(t, url, push); });
+    }).catch(function(){ location.href=url; })
+      .then(function(){ document.body.classList.remove('spa-loading'); });
+  }
+  document.addEventListener('click', function(e){
+    if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
+    var a=e.target.closest && e.target.closest('a'); if(!a) return;
+    var href=a.getAttribute('href');
+    if(!href || href.charAt(0)!=='/' || href.indexOf('//')===0) return;     // internal absolute paths only
+    if(a.target==='_blank' || a.hasAttribute('download') || a.getAttribute('rel')==='external') return;
+    if(href.indexOf('/data/')===0 || href.indexOf('/proto-files/')===0) return;  // static assets -> real nav
+    e.preventDefault();
+    if(href===location.pathname+location.search){ return; }
+    navigate(href, true);
+  });
+  window.addEventListener('popstate', function(){ navigate(location.pathname+location.search, false); });
 })();
 </script>
 """
@@ -243,12 +303,12 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     {_user_menu()}
   </aside>
   <div class="resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
-  <div class="main">
+  <div class="main" id="main">
     <header class="topbar"><button class="iconbtn" id="sbt" title="{t("sidebar")} ([)" aria-label="Sidebar">{_icon("panel")}</button>
       {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{palette_markup()}{PALETTE_JS}{app_js}</body></html>"""
+</div>{palette_markup()}{PALETTE_JS}{app_js}{SPA_JS}</body></html>"""
 
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.

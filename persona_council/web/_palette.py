@@ -97,8 +97,9 @@ inp.addEventListener('input',function(){ clearTimeout(timer); var q=inp.value; t
 inp.addEventListener('keydown',function(e){
   if(e.key==='ArrowDown'){ e.preventDefault(); move(1); }
   else if(e.key==='ArrowUp'){ e.preventDefault(); move(-1); }
-  else if(e.key==='Enter'){ e.preventDefault(); if(items[sel]) location.href=items[sel].url; }
+  else if(e.key==='Enter'){ e.preventDefault(); var a=list.querySelector('.cmdk-item[data-i="'+sel+'"]'); if(a) a.click(); }
   else if(e.key==='Escape'){ e.preventDefault(); close(); } });
+list.addEventListener('click',function(e){ if(e.target.closest&&e.target.closest('.cmdk-item')) close(); });
 list.addEventListener('mousemove',function(e){ var a=e.target.closest&&e.target.closest('.cmdk-item'); if(!a) return;
   var i=+a.getAttribute('data-i'); if(i!==sel){ var els=list.querySelectorAll('.cmdk-item'); if(els[sel]) els[sel].classList.remove('sel'); sel=i; a.classList.add('sel'); } });
 ov.addEventListener('click',function(e){ if(e.target.hasAttribute('data-cmdk-close')) close(); });

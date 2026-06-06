@@ -27,6 +27,7 @@ CSS = """
 
 *{box-sizing:border-box}
 html,body{height:100%}
+body.spa-loading{cursor:progress}
 body{margin:0;font:13px/1.5 "Inter","Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;letter-spacing:-0.003em}
 a{color:inherit;text-decoration:none}
 .muted{color:var(--muted)}.small{font-size:var(--t-sm)}.faint{color:var(--faint)}
