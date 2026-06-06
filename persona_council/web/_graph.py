@@ -650,6 +650,12 @@ def _outline_html(graph: dict) -> str:
         if p["id"] not in used:
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
                 f'/prototypes/{p["slug"]}', ideation, 0, p.get("created_at", ""))
+    # Notes are phase-free project observations — they have no methodology step, so add them explicitly
+    # (the loop above skips phase-less nodes). They carry their own kind_label + /notes/ link.
+    for nt in sorted((n for n in nodes if n.get("note_kind") == "note"), key=lambda n: n.get("created_at", "")):
+        add(nt["study_id"], nt.get("color", "#f29900"), nt.get("title", "") or "—",
+            nt.get("kind_label", ""), nt.get("href", ""), "", node_round.get(nt["study_id"], 0),
+            nt.get("created_at", ""))
 
     # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
     # "Prototypen-Leiter", "Konzepte (Ideation)" … (phase/journal sections are skipped — phase already
