@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .._render import render_statements
+from ... import artifacts as _artifacts
 
 
 def register_library(app) -> None:
@@ -75,9 +77,18 @@ def register_library(app) -> None:
         _ap = _artifact_present(p)
         fid = h("span", {"class_": "pill"}, _ap["disc"] or _ap["label"])
         src = f'/proto-files/{slug}/{p.get("entry", "index.html")}'
+        # Sessions render through the SAME statement renderer as council/synthesis voices: the test
+        # `focus` is the prompt BANNER above the persona cards (not a line inside each), with a grounded
+        # chip per card — one uniform "prompt → responses" structure across all detail pages.
         sessions = store.list_prototype_sessions(prototype_id=p["id"])
-        sessions_html = (fragment(*(_session_card(store, s) for s in sessions))
-                         or h("div", {"class_": "muted small"}, f'— {t("prototypes_h")}: {t("no_sessions")} —'))
+        sess_statements = [_artifacts.session_statements(s)[0] for s in sessions]
+        focus = next((f for f in (_artifacts.session_focus(s) for s in sessions) if f), "")
+        fp = _artifacts.prompt(focus, kind="focus", id="focus") if focus else None
+        if sess_statements:
+            sessions_html = (render_statements(sess_statements, store, group_by="prompt", prompts=[fp]) if fp
+                             else render_statements(sess_statements, store, group_by="persona"))
+        else:
+            sessions_html = h("div", {"class_": "muted small"}, f'— {t("prototypes_h")}: {t("no_sessions")} —')
         proto_title = fragment(p["name"], " ", fid)
         body = fragment(
             h("p", {"style": "margin:8px 0 16px"},

@@ -276,8 +276,15 @@ def synthesis_statements(s: dict) -> list[dict]:
         meta = {"context": v["segment"]} if v.get("segment") else None   # → the card's ctx line
         out.append(statement(v.get("persona_id", ""), v.get("key_argument", ""),
                              stance=resolve_stance(v.get("sentiment")) if v.get("sentiment") else None,
+                             about=ref("prompt", id="studyq"),    # voices answer the study question (banner)
                              refs=refs, relevance=v.get("relevance"), shift=sh, meta=meta))
     return out
+
+
+def synthesis_question(s: dict) -> dict | None:
+    """The single study-question Prompt shown as the banner above the synthesis voices (id 'studyq')."""
+    txt = (s.get("start_input") or s.get("goal") or s.get("title") or "").strip()
+    return prompt(txt, kind="question", id="studyq") if txt else None
 
 
 def synthesis_findings(s: dict) -> list[dict]:
@@ -316,14 +323,20 @@ def session_statements(se: dict, persona_name: str | None = None) -> list[dict]:
              if k not in ("persona", "fidelity", "version", "observed_state_refs", "self_authored",
                           "session_id", "grounded_verified", "grounded", "verdict", "reaction_text", "summary", "focus")
              and v not in (None, "", [], {})}
-    meta = {}
+    meta = {"grounded": bool(se.get("grounded_verified"))}   # → the grounded chip in the card header
     ctx = " · ".join(x for x in [r.get("fidelity"), r.get("version")] if x)
     if ctx:
         meta["context"] = ctx                       # → the card's ctx line (fidelity · version)
-    if r.get("focus"):
-        meta["focus"] = r["focus"]                  # → a muted "focus" line in the body
     meta.update(extra)
-    return [statement(se.get("persona_id", ""), text, refs=refs, meta=meta or None)]
+    # the session's `focus` (what was tested) becomes the prompt BANNER above the cards (uniform with
+    # council/synthesis voices) — not a line inside the card; see session_focus().
+    about = ref("prompt", id="focus") if r.get("focus") else None
+    return [statement(se.get("persona_id", ""), text, about=about, refs=refs, meta=meta or None)]
+
+
+def session_focus(se: dict) -> str:
+    """The session's test focus — rendered as the prompt banner above the session cards (id 'focus')."""
+    return ((se.get("reaction") or {}).get("focus") or "") if isinstance(se.get("reaction"), dict) else ""
 
 
 def note_findings(n: dict) -> list[dict]:

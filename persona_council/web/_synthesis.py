@@ -555,10 +555,12 @@ def _synthesis_html(store: Store, syn: dict):
     # detail pages); the per-council sentiment chart is the fallback when there are no structured voices.
     voices = _A.synthesis_statements(syn)
     if voices:
+        qp = _A.synthesis_question(syn)               # the study question, shown as the banner above the voices
+        vhtml = (render_statements(voices, store, group_by="prompt", prompts=[qp]) if qp
+                 else render_statements(voices, store, group_by="persona"))
         sec.append(("stimmen", t("voices"),
                     h("div", {"class_": "block", "id": "stimmen"}, h("h2", {"class_": "bh"}, t("voices")),
-                      h("p", {"class_": "ihint"}, t("voices_intro")),
-                      raw(render_statements(voices, store, group_by="persona")))))
+                      h("p", {"class_": "ihint"}, t("voices_intro")), raw(vhtml))))
     else:
         syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]
         sent = _sentiment_section(store, syn_sessions, title=t("sentiment_over_chain"), per_council=True)

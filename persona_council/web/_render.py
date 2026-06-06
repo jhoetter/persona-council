@@ -80,10 +80,15 @@ def _persona_card(sts: list, store, *, head_extra=None) -> str:
            if p else h("span", {"class_": "turn-who"}, h("b", {}, name)))
     st_with_stance = next((s for s in sts if s.get("stance")), None)
     stance_chip = raw(render_stance(st_with_stance["stance"])) if st_with_stance else None
+    gmeta = head_st.get("meta") or {}
+    grounded_chip = None
+    if "grounded" in gmeta:                            # prototype sessions: a grounded badge in the stance slot
+        g = bool(gmeta["grounded"])
+        grounded_chip = raw(_label(t("grounded_yes") if g else t("grounded_no"), "var(--green)" if g else "var(--muted)"))
     rel = head_st.get("relevance")
     rel_html = h("span", {"class_": "muted small"}, f" · {rel}") if rel else None
     return h("div", {"class_": "turn"},
-             h("div", {"class_": "hd"}, who, " ", stance_chip, head_extra, rel_html,
+             h("div", {"class_": "hd"}, who, " ", stance_chip, grounded_chip, head_extra, rel_html,
                h("div", {"class_": "muted small turn-ctx"}, ctx) if ctx else None),
              fragment(*(_statement_body(s) for s in sts)))
 
@@ -111,14 +116,15 @@ def render_statements(items: list, store, *, group_by: str = "persona", prompts:
     items = [s for s in items if s]
     if group_by == "prompt" and prompts:
         ids = {p.get("id") for p in prompts}
-        rounds = []
+        single = len(prompts) == 1                     # one prompt (synthesis study-question / session focus)
+        rounds = []                                    #   → every statement is its response (no "rest" bucket)
         for n, p in enumerate(prompts, 1):
-            qs = [s for s in items if (s.get("about") or {}).get("id") == p.get("id")]
+            qs = items if single else [s for s in items if (s.get("about") or {}).get("id") == p.get("id")]
             if not qs:
                 continue
-            rounds.append(h("div", {"class_": "qround"}, raw(render_prompt(p, n=n)),
+            rounds.append(h("div", {"class_": "qround"}, raw(render_prompt(p, n=(None if single else n))),
                             h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store) for g in _by_persona(qs))))))
-        rest = [s for s in items if (s.get("about") or {}).get("id") not in ids]
+        rest = [] if single else [s for s in items if (s.get("about") or {}).get("id") not in ids]
         if rest:
             rounds.append(h("div", {"class_": "qround"},
                             h("div", {"class_": "qround-q"}, raw(_icon("bulb")),
