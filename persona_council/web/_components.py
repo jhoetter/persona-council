@@ -6,6 +6,7 @@ import re
 from collections import Counter, defaultdict
 
 from persona_icons import icon as _persona_icon
+from persona_icons import HIFI_ANIM_CSS as _HIFI_ANIM_CSS
 
 from .. import services
 from .. import presentation as _pres
@@ -233,7 +234,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 <title>{_esc(title)} · Persona Council</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-{HEAD_JS}<style>{CSS}{PALETTE_CSS}</style></head>
+{HEAD_JS}<style>{CSS}{PALETTE_CSS}{_HIFI_ANIM_CSS}</style></head>
 <body><div class="app" id="app">
   <aside class="sidebar">
     <div class="brand"><span class="mark"></span><a href="/">Persona&nbsp;Council</a></div>

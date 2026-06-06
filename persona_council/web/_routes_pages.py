@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from .. import services
 from ..storage import Store
+from persona_icons import hifi as _persona_hifi, hifi_names as _hifi_names
 from ._i18n import t, _lang
 from ._components import (
     _esc, _icon, _avatar, _label, _pills, _md, _layout, _empty_state, _doc, _list_page,
@@ -164,6 +165,33 @@ def register_pages(app) -> None:
             f'<span class="right"><span class="muted small">{_esc(p["company_context"]["industry"])}</span>{"".join(meta)}'
             f'{_star("persona", pid, p["display_name"], f"/personas/{pid}")}</span></a>'
         )
+
+    @app.get("/icons", response_class=HTMLResponse)
+    def _icons_catalog():
+        # Internal catalog / playground for the shared persona-icons hi-fi set.
+        # Each tile is `.pi-hover`, so hovering plays the icon's animation (CSS
+        # injected into <head> via _layout). Honors prefers-reduced-motion.
+        store = Store()
+        cards = "".join(
+            '<button class="pi-hover" type="button" '
+            'style="display:flex;flex-direction:column;align-items:center;gap:10px;'
+            'padding:22px 8px 14px;border:1px solid rgba(128,128,128,.25);'
+            'border-radius:12px;background:transparent;color:inherit;cursor:pointer;font:inherit">'
+            f'{_persona_hifi(name, 56)}'
+            '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;opacity:.55">'
+            f'{_esc(name)}</span></button>'
+            for name in _hifi_names()
+        )
+        body = (
+            '<div style="max-width:960px;margin:0 auto;padding:24px 24px 4px">'
+            '<h1 style="margin:0 0 4px">persona-icons</h1>'
+            '<p class="muted" style="margin:0">Hover (or keyboard-focus) any tile to play its '
+            'animation. Honors prefers-reduced-motion.</p></div>'
+            '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));'
+            'gap:14px;max-width:960px;margin:0 auto;padding:12px 24px 48px">'
+            f'{cards}</div>'
+        )
+        return _layout("Icons", body, store, active="")
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
