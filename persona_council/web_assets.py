@@ -285,6 +285,10 @@ details.sec[open]>summary::before,details.block[open]>summary.bh::before{transfo
 .srcchip{display:inline-block;font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-left:6px;background:var(--panel-2);white-space:nowrap}
 .psolve{padding:9px 0;border-bottom:1px solid var(--line-2);max-width:74ch}.psolve:last-child{border-bottom:0}
 .psolve .es-prose,.psolve p{max-width:none}.psolve p{margin:0}
+/* unified finding row (every finding section: key_problem/pain_solver/cluster/segment/ranking/…) */
+.fitem{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:9px 0;border-bottom:1px solid var(--line-2);max-width:74ch}
+.fitem:last-child{border-bottom:0}.fitem .fbody{min-width:0;flex:1}.fitem .fbody p{margin:0}
+.fitem .fchips{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .segrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:11px 0;border-bottom:1px solid var(--line-2);max-width:74ch}
 .segrow:last-child{border-bottom:0}
 .srclist{list-style:none;padding:0;margin:0;counter-reset:c}

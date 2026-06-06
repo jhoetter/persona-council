@@ -487,10 +487,6 @@ def _synthesis_html(store: Store, syn: dict):
     def _block(bid, label, inner):                            # the shared section wrapper
         return h("div", {"class_": "block", "id": bid}, h("h2", {"class_": "bh"}, label), inner)
 
-    def _segrow(head, body):
-        return h("div", {"class_": "segrow"}, h("div", {}, h("strong", {}, head), h("br"),
-                                                h("span", {"class_": "muted"}, body)))
-
     # 1) Executive Summary — the unified Question → Answer lead (shared with the council 'finding'),
     # fed by the shared study view-model so council/synthesis never branch on field names.
     if syn.get("gesamtbild"):
@@ -549,12 +545,10 @@ def _synthesis_html(store: Store, syn: dict):
     # labels via i18n, content free-text; no methodology value hardcoded).
     if (s := _fsec("key_problem", t("key_problems"))):
         sec.append(s)
-    if syn.get("clusters"):
-        cl = fragment(*(_segrow(c.get("label", ""), c.get("insight", "")) for c in syn["clusters"]))
-        sec.append(("clusters", t("affinity_clusters"), _block("clusters", t("affinity_clusters"), cl)))
-    if syn.get("ranking"):
-        rk = fragment(*(_segrow(r.get("prototype_id", ""), r.get("score_rationale", "")) for r in syn["ranking"]))
-        sec.append(("ranking", t("ranking"), _block("ranking", t("ranking"), rk)))
+    if (s := _fsec("cluster", t("affinity_clusters"))):
+        sec.append(s)
+    if (s := _fsec("ranking", t("ranking"))):
+        sec.append(s)
     if (s := _fsec("shortlist", t("shortlist"))):
         sec.append(s)
     # voices — who thinks what & why (filter/sort/shift/evidence)
@@ -567,14 +561,8 @@ def _synthesis_html(store: Store, syn: dict):
         if sent:
             sec.append(("stimmen", t("voices"), h("div", {"class_": "block", "id": "stimmen"}, raw(sent))))
     # supporting analysis (omit when empty — an empty section reads as a broken box)
-    if syn.get("segmente"):
-        segs = fragment(*(
-            h("div", {"class_": "segrow"},
-              h("div", {}, h("strong", {}, s.get("segment", "")), h("br"),
-                h("span", {"class_": "muted"}, s.get("why", ""))),
-              raw(_label(s.get("stance", ""), _stance_color(s.get("stance", "")))))
-            for s in syn["segmente"]))
-        sec.append(("segmente", t("segments"), _block("segmente", t("segments"), segs)))
+    if (s := _fsec("segment", t("segments"))):
+        sec.append(s)
     if (s := _fsec("pain_solver", t("validated_pain_solvers"))):
         sec.append(s)
     if (s := _fsec("open_question", t("open_questions_next_study"), toc=t("open_questions"))):

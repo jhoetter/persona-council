@@ -271,6 +271,14 @@ def synthesis_findings(s: dict) -> list[dict]:
             out.append(finding(rec.get("text", ""), kind="recommendation", score=score))
         else:
             out.append(finding(str(rec), kind="recommendation"))
+    for c in s.get("clusters") or []:
+        out.append(finding(c.get("label", ""), kind="cluster",
+                           meta={"detail": c.get("insight", ""), "members": c.get("member_node_ids") or c.get("members") or []}))
+    for sg in s.get("segmente") or []:
+        out.append(finding(sg.get("segment", ""), kind="segment",
+                           meta={"detail": sg.get("why", ""), "stance": resolve_stance(sg.get("stance")) if sg.get("stance") else None}))
+    for rk in s.get("ranking") or []:
+        out.append(finding(rk.get("prototype_id", ""), kind="ranking", meta={"detail": rk.get("score_rationale", "")}))
     return out
 
 

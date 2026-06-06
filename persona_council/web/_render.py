@@ -130,17 +130,29 @@ def render_statements(items: list, store, *, group_by: str = "persona", prompts:
 
 
 def render_finding(f: dict, *, n: int | None = None) -> str:
-    """One authored finding: prose + optional effort·impact score chip + grounding refs. The list-row form
-    used by every synthesis finding section."""
+    """One authored finding — the ONE row every finding section uses (key_problem, pain_solver, cluster,
+    segment, ranking, recommendation, …): a left block (prose title, optional muted detail, members,
+    grounding refs) and right-aligned chips (effort·impact score + stance). Numbered → the .rec form."""
+    meta = f.get("meta") or {}
     score = f.get("score")
-    chip = ""
+    detail = meta.get("detail")
+    left = [h("strong", {}, raw(_prose(f.get("text", "")))) if detail else h("span", {}, raw(_prose(f.get("text", ""))))]
+    if detail:
+        left.append(h("div", {"class_": "muted small", "style": "margin-top:2px"}, raw(_prose(detail))))
+    if meta.get("members"):
+        left.append(h("div", {"class_": "muted small", "style": "margin-top:2px"}, "· " + ", ".join(str(m) for m in meta["members"])))
+    rl = _refs_line(f.get("refs") or [], t("rel_based_on"))
+    if rl:
+        left.append(raw(rl))
+    chips = []
     if isinstance(score, dict) and score.get("effort") and score.get("value"):
-        chip = h("span", {"class_": "axchip"}, t("effort_value", a=score["effort"], n=score["value"]))
+        chips.append(h("span", {"class_": "axchip"}, t("effort_value", a=score["effort"], n=score["value"])))
+    if meta.get("stance"):
+        chips.append(raw(render_stance(meta["stance"])))
     num = h("span", {"class_": "recnum"}, str(n)) if n is not None else None
-    body = h("div", {}, raw(_prose(f.get("text", ""))), chip,
-             raw(_refs_line(f.get("refs") or [], t("rel_based_on"))))
-    cls = "rec" if (n is not None or chip) else "psolve"
-    return h("div", {"class_": cls}, num, body) if num else h("div", {"class_": cls}, body)
+    body = h("div", {"class_": "fbody"}, fragment(*left))
+    right = h("div", {"class_": "fchips"}, fragment(*chips)) if chips else None
+    return h("div", {"class_": "rec" if n is not None else "fitem"}, num, body, right)
 
 
 def render_findings(items: list, *, numbered: bool = False) -> str:
