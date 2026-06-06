@@ -1,6 +1,7 @@
 # Roadmap — architecture cleanup before further feature work
 
-Status: **planned** (2026-06-06). This is the actionable tracker for the three structural items called out
+Status: **R1–R3 DONE** (2026-06-06). All three structural items shipped and verified — see the per-item
+"✅ Done" notes below. This is the actionable tracker for the three structural items called out
 after the component-SSR conversion (C1–C4 done; see `spec/component-ssr-architecture.md` §10). Each item
 is independently shippable, ordered by dependency/risk, and verifiable with the existing harness. Detail
 for the CSS work lives in `spec/design-system.md`; this file is the *sequence*.
@@ -15,6 +16,8 @@ for the CSS work lives in `spec/design-system.md`; this file is the *sequence*.
 ---
 
 ## R1 — Shadowing guard (do FIRST: cheap, protects R2/R3)
+
+> ✅ **Done.** `tests/test_no_render_name_shadowing.py` (AST guard) added; 8 offenders renamed. Both this and the burndown ratchet switched to `rglob` to cover `web/pages/`.
 
 **Why.** Loop/local vars named `h` / `raw` / `fragment` / `t` silently shadow the `h()` builder and the
 i18n `t`. This bit us ~4× during C4 (`for h in hits`, `x,y,w,h=…`, `raw=lines[i]`, `for t in …`). An AST
@@ -41,6 +44,8 @@ scan today finds **7 live offenders** (benign now, but footguns): `_components.p
 ---
 
 ## R2 — Split `_routes_pages.py` (778 LOC) into a `web/pages/` package
+
+> ✅ **Done.** `_routes_pages.py` removed → `web/pages/` (`_ctx`, `_calendar`, `personas`, `councils`, `syntheses`, `projects`, `library`); largest module 195 LOC. Pure move, golden body byte-identical, re-exports preserved.
 
 **Why.** It's at the 800 bar with no headroom; the next page added pushes it over. It's one giant
 `register_pages(app)` closure with every route nested inside — hard to navigate and to test in isolation.
@@ -81,6 +86,8 @@ re-exports intact; golden byte-identical; LOC budget green with headroom.
 ---
 
 ## R3 — C5: co-locate CSS into components; shrink the monolith
+
+> ✅ **Done.** CSS co-located into component `register_css` fragments; `_SYN_STYLE` deleted; `web_assets.CSS` now 295 lines (base only). Verified by a CSS rule-set differ AND a computed-cascade diff (last-wins per selector+property) that is IDENTICAL across all 23 pages vs pre-R3 — zero flips. Doc-layout grid (`@media`-entangled) + shared `.es-prose` intentionally remain base.
 
 **Why.** Markup is componentized but **styles aren't** — `web_assets.CSS` is still a 759-LOC global blob,
 so a component isn't self-contained (markup in its module, CSS elsewhere). This is C5 from the
