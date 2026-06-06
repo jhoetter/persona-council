@@ -1,6 +1,19 @@
 # Artifact cross-references — addressable parts, typed links, live resolution
 
-Status: **DESIGN** (2026-06-07). Foundational. Supersedes the ad-hoc relation mechanisms below.
+Status: **P0–P2 + P4 DONE** (2026-06-07) · P3 (generalize remaining relations) = next. Foundational.
+
+Implemented: stable part ids (statement/finding/prompt) assigned at record time; `ref()` carries
+`{anchor, role}`; `part_address`/`parse_address`/`resolve_ref` (live resolution, broken-ref honest);
+`render_ref(r, store)` renders cross-ref chips (persona/title + role + deep-link to `#part`);
+statements/findings render with DOM ids + a `:target` arrival highlight. **The synthesis no longer
+re-hosts council voices** — its findings cross-reference the source statements (role=derived_from) and
+the persona's words live once, in the council. **Backlinks** (`services.ref_backlinks`) give every
+council statement its "cited by …" reverse links. Demo authored with cross-refs; purged + rebuilt.
+
+NOT yet migrated (P3, deliberate — touches the methodology/plan engine, no new user-visible value
+beyond backlinks): `StudyEdge`, `open_question.answered_by`, `note.data.prototype_id`, meta-report
+citations still use their own fields. They remain valid; the ref model is designed to subsume them when
+that migration is worth the churn.
 
 ## 1. The problem (whole-app, not just councils)
 
