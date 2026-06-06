@@ -10,6 +10,7 @@ from ._components import (
     _effort_impact, _star, _study_lead, _SYN_STYLE,
 )
 from ._vm import study_head
+from ._html import h, raw, fragment
 
 
 # ----------------------------- chart primitives ----------------------------- #
@@ -378,28 +379,25 @@ def _synthesis_html(store: Store, syn: dict):
     # Structured convergence blocks (GAP-3): a methodology's key problems / affinity clusters /
     # down-select ranking + shortlist render as first-class answer content when present (data-driven —
     # labels via i18n, content free-text; no methodology value hardcoded).
+    def _block(bid, label, inner):                            # the shared section wrapper
+        return h("div", {"class_": "block", "id": bid}, h("h2", {"class_": "bh"}, label), inner)
+
+    def _segrow(head, body):
+        return h("div", {"class_": "segrow"}, h("div", {}, h("strong", {}, head), h("br"),
+                                                h("span", {"class_": "muted"}, body)))
+
     if syn.get("key_problems"):
-        kp = "".join(f'<div class="psolve">{_srcchips(_esc(x))}</div>' for x in syn["key_problems"])
-        sec.append(("keyproblems", t("key_problems"),
-                    f'<div class="block" id="keyproblems"><h2 class="bh">{t("key_problems")}</h2>{kp}</div>'))
+        kp = fragment(*(h("div", {"class_": "psolve"}, raw(_srcchips(_esc(x)))) for x in syn["key_problems"]))
+        sec.append(("keyproblems", t("key_problems"), _block("keyproblems", t("key_problems"), kp)))
     if syn.get("clusters"):
-        cl = "".join(
-            f'<div class="segrow"><div><strong>{_esc(c.get("label",""))}</strong>'
-            f'<br><span class="muted">{_esc(c.get("insight",""))}</span></div></div>'
-            for c in syn["clusters"])
-        sec.append(("clusters", t("affinity_clusters"),
-                    f'<div class="block" id="clusters"><h2 class="bh">{t("affinity_clusters")}</h2>{cl}</div>'))
+        cl = fragment(*(_segrow(c.get("label", ""), c.get("insight", "")) for c in syn["clusters"]))
+        sec.append(("clusters", t("affinity_clusters"), _block("clusters", t("affinity_clusters"), cl)))
     if syn.get("ranking"):
-        rk = "".join(
-            f'<div class="segrow"><div><strong>{_esc(r.get("prototype_id",""))}</strong>'
-            f'<br><span class="muted">{_esc(r.get("score_rationale",""))}</span></div></div>'
-            for r in syn["ranking"])
-        sec.append(("ranking", t("ranking"),
-                    f'<div class="block" id="ranking"><h2 class="bh">{t("ranking")}</h2>{rk}</div>'))
+        rk = fragment(*(_segrow(r.get("prototype_id", ""), r.get("score_rationale", "")) for r in syn["ranking"]))
+        sec.append(("ranking", t("ranking"), _block("ranking", t("ranking"), rk)))
     if syn.get("shortlist"):
-        sl = "".join(f'<div class="psolve">{_esc(x)}</div>' for x in syn["shortlist"])
-        sec.append(("shortlist", t("shortlist"),
-                    f'<div class="block" id="shortlist"><h2 class="bh">{t("shortlist")}</h2>{sl}</div>'))
+        sl = fragment(*(h("div", {"class_": "psolve"}, x) for x in syn["shortlist"]))
+        sec.append(("shortlist", t("shortlist"), _block("shortlist", t("shortlist"), sl)))
     # voices — who thinks what & why (filter/sort/shift/evidence)
     panel = _voices_panel(store, syn)
     if panel:
@@ -411,17 +409,19 @@ def _synthesis_html(store: Store, syn: dict):
             sec.append(("stimmen", t("voices"), f'<div class="block" id="stimmen">{sent}</div>'))
     # supporting analysis (omit when empty — an empty section reads as a broken box)
     if syn.get("segmente"):
-        segs = "".join(
-            f'<div class="segrow"><div><strong>{_esc(s.get("segment",""))}</strong><br><span class="muted">{_esc(s.get("why",""))}</span></div>'
-            f'{_label(s.get("stance",""), _stance_color(s.get("stance","")))}</div>' for s in syn["segmente"]
-        )
-        sec.append(("segmente", t("segments"), f'<div class="block" id="segmente"><h2 class="bh">{t("segments")}</h2>{segs}</div>'))
+        segs = fragment(*(
+            h("div", {"class_": "segrow"},
+              h("div", {}, h("strong", {}, s.get("segment", "")), h("br"),
+                h("span", {"class_": "muted"}, s.get("why", ""))),
+              raw(_label(s.get("stance", ""), _stance_color(s.get("stance", "")))))
+            for s in syn["segmente"]))
+        sec.append(("segmente", t("segments"), _block("segmente", t("segments"), segs)))
     if syn.get("pain_solvers"):
-        ps = "".join(f'<div class="psolve">{_srcchips(_esc(x))}</div>' for x in syn["pain_solvers"])
-        sec.append(("painsolver", "Pain-Solver", f'<div class="block" id="painsolver"><h2 class="bh">{t("validated_pain_solvers")}</h2>{ps}</div>'))
+        ps = fragment(*(h("div", {"class_": "psolve"}, raw(_srcchips(_esc(x)))) for x in syn["pain_solvers"]))
+        sec.append(("painsolver", "Pain-Solver", _block("painsolver", t("validated_pain_solvers"), ps)))
     if syn.get("offene_fragen"):
-        of = "".join(f'<div class="psolve">{_esc(x)}</div>' for x in syn["offene_fragen"])
-        sec.append(("offene", t("open_questions"), f'<div class="block" id="offene"><h2 class="bh">{t("open_questions_next_study")}</h2>{of}</div>'))
+        of = fragment(*(h("div", {"class_": "psolve"}, x) for x in syn["offene_fragen"]))
+        sec.append(("offene", t("open_questions"), _block("offene", t("open_questions_next_study"), of)))
     if belege:                       # cited evidence (councils) — demoted, near the end, collapsible
         sec.append(belege)
     # arc (collapsed) — only when there is a narrative; an empty <details> reads as a broken box
