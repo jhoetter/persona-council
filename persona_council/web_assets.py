@@ -155,16 +155,16 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 /* relations block on detail pages (Linear progressive disclosure) */
 .relcard{margin-top:16px}
 .relh{font-size:var(--t-sm);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;display:flex;align-items:center;gap:6px}.relh svg{width:13px;height:13px}.h1ic{display:inline-flex;vertical-align:-3px;margin-right:7px}.h1ic svg{width:19px;height:19px}
-.relgrp{margin-bottom:10px}
-.rellbl{font-size:var(--t-xs);font-weight:600;color:var(--muted);margin:6px 0 3px}
-.relrow{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:var(--t-body)}
+.relgrp{padding:2px 0 8px}
+.rellbl{font-size:var(--t-xs);font-weight:600;color:var(--muted);margin:0;padding:5px 14px 3px}
+.relrow{display:flex;align-items:center;gap:9px;padding:6px 14px;color:var(--ink);text-decoration:none;font-size:var(--t-body)}
 .relrow:hover{background:var(--hover)}
 .relrow .relt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .propcard{margin-top:16px}
-.prop{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:7px 2px;font-size:var(--t-body);border-bottom:1px solid var(--line-2)}
-.prop:last-child{border-bottom:0}
-.prop-k{display:inline-flex;align-items:center;gap:8px;color:var(--muted);flex-shrink:0}.prop-k svg{width:15px;height:15px;color:var(--faint)}
+.prop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 14px;font-size:var(--t-sm)}
+.prop-k{display:inline-flex;align-items:center;gap:8px;color:var(--muted);flex-shrink:0}.prop-k svg{width:14px;height:14px;color:var(--faint)}
 .prop-v{color:var(--ink);font-weight:500;text-align:right;min-width:0;overflow-wrap:anywhere}
+.prop-v a{color:var(--accent);text-decoration:none}.prop-v a:hover{text-decoration:underline}
 /* view toggle (Outline / Graph) */
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}
@@ -246,10 +246,9 @@ h1,h2,h3,h4{color:var(--ink)}
 .toc a:hover{color:var(--ink);background:var(--hover)}
 .toc a.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-weak)}
 .rail{position:sticky;top:0;align-self:start;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
-.rail h4{margin:0;padding:11px 14px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--line-2)}
-.prop{display:flex;align-items:flex-start;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line-2);font-size:var(--t-sm)}
-.prop:last-child{border-bottom:0}.prop .k{color:var(--muted);width:84px;flex-shrink:0}
-.prop .v{color:var(--ink);min-width:0;font-weight:500}
+.rail h4{margin:0;padding:11px 14px 8px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px}
+.rail h4 svg{width:13px;height:13px;color:var(--faint)}
+.rail h4:not(:first-child){border-top:1px solid var(--line-2);margin-top:4px;padding-top:13px}
 /* .hero h1/.sub now co-located with the _hero component (component-SSR C3) */
 .mdtable{border-collapse:collapse;width:100%;margin:16px 0;font-size:var(--t-body);line-height:1.4}
 .mdtable th,.mdtable td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}

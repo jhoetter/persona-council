@@ -49,11 +49,10 @@ def _relations_html(store, study_id: str, proj_id: str | None,
     blocks = fragment(grp(t("rel_based_on"), incoming), grp(t("rel_feeds_into"), outgoing))
     if not blocks:
         return ""
-    head = (raw(_icon("link")), " ", t("relations"))
-    if aside:
-        return fragment(h("h4", {"id": "sec-relations"}, *head), blocks)
+    if aside:                                                  # plain uppercase header, uniform with Properties
+        return fragment(h("h4", {"id": "sec-relations"}, t("relations")), blocks)
     return h("div", {"class_": "card relcard", "id": "sec-relations"},
-             h("div", {"class_": "relh"}, *head), blocks)
+             h("div", {"class_": "relh"}, raw(_icon("link")), " ", t("relations")), blocks)
 
 
 # Reaction keys that are meta/internal (shown via the badge/header), not user-facing content.
