@@ -28,7 +28,7 @@ def register_library(app) -> None:
             ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"])),
         ], aside=True)
         sec_sub = fragment(chip, " ", h("span", {"class_": "muted small"}, t("n_nodes", n=len(members))))
-        main = fragment(raw(_hero(sec["title"], sub=sec_sub)), note_sub,
+        main = fragment(raw(_hero(sec["title"], icon="squareGrid", sub=sec_sub)), note_sub,
                         h("div", {"style": "margin-top:8px"},
                           fragment(*rows) if rows else raw(_empty_state(t("section"), t("no_members")))))
         return _layout(sec["title"], _doc(main, rail=sprops), store,
@@ -55,10 +55,8 @@ def register_library(app) -> None:
             ("projects", t("project"), proj_link),
         ], aside=True)
         nrel = _relations_html(store, f"note:{note_id}", proj["id"], aside=True)
-        pill = h("div", {"style": "margin-bottom:6px"},
-                 h("span", {"class_": "pill", "style": f'border-color:{pr["color"]};color:{pr["color"]}'},
-                   ((pr.get("glyph") + " ") if pr.get("glyph") else ""), klabel))
-        main = fragment(raw(_hero(note.get("title", ""), hid="sec-content", top=pill)),
+        nicon = "bulb" if kind == "concept" else "square"     # type icon in the hero (consistent w/ other pages)
+        main = fragment(raw(_hero(note.get("title", ""), icon=nicon, hid="sec-content", sub=klabel)),
                         h("div", {"class_": "es-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))))
         nrail = [("sec-content", klabel)]
         if nprops:
@@ -68,7 +66,8 @@ def register_library(app) -> None:
         body = _doc(main, rail=nprops + nrel) + _page_rail(nrail)
         star_url = f'/{"concepts" if kind == "concept" else "notes"}/{note_id}'
         return _layout(note.get("title") or klabel, body, store,
-                       crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (klabel, None)],
+                       crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'),
+                               (note.get("title") or klabel, None)],   # title in the crumb (consistent w/ other pages)
                        active=active, actions=raw(_star(kind, note_id, note.get("title") or klabel, star_url)))
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)

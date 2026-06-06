@@ -163,7 +163,7 @@ def register_councils(app) -> None:
             sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
         main = fragment(
-            raw(_hero(session["prompt"], sub=council_sub, hid="sec-question")),
+            raw(_hero(session["prompt"], icon="councils", sub=council_sub, hid="sec-question")),
             raw(lead_block), raw(_study_lead(exec_html, vm["answer_label"])), raw(sentiment),
             h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, voices_label), raw(turns_html)),
             h("details", {"class_": "sec"}, h("summary", {}, summary_h),

@@ -93,6 +93,7 @@ register_css(r"""
 register_css(r"""
 
 .syn-head h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;font-weight:650;margin:0 0 8px}
+.syn-head h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}
 .syn-goal{color:var(--muted);font-size:var(--t-md);line-height:1.5;max-width:72ch;margin:0 0 14px}
 .syn-meta{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .mchip{font-size:var(--t-sm);color:var(--muted);border:1px solid var(--line);background:var(--panel-2);border-radius:var(--radius-sm);padding:3px 10px}
@@ -588,7 +589,7 @@ def _synthesis_html(store: Store, syn: dict):
     if smeta:
         mchips.append(h("span", {"class_": "mchip"}, raw(t("voices_meta", s=_esc(smeta)))))
     mchips.append(h("span", {"class_": "mchip"}, syn["created_at"][:10]))
-    head = h("header", {"class_": "syn-head"}, h("h1", {}, syn["title"]),
+    head = h("header", {"class_": "syn-head"}, h("h1", {}, raw(_icon("syntheses")), syn["title"]),
              h("div", {"class_": "syn-meta"}, fragment(*mchips)))
 
     main = head + raw("".join(str(html) for _, _, html in sec))   # section htmls are all trusted (h() Safe or built strings)
