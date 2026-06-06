@@ -59,22 +59,23 @@ def _hbars(rows: list[tuple], maxv: int | None = None) -> str:
         for lbl, v, c in rows))
 
 
-def _area(points: list[tuple], w: int = 560, h: int = 140) -> str:
+def _area(points: list[tuple], w: int = 560, ht: int = 140) -> str:
     """points: [(label, value)]. Area + line chart (SVG, viewBox-scaled)."""
     if not points:
-        return f'<p class="muted small">{t("no_data")}</p>'
+        return h("p", {"class_": "muted small"}, t("no_data"))
     n = len(points); mx = max(v for _, v in points) or 1
     pad = 6
     def x(i): return pad + (i * (w - 2 * pad) / (n - 1 if n > 1 else 1))
-    def y(v): return h - pad - (v / mx * (h - 2 * pad))
+    def y(v): return ht - pad - (v / mx * (ht - 2 * pad))
     pts = [(x(i), y(v)) for i, (_, v) in enumerate(points)]
     line = "M" + " L".join(f"{px:.1f},{py:.1f}" for px, py in pts)
-    fill = f"M{pts[0][0]:.1f},{h - pad} L" + " L".join(f"{px:.1f},{py:.1f}" for px, py in pts) + f" L{pts[-1][0]:.1f},{h - pad} Z"
-    dots = "".join(f'<circle class="dot" cx="{px:.1f}" cy="{py:.1f}" r="2"></circle>' for px, py in pts)
+    fill = f"M{pts[0][0]:.1f},{ht - pad} L" + " L".join(f"{px:.1f},{py:.1f}" for px, py in pts) + f" L{pts[-1][0]:.1f},{ht - pad} Z"
+    dots = [h("circle", {"class_": "dot", "cx": f"{px:.1f}", "cy": f"{py:.1f}", "r": "2"}) for px, py in pts]
     first, last = points[0][0], points[-1][0]
-    return (f'<div class="area"><svg viewBox="0 0 {w} {h}" preserveAspectRatio="none">'
-            f'<path class="fl" d="{fill}"></path><path class="ln" d="{line}"></path>{dots}</svg></div>'
-            f'<div class="axis"><span>{_esc(first)}</span><span>{_esc(last)}</span></div>')
+    return fragment(
+        h("div", {"class_": "area"}, h("svg", {"viewBox": f"0 0 {w} {ht}", "preserveAspectRatio": "none"},
+          h("path", {"class_": "fl", "d": fill}), h("path", {"class_": "ln", "d": line}), fragment(*dots))),
+        h("div", {"class_": "axis"}, h("span", {}, first), h("span", {}, last)))
 
 
 def _stance_bucket(s: str) -> tuple[str, str]:
@@ -102,8 +103,8 @@ def _vote_parts(sessions: list[dict]) -> tuple[Counter, list[tuple]]:
 
 
 def _overview_html(parts: list[tuple]) -> str:
-    return (f'<div class="dnrow">{_donut(parts)}<div style="flex:1">'
-            f'{_stacked(parts)}{_legend(parts)}</div></div>')
+    return h("div", {"class_": "dnrow"}, _donut(parts),
+             h("div", {"style": "flex:1"}, _stacked(parts), _legend(parts)))
 
 
 def _per_council_html(sessions: list[dict]) -> str:
@@ -111,11 +112,11 @@ def _per_council_html(sessions: list[dict]) -> str:
     for s in sorted(sessions, key=lambda x: x.get("created_at", "")):
         _, parts = _vote_parts([s])
         n = len(s.get("persona_ids", []))
-        rows.append(
-            f'<a class="crow" href="/councils/{_esc(s["id"])}"><span class="ct" title="{_esc(s["prompt"])}">{_esc(s["prompt"])}</span>'
-            f'{_stacked(parts, thin=True)}<span class="cn">{n} P · {_esc(s.get("created_at", "")[:10])}</span></a>'
-        )
-    return "".join(rows)
+        rows.append(h("a", {"class_": "crow", "href": f'/councils/{s["id"]}'},
+                      h("span", {"class_": "ct", "title": s["prompt"]}, s["prompt"]),
+                      _stacked(parts, thin=True),
+                      h("span", {"class_": "cn"}, f'{n} P · {s.get("created_at", "")[:10]}')))
+    return fragment(*rows)
 
 
 def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
@@ -140,11 +141,11 @@ def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
         _, parts = (None, [(cnt.get(k, 0), _VOTE_COLOR[k], _vote_label(k)) for k in _VOTE_ORDER])
         pct = round(score * 100)
         col = _stance_color("positiv" if pct >= 33 else "skept" if pct < 0 else "bedingt")
-        rows.append(
-            f'<div class="prow"><a class="pn" href="/personas/{_esc(pid)}">{av}<span>{_esc(name)}</span></a>'
-            f'{_stacked(parts, thin=True)}<span class="ps" style="color:{col}">{pct:+d}</span></div>'
-        )
-    return "".join(rows)
+        rows.append(h("div", {"class_": "prow"},
+                      h("a", {"class_": "pn", "href": f'/personas/{pid}'}, av, h("span", {}, name)),
+                      _stacked(parts, thin=True),
+                      h("span", {"class_": "ps", "style": f"color:{col}"}, f"{pct:+d}")))
+    return fragment(*rows)
 
 
 def _stance_dist_html(sessions: list[dict]) -> str:
@@ -169,20 +170,20 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
     if not nvotes and not has_turns:
         return None
     scope = t("sentiment_scope_chain") if per_council else t("sentiment_scope_session")
-    blocks = [f'<p class="ihint">{t("sentiment_intro", scope=scope)}</p>']
+    blocks = [h("p", {"class_": "ihint"}, t("sentiment_intro", scope=scope))]
     if nvotes:
         blocks.append(_overview_html(parts))
     if per_council and len(sessions) > 1:
         pc = _per_council_html(sessions)
         if pc:
-            blocks.append(f'<p class="ihint" style="margin-top:18px">{t("per_council")}</p>' + pc)
+            blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("per_council")), pc))
     pbs = _personas_by_sentiment_html(store, sessions)
     if pbs:
-        blocks.append(f'<p class="ihint" style="margin-top:18px">{t("personas_by_sentiment")}</p>' + pbs)
+        blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("personas_by_sentiment")), pbs))
     sd = _stance_dist_html(sessions)
     if sd:
-        blocks.append(f'<p class="ihint" style="margin-top:18px">{t("stance_of_contributions")}</p>' + sd)
-    return f'<div class="sec" id="{_esc(sid)}"><h2>{_esc(title)}</h2>' + "".join(blocks) + "</div>"
+        blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("stance_of_contributions")), sd))
+    return h("div", {"class_": "sec", "id": sid}, h("h2", {}, title), fragment(*blocks))
 
 
 # --------------------------- voices / Stimmen panel --------------------------- #
@@ -199,8 +200,8 @@ def _sent_color(s: str) -> str:
 
 def _relbar(rel: str) -> str:
     lvl = _REL_LEVEL.get(rel, 2)
-    ticks = "".join(f'<i class="{"on" if i < lvl else ""}"></i>' for i in range(4))
-    return f'<span class="relbar" title="{_esc(t("relevance_tooltip", rel=rel))}">{ticks}</span>'
+    ticks = [h("i", {"class_": "on" if i < lvl else ""}) for i in range(4)]
+    return h("span", {"class_": "relbar", "title": t("relevance_tooltip", rel=rel)}, ticks)
 
 
 VOICES_JS = """
@@ -251,22 +252,24 @@ def _voices_panel(store: Store, syn: dict) -> str | None:
     segments = sorted({v.get("segment", "") for v in voices if v.get("segment")})
 
     def chip(facet: str, val: str, color: str | None = None) -> str:
-        dot = f'<i style="background:{color}"></i>' if color else ""
-        return f'<button class="vchip" data-facet="{facet}" data-val="{_esc(val)}">{_esc(val)}{dot}</button>'
+        dot = h("i", {"style": f"background:{color}"}) if color else ""
+        return h("button", {"class_": "vchip", "data-facet": facet, "data-val": val}, val, dot)
 
-    filt = (f'<div class="fgroup"><span class="flabel">{t("sentiment_label")}</span>'
-            + "".join(chip("sentiment", s, _sent_color(s)) for s in _SENT_ORDER) + "</div>"
-            + f'<div class="fgroup"><span class="flabel">{t("relevance_label")}</span>'
-            + "".join(chip("relevance", r) for r in _REL_ORDER) + "</div>")
-    if segments:
-        filt += (f'<div class="fgroup"><span class="flabel">{t("segment")}</span>'
-                 + "".join(chip("segment", s) for s in segments) + "</div>")
-    ph_search = _esc(t("search_arg_name"))
-    tools = (f'<div class="vtools"><div class="vfilters">{filt}</div>'
-             f'<div class="vtools-right"><input class="vsearch" type="text" placeholder="{ph_search}">'
-             f'<select class="vsort"><option value="sentiment">{t("sort_by_sentiment")}</option>'
-             f'<option value="relevance">{t("sort_relevance")}</option><option value="name">{t("name_label")}</option>'
-             f'<option value="shift">{t("sort_shift_first")}</option></select></div></div>')
+    filt = fragment(
+        h("div", {"class_": "fgroup"}, h("span", {"class_": "flabel"}, t("sentiment_label")),
+          *(chip("sentiment", s, _sent_color(s)) for s in _SENT_ORDER)),
+        h("div", {"class_": "fgroup"}, h("span", {"class_": "flabel"}, t("relevance_label")),
+          *(chip("relevance", r) for r in _REL_ORDER)),
+        (h("div", {"class_": "fgroup"}, h("span", {"class_": "flabel"}, t("segment")),
+          *(chip("segment", s) for s in segments)) if segments else None))
+    tools = h("div", {"class_": "vtools"}, h("div", {"class_": "vfilters"}, filt),
+              h("div", {"class_": "vtools-right"},
+                h("input", {"class_": "vsearch", "type": "text", "placeholder": t("search_arg_name")}),
+                h("select", {"class_": "vsort"},
+                  h("option", {"value": "sentiment"}, t("sort_by_sentiment")),
+                  h("option", {"value": "relevance"}, t("sort_relevance")),
+                  h("option", {"value": "name"}, t("name_label")),
+                  h("option", {"value": "shift"}, t("sort_shift_first")))))
 
     rows = []
     for v in voices:
@@ -276,37 +279,37 @@ def _voices_panel(store: Store, syn: dict) -> str | None:
         sent = v.get("sentiment", "neutral"); rel = v.get("relevance", "teilweise"); seg = v.get("segment", "")
         sh = v.get("shift")
         has_shift = bool(sh and (sh.get("trigger") or sh.get("to")))
-        shbadge = (f'<span class="shiftbadge">{_esc(sh.get("from",""))} → {_esc(sh.get("to",""))}</span>'
+        shbadge = (h("span", {"class_": "shiftbadge"}, sh.get("from", ""), " → ", sh.get("to", ""))
                    if has_shift else "")
-        segchip = f'<span class="segchip" title="{_esc(seg)}">{_esc(seg)}</span>' if seg else ""
+        segchip = h("span", {"class_": "segchip", "title": seg}, seg) if seg else ""
         exp = []
         if has_shift:
             cid = sh.get("council_id", "")
-            link = f' <a href="/councils/{_esc(cid)}">{t("to_council")}</a>' if cid else ""
-            shift_lbl = _esc(t("shift_label", a=sh.get("from", ""), b=sh.get("to", "")))
-            exp.append(f'<div class="vshift"><strong>{shift_lbl}</strong> {_esc(sh.get("trigger",""))}{link}</div>')
+            link = fragment(" ", h("a", {"href": f'/councils/{cid}'}, t("to_council"))) if cid else ""
+            exp.append(h("div", {"class_": "vshift"}, h("strong", {}, t("shift_label", a=sh.get("from", ""), b=sh.get("to", ""))),
+                         " ", sh.get("trigger", ""), link))
         for e in v.get("evidence", []):
             cid = e.get("council_id", "")
-            link = f' <a href="/councils/{_esc(cid)}">{t("to_council")}</a>' if cid else ""
-            exp.append(f'<div class="vev">„{_esc(e.get("quote",""))}“{link}</div>')
-        exp_html = f'<div class="vexp" hidden>{"".join(exp)}</div>' if exp else ""
+            link = fragment(" ", h("a", {"href": f'/councils/{cid}'}, t("to_council"))) if cid else ""
+            exp.append(h("div", {"class_": "vev"}, "„", e.get("quote", ""), "“", link))
+        exp_html = h("div", {"class_": "vexp", "hidden": True}, fragment(*exp)) if exp else ""
         text = f'{name} {v.get("key_argument","")} {seg}'.lower()
-        rows.append(
-            f'<div class="vrow" data-sentiment="{_esc(sent)}" data-relevance="{_esc(rel)}" data-segment="{_esc(seg)}" '
-            f'data-name="{_esc(name)}" data-shift="{1 if has_shift else 0}" data-text="{_esc(text)}">'
-            f'<div class="vrow-main"><span class="vav">{_avatar(p, 30)}</span>'
-            f'<div class="vmeta"><div class="vline1"><b>{_esc(name)}</b>{_label(sent, _sent_color(sent))}{_relbar(rel)}{shbadge}</div>'
-            f'<div class="varg">{_esc(v.get("key_argument",""))}</div></div>'
-            f'<div class="vright">{segchip}{_star("persona", pid, name, f"/personas/{pid}")}<span class="vchev">{_icon("caretRight")}</span></div>'
-            f'</div>{exp_html}</div>'
-        )
+        rows.append(h("div", {"class_": "vrow", "data-sentiment": sent, "data-relevance": rel, "data-segment": seg,
+                              "data-name": name, "data-shift": "1" if has_shift else "0", "data-text": text},
+                      h("div", {"class_": "vrow-main"}, h("span", {"class_": "vav"}, _avatar(p, 30)),
+                        h("div", {"class_": "vmeta"},
+                          h("div", {"class_": "vline1"}, h("b", {}, name), _label(sent, _sent_color(sent)), _relbar(rel), shbadge),
+                          h("div", {"class_": "varg"}, v.get("key_argument", ""))),
+                        h("div", {"class_": "vright"}, segchip, raw(_star("persona", pid, name, f"/personas/{pid}")),
+                          h("span", {"class_": "vchev"}, raw(_icon("caretRight"))))),
+                      exp_html))
     js = (VOICES_JS.replace("__SENT_LABEL__", t("sentiment_label"))
           .replace("__REL_LABEL__", t("relevance_label"))
           .replace("__NOFM__", t("voices_n_of_m", n="{n}", m="{m}")))
-    return (f'<div class="sec" id="stimmen"><h2>{t("voices_count", n=len(voices))}</h2>'
-            f'<p class="ihint">{t("voices_intro")}</p>'
-            f'<div class="voices" id="voices">{tools}<div class="vdist"></div><div class="vcount"></div>'
-            f'<div class="vrows">{"".join(rows)}</div></div></div>') + js
+    return h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices_count", n=len(voices))),
+             h("p", {"class_": "ihint"}, t("voices_intro")),
+             h("div", {"class_": "voices", "id": "voices"}, tools, h("div", {"class_": "vdist"}),
+               h("div", {"class_": "vcount"}), h("div", {"class_": "vrows"}, fragment(*rows)))) + raw(js)
 
 
 def _persona_voices_html(store: Store, pid: str) -> str:
@@ -317,19 +320,21 @@ def _persona_voices_html(store: Store, pid: str) -> str:
                 continue
             sent = v.get("sentiment", "neutral")
             sh = v.get("shift")
-            shb = (f'<span class="shiftbadge">{_esc(sh.get("from",""))} → {_esc(sh.get("to",""))}</span>'
+            shb = (h("span", {"class_": "shiftbadge"}, sh.get("from", ""), " → ", sh.get("to", ""))
                    if (sh and (sh.get("trigger") or sh.get("to"))) else "")
-            out.append(
-                '<div class="vrow"><div class="vrow-main" style="cursor:default"><span></span>'
-                f'<div class="vmeta"><div class="vline1"><a href="/syntheses/{_esc(syn["id"])}"><b>{_esc(syn["title"])}</b></a>'
-                f'{_label(sent, _sent_color(sent))}{_relbar(v.get("relevance","teilweise"))}{shb}</div>'
-                f'<div class="varg" style="white-space:normal">{_esc(v.get("key_argument",""))}</div></div>'
-                '<div class="vright"></div></div></div>'
-            )
+            out.append(h("div", {"class_": "vrow"},
+                h("div", {"class_": "vrow-main", "style": "cursor:default"}, h("span", {}),
+                  h("div", {"class_": "vmeta"},
+                    h("div", {"class_": "vline1"},
+                      h("a", {"href": f'/syntheses/{syn["id"]}'}, h("b", {}, syn["title"])),
+                      _label(sent, _sent_color(sent)), _relbar(v.get("relevance", "teilweise")), shb),
+                    h("div", {"class_": "varg", "style": "white-space:normal"}, v.get("key_argument", ""))),
+                  h("div", {"class_": "vright"}))))
             break
     if not out:
         return ""
-    return f'<div class="sec" id="stimmen"><h2>{t("voices_in_analyses")}</h2><div class="vrows">{"".join(out)}</div></div>'
+    return h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices_in_analyses")),
+             h("div", {"class_": "vrows"}, fragment(*out)))
 
 
 # --------------------------- synthesis report --------------------------- #
@@ -363,10 +368,11 @@ def _synthesis_html(store: Store, syn: dict):
         tally = Counter(str(v.get("vote", "")).upper() for v in (c.get("votes") or []) if isinstance(v, dict))
         parts = [(tally.get(k, 0), _VOTE_COLOR[k], k) for k in _VOTE_ORDER]
         prompt = c.get("prompt") or cid
-        ref_rows.append(
-            f'<a class="ref-row" href="/councils/{_esc(cid)}"><span class="ref-n">C{i}</span>'
-            f'<span class="ref-t">{_esc(prompt[:96])}</span>'
-            f'<span class="ref-bar">{_stacked(parts, thin=True)}</span><span class="ref-go">{_icon("arrowRight")}</span></a>')
+        ref_rows.append(h("a", {"class_": "ref-row", "href": f"/councils/{cid}"},
+                          h("span", {"class_": "ref-n"}, f"C{i}"),
+                          h("span", {"class_": "ref-t"}, prompt[:96]),
+                          h("span", {"class_": "ref-bar"}, _stacked(parts, thin=True)),
+                          h("span", {"class_": "ref-go"}, raw(_icon("arrowRight")))))
     if ref_rows:
         belege = ("belege", t("councils"),
                   h("details", {"class_": "block", "id": "belege"},
@@ -405,12 +411,12 @@ def _synthesis_html(store: Store, syn: dict):
     # voices — who thinks what & why (filter/sort/shift/evidence)
     panel = _voices_panel(store, syn)
     if panel:
-        sec.append(("stimmen", t("voices"), f'<div class="block" id="stimmen">{panel}</div>'))
+        sec.append(("stimmen", t("voices"), h("div", {"class_": "block", "id": "stimmen"}, raw(panel))))
     else:
         syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]
         sent = _sentiment_section(store, syn_sessions, title=t("sentiment_over_chain"), per_council=True)
         if sent:
-            sec.append(("stimmen", t("voices"), f'<div class="block" id="stimmen">{sent}</div>'))
+            sec.append(("stimmen", t("voices"), h("div", {"class_": "block", "id": "stimmen"}, raw(sent))))
     # supporting analysis (omit when empty — an empty section reads as a broken box)
     if syn.get("segmente"):
         segs = fragment(*(
@@ -431,7 +437,9 @@ def _synthesis_html(store: Store, syn: dict):
     # arc (collapsed) — only when there is a narrative; an empty <details> reads as a broken box
     if (syn.get("arc_narrative") or "").strip():
         sec.append(("bogen", t("course"),
-                    f'<details class="block" id="bogen"><summary class="bh" style="cursor:pointer">{t("arc_course")}</summary><div class="es-prose sm">{_md(_srcchips(syn["arc_narrative"]))}</div></details>'))
+                    h("details", {"class_": "block", "id": "bogen"},
+                      h("summary", {"class_": "bh", "style": "cursor:pointer"}, t("arc_course")),
+                      h("div", {"class_": "es-prose sm"}, raw(_md(_srcchips(syn["arc_narrative"])))))))
 
     # ---- slim meta strip (replaces the old Eigenschaften rail) ----
     cs = Counter(v.get("sentiment", "neutral") for v in syn.get("voices", []))
@@ -450,4 +458,4 @@ def _synthesis_html(store: Store, syn: dict):
     # Unified detail shell: the caller wraps this content in _doc (content column + Properties/Relations
     # aside) and renders the section minimap via _page_rail(toc) — same as every other detail page.
     toc = [(sid, lbl) for sid, lbl, _ in sec]
-    return _SYN_STYLE + f'<div class="syn-main">{main}</div>', toc
+    return raw(_SYN_STYLE) + h("div", {"class_": "syn-main"}, raw(main)), toc
