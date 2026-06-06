@@ -32,7 +32,6 @@ def register_councils(app) -> None:
         session = store.get_council_session(session_id)
         if not session:
             return _layout(t("not_found"), _empty_state(t("council_not_found"), t("runtime_maybe_cleared")), store, active="councils")
-        voices_detail_h = t("voices_in_detail", n=len({tn.get("persona_id") for tn in session["turns"] if tn.get("persona_id")}))
         proposal_short_h = t("proposal_short_summary")
         proposal_h = t("proposal"); summary_h = t("summary")
         sentiment_title = t("sentiment_this_council")
@@ -47,45 +46,32 @@ def register_councils(app) -> None:
         # flat per-persona list — same card either way.
         statements = _A.council_statements(session)
         prompts = _A.council_prompts(session)
-        q_prompts = [p for p in prompts if str(p.get("id", "")).startswith("q")]
-        help_html = h("p", {"class_": "muted small", "style": "margin:-4px 0 12px"}, t("council_voices_help"))
-        if q_prompts and any(st.get("about") for st in statements):
-            turns_html = fragment(help_html, render_statements(statements, store, group_by="prompt", prompts=q_prompts))
-        else:
-            turns_html = fragment(help_html, render_statements(statements, store, group_by="persona"))
         n_voices = len(session.get("persona_ids", []))
-        # A council has THREE honest shapes (derived, no stored type): DISCOVERY (open questions →
-        # answers, no vote — listening), EVALUATION (react to a concept), DECISION (a motion put to a
-        # vote). Lead the page with the right framing so "what is the question?" is always answered.
         vm = study_head(session)                       # shared study view-model (question/answer/mode)
         mode = vm["mode"]
         exec_html = _md(vm["answer_md"])
-        voices_label = t("council_voices_answers") if mode == "discovery" else voices_detail_h
-        if mode == "discovery":
-            qs = session.get("questions") or ([session.get("prompt")] if session.get("prompt") else [])
-            qlist = [h("li", {}, q) for q in qs] or [h("li", {"class_": "muted"}, "—")]
-            lead_block = h("div", {"class_": "es"}, h("div", {"class_": "eyebrow"}, t("council_questions_h")),
-                           h("ul", {"class_": "es-prose"}, qlist),
-                           h("p", {"class_": "muted small"}, t("council_questions_help", n=n_voices)))
-            sentiment = ""                                    # a listening session has no vote/sentiment chart
-        else:
-            motion = (session.get("proposal") or "").strip()
-            label = t("council_eval_h") if mode == "evaluation" else t("council_motion")
-            help_ = t("council_eval_help", n=n_voices) if mode == "evaluation" else t("council_motion_help", n=n_voices)
-            lead_block = (h("div", {"class_": "es"}, h("div", {"class_": "eyebrow"}, label),
-                            h("div", {"class_": "es-prose"}, "„", motion, "“"),
-                            h("p", {"class_": "muted small"}, help_)) if motion else "")
-            sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
+        # The Voices section carries the framing for EVERY mode: each persona card is grouped under the
+        # prompt it answers — the discovery QUESTIONS or the evaluation/decision PROPOSAL (rendered as
+        # Markdown via render_prompt) — so "what was asked" always sits right above the cards. One
+        # consistent structure across all councils (no separate lead block to drift out of sync).
+        referenced = {(s.get("about") or {}).get("id") for s in statements if s.get("about")}
+        group_prompts = [p for p in prompts if p.get("id") in referenced]
+        help_text = (t("council_questions_help", n=n_voices) if mode == "discovery"
+                     else t("council_eval_help", n=n_voices) if mode == "evaluation"
+                     else t("council_motion_help", n=n_voices))
+        intro = h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, help_text)
+        voices_html = (render_statements(statements, store, group_by="prompt", prompts=group_prompts)
+                       if group_prompts else render_statements(statements, store, group_by="persona"))
+        sentiment = "" if mode == "discovery" else (_sentiment_section(store, [session], title=sentiment_title) or "")
         council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
         short_title = _display_title(session["prompt"])        # short form for breadcrumb / tab / favourite only
-        # Executive Summary (the short TL;DR) sits at the TOP — same block/name as the synthesis — not a
-        # bottom toggle. The long exec_summary stays below as "what this council found" (the detail).
+        # Executive Summary (the short TL;DR) sits at the TOP — same block/name as the synthesis.
         has_summary = bool((session.get("summary") or "").strip())
         summary_lead = (raw(_study_lead(_md(session["summary"]), t("answer_exec_summary"), qid="sec-summary"))
                         if has_summary else "")
         body = fragment(
-            raw(lead_block), summary_lead, raw(_study_lead(exec_html, vm["answer_label"])), raw(sentiment),
-            h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, voices_label), raw(turns_html)))
+            summary_lead, raw(_study_lead(exec_html, vm["answer_label"])), raw(sentiment),
+            h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices")), intro, raw(voices_html)))
         prop_rows = [("councils", t("type_h"), t("council_mode_" + mode)), ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
             vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}

@@ -42,7 +42,7 @@ def render_prompt(p: dict, *, n: int | None = None) -> str:
     """A posed prompt. As a transcript header (question/proposal) with an optional ordinal."""
     ey = {"question": t("question"), "proposal": t("council_motion"),
           "goal": t("question"), "focus": t("question"), "hypothesis": t("council_motion")}.get(p.get("kind"), t("question"))
-    label = f'{ey} {n}' if n is not None else ey
+    label = f'{ey} {n}' if (n is not None and p.get("kind") == "question") else ey
     ico = "compass" if p.get("kind") in ("question", "goal", "focus") else "bulb"
     return h("div", {"class_": "qround-q"}, raw(_icon(ico)),
              h("div", {}, h("div", {"class_": "qround-n"}, label),

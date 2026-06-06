@@ -690,7 +690,7 @@ def _effort_impact(recs: list) -> str:
                 cls += " algn-l"
             pop = h("span", {"class_": "ei-pop"},
                     h("span", {"class_": "ei-pop-h", "style": f"color:{color}"}, f"#{i} · {levlabel}"),
-                    h("span", {"class_": "ei-pop-t"}, raw(_srcchips(_esc(txt)))),
+                    h("span", {"class_": "ei-pop-t"}, raw(_prose(txt))),
                     h("span", {"class_": "ei-pop-m"}, t("effort_value", a=a2, n=n2)))
             dots.append(h("span", {"class_": cls, "tabindex": "0", "style": f"left:{lp:.2f}%;top:{tp:.2f}%;--c:{color}"},
                           h("span", {"class_": "ei-num"}, str(i)), pop))
