@@ -19,6 +19,7 @@ from ..config import (
     ROOT, utc_now_iso, content_language, ensure_content_language, language_instruction,
     critic_threshold, critic_sample_k,
 )
+from ._authoring import MARKDOWN_CONTRACT
 from ..models import (
     CalendarEvent,
     CouncilSession,
@@ -145,7 +146,7 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
             "is AUDITABLE (the UI shows it per voice). Ground every turn in agent_context, honest + "
             "anti-steering. Then a short summary + a rich Markdown exec_summary. Persist via "
             "record_council(project_id, prompt, persona_ids, turns, votes=[], proposal='', questions=[...], "
-            f"summary, exec_summary). {language_instruction(language)}"
+            f"summary, exec_summary). {language_instruction(language)}" + MARKDOWN_CONTRACT
         ),
     }
 

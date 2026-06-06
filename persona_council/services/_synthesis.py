@@ -19,6 +19,7 @@ from ..config import (
     ROOT, utc_now_iso, content_language, ensure_content_language, language_instruction,
     critic_threshold, critic_sample_k,
 )
+from ._authoring import MARKDOWN_CONTRACT
 from ..models import (
     CalendarEvent,
     CouncilSession,
@@ -137,7 +138,7 @@ def brief_synthesis(council_ids: list[str], title: str | None = None, start_inpu
         "provenance": _synthesis_provenance(store, council_ids, goal or start_input or title),
     }
     return {"schema": "synthesis", "council_ids": council_ids,
-            "instructions": build_synthesis_prompt(frame), "frame": frame}
+            "instructions": build_synthesis_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
 
 
 
@@ -390,7 +391,7 @@ def brief_meta_report(project_id: str, store: Store | None = None) -> dict[str, 
         "studies": [_study_compact(store, sid, tags.get(sid, [])) for sid in graph["build_order"]],
     }
     return {"project_id": graph["project"]["id"], "schema": "meta_outline",
-            "study_ids": graph["build_order"], "instructions": build_meta_outline_prompt(frame), "frame": frame}
+            "study_ids": graph["build_order"], "instructions": build_meta_outline_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
 
 
 
@@ -437,7 +438,7 @@ def brief_meta_section(project_id: str, section_id: str, report_id: str | None =
     frame = {"heading": section["heading"], "intent": section["intent"], "theme_tags": section["theme_tags"],
              "studies": [_study_full(store, sid) for sid in section["source_study_ids"]]}
     return {"project_id": project["id"], "report_id": report["id"], "section_id": section_id,
-            "schema": "meta_section", "instructions": build_meta_section_prompt(frame), "frame": frame}
+            "schema": "meta_section", "instructions": build_meta_section_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
 
 
 

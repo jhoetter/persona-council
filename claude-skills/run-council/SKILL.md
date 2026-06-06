@@ -97,3 +97,11 @@ When the council is recorded, point the user to the web inspector to read it:
 A good harness lets the persona *reason about whether* the past is relevant —
 cheap reflection first, targeted lookup only when it sharpens the answer. This
 mirrors the agentic memory pattern: the agent decides when to check history.
+
+## Authoring style (Markdown, not ALL-CAPS)
+
+Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis, `-`/`1.` lists,
+`>` quotes, blank lines between paragraphs. **Never** use ALL-CAPS for emphasis or write a literal
+section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
+the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
+notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).

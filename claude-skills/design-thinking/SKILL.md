@@ -72,3 +72,11 @@ meta-brief → meta-outline → (per phase) meta-section-brief → meta-section 
 Diverge/converge is the run-council strategies (`pain-discovery`/`positive-deepdive` =
 divergent; `goal`/`tension`→decision = convergent). The facilitator's whole job is sequencing
 them per the diamond and keeping every claim grounded in a persona's lived experience.
+
+## Authoring style (Markdown, not ALL-CAPS)
+
+Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis, `-`/`1.` lists,
+`>` quotes, blank lines between paragraphs. **Never** use ALL-CAPS for emphasis or write a literal
+section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
+the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
+notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).

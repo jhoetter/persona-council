@@ -90,3 +90,11 @@ inspector's methodology strip + diamond view.
 ## Hard rule
 No LLM text-generation, ever. Host/subagents author all text via MCP. OpenAI key = embeddings +
 images only. (See the project memory + `spec/deep-design-thinking-and-diamond.md` §2.)
+
+## Authoring style (Markdown, not ALL-CAPS)
+
+Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis, `-`/`1.` lists,
+`>` quotes, blank lines between paragraphs. **Never** use ALL-CAPS for emphasis or write a literal
+section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
+the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
+notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).
