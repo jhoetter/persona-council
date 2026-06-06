@@ -213,6 +213,39 @@ def resolve_open_question(project_id: str, question_id: str, answered_by_study_i
 
 
 
+def ref_backlinks(project_id: str, store: Store | None = None) -> dict[str, list[dict[str, Any]]]:
+    """Reverse cross-reference index for a project (spec/artifact-cross-references.md §4): for every
+    addressed part, who points AT it. Returns {address: [{href, label, role}]}. Built by scanning every
+    artifact's outgoing refs — so a council statement learns it is 'cited by' the synthesis that derives
+    from it (the bidirectional knowledge graph), without any data duplication."""
+    store = store or Store()
+    proj = _require_research_project(store, project_id)
+    idx: dict[str, list[dict[str, Any]]] = {}
+
+    def add(target: dict, label: str, href: str):
+        if not (target and target.get("id")):
+            return
+        addr = _A.part_address(target["kind"], target["id"], target.get("anchor"))
+        idx.setdefault(addr, []).append({"href": href, "label": label, "role": target.get("role")})
+
+    syns = store.list_syntheses()
+    councils = {c["id"]: c for c in store.list_council_sessions() if c.get("project_id") == proj["id"]}
+    for syn in syns:
+        if not any(cid in councils for cid in (syn.get("council_ids") or [])) and \
+           syn["id"] not in (proj.get("study_ids") or []):
+            continue
+        for f in (syn.get("findings") or []):
+            for r in (f.get("refs") or []):
+                add(r, syn.get("title", ""), f'/syntheses/{syn["id"]}#{f.get("id", "")}')
+    # councils referencing each other / earlier parts
+    for c in councils.values():
+        for s in (c.get("statements") or []):
+            for r in (s.get("refs") or []):
+                if r.get("kind") in ("council", "synthesis", "note"):
+                    add(r, c.get("prompt", ""), f'/councils/{c["id"]}#{s.get("id", "")}')
+    return idx
+
+
 def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
     """A graph node for a synthesis (study) — used by the plan-less / meta-report study_ids path."""
     syn = store.get_synthesis(study_id)

@@ -86,7 +86,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "council_mode_discovery": "Discovery", "council_mode_evaluation": "Konzept-Resonanz", "council_mode_decision": "Entscheidung",
         "council_input_given": "Gegebener Input (Prompt + Kontext)",
         "council_drew_on": "Stützte sich auf",
-        "further_answers": "Weitere Antworten",
+        "further_answers": "Weitere Antworten", "cited_by": "Zitiert von",
         # vote labels
         "vote_support": "Befürwortend", "vote_maybe": "Bedingt",
         "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
@@ -233,7 +233,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "council_mode_discovery": "Discovery", "council_mode_evaluation": "Concept reaction", "council_mode_decision": "Decision",
         "council_input_given": "Input given (prompt + context)",
         "council_drew_on": "Drew on",
-        "further_answers": "Further answers",
+        "further_answers": "Further answers", "cited_by": "Cited by",
         # vote labels
         "vote_support": "For", "vote_maybe": "Conditional",
         "vote_abstain": "Abstain", "vote_oppose": "Against",

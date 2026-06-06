@@ -62,9 +62,22 @@ def render_prompt(p: dict, *, n: int | None = None) -> str:
                h("p", {}, raw(_prose(p.get("text", ""))))))
 
 
-def _statement_body(st: dict, store=None) -> str:
-    """One utterance's body: optional focus line, input snapshot, the prose, pushback, shift, refs. The
-    wrapper carries id=<part-id> so other artifacts can deep-link to this exact statement."""
+def _backlinks_line(st: dict, backlinks) -> str:
+    """The REVERSE cross-references (spec/artifact-cross-references.md §4): who points AT this part — e.g.
+    'cited by <synthesis>'. `backlinks` is {part_id: [{href, label, role}]}."""
+    bl = (backlinks or {}).get(st.get("id")) if st.get("id") else None
+    if not bl:
+        return ""
+    chips = [h("a", {"class_": "srcchip xref", "href": r["href"]}, raw(_icon("link")), " ", r.get("label") or "—",
+               h("span", {"class_": "xref-role"}, " · " + r["role"].replace("_", " ")) if r.get("role") else None)
+             for r in bl]
+    return h("p", {"class_": "muted small turn-refs"}, t("cited_by"), ": ", fragment(*chips))
+
+
+def _statement_body(st: dict, store=None, backlinks=None) -> str:
+    """One utterance's body: optional focus line, input snapshot, the prose, pushback, shift, refs, and
+    the reverse cross-refs ('cited by'). The wrapper carries id=<part-id> so other artifacts can
+    deep-link to this exact statement."""
     meta = st.get("meta") or {}
     focus = h("p", {"class_": "muted small", "style": "font-style:italic;margin:0 0 4px"}, meta["focus"]) if meta.get("focus") else None
     given = h("details", {"class_": "turn-input"},
@@ -79,10 +92,11 @@ def _statement_body(st: dict, store=None) -> str:
     if st.get("id"):
         attrs["id"] = st["id"]
     return h("div", attrs, focus, given, h("p", {}, raw(_prose(st.get("text", "")))),
-             pushback, shift_html, raw(_refs_line(st.get("refs") or [], t("council_drew_on"), store)))
+             pushback, shift_html, raw(_refs_line(st.get("refs") or [], t("council_drew_on"), store)),
+             raw(_backlinks_line(st, backlinks)))
 
 
-def _persona_card(sts: list, store, *, head_extra=None) -> str:
+def _persona_card(sts: list, store, *, head_extra=None, backlinks=None) -> str:
     """The ONE .turn statement card — a persona's avatar + name + stance + life-context, then one or more
     utterance bodies (a persona answering several questions merges into a single card, not repeated heads)."""
     head_st = sts[0]
@@ -107,7 +121,7 @@ def _persona_card(sts: list, store, *, head_extra=None) -> str:
     return h("div", {"class_": "turn"},
              h("div", {"class_": "hd"}, who, " ", stance_chip, grounded_chip, head_extra, rel_html,
                h("div", {"class_": "muted small turn-ctx"}, ctx) if ctx else None),
-             fragment(*(_statement_body(s, store) for s in sts)))
+             fragment(*(_statement_body(s, store, backlinks) for s in sts)))
 
 
 def render_statement(st: dict, store, *, head_extra=None) -> str:
@@ -126,10 +140,12 @@ def _by_persona(items: list) -> list:
     return [by[pid] for pid in order]
 
 
-def render_statements(items: list, store, *, group_by: str = "persona", prompts: list | None = None) -> str:
+def render_statements(items: list, store, *, group_by: str = "persona", prompts: list | None = None,
+                      backlinks=None) -> str:
     """Render statements as the SAME .turn cards. group_by='prompt' → a moderated transcript (a question
     header from `prompts` + the statements answering it via Statement.about.id, grouped per persona);
-    group_by='persona' → a flat list of per-persona cards."""
+    group_by='persona' → a flat list of per-persona cards. `backlinks` ({part_id: [referrers]}) adds the
+    reverse 'cited by' cross-references under each statement."""
     items = [s for s in items if s]
     if group_by == "prompt" and prompts:
         ids = {p.get("id") for p in prompts}
@@ -140,16 +156,16 @@ def render_statements(items: list, store, *, group_by: str = "persona", prompts:
             if not qs:
                 continue
             rounds.append(h("div", {"class_": "qround"}, raw(render_prompt(p, n=(None if single else n))),
-                            h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store) for g in _by_persona(qs))))))
+                            h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store, backlinks=backlinks) for g in _by_persona(qs))))))
         rest = [] if single else [s for s in items if (s.get("about") or {}).get("id") not in ids]
         if rest:
             rounds.append(h("div", {"class_": "qround"},
                             h("div", {"class_": "qround-q"}, raw(_icon("bulb")),
                               h("div", {}, h("div", {"class_": "qround-n"}, t("further_answers")))),
-                            h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store) for g in _by_persona(rest))))))
+                            h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store, backlinks=backlinks) for g in _by_persona(rest))))))
         return h("div", {"class_": "qrounds"}, fragment(*rounds))
     return h("div", {"style": "display:flex;flex-direction:column;gap:10px"},
-             fragment(*(_persona_card(g, store) for g in _by_persona(items))))
+             fragment(*(_persona_card(g, store, backlinks=backlinks) for g in _by_persona(items))))
 
 
 def render_finding(f: dict, *, n: int | None = None, store=None) -> str:

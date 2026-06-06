@@ -60,8 +60,13 @@ def register_councils(app) -> None:
                      else t("council_eval_help", n=n_voices) if mode == "evaluation"
                      else t("council_motion_help", n=n_voices))
         intro = h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, help_text)
-        voices_html = (render_statements(statements, store, group_by="prompt", prompts=group_prompts)
-                       if group_prompts else render_statements(statements, store, group_by="persona"))
+        # Reverse cross-refs: each statement learns who cites it (e.g. the synthesis that derives from it).
+        _idx = services.ref_backlinks(session.get("project_id", ""), store) if session.get("project_id") else {}
+        backlinks = {s["id"]: _idx.get(_A.part_address("council", session["id"], s["id"]), [])
+                     for s in statements if s.get("id")}
+        backlinks = {k: v for k, v in backlinks.items() if v}
+        voices_html = (render_statements(statements, store, group_by="prompt", prompts=group_prompts, backlinks=backlinks)
+                       if group_prompts else render_statements(statements, store, group_by="persona", backlinks=backlinks))
         sentiment = "" if mode == "discovery" else (_sentiment_section(store, [session], title=sentiment_title) or "")
         council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
         short_title = _display_title(session["prompt"])        # short form for breadcrumb / tab / favourite only

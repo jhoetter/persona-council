@@ -248,7 +248,8 @@ def pain_point_finding(obs: dict) -> dict:
 # recorded record is always well-shaped (stance resolved through the scale, empties dropped).
 
 def validate_ref(d: dict) -> dict:
-    return ref(d.get("kind", "external"), id=d.get("id"), text=d.get("text"), quote=d.get("quote"))
+    return ref(d.get("kind", "external"), id=d.get("id"), anchor=d.get("anchor"), role=d.get("role"),
+               text=d.get("text"), quote=d.get("quote"))
 
 
 def validate_stance(d) -> dict | None:
@@ -264,14 +265,15 @@ def validate_prompt(d: dict) -> dict:
 
 
 def validate_statement(d: dict) -> dict:
-    return statement(d.get("persona_id", ""), d.get("text", ""), stance=validate_stance(d.get("stance")),
+    return statement(d.get("persona_id", ""), d.get("text", ""), id=d.get("id"),
+                     stance=validate_stance(d.get("stance")),
                      about=(validate_ref(d["about"]) if d.get("about") else None),
                      refs=[validate_ref(r) for r in (d.get("refs") or [])],
                      relevance=d.get("relevance"), shift=d.get("shift") or None, meta=d.get("meta") or None)
 
 
 def validate_finding(d: dict) -> dict:
-    return finding(d.get("text", ""), kind=d.get("kind", "note"), score=d.get("score") or None,
+    return finding(d.get("text", ""), kind=d.get("kind", "note"), id=d.get("id"), score=d.get("score") or None,
                    refs=[validate_ref(r) for r in (d.get("refs") or [])], meta=d.get("meta") or None)
 
 
