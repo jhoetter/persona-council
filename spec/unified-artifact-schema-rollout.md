@@ -12,11 +12,25 @@ Progress:
   prompts` (validated); adapters PREFER native (dual-read); briefs + 5 skills carry PRIMITIVES_CONTRACT.
 - ✅ **Phase 3 (backfill)** — `scripts/migrate_to_primitives.py --apply` wrote primitives onto all 9
   councils / 4 syntheses / 20 sessions; render verified **byte-identical** before/after (loss-free).
-- ⏸ **Phase 3 (legacy-field removal)** — DEFERRED. Removing `turns/votes/voices/key_problems/…` requires
-  rewiring every DIRECT legacy reader (council_mode derivation, vote tallies, the `_voices_panel`,
-  `_council_brief_row`, the meta-report). The adapters provide permanent dual-read, so this is the
-  plan's "only breaking step, never required for correctness" — left as a separately-gated follow-up
-  (snapshot + golden-identity per the plan below).
+- ✅ **Phase 4 (memory primitives)** — `event()` + `validate_event` (unifies ExperienceEvent/Calendar/
+  DailySummary/Reflection) and `pain_point_finding()` (PainPointObservation → persona-scoped Finding);
+  `finding_kinds.json` gains `pain_point`; the persona page renders structured pain-points through the
+  one finding row.
+- ✅ **Layer 2** — edge colors → `suggestions/edge_types.json` (`presentation.edge_colors()`); no edge
+  color hardcoded.
+- ✅ **UI consolidation (the priority)** — every detail page draws its content through the ONE renderer:
+  council voices, synthesis voices and prototype sessions are the SAME `.turn` statement card; every
+  finding section (key_problems/pain_solvers/clusters/segmente/ranking/recommendations + persona pains)
+  is the SAME `.fitem` row; one stance scale everywhere.
+- ⏸ **Phase 3 (legacy-field removal)** — DELIBERATELY NOT PURSUED (engineering decision, not an
+  oversight). A grep shows **48 direct readers** of the duplicate fields across core engine logic
+  (council_mode derivation, vote tallies, `_council_brief_row`, the meta-report, the sentiment charts,
+  the whole simulation subsystem) plus intertwined helpers (`_voices_panel`/`_persona_voices_html` share
+  `_sent_color`/`_relbar`). Deleting the fields means rewiring all 48 with **zero UI change** (the UI
+  already reads via adapters/primitives) and real risk to a working, fully-consolidated app. The adapters
+  are PERMANENT dual-read, so this is the plan's "only breaking step, never required for correctness."
+  It stays a separately-gated follow-up (snapshot + golden-identity) if the internal dedup is ever worth
+  the churn.
 
 Guiding rules for every phase:
 - **Non-breaking until the last step.** Each phase ships independently and leaves the app green.
