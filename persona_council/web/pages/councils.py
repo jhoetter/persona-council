@@ -162,8 +162,7 @@ def register_councils(app) -> None:
                             h("p", {"class_": "muted small"}, help_)) if motion else "")
             sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
-        main = fragment(
-            raw(_hero(session["prompt"], icon="councils", sub=council_sub, hid="sec-question")),
+        body = fragment(
             raw(lead_block), raw(_study_lead(exec_html, vm["answer_label"])), raw(sentiment),
             h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, voices_label), raw(turns_html)),
             h("details", {"class_": "sec"}, h("summary", {}, summary_h),
@@ -173,7 +172,6 @@ def register_councils(app) -> None:
             vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
             prop_rows += [("dot", _vote_label(k), str(vc[k])) for k in vc]
         prop_rows.append(("dot", created_h, session["created_at"][:10]))
-        cprops = _properties_html(prop_rows, aside=True)
         # Forward, project-rooted crumb: Projects > [Project] > [Council]. (A Discover council FEEDS
         # the Define synthesis — it is not nested under it; and the project lookup must work for
         # plan-based projects, where the council is scoped directly to the project.)
@@ -184,12 +182,10 @@ def register_councils(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((session["prompt"][:50], None))
-        rel = _relations_html(store, f"council:{session_id}", proj["id"] if proj else None, aside=True)
-        crail = [("sec-question", t("question")), ("stimmen", t("voices"))]
-        if rel:
-            crail.append(("sec-relations", t("relations")))
-        if cprops:
-            crail.append(("sec-properties", t("properties")))
-        return _layout(council_title, _doc(main, rail=rel + cprops) + _page_rail(crail), store,
-                       crumbs=crumbs, active="projects",
-                       actions=_star("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))
+        return detail_page(
+            store, title=council_title, active="projects", crumbs=crumbs,
+            hero=_hero(session["prompt"], icon="councils", sub=council_sub, hid="sec-question"), body=body,
+            prop_rows=prop_rows,
+            rel_study_id=f"council:{session_id}", rel_proj_id=(proj["id"] if proj else None),
+            rail_sections=[("sec-question", t("question")), ("stimmen", t("voices"))],
+            star=("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))

@@ -28,22 +28,19 @@ def register_syntheses(app) -> None:
         syn = store.get_synthesis(synthesis_id)
         if not syn:
             return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared")), store, active="syntheses")
-        actions = raw(_star("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}"))
         crumbs = [(t("projects"), "/projects")]
         proj = services.parent_project_of_synthesis(synthesis_id, store)
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((syn["title"], None))
-        rel = _relations_html(store, f"synthesis:{synthesis_id}", proj["id"] if proj else None, aside=True)
-        props = _properties_html([
-            ("check", t("status"), t("done") if syn.get("status", "done") == "done" else t("running")),
-            ("councils", t("councils"), str(len(syn.get("council_ids", [])))),
-            ("dot", t("created"), syn.get("created_at", "")[:10]),
-            ("projects", t("project"),
-             (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")),
-        ], aside=True)
-        content, toc = _synthesis_html(store, syn)
-        body = _doc(content, rail=props + rel) + _page_rail(toc)
-        return _layout(syn["title"], body, store,
-                       crumbs=crumbs, active="projects", actions=actions)
+        content, toc = _synthesis_html(store, syn)             # content carries its own hero (syn-head)
+        return detail_page(
+            store, title=syn["title"], active="projects", crumbs=crumbs,
+            hero="", body=raw(content), rail_sections=toc,
+            prop_rows=[("check", t("status"), t("done") if syn.get("status", "done") == "done" else t("running")),
+                       ("councils", t("councils"), str(len(syn.get("council_ids", [])))),
+                       ("dot", t("created"), syn.get("created_at", "")[:10]),
+                       ("projects", t("project"), (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—"))],
+            rel_study_id=f"synthesis:{synthesis_id}", rel_proj_id=(proj["id"] if proj else None),
+            star=("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}"))
 

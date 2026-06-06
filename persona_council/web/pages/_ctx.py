@@ -24,7 +24,7 @@ from .._synthesis import (
     _area, _vote_label, _sentiment_section, _synthesis_html, _persona_voices_html,
 )
 from .._graph import _graph_interactive, _plan_html, _outline_html
-from .._detail import _relations_html, _properties_html, _session_card
+from .._detail import _relations_html, _properties_html, _session_card, detail_page
 from .._rail import _page_rail
 from .._routes_lists import _projects_page, _persona_row
 from .._html import raw, h, fragment

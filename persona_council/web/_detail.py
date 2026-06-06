@@ -1,11 +1,13 @@
-"""Detail-page building blocks: the Linear-style Relations + Properties panels.
-
-Split out of _routes_pages.py to keep it under the LOC bar. Pure render helpers."""
+"""Detail-page building blocks: the shared detail_page() shell + the Linear-style Relations / Properties
+panels (spec/design-system.md). Every artifact detail page (council, synthesis, concept/note, section,
+prototype) is assembled by detail_page(), so the structure — hero, content column, Properties→Relations
+aside, section minimap, topbar star — is identical by construction instead of duplicated per route."""
 from __future__ import annotations
 
 from .. import services
 from ._i18n import t
-from ._components import _esc, _icon  # noqa: F401  (_esc kept for any callers)
+from ._components import _esc, _icon, _hero, _doc, _layout, _star  # noqa: F401
+from ._rail import _page_rail
 from ._html import h, raw, fragment
 
 
@@ -104,3 +106,38 @@ def _properties_html(rows, aside: bool = False) -> str:
         return fragment(h("h4", {"id": "sec-properties"}, t("properties")), inner)
     return h("div", {"class_": "card propcard", "id": "sec-properties"},
              h("div", {"class_": "relh"}, t("properties")), inner)
+
+
+def detail_page(store, *, title: str, active: str, crumbs: list, body,
+                hero=None, icon: str | None = None, sub=None, hid: str | None = None,
+                prop_rows: list | None = None,
+                rel_study_id: str | None = None, rel_proj_id: str | None = None,
+                rel_extra_in: list | None = None, rel_extra_out: list | None = None,
+                rail_sections: list | None = None, star: tuple | None = None) -> str:
+    """The ONE detail-page shell every artifact page extends — consistency by construction.
+
+    Assembles: hero · content column (`body`) · Properties→Relations aside (always that order) · the
+    section minimap (`rail_sections` + auto Properties/Relations anchors) · a topbar favourite star.
+
+    - `hero`: a pre-built hero (Safe) — e.g. the synthesis syn-head, or "" to omit. If None, the
+      component builds `_hero(title, icon=, sub=, hid=)`.
+    - `body`: the content after the hero (Safe).
+    - `prop_rows`: `[(icon, label, value), …]` for Properties (empty values are skipped).
+    - `rel_study_id`/`rel_proj_id`/`rel_extra_*`: build the Relations panel from the project graph.
+    - `star`: `(kind, ident, label, href)` for the topbar favourite.
+    """
+    hero_html = hero if hero is not None else _hero(title, icon=icon, sub=sub, hid=hid)
+    main = fragment(raw(hero_html), body)
+    props = _properties_html(prop_rows, aside=True) if prop_rows else ""
+    rel = ""
+    if rel_study_id:
+        rel = _relations_html(store, rel_study_id, rel_proj_id, extra_in=rel_extra_in,
+                              extra_out=rel_extra_out, aside=True)
+    rail = list(rail_sections or [])
+    if props:
+        rail.append(("sec-properties", t("properties")))
+    if rel:
+        rail.append(("sec-relations", t("relations")))
+    page = _doc(main, rail=raw(props) + raw(rel)) + _page_rail(rail)
+    actions = raw(_star(*star)) if star else ""
+    return _layout(title, page, store, crumbs=crumbs, active=active, actions=actions)

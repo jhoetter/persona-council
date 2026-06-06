@@ -23,17 +23,16 @@ def register_library(app) -> None:
             rows.append(h("div", {"class_": "strow"}, h("b", {}, head), " ", h("span", {"class_": "muted small"}, m["kind"]),
                           h("div", {"class_": "muted small", "style": "margin-top:3px"}, (m["summary"] or "")[:240])))
         note_sub = h("p", {"class_": "sub"}, sec.get("note", "")) if sec.get("note") else ""
-        sprops = _properties_html([
-            ("dot", t("type_h"), pr.get("short", sec.get("kind", ""))),
-            ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"])),
-        ], aside=True)
         sec_sub = fragment(chip, " ", h("span", {"class_": "muted small"}, t("n_nodes", n=len(members))))
-        main = fragment(raw(_hero(sec["title"], icon="squareGrid", sub=sec_sub)), note_sub,
-                        h("div", {"style": "margin-top:8px"},
-                          fragment(*rows) if rows else raw(_empty_state(t("section"), t("no_members")))))
-        return _layout(sec["title"], _doc(main, rail=sprops), store,
-                       crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
-                       active="projects", actions=raw(_star("section", sec["id"], sec["title"], f'/sections/{sec["id"]}')))
+        body = fragment(note_sub, h("div", {"style": "margin-top:8px"},
+                        fragment(*rows) if rows else raw(_empty_state(t("section"), t("no_members")))))
+        return detail_page(
+            store, title=sec["title"], active="projects",
+            crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
+            icon="squareGrid", sub=sec_sub, body=body,
+            prop_rows=[("dot", t("type_h"), pr.get("short", sec.get("kind", ""))),
+                       ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]))],
+            star=("section", sec["id"], sec["title"], f'/sections/{sec["id"]}'))
 
     @app.get("/notes/{note_id}", response_class=HTMLResponse)
     @app.get("/concepts/{note_id}", response_class=HTMLResponse)        # a concept is a note with kind=concept
@@ -49,26 +48,17 @@ def register_library(app) -> None:
         pr = _pres.present(kind)
         klabel = t("concept_h") if kind == "concept" else (t("notes_h") if kind == "note" else (pr.get("label") or kind))
         active = "concept" if kind == "concept" else "projects"
-        proj_link = h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"])
-        nprops = _properties_html([
-            ("dot", t("created"), note.get("created_at", "")[:10]),
-            ("projects", t("project"), proj_link),
-        ], aside=True)
-        nrel = _relations_html(store, f"note:{note_id}", proj["id"], aside=True)
-        nicon = "bulb" if kind == "concept" else "square"     # type icon in the hero (consistent w/ other pages)
-        main = fragment(raw(_hero(note.get("title", ""), icon=nicon, hid="sec-content", sub=klabel)),
-                        h("div", {"class_": "es-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))))
-        nrail = [("sec-content", klabel)]
-        if nprops:
-            nrail.append(("sec-properties", t("properties")))
-        if nrel:
-            nrail.append(("sec-relations", t("relations")))
-        body = _doc(main, rail=nprops + nrel) + _page_rail(nrail)
-        star_url = f'/{"concepts" if kind == "concept" else "notes"}/{note_id}'
-        return _layout(note.get("title") or klabel, body, store,
-                       crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'),
-                               (note.get("title") or klabel, None)],   # title in the crumb (consistent w/ other pages)
-                       active=active, actions=raw(_star(kind, note_id, note.get("title") or klabel, star_url)))
+        ntitle = note.get("title") or klabel
+        return detail_page(
+            store, title=ntitle, active=active,
+            crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (ntitle, None)],
+            icon=("bulb" if kind == "concept" else "square"), sub=klabel, hid="sec-content",
+            body=h("div", {"class_": "es-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))),
+            prop_rows=[("dot", t("created"), note.get("created_at", "")[:10]),
+                       ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]))],
+            rel_study_id=f"note:{note_id}", rel_proj_id=proj["id"],
+            rail_sections=[("sec-content", klabel)],
+            star=(kind, note_id, ntitle, f'/{"concepts" if kind == "concept" else "notes"}/{note_id}'))
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:
@@ -89,9 +79,7 @@ def register_library(app) -> None:
         sessions_html = (fragment(*(_session_card(store, s) for s in sessions))
                          or h("div", {"class_": "muted small"}, f'— {t("prototypes_h")}: {t("no_sessions")} —'))
         proto_title = fragment(p["name"], " ", fid)
-        proto_sub = f'{p.get("version","")} · {slug}'
-        main = fragment(
-            raw(_hero(proto_title, icon="prototype", sub=proto_sub)),
+        body = fragment(
             h("p", {"style": "margin:8px 0 16px"},
               h("a", {"class_": "btn", "href": src, "target": "_blank"},
                 raw(_icon("projects")), " ", t("open_in_new_tab"), " ", raw(_icon("external")))),
@@ -108,18 +96,13 @@ def register_library(app) -> None:
                 concept_in = []
         n_grounded = sum(1 for s in sessions if s.get("grounded_verified"))
         proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")
-        prop_html = _properties_html([
-            ("square", t("fidelity"), _ap.get("disc") or _ap.get("label") or ""),
-            ("personas", t("sessions"), str(len(sessions))),
-            ("check", t("grounded_yes"), f"{n_grounded}/{len(sessions)}" if sessions else "—"),
-            ("projects", t("project"), proj_link),
-        ], aside=True)
-        rel_html = _relations_html(store, f"prototype:{p['id']}", p.get("project_id"), extra_in=concept_in, aside=True)
-        rail = [("sec-sessions", t("sessions"))]
-        if prop_html:
-            rail.append(("sec-properties", t("properties")))
-        if rel_html:
-            rail.append(("sec-relations", t("relations")))
-        body = _doc(main, rail=prop_html + rel_html) + _page_rail(rail)
-        return _layout(p["name"], body, store, crumbs=crumbs, active="prototype",
-                       actions=raw(_star("prototype", p["id"], p["name"], f'/prototypes/{slug}')))
+        return detail_page(
+            store, title=p["name"], active="prototype", crumbs=crumbs,
+            hero=_hero(proto_title, icon="prototype", sub=f'{p.get("version","")} · {slug}'), body=body,
+            prop_rows=[("square", t("fidelity"), _ap.get("disc") or _ap.get("label") or ""),
+                       ("personas", t("sessions"), str(len(sessions))),
+                       ("check", t("grounded_yes"), f"{n_grounded}/{len(sessions)}" if sessions else "—"),
+                       ("projects", t("project"), proj_link)],
+            rel_study_id=f"prototype:{p['id']}", rel_proj_id=p.get("project_id"), rel_extra_in=concept_in,
+            rail_sections=[("sec-sessions", t("sessions"))],
+            star=("prototype", p["id"], p["name"], f'/prototypes/{slug}'))
