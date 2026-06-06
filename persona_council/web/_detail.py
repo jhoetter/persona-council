@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from .. import services
 from ._i18n import t
-from ._components import _esc, _icon
+from ._components import _esc, _icon  # noqa: F401  (_esc kept for any callers)
+from ._html import h, raw, fragment
 
 
 def _relations_html(store, study_id: str, proj_id: str | None,
@@ -37,20 +38,22 @@ def _relations_html(store, study_id: str, proj_id: str | None,
     def grp(label, ns):
         if not ns:
             return ""
-        rows = "".join(
-            f'<a class="relrow" href="{_esc(n.get("href", ""))}">'
-            f'<span class="ol-dot" style="background:{n.get("color", "#9aa0a6")}"></span>'
-            f'<span class="relt">{_esc(n.get("title", ""))}</span>'
-            f'<span class="muted small">{_esc(n.get("kind_label", n.get("kind", "")))}</span></a>'
-            for n in ns)
-        return f'<div class="relgrp"><div class="rellbl">{_esc(label)}</div>{rows}</div>'
+        rows = fragment(*(
+            h("a", {"class_": "relrow", "href": n.get("href", "")},
+              h("span", {"class_": "ol-dot", "style": f"background:{n.get('color', '#9aa0a6')}"}),
+              h("span", {"class_": "relt"}, n.get("title", "")),
+              h("span", {"class_": "muted small"}, n.get("kind_label", n.get("kind", ""))))
+            for n in ns))
+        return h("div", {"class_": "relgrp"}, h("div", {"class_": "rellbl"}, label), rows)
 
-    blocks = grp(t("rel_based_on"), incoming) + grp(t("rel_feeds_into"), outgoing)
+    blocks = fragment(grp(t("rel_based_on"), incoming), grp(t("rel_feeds_into"), outgoing))
     if not blocks:
         return ""
+    head = (raw(_icon("link")), " ", t("relations"))
     if aside:
-        return f'<h4 id="sec-relations">{_icon("link")} {t("relations")}</h4>{blocks}'
-    return f'<div class="card relcard" id="sec-relations"><div class="relh">{_icon("link")} {t("relations")}</div>{blocks}</div>'
+        return fragment(h("h4", {"id": "sec-relations"}, *head), blocks)
+    return h("div", {"class_": "card relcard", "id": "sec-relations"},
+             h("div", {"class_": "relh"}, *head), blocks)
 
 
 # Reaction keys that are meta/internal (shown via the badge/header), not user-facing content.
@@ -67,36 +70,38 @@ def _session_card(store, sess: dict) -> str:
     if not name and pid:                                   # data is matched — resolve slug/id → name
         p = store.get_persona(pid)
         name = (p or {}).get("display_name") or pid
-    gv = ((_icon("check") + " " + t("grounded_yes")) if sess.get("grounded_verified")
-          else (_icon("circle") + " " + t("grounded_no")))
+    gv = fragment(raw(_icon("check") if sess.get("grounded_verified") else _icon("circle")), " ",
+                  t("grounded_yes") if sess.get("grounded_verified") else t("grounded_no"))
     fields = []
     for k, v in r.items():
         if k in _SESSION_SKIP or v in (None, "", [], {}):
             continue
         if isinstance(v, bool):
-            val = _icon("check") if v else _icon("circle")
+            val = raw(_icon("check") if v else _icon("circle"))
         elif isinstance(v, list):
-            val = ('<ul class="small" style="margin:2px 0 0 16px">'
-                   + "".join(f"<li>{_esc(str(x))}</li>" for x in v) + "</ul>")
+            val = h("ul", {"class_": "small", "style": "margin:2px 0 0 16px"}, [h("li", {}, str(x)) for x in v])
         else:
-            val = f'<div class="small">{_esc(str(v))}</div>'
-        label = _esc(k.replace("_", " ").capitalize())
-        fields.append(f'<div style="margin:7px 0"><div class="muted small" '
-                      f'style="text-transform:uppercase;letter-spacing:.04em">{label}</div>{val}</div>')
-    inner = "".join(fields) or f'<div class="muted small">—</div>'
-    return (f'<div class="strow"><b>{_esc(name or pid or "—")}</b> <span class="muted small">{gv}</span>'
-            f'<div style="margin-top:4px">{inner}</div></div>')
+            val = h("div", {"class_": "small"}, str(v))
+        label = k.replace("_", " ").capitalize()
+        fields.append(h("div", {"style": "margin:7px 0"},
+                        h("div", {"class_": "muted small", "style": "text-transform:uppercase;letter-spacing:.04em"}, label),
+                        val))
+    inner = fragment(*fields) if fields else h("div", {"class_": "muted small"}, "—")
+    return h("div", {"class_": "strow"}, h("b", {}, name or pid or "—"), " ",
+             h("span", {"class_": "muted small"}, gv), h("div", {"style": "margin-top:4px"}, inner))
 
 
 def _properties_html(rows, aside: bool = False) -> str:
     """Linear-style Properties panel: an icon + label + value per row (skips empty values).
     aside=True renders a bare section (h4 + rows) to sit inside the _doc right rail."""
-    inner = "".join(
-        f'<div class="prop"><span class="prop-k">{_icon(ic)}{_esc(lbl)}</span>'
-        f'<span class="prop-v">{val}</span></div>'
-        for ic, lbl, val in rows if val not in (None, "", "—"))
-    if not inner:
+    proprows = [h("div", {"class_": "prop"},
+                  h("span", {"class_": "prop-k"}, raw(_icon(ic)), lbl),
+                  h("span", {"class_": "prop-v"}, raw(val)))           # val is caller-built HTML/text (trusted)
+                for ic, lbl, val in rows if val not in (None, "", "—")]
+    if not proprows:
         return ""
+    inner = fragment(*proprows)
     if aside:
-        return f'<h4 id="sec-properties">{t("properties")}</h4>{inner}'
-    return f'<div class="card propcard" id="sec-properties"><div class="relh">{t("properties")}</div>{inner}</div>'
+        return fragment(h("h4", {"id": "sec-properties"}, t("properties")), inner)
+    return h("div", {"class_": "card propcard", "id": "sec-properties"},
+             h("div", {"class_": "relh"}, t("properties")), inner)
