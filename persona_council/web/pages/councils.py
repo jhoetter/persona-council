@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .._render import render_statements
+from ... import artifacts as _A
 
 
 def register_councils(app) -> None:
@@ -40,106 +42,17 @@ def register_councils(app) -> None:
         # "input") and any recorded input snapshot, so you can see what each was given → what they said.
         pmap = {pid: store.get_persona(pid) for pid in session.get("persona_ids", [])}
 
-        def _is_mod(tn: dict) -> bool:
-            return (tn.get("speaker") == "Moderator" or tn.get("stance") in ("moderation", "moderator")
-                    or tn.get("type") == "moderator")
-
-        def _qidx(tn: dict):
-            """Which moderator question this answer addresses (index into session.questions), or None."""
-            q = tn.get("question_index", tn.get("question_idx"))
-            return q if isinstance(q, int) and not isinstance(q, bool) else None
-
-        def _answer_html(tn: dict) -> str:
-            """One answer (a single turn): optional input snapshot, the text, concerns, memory refs."""
-            body = tn.get("content") or tn.get("text") or tn.get("message") or ""   # tolerate body field variants
-            given = tn.get("input") or tn.get("context_given") or ""
-            given_html = h("details", {"class_": "turn-input"},
-                           h("summary", {"class_": "muted small"}, t("council_input_given")),
-                           h("p", {"class_": "muted small", "style": "white-space:pre-wrap"}, given)) if given else None
-            concerns = fragment(*(h("p", {"class_": "muted small"}, f"• {q}")
-                                  for q in (tn.get("questions_or_pushback") or [])[:4]))
-            mrefs = (tn.get("memory_refs") or tn.get("memory_used") or [])[:3]
-            mem = h("p", {"class_": "muted small"}, raw(_icon("memory")), " ", t("council_drew_on"),
-                    ": ", ", ".join(mrefs)) if mrefs else None
-            return h("div", {"class_": "turn-ans"}, given_html, h("p", {}, body), concerns, mem)
-
-        def _persona_head(pid, tns: list) -> str:
-            """Avatar + name + life-context + first declared stance, for a persona's answer block."""
-            p = pmap.get(pid)
-            stance_src = next((x for x in tns if x.get("stance") and not _is_mod(x)), None)
-            stance = _label(stance_src["stance"], _stance_color(stance_src["stance"])) if stance_src else ""
-            if not p:
-                return fragment(h("b", {}, tns[0].get("speaker", "")), " ", stance)
-            seg = p.get("segment") or {}
-            desc = " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
-                or (p.get("source_description") or "")[:130]
-            return fragment(
-                h("a", {"href": f'/personas/{p["id"]}', "class_": "turn-who"},
-                  _avatar(p, 26), h("b", {}, p.get("display_name") or tns[0].get("speaker", ""))),
-                " ", stance, h("div", {"class_": "muted small turn-ctx"}, desc))
-
-        def _by_persona(tlist: list) -> list:
-            order, by = [], {}
-            for tn in tlist:
-                pid = tn.get("persona_id")
-                if pid not in by:
-                    by[pid] = []; order.append(pid)
-                by[pid].append(tn)
-            return [(pid, by[pid]) for pid in order]
-
-        def _answer_block(pid, tns: list) -> str:
-            # The SAME .turn statement card the evaluation/decision modes and prototype sessions use —
-            # discovery just groups these cards under question headers (one consistent voice primitive).
-            return h("div", {"class_": "turn"}, h("div", {"class_": "hd"}, _persona_head(pid, tns)),
-                     fragment(*(_answer_html(tn) for tn in tns)))
-
-        answer_turns = [tn for tn in session["turns"] if not _is_mod(tn) and tn.get("persona_id")]
-        questions = session.get("questions") or []
-        in_range = lambda tn: (_qidx(tn) is not None and 0 <= _qidx(tn) < len(questions))
-        indexed = [tn for tn in answer_turns if in_range(tn)]
+        # Voices render through the ONE statement renderer (spec/unified-artifact-schema): discovery
+        # groups the .turn cards under question headers (group_by="prompt"), evaluation/decision show a
+        # flat per-persona list — same card either way.
+        statements = _A.council_statements(session)
+        prompts = _A.council_prompts(session)
+        q_prompts = [p for p in prompts if str(p.get("id", "")).startswith("q")]
         help_html = h("p", {"class_": "muted small", "style": "margin:-4px 0 12px"}, t("council_voices_help"))
-
-        if questions and answer_turns and len(indexed) >= 0.6 * len(answer_turns):
-            # MODERATED TRANSCRIPT — one round per moderator question: the question (moderator's voice),
-            # then the persona answers that addressed it. This is the "how they discussed with the
-            # moderator" view; it needs a per-answer question_index (future councils set it — see
-            # record_council). Existing councils without indices use the per-persona fallback below.
-            rounds = []
-            for qi, q in enumerate(questions):
-                qts = [tn for tn in answer_turns if _qidx(tn) == qi]
-                if not qts:
-                    continue
-                ans = fragment(*(_answer_block(pid, ts) for pid, ts in _by_persona(qts)))
-                rounds.append(h("div", {"class_": "qround"},
-                                h("div", {"class_": "qround-q"}, raw(_icon("compass")),
-                                  h("div", {}, h("div", {"class_": "qround-n"}, f'{t("question")} {qi + 1}'), h("p", {}, q))),
-                                h("div", {"class_": "qround-a"}, ans)))
-            rest = [tn for tn in answer_turns if not in_range(tn)]
-            if rest:
-                ans = fragment(*(_answer_block(pid, ts) for pid, ts in _by_persona(rest)))
-                rounds.append(h("div", {"class_": "qround"},
-                                h("div", {"class_": "qround-q"}, raw(_icon("bulb")),
-                                  h("div", {}, h("div", {"class_": "qround-n"}, t("further_answers")))),
-                                h("div", {"class_": "qround-a"}, ans)))
-            turns_html = fragment(help_html, h("div", {"class_": "qrounds"}, fragment(*rounds)))
+        if q_prompts and any(st.get("about") for st in statements):
+            turns_html = fragment(help_html, render_statements(statements, store, group_by="prompt", prompts=q_prompts))
         else:
-            # FALLBACK — one clean card per persona (a persona answering several questions used to
-            # render as several identical-header blocks). Moderator turns stand on their own.
-            grouped: list[tuple] = []
-            idx_of: dict = {}
-            for tn in session["turns"]:
-                pid = tn.get("persona_id")
-                if _is_mod(tn) or not pid:
-                    grouped.append((pid, [tn], _is_mod(tn)))
-                elif pid in idx_of:
-                    grouped[idx_of[pid]][1].append(tn)
-                else:
-                    idx_of[pid] = len(grouped); grouped.append((pid, [tn], False))
-            cards = [h("div", {"class_": f'turn{" mod" if is_mod else ""}'},
-                       h("div", {"class_": "hd"}, _persona_head(pid, tns)),
-                       fragment(*(_answer_html(tn) for tn in tns)))
-                     for pid, tns, is_mod in grouped]
-            turns_html = fragment(help_html, h("div", {"style": "display:grid;gap:12px"}, fragment(*cards)))
+            turns_html = fragment(help_html, render_statements(statements, store, group_by="persona"))
         n_voices = len(session.get("persona_ids", []))
         # A council has THREE honest shapes (derived, no stored type): DISCOVERY (open questions →
         # answers, no vote — listening), EVALUATION (react to a concept), DECISION (a motion put to a

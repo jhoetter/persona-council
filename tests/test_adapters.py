@@ -44,7 +44,7 @@ def test_session_adapter_one_statement_with_refs():
     assert sts[0]["text"] == "**good**"                       # markdown kept (rendered later via _prose)
     assert sts[0]["refs"][0] == {"kind": "prototype_state", "text": "saw X"}
     assert "grounded_verified" not in sts[0]["meta"]          # redundant flag dropped (session is the source)
-    assert sts[0]["meta"]["focus"] == "does it work?" and "hi-fi" in sts[0]["meta"]["fidelity"]
+    assert sts[0]["meta"]["focus"] == "does it work?" and "hi-fi" in sts[0]["meta"]["context"]
 
 
 def test_adapters_prefer_native_primitive_fields():

@@ -9,6 +9,8 @@ from ._components import (
     _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _prose, _rec_item, _rec_row_n,
     _effort_impact, _star, _study_lead,
 )
+from ._render import render_findings
+from .. import artifacts as _A
 from ._vm import study_head
 from ._html import h, raw, fragment, register_css
 
@@ -518,6 +520,17 @@ def _synthesis_html(store: Store, syn: dict):
                       t("councils_overview"), " ", h("span", {"class_": "cnt"}, str(len(ref_rows)))),
                     h("p", {"class_": "muted small", "style": "margin:6px 0 10px"}, t("evidence_decoupled_note")),
                     h("div", {"class_": "ref-list"}, raw("".join(ref_rows)))))
+    # Finding LIST sections (key_problems/pain_solvers/open_questions/shortlist) now render through the
+    # ONE finding renderer — id + label from finding_kinds.json, prose via _prose (spec/unified-…).
+    _findings = _A.synthesis_findings(syn)
+
+    def _fsec(kind, label, toc=None):        # id from data (finding_kinds.json); label = static i18n
+        items = [f for f in _findings if f.get("kind") == kind]
+        if not items:
+            return None
+        sid = _A.finding_kind(kind)["id"]
+        return (sid, toc or label, _block(sid, label, render_findings(items)))
+
     rec_items = [_rec_item(x) for x in syn.get("handlungsempfehlungen", [])]
     if rec_items:
         chart = _effort_impact(rec_items)
@@ -534,18 +547,16 @@ def _synthesis_html(store: Store, syn: dict):
     # Structured convergence blocks (GAP-3): a methodology's key problems / affinity clusters /
     # down-select ranking + shortlist render as first-class answer content when present (data-driven —
     # labels via i18n, content free-text; no methodology value hardcoded).
-    if syn.get("key_problems"):
-        kp = fragment(*(h("div", {"class_": "psolve"}, raw(_prose(x))) for x in syn["key_problems"]))
-        sec.append(("keyproblems", t("key_problems"), _block("keyproblems", t("key_problems"), kp)))
+    if (s := _fsec("key_problem", t("key_problems"))):
+        sec.append(s)
     if syn.get("clusters"):
         cl = fragment(*(_segrow(c.get("label", ""), c.get("insight", "")) for c in syn["clusters"]))
         sec.append(("clusters", t("affinity_clusters"), _block("clusters", t("affinity_clusters"), cl)))
     if syn.get("ranking"):
         rk = fragment(*(_segrow(r.get("prototype_id", ""), r.get("score_rationale", "")) for r in syn["ranking"]))
         sec.append(("ranking", t("ranking"), _block("ranking", t("ranking"), rk)))
-    if syn.get("shortlist"):
-        sl = fragment(*(h("div", {"class_": "psolve"}, raw(_prose(x))) for x in syn["shortlist"]))
-        sec.append(("shortlist", t("shortlist"), _block("shortlist", t("shortlist"), sl)))
+    if (s := _fsec("shortlist", t("shortlist"))):
+        sec.append(s)
     # voices — who thinks what & why (filter/sort/shift/evidence)
     panel = _voices_panel(store, syn)
     if panel:
@@ -564,12 +575,10 @@ def _synthesis_html(store: Store, syn: dict):
               raw(_label(s.get("stance", ""), _stance_color(s.get("stance", "")))))
             for s in syn["segmente"]))
         sec.append(("segmente", t("segments"), _block("segmente", t("segments"), segs)))
-    if syn.get("pain_solvers"):
-        ps = fragment(*(h("div", {"class_": "psolve"}, raw(_prose(x))) for x in syn["pain_solvers"]))
-        sec.append(("painsolver", "Pain-Solver", _block("painsolver", t("validated_pain_solvers"), ps)))
-    if syn.get("offene_fragen"):
-        of = fragment(*(h("div", {"class_": "psolve"}, raw(_prose(x))) for x in syn["offene_fragen"]))
-        sec.append(("offene", t("open_questions"), _block("offene", t("open_questions_next_study"), of)))
+    if (s := _fsec("pain_solver", t("validated_pain_solvers"))):
+        sec.append(s)
+    if (s := _fsec("open_question", t("open_questions_next_study"), toc=t("open_questions"))):
+        sec.append(s)
     if belege:                       # cited evidence (councils) — demoted, near the end, collapsible
         sec.append(belege)
     # arc (collapsed) — only when there is a narrative; an empty <details> reads as a broken box

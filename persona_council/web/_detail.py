@@ -63,34 +63,15 @@ _SESSION_SKIP = {"persona", "fidelity", "version", "observed_state_refs", "self_
 
 
 def _session_card(store, sess: dict) -> str:
-    """One prototype/persona session — rendered as the SAME statement card as a council voice (avatar +
-    name + grounded badge + meta), so sessions and councils read as one product. The reaction schema is
-    agent-authored and varies (9+ shapes), so we render every substantive field generically through the
-    shared _prose() renderer (Markdown + citations) — never cherry-pick fixed keys, never raw text."""
-    r = sess.get("reaction") if isinstance(sess.get("reaction"), dict) else {}
-    pid = sess.get("persona_id", "") or ""
-    p = store.get_persona(pid) if pid else None
-    name = r.get("persona") or (p or {}).get("display_name") or pid or "—"
+    """One prototype/persona session → the ONE statement card (render_statement), so sessions read
+    identically to council voices. The grounded badge (session is the single source of truth) is injected
+    as the header's extra chip; the verdict/focus/observed-state map onto the Statement primitive."""
+    from ._render import render_statement
+    from .. import artifacts as _A
+    sts = _A.session_statements(sess)
     grounded = bool(sess.get("grounded_verified"))         # SINGLE source of truth (the session, not the reaction)
     badge = _label(t("grounded_yes") if grounded else t("grounded_no"), "var(--green)" if grounded else "var(--muted)")
-    meta = " · ".join(x for x in [r.get("fidelity"), r.get("version")] if x)
-    fields = []
-    for k, v in r.items():
-        if k in _SESSION_SKIP or v in (None, "", [], {}):  # _SESSION_SKIP now also drops the redundant grounded_verified
-            continue
-        if isinstance(v, bool):
-            val = raw(_icon("check") if v else _icon("circle"))
-        elif isinstance(v, list):
-            val = h("ul", {"class_": "es-prose sm", "style": "margin:2px 0 0 18px"},
-                    [h("li", {}, raw(_prose(x))) for x in v])
-        else:
-            val = h("div", {"class_": "es-prose sm"}, raw(_prose(v)))
-        fields.append(h("div", {"class_": "sfield"}, h("div", {"class_": "eyebrow"}, k.replace("_", " ")), val))
-    head = fragment(
-        h("div", {"class_": "turn-who"}, (_avatar(p, 26) if p else None), h("b", {}, name), " ", badge),
-        h("div", {"class_": "muted small turn-ctx"}, meta) if meta else None)
-    body = fragment(*fields) if fields else h("div", {"class_": "muted small"}, "—")
-    return h("div", {"class_": "turn"}, h("div", {"class_": "hd"}, head), body)
+    return render_statement(sts[0], store, head_extra=raw(badge))
 
 
 def _properties_html(rows, aside: bool = False) -> str:

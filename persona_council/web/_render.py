@@ -49,56 +49,84 @@ def render_prompt(p: dict, *, n: int | None = None) -> str:
                h("p", {}, raw(_prose(p.get("text", ""))))))
 
 
-def render_statement(st: dict, store) -> str:
-    """A persona statement — the ONE .turn card used by council answers, synthesis voices and prototype
-    sessions: avatar + name + stance + life-context, then the prose body, grounding refs and any extras."""
-    pid = st.get("persona_id", "")
-    p = store.get_persona(pid) if pid else None
-    name = (p or {}).get("display_name") or pid or "—"
-    seg = (p or {}).get("segment") or {}
-    ctx = " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
-        or ((p or {}).get("source_description") or "")[:130]
-    who = (h("a", {"href": f'/personas/{p["id"]}', "class_": "turn-who"}, _avatar(p, 26), h("b", {}, name))
-           if p else h("span", {"class_": "turn-who"}, h("b", {}, name)))
-    stance_chip = raw(render_stance(st.get("stance"))) if st.get("stance") else None
-    rel = h("span", {"class_": "muted small"}, f' · {st["relevance"]}') if st.get("relevance") else None
+def _statement_body(st: dict) -> str:
+    """One utterance's body: optional focus line, input snapshot, the prose, pushback, shift, refs."""
     meta = st.get("meta") or {}
+    focus = h("p", {"class_": "muted small", "style": "font-style:italic;margin:0 0 4px"}, meta["focus"]) if meta.get("focus") else None
     given = h("details", {"class_": "turn-input"},
               h("summary", {"class_": "muted small"}, t("council_input_given")),
               h("p", {"class_": "muted small", "style": "white-space:pre-wrap"}, meta["input"])) if meta.get("input") else None
     pushback = fragment(*(h("p", {"class_": "muted small"}, f"• {q}") for q in (meta.get("pushback") or [])[:4]))
     shift = st.get("shift") or {}
     shift_html = h("p", {"class_": "muted small"}, raw(_icon("exchange")), " ",
-                   f'{shift.get("from","")} → {shift.get("to","")}', (f' · {shift["trigger"]}' if shift.get("trigger") else "")) if shift else None
+                   f'{shift.get("from","")} → {shift.get("to","")}',
+                   (f' · {shift["trigger"]}' if shift.get("trigger") else "")) if shift else None
+    return h("div", {"class_": "turn-ans"}, focus, given, h("p", {}, raw(_prose(st.get("text", "")))),
+             pushback, shift_html, raw(_refs_line(st.get("refs") or [], t("council_drew_on"))))
+
+
+def _persona_card(sts: list, store, *, head_extra=None) -> str:
+    """The ONE .turn statement card — a persona's avatar + name + stance + life-context, then one or more
+    utterance bodies (a persona answering several questions merges into a single card, not repeated heads)."""
+    head_st = sts[0]
+    pid = head_st.get("persona_id", "")
+    p = store.get_persona(pid) if pid else None
+    name = (p or {}).get("display_name") or pid or "—"
+    seg = (p or {}).get("segment") or {}
+    ctx = (head_st.get("meta") or {}).get("context") \
+        or " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
+        or ((p or {}).get("source_description") or "")[:130]
+    who = (h("a", {"href": f'/personas/{p["id"]}', "class_": "turn-who"}, _avatar(p, 26), h("b", {}, name))
+           if p else h("span", {"class_": "turn-who"}, h("b", {}, name)))
+    st_with_stance = next((s for s in sts if s.get("stance")), None)
+    stance_chip = raw(render_stance(st_with_stance["stance"])) if st_with_stance else None
+    rel = head_st.get("relevance")
+    rel_html = h("span", {"class_": "muted small"}, f" · {rel}") if rel else None
     return h("div", {"class_": "turn"},
-             h("div", {"class_": "hd"}, who, " ", stance_chip, rel,
+             h("div", {"class_": "hd"}, who, " ", stance_chip, head_extra, rel_html,
                h("div", {"class_": "muted small turn-ctx"}, ctx) if ctx else None),
-             given,
-             h("div", {"class_": "turn-ans"}, h("p", {}, raw(_prose(st.get("text", "")))), pushback, shift_html,
-               raw(_refs_line(st.get("refs") or [], t("council_drew_on")))))
+             fragment(*(_statement_body(s) for s in sts)))
+
+
+def render_statement(st: dict, store, *, head_extra=None) -> str:
+    """A single persona statement → the .turn card (used by prototype sessions). `head_extra` is an extra
+    header chip (e.g. a session's grounded badge)."""
+    return _persona_card([st], store, head_extra=head_extra)
+
+
+def _by_persona(items: list) -> list:
+    order, by = [], {}
+    for s in items:
+        pid = s.get("persona_id")
+        if pid not in by:
+            by[pid] = []; order.append(pid)
+        by[pid].append(s)
+    return [by[pid] for pid in order]
 
 
 def render_statements(items: list, store, *, group_by: str = "persona", prompts: list | None = None) -> str:
-    """Render a list of statements. group_by='prompt' → a moderated transcript (question header + the
-    statements answering it, via Statement.about.id); group_by='persona'/None → a flat list of cards."""
+    """Render statements as the SAME .turn cards. group_by='prompt' → a moderated transcript (a question
+    header from `prompts` + the statements answering it via Statement.about.id, grouped per persona);
+    group_by='persona' → a flat list of per-persona cards."""
     items = [s for s in items if s]
     if group_by == "prompt" and prompts:
+        ids = {p.get("id") for p in prompts}
         rounds = []
         for n, p in enumerate(prompts, 1):
             qs = [s for s in items if (s.get("about") or {}).get("id") == p.get("id")]
             if not qs:
                 continue
             rounds.append(h("div", {"class_": "qround"}, raw(render_prompt(p, n=n)),
-                            h("div", {"class_": "qround-a"}, fragment(*(render_statement(s, store) for s in qs)))))
-        rest = [s for s in items if not (s.get("about") and any((s.get("about") or {}).get("id") == p.get("id") for p in prompts))]
+                            h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store) for g in _by_persona(qs))))))
+        rest = [s for s in items if (s.get("about") or {}).get("id") not in ids]
         if rest:
             rounds.append(h("div", {"class_": "qround"},
                             h("div", {"class_": "qround-q"}, raw(_icon("bulb")),
                               h("div", {}, h("div", {"class_": "qround-n"}, t("further_answers")))),
-                            h("div", {"class_": "qround-a"}, fragment(*(render_statement(s, store) for s in rest)))))
+                            h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store) for g in _by_persona(rest))))))
         return h("div", {"class_": "qrounds"}, fragment(*rounds))
     return h("div", {"style": "display:flex;flex-direction:column;gap:10px"},
-             fragment(*(render_statement(s, store) for s in items)))
+             fragment(*(_persona_card(g, store) for g in _by_persona(items))))
 
 
 def render_finding(f: dict, *, n: int | None = None) -> str:
@@ -115,10 +143,8 @@ def render_finding(f: dict, *, n: int | None = None) -> str:
     return h("div", {"class_": cls}, num, body) if num else h("div", {"class_": cls}, body)
 
 
-def render_findings(items: list, kind: str) -> tuple[str, str, str]:
-    """A whole finding SECTION for one kind → (section_id, label, html). id+label come from
-    artifacts.finding_kind() (data-driven; the synthesis minimap anchors)."""
-    meta = _A.finding_kind(kind)
-    numbered = kind in ("recommendation",)
+def render_findings(items: list, *, numbered: bool = False) -> str:
+    """The rows of a finding list section (one render_finding per item). The caller wraps them in a
+    section with the data-driven id (artifacts.finding_kind(kind)['id']) and an i18n label."""
     rows = [render_finding(f, n=(i if numbered else None)) for i, f in enumerate(items, 1)]
-    return meta["id"], t(meta["label_key"]), fragment(*rows)
+    return fragment(*rows)

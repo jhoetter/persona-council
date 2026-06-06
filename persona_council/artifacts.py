@@ -248,14 +248,17 @@ def session_statements(se: dict, persona_name: str | None = None) -> list[dict]:
     r = se.get("reaction") if isinstance(se.get("reaction"), dict) else {}
     refs = [ref("prototype_state", text=str(x)) for x in (se.get("observed_state_refs") or r.get("observed_state_refs") or [])]
     text = r.get("verdict") or r.get("reaction_text") or r.get("summary") or ""
-    meta = {k: v for k, v in r.items()
-            if k not in ("persona", "fidelity", "version", "observed_state_refs", "self_authored",
-                         "session_id", "grounded_verified", "grounded", "verdict", "reaction_text", "summary", "focus")
-            and v not in (None, "", [], {})}
+    extra = {k: v for k, v in r.items()
+             if k not in ("persona", "fidelity", "version", "observed_state_refs", "self_authored",
+                          "session_id", "grounded_verified", "grounded", "verdict", "reaction_text", "summary", "focus")
+             and v not in (None, "", [], {})}
+    meta = {}
+    ctx = " · ".join(x for x in [r.get("fidelity"), r.get("version")] if x)
+    if ctx:
+        meta["context"] = ctx                       # → the card's ctx line (fidelity · version)
     if r.get("focus"):
-        meta = {"focus": r["focus"], **meta}
-    if r.get("fidelity") or r.get("version"):
-        meta["fidelity"] = " · ".join(x for x in [r.get("fidelity"), r.get("version")] if x)
+        meta["focus"] = r["focus"]                  # → a muted "focus" line in the body
+    meta.update(extra)
     return [statement(se.get("persona_id", ""), text, refs=refs, meta=meta or None)]
 
 
