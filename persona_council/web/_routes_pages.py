@@ -5,10 +5,6 @@ from datetime import date, timedelta
 
 from .. import services
 from ..storage import Store
-from persona_icons import (
-    hifi as _persona_hifi, hifi_names as _hifi_names,
-    icon as _persona_icon_fn, names as _icon_names,
-)
 from ._i18n import t, _lang
 from ._components import (
     _esc, _icon, _avatar, _label, _pills, _md, _layout, _empty_state, _doc, _list_page,
@@ -136,45 +132,6 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
 def register_pages(app) -> None:
     from fastapi import Query
     from fastapi.responses import HTMLResponse
-
-    @app.get("/icons", response_class=HTMLResponse)
-    def _icons_catalog():
-        # Internal catalog / playground for the shared persona-icons set (hi-fi +
-        # regular). Each tile is `.pi-hover` and every icon is rendered with
-        # animate=True, so hovering plays the animation (CSS injected into <head>
-        # via _layout). In real usage animation is opt-in; honors
-        # prefers-reduced-motion.
-        store = Store()
-
-        def _tile(svg: str, name: str) -> str:
-            return (
-                '<button class="pi-hover" type="button" '
-                'style="display:flex;flex-direction:column;align-items:center;gap:10px;'
-                'padding:20px 8px 12px;border:1px solid rgba(128,128,128,.25);'
-                'border-radius:12px;background:transparent;color:inherit;cursor:pointer;font:inherit">'
-                f'{svg}'
-                '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;opacity:.55">'
-                f'{_esc(name)}</span></button>'
-            )
-
-        grid = ('display:grid;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));'
-                'gap:13px;max-width:980px;margin:0 auto;padding:12px 24px 36px')
-        head = ('max-width:980px;margin:18px auto 0;padding:0 24px;'
-                'font:600 12px/1 ui-monospace,monospace;letter-spacing:.12em;'
-                'text-transform:uppercase;opacity:.5')
-        hi_cards = "".join(_tile(_persona_hifi(n, 56, animate=True), n) for n in _hifi_names())
-        rg_cards = "".join(_tile(_persona_icon_fn(n, animate=True), n) for n in _icon_names())
-        body = (
-            # bump the council's 16px svg.ic so regular icons read in the catalog
-            '<style>.pi-cat-reg .ic{width:26px;height:26px}</style>'
-            '<div style="max-width:980px;margin:0 auto;padding:24px 24px 4px">'
-            '<h1 style="margin:0 0 4px">persona-icons</h1>'
-            '<p class="muted" style="margin:0">Hover (or keyboard-focus) any tile to play its '
-            'animation. Animation is opt-in (animate=True); honors prefers-reduced-motion.</p></div>'
-            f'<h2 style="{head}">Hi-fi · 48</h2><div style="{grid}">{hi_cards}</div>'
-            f'<h2 style="{head}">Regular · 24</h2><div class="pi-cat-reg" style="{grid}">{rg_cards}</div>'
-        )
-        return _layout("Icons", body, store, active="")
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
