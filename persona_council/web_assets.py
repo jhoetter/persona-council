@@ -40,7 +40,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .app.collapsed .sidebar{width:0;min-width:0;border-right-width:0}
 .brand{height:var(--row-h);flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 14px;font-weight:680;font-size:var(--t-body);border-bottom:1px solid var(--line);white-space:nowrap}
 .brand .mark{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
-.brand .mark svg{width:22px;height:22px}
+.brand .mark svg{width:22px;height:22px;overflow:visible}
 .sb-scroll{overflow:auto;padding:10px 8px;flex:1;min-height:0}
 .nav{display:flex;flex-direction:column;gap:1px}
 .nav a{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:6px;color:var(--ink);font-weight:500;position:relative;min-height:30px}
