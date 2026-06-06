@@ -249,7 +249,7 @@ def synthesis_statements(s: dict) -> list[dict]:
         refs = [ref("council", id=e.get("council_id"), quote=e.get("quote"))
                 for e in (v.get("evidence") or []) if isinstance(e, dict)]
         sh = v.get("shift") or None
-        meta = {"segment": v["segment"]} if v.get("segment") else None
+        meta = {"context": v["segment"]} if v.get("segment") else None   # → the card's ctx line
         out.append(statement(v.get("persona_id", ""), v.get("key_argument", ""),
                              stance=resolve_stance(v.get("sentiment")) if v.get("sentiment") else None,
                              refs=refs, relevance=v.get("relevance"), shift=sh, meta=meta))

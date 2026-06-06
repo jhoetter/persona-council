@@ -9,7 +9,7 @@ from ._components import (
     _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _prose, _rec_item, _rec_row_n,
     _effort_impact, _star, _study_lead,
 )
-from ._render import render_findings
+from ._render import render_findings, render_statements
 from .. import artifacts as _A
 from ._vm import study_head
 from ._html import h, raw, fragment, register_css
@@ -551,10 +551,13 @@ def _synthesis_html(store: Store, syn: dict):
         sec.append(s)
     if (s := _fsec("shortlist", t("shortlist"))):
         sec.append(s)
-    # voices — who thinks what & why (filter/sort/shift/evidence)
-    panel = _voices_panel(store, syn)
-    if panel:
-        sec.append(("stimmen", t("voices"), h("div", {"class_": "block", "id": "stimmen"}, raw(panel))))
+    # voices — the SAME .turn statement cards as a council (one consolidated voice primitive across all
+    # detail pages); the per-council sentiment chart is the fallback when there are no structured voices.
+    voices = _A.synthesis_statements(syn)
+    if voices:
+        sec.append(("stimmen", t("voices"),
+                    h("div", {"class_": "block", "id": "stimmen"}, h("h2", {"class_": "bh"}, t("voices")),
+                      raw(render_statements(voices, store, group_by="persona")))))
     else:
         syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]
         sent = _sentiment_section(store, syn_sessions, title=t("sentiment_over_chain"), per_council=True)
