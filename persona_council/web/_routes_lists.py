@@ -87,11 +87,39 @@ def _docs_page() -> str:
               h("span", {"class_": "doc-name"}, name)),
             h("div", {"class_": "es-prose sm doc-desc"}, raw(_md(desc))),
             h("ul", {"class_": "doc-caps"}, fragment(*(h("li", {}, raw(_md_inline(c))) for c in caps)))))
+    prim_rows = []
+    for nm, dde, den in PRIMITIVES:
+        prim_rows.append(h("div", {"class_": "psolve"},
+            h("strong", {}, nm), " — ", raw(_md_inline(dde if de else den))))
+    primitives = h("div", {"class_": "block", "style": "margin-top:38px"},
+        h("h2", {"class_": "bh"}, ("Datenmodell — fünf Primitive" if de else "Data model — five primitives")),
+        h("div", {"class_": "es-prose sm", "style": "margin-bottom:10px"},
+          raw(_md(("Unter der Haube sind alle Artefakte aus **denselben fünf JSON-Primitiven** "
+                   "zusammengesetzt — so wird jedes „gleiche Ding“ überall gleich dargestellt "
+                   "(Details: `spec/unified-artifact-schema.md`).") if de else
+                  ("Under the hood every artefact is composed of **the same five JSON primitives** — so the "
+                   "\"same thing\" is rendered the same way everywhere (details: `spec/unified-artifact-schema.md`).")))),
+        fragment(*prim_rows))
     body = h("section", {},
              h("div", {"class_": "hero"}, h("h1", {}, raw(_icon("overview")), t("documentation")),
                h("div", {"class_": "es-prose sm", "style": "margin-top:6px"}, raw(_md(DOCS_INTRO["de" if de else "en"])))),
-             h("div", {"class_": "docgrid"}, fragment(*cards)))
+             h("div", {"class_": "docgrid"}, fragment(*cards)), primitives)
     return _layout(t("documentation"), body, store, crumbs=[(t("documentation"), None)], active="docs")
+
+
+# The unified data primitives (spec/unified-artifact-schema.md) — surfaced here so the data model is visible.
+PRIMITIVES = [
+    ("Statement", "Eine Persona-Aussage: Text, Haltung, Bezug, Belege. Vereint Council-Turns, Synthese-Voices und Prototyp-Reaktionen.",
+     "A persona's utterance: text, stance, target, refs. Unifies council turns, synthesis voices and prototype reactions."),
+    ("Finding", "Ein authored Analyse-Item (Kernproblem, Empfehlung, offene Frage …): Markdown-Text, optionaler Score, Belege.",
+     "An authored analysis item (key problem, recommendation, open question …): markdown text, optional score, refs."),
+    ("Prompt", "Das Gestellte: Frage, Proposal, Ziel oder Fokus — eine Form für alles, was untersucht wird.",
+     "The thing posed: a question, proposal, goal or focus — one shape for everything being investigated."),
+    ("Ref", "Ein Beleg-Zeiger (Memory, Council, Prototyp-State, Zitat). Vereint memory_refs, evidence, observed_state_refs, `[C#]`.",
+     "A grounding pointer (memory, council, prototype-state, quote). Unifies memory_refs, evidence, observed_state_refs, `[C#]`."),
+    ("Stance", "Eine einzige Positivitäts-Skala (−2 oppose … +2 support). Ersetzt votes, stance und sentiment.",
+     "One positivity scale (−2 oppose … +2 support). Replaces votes, stance and sentiment."),
+]
 
 
 def _row(href: str, ric, title, right=None, *, color: str | None = None, sub=None) -> str:
