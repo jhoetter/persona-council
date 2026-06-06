@@ -96,7 +96,7 @@ def _properties_html(rows, aside: bool = False) -> str:
     aside=True renders a bare section (h4 + rows) to sit inside the _doc right rail."""
     proprows = [h("div", {"class_": "prop"},
                   h("span", {"class_": "prop-k"}, raw(_icon(ic)), lbl),
-                  h("span", {"class_": "prop-v"}, raw(val)))           # val is caller-built HTML/text (trusted)
+                  h("span", {"class_": "prop-v"}, val))                # text auto-escaped; h-built links (Safe) kept
                 for ic, lbl, val in rows if val not in (None, "", "—")]
     if not proprows:
         return ""

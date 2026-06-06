@@ -214,10 +214,10 @@ def register_pages(app) -> None:
               raw(_calendar_tabs(p["id"], selected_date, view)),
               raw(_period_calendar_html(p["id"], selected_date, view, period))))
         props = _properties_html([
-            ("personas", t("role"), _esc(p["role"]["title"])),
-            ("projects", t("industry"), _esc(p["company_context"]["industry"])),
-            ("dot", t("size"), _esc(p["company_context"].get("size", ""))),
-            ("memory", t("memory"), f'<a class="bc-link" href="/personas/{_esc(p["id"])}/memory">{_icon("memory")} {t("open")}</a>'),
+            ("personas", t("role"), p["role"]["title"]),
+            ("projects", t("industry"), p["company_context"]["industry"]),
+            ("dot", t("size"), p["company_context"].get("size", "")),
+            ("memory", t("memory"), h("a", {"class_": "bc-link", "href": f'/personas/{p["id"]}/memory'}, raw(_icon("memory")), " ", t("open"))),
         ], aside=True)
         prail = [("aktivitaet", t("activity_over_time"))] if activity else []
         prail += [("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
@@ -256,11 +256,11 @@ def register_pages(app) -> None:
               h("div", {"class_": "card"}, h("h3", {}, t("artifacts")), raw(_pills(a.get("artifacts_touched", [])) or "—")),
               h("div", {"class_": "card"}, h("h3", {}, t("open_loops")), raw(_pills(a.get("open_loops", [])) or "—"))))
         props = _properties_html([
-            ("personas", t("persona"), f'<a class="bc-link" href="/personas/{_esc(p["id"])}">{_esc(p["display_name"])}</a>'),
-            ("square", t("tool"), _esc(a["tool"])),
-            ("dot", t("mood"), _esc(a["impact"]["mood"])),
+            ("personas", t("persona"), h("a", {"class_": "bc-link", "href": f'/personas/{p["id"]}'}, p["display_name"])),
+            ("square", t("tool"), a["tool"]),
+            ("dot", t("mood"), a["impact"]["mood"]),
             ("personas", t("participants"), _pills(a.get("participants", []) or [alone_label])),
-            ("check", t("decision"), _esc(a.get("decision") or "")),
+            ("check", t("decision"), a.get("decision") or ""),
         ], aside=True)
         return _layout(a["task"], _doc(main, rail=props), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], f'/personas/{p["id"]}'), (a["task"][:46], None)], active="personas")
@@ -432,7 +432,7 @@ def register_pages(app) -> None:
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
             vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
             prop_rows += [("dot", _vote_label(k), str(vc[k])) for k in vc]
-        prop_rows.append(("dot", created_h, _esc(session["created_at"][:10])))
+        prop_rows.append(("dot", created_h, session["created_at"][:10]))
         cprops = _properties_html(prop_rows, aside=True)
         # Forward, project-rooted crumb: Projects > [Project] > [Council]. (A Discover council FEEDS
         # the Define synthesis — it is not nested under it; and the project lookup must work for
@@ -477,8 +477,8 @@ def register_pages(app) -> None:
         syn = store.get_synthesis(synthesis_id)
         if not syn:
             return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared")), store, active="syntheses")
-        actions = (_star("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}")
-                   + f'<button class="btn" onclick="window.print()">{t("export_pdf")}</button>')
+        actions = (raw(_star("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}"))
+                   + h("button", {"class_": "btn", "onclick": "window.print()"}, t("export_pdf")))
         crumbs = [(t("projects"), "/projects")]
         proj = services.parent_project_of_synthesis(synthesis_id, store)
         if proj:
@@ -488,9 +488,9 @@ def register_pages(app) -> None:
         props = _properties_html([
             ("check", t("status"), t("done") if syn.get("status", "done") == "done" else t("running")),
             ("councils", t("councils"), str(len(syn.get("council_ids", [])))),
-            ("dot", t("created"), _esc(syn.get("created_at", "")[:10])),
+            ("dot", t("created"), syn.get("created_at", "")[:10]),
             ("projects", t("project"),
-             (f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>' if proj else "—")),
+             (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")),
         ], aside=True)
         content, toc = _synthesis_html(store, syn)
         body = _doc(content, rail=props + rel) + _page_rail(toc)
@@ -511,16 +511,15 @@ def register_pages(app) -> None:
         proj = graph["project"]
         # edge legend (shown in the floating open-questions panel)
         used_types = sorted({e["type"] for e in graph["edges"]})
-        edge_leg = "".join(
-            f'<span class="pill" style="border-color:{_EDGE_COLORS.get(ty, "#9aa0a6")}">{_esc(ty)}</span>'
-            for ty in used_types) or f'<span class="muted small">—</span>'
+        edge_leg = fragment(*(h("span", {"class_": "pill", "style": f'border-color:{_EDGE_COLORS.get(ty, "#9aa0a6")}'}, ty)
+                              for ty in used_types)) or h("span", {"class_": "muted small"}, "—")
         oqs = [o for o in graph["open_questions"] if o.get("status") == "open"]
-        oq_html = "".join(f'<li>{_esc(o["text"])}</li>' for o in oqs[:30]) or f'<li class="muted">—</li>'
+        oq_html = fragment(*(h("li", {}, o["text"]) for o in oqs[:30])) or h("li", {"class_": "muted"}, "—")
         reports = store.list_meta_reports(proj["id"])
-        meta_btn = (f'<a class="btn" href="/projects/{_esc(proj["id"])}/meta">{_icon("syntheses")} {t("meta_report")}</a>'
+        meta_btn = (h("a", {"class_": "btn", "href": f'/projects/{proj["id"]}/meta'}, raw(_icon("syntheses")), " ", t("meta_report"))
                     if reports else "")
         if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan view
-            meta_btn = f'<a class="btn" href="/projects/{_esc(proj["id"])}/plan">{_icon("projects")} Plan</a>' + meta_btn
+            meta_btn = fragment(h("a", {"class_": "btn", "href": f'/projects/{proj["id"]}/plan'}, raw(_icon("projects")), " Plan"), meta_btn)
         protos = graph.get("prototypes") or []
         # Q4: a TYPE filter row (also the LEGEND) — every node KIND present is a colored, glyph'd,
         # toggleable chip that filters the graph by type; capability/theme tags go to a 2nd muted row.
@@ -533,46 +532,48 @@ def register_pages(app) -> None:
             ap0 = _artifact_present(protos[0])
             type_meta["prototype"] = (ap0["color"], t("prototypes_h"), ap0.get("glyph", ""))
         type_tagset = set(type_meta)
-        type_chips = "".join(
-            f'<button class="rgchip" data-theme="{_esc(ty)}" style="--c:{c}">{(_icon(glyph_icon(g)) + " ") if g else ""}{_esc(lab)}</button>'
-            for ty, (c, lab, g) in type_meta.items())
+        type_chips = fragment(*(
+            h("button", {"class_": "rgchip", "data-theme": ty, "style": f"--c:{c}"},
+              (fragment(raw(_icon(glyph_icon(g))), " ") if g else ""), lab)
+            for ty, (c, lab, g) in type_meta.items()))
         node_tags = []
         for n in graph["nodes"]:
             for tgx in n.get("theme_tags", []):
                 if tgx not in node_tags and tgx not in type_tagset:
                     node_tags.append(tgx)
         tag_vocab = list(dict.fromkeys((proj.get("themes") or []) + node_tags))
-        tag_chips = "".join(
-            f'<button class="rgchip tagchip" data-theme="{_esc(th)}" style="--c:{_theme_color(th, tag_vocab)}">{_esc(th)}</button>'
-            for th in tag_vocab)
-        left = (f'<span class="ptlabel">{_icon("search")} {t("type_h")}</span>{type_chips}'
-                + (f'<span class="ptlabel ptlabel-2">{t("tags_h")}</span>{tag_chips}' if tag_chips else "")
-                + f'<a class="rgclear" style="display:none">{t("clear_filter")}</a>') if type_chips else ""
-        oqbtn = f'<button class="btn" id="oqbtn">{t("legend")} · {t("open_questions_h")} ({len(oqs)})</button>'
-        toolbar = f'<div class="ptoolbar">{left}<span class="spacer"></span>{oqbtn}{meta_btn}</div>'
+        tag_chips = fragment(*(
+            h("button", {"class_": "rgchip tagchip", "data-theme": th, "style": f"--c:{_theme_color(th, tag_vocab)}"}, th)
+            for th in tag_vocab))
+        left = (fragment(h("span", {"class_": "ptlabel"}, raw(_icon("search")), " ", t("type_h")), type_chips,
+                         (fragment(h("span", {"class_": "ptlabel ptlabel-2"}, t("tags_h")), tag_chips) if tag_chips else ""),
+                         h("a", {"class_": "rgclear", "style": "display:none"}, t("clear_filter"))) if type_chips else "")
+        oqbtn = h("button", {"class_": "btn", "id": "oqbtn"}, f'{t("legend")} · {t("open_questions_h")} ({len(oqs)})')
+        toolbar = h("div", {"class_": "ptoolbar"}, left, h("span", {"class_": "spacer"}), oqbtn, meta_btn)
         # Artifact viewer: artifacts + recorded persona sessions (read-only).
         proto_html = ""
         if protos:
             rows = []
             for p in protos:
                 sess = store.list_prototype_sessions(prototype_id=p["id"])
-                run_badge = ('<span class="pill" style="border-color:#3d7b5f">running</span>'
-                             + f' <a href="{_esc(p["url"])}" target="_blank">open {_icon("external")}</a>' if p.get("running") and p.get("url") else "")
                 sl = []
                 for s in sess[:6]:
                     r = s.get("reaction", {})
                     gv = _icon("check") if s.get("grounded_verified") else _icon("circle")
                     nm = r.get("persona") or (store.get_persona(s.get("persona_id", "")) or {}).get("display_name") or s.get("persona_id", "")
-                    sl.append(f'<li><b>{_esc(nm)}</b>: {_esc(str(r.get("verdict") or r.get("reaction_text") or ""))[:80]} '
-                              f'<span class="muted small">{gv} grounded</span></li>')
-                sl_html = ("<ul style='margin:4px 0 0 18px'>" + "".join(sl) + "</ul>") if sl else '<div class="muted small">— keine Sessions —</div>'
+                    sl.append(h("li", {}, h("b", {}, nm), ": ", str(r.get("verdict") or r.get("reaction_text") or "")[:80],
+                                " ", h("span", {"class_": "muted small"}, raw(gv), " grounded")))
+                sl_html = (h("ul", {"style": "margin:4px 0 0 18px"}, fragment(*sl)) if sl
+                           else h("div", {"class_": "muted small"}, "— keine Sessions —"))
                 ap = _artifact_present(p)
                 pill = ap["disc"] or ap["label"]
-                rows.append(f'<div class="strow"><a href="/prototypes/{_esc(p["slug"])}">{_icon("projects")}<b>{_esc(p["name"])}</b></a> '
-                            f'<span class="pill">{_esc(pill)}</span> <span class="muted small">{_esc(p.get("version",""))}</span> '
-                            f'<a class="btn" style="padding:2px 8px" href="/prototypes/{_esc(p["slug"])}">ansehen {_icon("external")}</a>{sl_html}</div>')
-            proto_html = (f'<div class="oqp-h" style="margin-top:14px">{t("prototypes_h")} ({len(protos)})</div>'
-                          + "".join(rows))
+                rows.append(h("div", {"class_": "strow"},
+                              h("a", {"href": f'/prototypes/{p["slug"]}'}, raw(_icon("projects")), h("b", {}, p["name"])), " ",
+                              h("span", {"class_": "pill"}, pill), " ", h("span", {"class_": "muted small"}, p.get("version", "")), " ",
+                              h("a", {"class_": "btn", "style": "padding:2px 8px", "href": f'/prototypes/{p["slug"]}'},
+                                "ansehen ", raw(_icon("external"))), sl_html))
+            proto_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("prototypes_h")} ({len(protos)})'),
+                                  fragment(*rows))
         # Sections outline (methodology-independent groupings) — a navigable list in the panel.
         from .. import presentation as _pres
         secs = sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0))
@@ -581,11 +582,13 @@ def register_pages(app) -> None:
             rows = []
             for s in secs:
                 pr = _pres.present(s.get("kind", "theme"), s.get("presentation"))
-                rows.append(
-                    f'<div class="strow"><a href="/sections/{_esc(s["id"])}"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
-                    f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(s.get("title",""))}</span></a> '
-                    f'<span class="muted small">{_esc(pr.get("short", s.get("kind","")))} · {len(s.get("member_ids",[]))}</span></div>')
-            sec_html = (f'<div class="oqp-h" style="margin-top:14px">Sections ({len(secs)})</div>' + "".join(rows))
+                glyph = (pr.get("glyph") + " ") if pr.get("glyph") else ""
+                rows.append(h("div", {"class_": "strow"},
+                              h("a", {"href": f'/sections/{s["id"]}'},
+                                h("span", {"class_": "pill", "style": f'border-color:{pr["color"]};color:{pr["color"]}'},
+                                  glyph, s.get("title", ""))), " ",
+                              h("span", {"class_": "muted small"}, f'{pr.get("short", s.get("kind",""))} · {len(s.get("member_ids",[]))}')))
+            sec_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f"Sections ({len(secs)})"), fragment(*rows))
         # Project pulse (assess_project) — a self-documenting status line for in-flight long runs.
         pulse_html = ""
         try:
@@ -593,24 +596,20 @@ def register_pages(app) -> None:
             cov = ap["coverage"]["evidence_by_kind"]
             cov_str = " · ".join(f"{k}:{v}" for k, v in cov.items())
             gaps = ap.get("gaps") or []
-            gap_str = (f'<div class="muted small" style="margin-top:4px">{t("gaps")}: '
-                       + "; ".join(_esc(g) for g in gaps[:4]) + "</div>") if gaps else ""
-            pulse_html = (
-                f'<div class="oqp-h">{t("pulse")}</div>'
-                f'<div class="strow"><span class="pill">{_esc(ap["recommendation"])}</span> '
-                f'<span class="muted small">{_esc(cov_str)} · {t("saturation")}: {_esc(ap["saturation"]["hint"])}</span>{gap_str}</div>')
+            gap_str = (h("div", {"class_": "muted small", "style": "margin-top:4px"}, f'{t("gaps")}: ', "; ".join(gaps[:4]))
+                       if gaps else "")
+            pulse_html = fragment(
+                h("div", {"class_": "oqp-h"}, t("pulse")),
+                h("div", {"class_": "strow"}, h("span", {"class_": "pill"}, ap["recommendation"]), " ",
+                  h("span", {"class_": "muted small"}, cov_str, f' · {t("saturation")}: {ap["saturation"]["hint"]}'), gap_str))
         except Exception:
             pulse_html = ""
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
-        panel = (
-            f'<div class="oqpanel" id="oqpanel" hidden>'
-            f'{pulse_html}'
-            f'<div class="oqp-h" style="margin-top:14px">{t("build_order_h")} (edges)</div>'
-            f'<div class="pills" style="margin:6px 0 14px">{edge_leg}</div>'
-            f'{sec_html}'
-            f'<div class="oqp-h" style="margin-top:14px">{t("open_questions_h")}</div>'
-            f'<ul style="margin:6px 0 0 18px">{oq_html}</ul>'
-            f'{proto_html}</div>')
+        panel = h("div", {"class_": "oqpanel", "id": "oqpanel", "hidden": True}, pulse_html,
+                  h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("build_order_h")} (edges)'),
+                  h("div", {"class_": "pills", "style": "margin:6px 0 14px"}, edge_leg), sec_html,
+                  h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("open_questions_h")),
+                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html)
         oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"
                  "p=document.getElementById('oqpanel');if(!b||!p)return;"
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
@@ -620,17 +619,14 @@ def register_pages(app) -> None:
         # via indentation + hover-highlight). The spatial graph is retired from the UI but still reachable
         # by URL (?view=graph) — code kept, just unlinked — so nothing is destroyed and it's reversible.
         is_graph = view == "graph"
-        head_tools = (f'<div class="ptoolbar"><span class="spacer"></span></div>{toolbar}'
-                      if is_graph else f'<div class="ptoolbar"><span class="spacer"></span>{meta_btn}</div>')
-        main_view = (f'<div class="graphcard proj-graph">{_graph_interactive(graph)}</div>{panel}{oq_js}'
-                     if is_graph else f'<div class="outlinecard">{_outline_html(graph)}</div>')
-        body = (
-            f'<div class="proj">'
-            f'<div class="proj-head"><h1 class="h1">{_esc(proj["title"])}</h1>'
-            f'<p class="lead">{_esc(proj.get("goal", ""))}</p>'
-            f'{head_tools}</div>'
-            f'{main_view}'
-            f'</div>')
+        head_tools = (fragment(h("div", {"class_": "ptoolbar"}, h("span", {"class_": "spacer"})), toolbar) if is_graph
+                      else h("div", {"class_": "ptoolbar"}, h("span", {"class_": "spacer"}), meta_btn))
+        main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
+                     if is_graph else h("div", {"class_": "outlinecard"}, raw(_outline_html(graph))))
+        body = h("div", {"class_": "proj"},
+                 h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
+                   h("p", {"class_": "lead"}, proj.get("goal", "")), head_tools),
+                 main_view)
         return _layout(proj["title"], body, store, crumbs=[(t("projects"), "/projects"), (proj["title"], None)], active="projects")
 
     @app.get("/projects/{project_id}/meta", response_class=HTMLResponse)
@@ -641,8 +637,8 @@ def register_pages(app) -> None:
             proj = services.get_research_project(project_id, store=store)
         except KeyError:
             return _layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared")), store, active="projects")
-        body = f'<div class="page"><div class="doc">{_md(md)}</div></div>'
-        actions = f'<button class="btn" onclick="window.print()">{t("export_pdf")}</button>'
+        body = h("div", {"class_": "page"}, h("div", {"class_": "doc"}, raw(_md(md))))
+        actions = h("button", {"class_": "btn", "onclick": "window.print()"}, t("export_pdf"))
         return _layout(proj["title"] + " — " + t("meta_report"), body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)],
                        active="projects", actions=actions)
@@ -656,7 +652,7 @@ def register_pages(app) -> None:
             return _layout(t("not_found"), _empty_state("Plan", t("runtime_maybe_cleared")), store, active="projects")
         plan = services.get_plan(project_id, store=store)
         if not plan:
-            body = f'<div class="page">{_empty_state("Plan", "Dieses Projekt hat noch keinen Plan (Freiform/Legacy).")}</div>'
+            body = h("div", {"class_": "page"}, raw(_empty_state("Plan", "Dieses Projekt hat noch keinen Plan (Freiform/Legacy).")))
         else:
             body = _plan_html(plan, store)
         return _layout(proj["title"] + " — Plan", body, store,
@@ -673,21 +669,22 @@ def register_pages(app) -> None:
             return _layout(t("not_found"), _empty_state("Section", t("runtime_maybe_cleared")), store, active="projects")
         sec, proj, members = data["section"], data["project"], data["members"]
         pr = _pres.present(sec.get("kind", "theme"), sec.get("presentation"))
-        chip = (f'<span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
-                f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(pr.get("short", sec.get("kind","")))}</span>')
+        chip = h("span", {"class_": "pill", "style": f'border-color:{pr["color"]};color:{pr["color"]}'},
+                 ((pr.get("glyph") + " ") if pr.get("glyph") else ""), pr.get("short", sec.get("kind", "")))
         rows = []
         for m in members:
-            head = (f'<a href="{m["href"]}">{_esc(m["title"])}</a>' if m["href"] else _esc(m["title"]))
-            rows.append(f'<div class="strow"><b>{head}</b> <span class="muted small">{_esc(m["kind"])}</span>'
-                        f'<div class="muted small" style="margin-top:3px">{_esc((m["summary"] or "")[:240])}</div></div>')
-        note_sub = f'<p class="sub">{_esc(sec.get("note",""))}</p>' if sec.get("note") else ""
+            head = h("a", {"href": m["href"]}, m["title"]) if m["href"] else m["title"]
+            rows.append(h("div", {"class_": "strow"}, h("b", {}, head), " ", h("span", {"class_": "muted small"}, m["kind"]),
+                          h("div", {"class_": "muted small", "style": "margin-top:3px"}, (m["summary"] or "")[:240])))
+        note_sub = h("p", {"class_": "sub"}, sec.get("note", "")) if sec.get("note") else ""
         sprops = _properties_html([
-            ("dot", t("type_h"), _esc(pr.get("short", sec.get("kind", "")))),
-            ("projects", t("project"), f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>'),
+            ("dot", t("type_h"), pr.get("short", sec.get("kind", ""))),
+            ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"])),
         ], aside=True)
-        sec_sub = raw(f'{chip} <span class="muted small">{t("n_nodes", n=len(members))}</span>')
-        main = (f'{_hero(sec["title"], sub=sec_sub)}{note_sub}'
-                f'<div style="margin-top:8px">{"".join(rows) or _empty_state(t("section"), t("no_members"))}</div>')
+        sec_sub = fragment(chip, " ", h("span", {"class_": "muted small"}, t("n_nodes", n=len(members))))
+        main = fragment(raw(_hero(sec["title"], sub=sec_sub)), note_sub,
+                        h("div", {"style": "margin-top:8px"},
+                          fragment(*rows) if rows else raw(_empty_state(t("section"), t("no_members")))))
         return _layout(sec["title"], _doc(main, rail=sprops), store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
                        active="projects")
@@ -706,16 +703,17 @@ def register_pages(app) -> None:
         pr = _pres.present(kind)
         klabel = t("concept_h") if kind == "concept" else (t("notes_h") if kind == "note" else (pr.get("label") or kind))
         active = "concept" if kind == "concept" else "projects"
-        proj_link = f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>'
+        proj_link = h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"])
         nprops = _properties_html([
-            ("dot", t("created"), _esc(note.get("created_at", "")[:10])),
+            ("dot", t("created"), note.get("created_at", "")[:10]),
             ("projects", t("project"), proj_link),
         ], aside=True)
         nrel = _relations_html(store, f"note:{note_id}", proj["id"], aside=True)
-        pill = (f'<div style="margin-bottom:6px"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
-                f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(klabel)}</span></div>')
-        main = (f'{_hero(note.get("title",""), hid="sec-content", top=pill)}'
-                f'<div class="es-prose" style="margin-top:4px">{_md(note.get("text",""))}</div>')
+        pill = h("div", {"style": "margin-bottom:6px"},
+                 h("span", {"class_": "pill", "style": f'border-color:{pr["color"]};color:{pr["color"]}'},
+                   ((pr.get("glyph") + " ") if pr.get("glyph") else ""), klabel))
+        main = fragment(raw(_hero(note.get("title", ""), hid="sec-content", top=pill)),
+                        h("div", {"class_": "es-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))))
         nrail = [("sec-content", klabel)]
         if nprops:
             nrail.append(("sec-properties", t("properties")))
@@ -739,19 +737,22 @@ def register_pages(app) -> None:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((p["name"], None))
         _ap = _artifact_present(p)
-        fid = f'<span class="pill">{_esc(_ap["disc"] or _ap["label"])}</span>'
-        src = f'/proto-files/{_esc(slug)}/{_esc(p.get("entry", "index.html"))}'
+        fid = h("span", {"class_": "pill"}, _ap["disc"] or _ap["label"])
+        src = f'/proto-files/{slug}/{p.get("entry", "index.html")}'
         sessions = store.list_prototype_sessions(prototype_id=p["id"])
-        sessions_html = ("".join(_session_card(store, s) for s in sessions)
-                         or f'<div class="muted small">— {t("prototypes_h")}: {t("no_sessions")} —</div>')
-        proto_title = raw(f'{_esc(p["name"])} {fid}')
+        sessions_html = (fragment(*(_session_card(store, s) for s in sessions))
+                         or h("div", {"class_": "muted small"}, f'— {t("prototypes_h")}: {t("no_sessions")} —'))
+        proto_title = fragment(p["name"], " ", fid)
         proto_sub = f'{p.get("version","")} · {slug}'
-        main = (
-            f'{_hero(proto_title, icon="prototype", sub=proto_sub)}'
-            f'<p style="margin:8px 0 16px"><a class="btn" href="{src}" target="_blank">{_icon("projects")} {t("open_in_new_tab")} {_icon("external")}</a></p>'
-            f'<div class="protoframe"><iframe src="{src}" title="{_esc(p["name"])}" loading="lazy"></iframe></div>'
-            f'<div class="sec" id="sec-sessions" style="margin-top:22px"><h2>{t("prototypes_h")} · {t("sessions")} ({len(sessions)})</h2>'
-            f'<div style="margin-top:8px">{sessions_html}</div></div>')
+        main = fragment(
+            raw(_hero(proto_title, icon="prototype", sub=proto_sub)),
+            h("p", {"style": "margin:8px 0 16px"},
+              h("a", {"class_": "btn", "href": src, "target": "_blank"},
+                raw(_icon("projects")), " ", t("open_in_new_tab"), " ", raw(_icon("external")))),
+            h("div", {"class_": "protoframe"}, h("iframe", {"src": src, "title": p["name"], "loading": "lazy"})),
+            h("div", {"class_": "sec", "id": "sec-sessions", "style": "margin-top:22px"},
+              h("h2", {}, f'{t("prototypes_h")} · {t("sessions")} ({len(sessions)})'),
+              h("div", {"style": "margin-top:8px"}, sessions_html)))
         concept_in = []
         if proj:                                              # the concept that realises this prototype
             try:
@@ -760,9 +761,9 @@ def register_pages(app) -> None:
             except Exception:
                 concept_in = []
         n_grounded = sum(1 for s in sessions if s.get("grounded_verified"))
-        proj_link = (f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>' if proj else "—")
+        proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")
         prop_html = _properties_html([
-            ("square", t("fidelity"), _esc(_ap.get("disc") or _ap.get("label") or "")),
+            ("square", t("fidelity"), _ap.get("disc") or _ap.get("label") or ""),
             ("personas", t("sessions"), str(len(sessions))),
             ("check", t("grounded_yes"), f"{n_grounded}/{len(sessions)}" if sessions else "—"),
             ("projects", t("project"), proj_link),
