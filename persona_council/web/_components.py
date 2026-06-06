@@ -274,9 +274,9 @@ def _user_menu() -> str:
                  h("div", {"class_": "seg seg-theme"}, theme_opts)),
                h("div", {"class_": "um-sec"}, h("div", {"class_": "um-lbl"}, t("language")),
                  h("div", {"class_": "seg"}, lang_opts))),
-             h("button", {"type": "button", "class_": "um-trigger", "id": "umbtn",
+             h("button", {"type": "button", "class_": "um-trigger pi-hover", "id": "umbtn",
                           "aria-haspopup": "true", "aria-expanded": "false"},
-               h("span", {"class_": "um-ava"}, raw(_icon("settings"))),
+               h("span", {"class_": "um-ava"}, raw(_icon("settings", animate=True))),
                h("span", {"class_": "um-name"}, t("settings")),
                h("span", {"class_": "um-caret"}, raw(_icon("chevron")))))
 
