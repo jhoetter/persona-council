@@ -44,8 +44,16 @@ Collapse 18 → 7. The handful of in-between sizes (13.5/14.5/12.5) round to the
 **Spacing scale:** `--s-1:4 --s-2:8 --s-3:12 --s-4:16 --s-5:20 --s-6:24 --s-8:32` (+ inline 2/6 kept as
 literals only inside chips). Card padding standardizes to `--s-3 var(--s-4)` (12/16).
 
-**One chip primitive:** `.chip` (radius 999, `--t-xs`, `2px 8px`) + modifiers `.chip-soft/-outline/-dot`.
-`.pill/.lbl/.rgchip/.mchip/.segchip/.axchip/.gate` become modifiers or aliases of it.
+**Chip system (audited 2026-06-06).** The 8 chip classes resolve to **three purposeful tiers**, not one
+primitive — collapsing them all to one radius would erase a deliberate visual language:
+- **Soft label** (`--t-sm`, radius 6px, `2px 8px`): `.pill`, `.lbl` — status/category labels.
+- **Round interactive** (`--t-sm`, radius 999px): `.rgchip`, `.vchip`, `.gate`, `.mchip` — filters/toggles/meta.
+- **Micro tag** (`--t-xs`, radius 5px, `1px 7px`): `.segchip`, `.axchip` — tiny inline tags.
+
+✅ Fixed the one true outlier: `.mchip` had an arbitrary `20px` radius → `999px` (+ `2px 10px`→`3px 10px`)
+to join the round tier. Paddings within each tier are otherwise consistent.
+**[needs your eye]** The open Linear-style question: flatten soft (6px) → round (999px) app-wide so *all*
+chips are pills? That's an opinionated, app-wide visual shift — decide on the running app, not blind.
 
 ## 3. Component ownership (C5, now unblocked)
 
@@ -73,15 +81,17 @@ cascade). This is why C5 belongs here, with the design pass, not as blind churn.
 
 ## 5. Plan (phased; each phase verifiable)
 
-1. **Tokens (additive, zero pixels):** add `--t-*` and `--s-*` to `:root`. No rule changes yet → golden
-   byte-identical. Lands safely now.
-2. **Map to scale [needs review]:** replace raw font-sizes/paddings with the tokens, rounding the
-   in-betweens. Per-file, eyeball each against the running app (the rounding is the only visual delta).
-3. **Chip primitive [needs review]:** unify the chip variants; verify each surface.
-4. **C5 co-location (structural):** move CSS into `register_css` per component, dependency-ordered,
-   verifying per move; shrink `web_assets.CSS` to base; delete `_SYN_STYLE`.
-5. **Consistency sweep:** apply §4 rules where any page still deviates.
+1. ✅ **Tokens (additive, zero pixels):** `--t-*` and `--s-*` added to `:root`. Body byte-identical.
+2. ✅ **Type scale mapped:** all 143 `font-size` declarations tokenized to the 7-step ramp
+   (11/12/13/15/16/18/24). A var-resolving cascade-diff confirmed the only deltas are the intended
+   roundings (49 imperceptible ±0.5px + `.stat b` 17→18, `.syn-head h1` 21→24). *Spacing px → `--s-*` is
+   deferred* — it's high-churn/low-visible-payoff; do opportunistically, not as a sweep.
+3. ◐ **Chips:** documented the 3-tier system (§2) and fixed the `.mchip` 20px outlier → round. The
+   app-wide soft→round flatten remains **[needs your eye]** on the running app.
+4. ✅ **C5 co-location:** done — see `spec/roadmap.md` R3 (CSS in component `register_css`; `_SYN_STYLE`
+   deleted; `web_assets.CSS` 295 LOC; computed cascade identical across all 23 pages).
+5. ☐ **Consistency sweep:** apply §4 rules where any page still deviates (the `.ihint`/`.eyebrow` overlap
+   retire, universal `_empty_state`). Not yet started.
 
-Phase 1 is safe to land immediately; 2–3 need the user's eye (rounding/unification are judgment calls);
-4 is mechanical-but-cascade-sensitive; 5 is cleanup. Tools: the running app (`make dev-forwarded`), the
+Tools: the running app (`make dev-forwarded`), the
 golden-diff harness (`/tmp/verify.py`) for structure, and Mobbin (Linear references) for the polish bar.

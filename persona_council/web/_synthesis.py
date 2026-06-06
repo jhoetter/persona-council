@@ -95,7 +95,7 @@ register_css(r"""
 .syn-head h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;font-weight:650;margin:0 0 8px}
 .syn-goal{color:var(--muted);font-size:var(--t-md);line-height:1.5;max-width:72ch;margin:0 0 14px}
 .syn-meta{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
-.mchip{font-size:var(--t-sm);color:var(--muted);border:1px solid var(--line);background:var(--panel-2);border-radius:20px;padding:2px 10px}
+.mchip{font-size:var(--t-sm);color:var(--muted);border:1px solid var(--line);background:var(--panel-2);border-radius:999px;padding:3px 10px}
 .block{margin:40px 0 0;padding-top:26px;border-top:1px solid var(--line)}
 .block>.bh{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:0 0 16px;display:flex;align-items:center;gap:8px}
 .block>.bh .cnt{color:var(--accent);background:var(--accent-weak);border-radius:20px;padding:1px 9px;font-size:var(--t-xs)}details.block>summary.bh{cursor:pointer;margin-bottom:0}details.block[open]>summary.bh{margin-bottom:16px}
