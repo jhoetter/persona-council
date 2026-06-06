@@ -19,7 +19,8 @@ from ..config import (
     ROOT, utc_now_iso, content_language, ensure_content_language, language_instruction,
     critic_threshold, critic_sample_k,
 )
-from ._authoring import MARKDOWN_CONTRACT
+from ._authoring import MARKDOWN_CONTRACT, PRIMITIVES_CONTRACT
+from .. import artifacts as _A
 from ..models import (
     CalendarEvent,
     CouncilSession,
@@ -138,7 +139,7 @@ def brief_synthesis(council_ids: list[str], title: str | None = None, start_inpu
         "provenance": _synthesis_provenance(store, council_ids, goal or start_input or title),
     }
     return {"schema": "synthesis", "council_ids": council_ids,
-            "instructions": build_synthesis_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
+            "instructions": build_synthesis_prompt(frame) + MARKDOWN_CONTRACT + PRIMITIVES_CONTRACT, "frame": frame}
 
 
 
@@ -160,6 +161,10 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
     if key and not synthesis_id:        # deterministic id → idempotent resumable upsert (HX6)
         synthesis_id = stable_id("synthesis", key)
     data = validate_synthesis_payload(payload or {})
+    _pl = payload or {}                                   # Phase 2 native primitives (optional; dual-read)
+    _sts = [_A.validate_statement(s) for s in (_pl.get("statements") or [])]
+    _fnds = [_A.validate_finding(f) for f in (_pl.get("findings") or [])]
+    _prmpts = [_A.validate_prompt(p) for p in (_pl.get("prompts") or [])]
     existing = store.get_synthesis(synthesis_id) if synthesis_id else None
     # honor an explicit/keyed synthesis_id even on first create (so a keyed run is idempotent)
     sid = (existing or {}).get("id") or synthesis_id or stable_id("synthesis", title or "synthesis", utc_now_iso())
@@ -182,6 +187,9 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
         key_problems=data["key_problems"] or prev.get("key_problems", []),
         ranking=data["ranking"] or prev.get("ranking", []),
         shortlist=data["shortlist"] or prev.get("shortlist", []),
+        statements=_sts or prev.get("statements", []),
+        findings=_fnds or prev.get("findings", []),
+        prompts=_prmpts or prev.get("prompts", []),
     ).to_dict()
     rec["updated_at"] = utc_now_iso()
     store.upsert_synthesis(rec)

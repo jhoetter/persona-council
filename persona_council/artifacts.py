@@ -149,6 +149,38 @@ def finding(text: str, *, kind: str, score: dict | int | None = None, refs: list
     return _clean({"text": text or "", "kind": kind, "score": score, "refs": list(refs), "meta": meta})
 
 
+# --------------------------------------------------------------------------- validators (Phase 2 native authoring)
+# Lenient normalizers for host-authored primitives — re-run input dicts through the constructors so a
+# recorded record is always well-shaped (stance resolved through the scale, empties dropped).
+
+def validate_ref(d: dict) -> dict:
+    return ref(d.get("kind", "external"), id=d.get("id"), text=d.get("text"), quote=d.get("quote"))
+
+
+def validate_stance(d) -> dict | None:
+    if d in (None, "", []):
+        return None
+    if isinstance(d, dict) and "value" in d:
+        return stance(int(d["value"]), label=d.get("label"))
+    return resolve_stance(d)
+
+
+def validate_prompt(d: dict) -> dict:
+    return prompt(d.get("text", ""), kind=d.get("kind", "question"), id=d.get("id"))
+
+
+def validate_statement(d: dict) -> dict:
+    return statement(d.get("persona_id", ""), d.get("text", ""), stance=validate_stance(d.get("stance")),
+                     about=(validate_ref(d["about"]) if d.get("about") else None),
+                     refs=[validate_ref(r) for r in (d.get("refs") or [])],
+                     relevance=d.get("relevance"), shift=d.get("shift") or None, meta=d.get("meta") or None)
+
+
+def validate_finding(d: dict) -> dict:
+    return finding(d.get("text", ""), kind=d.get("kind", "note"), score=d.get("score") or None,
+                   refs=[validate_ref(r) for r in (d.get("refs") or [])], meta=d.get("meta") or None)
+
+
 # --------------------------------------------------------------------------- read adapters (legacy → primitives)
 # Pure transforms record-dict → primitives (persona lookup happens at render time). Each adapter PREFERS
 # a record's native primitive field when present (forward-compat for Phase 2), else derives from legacy.

@@ -151,6 +151,11 @@ class CouncilSession:
     # (spec/research-graph-and-meta-report.md §4-5: personas are global, but studies/
     # councils/reports are encapsulated at the Project level). Enforced at creation.
     project_id: str = ""
+    # Unified primitives (spec/unified-artifact-schema.md) — native shape, optional during the
+    # transition. When present the renderers/adapters prefer them over turns/votes/questions.
+    statements: list = field(default_factory=list)
+    findings: list = field(default_factory=list)
+    prompts: list = field(default_factory=list)
 
     def to_dict(self) -> Json:
         return asdict(self)
@@ -192,6 +197,10 @@ class Synthesis:
     key_problems: list[str] = field(default_factory=list)
     ranking: list[Json] = field(default_factory=list)    # down-select: [{prototype_id, score_rationale}]
     shortlist: list[str] = field(default_factory=list)   # prototype_ids carried to mid-fi
+    # Unified primitives (spec/unified-artifact-schema.md) — native shape, optional during the transition.
+    statements: list = field(default_factory=list)
+    findings: list = field(default_factory=list)
+    prompts: list = field(default_factory=list)
 
     def to_dict(self) -> Json:
         return asdict(self)
@@ -361,6 +370,7 @@ class PrototypeSession:
     reaction: Json
     observed_state_refs: list[str]
     created_at: str
+    statements: list = field(default_factory=list)   # unified primitive (spec/unified-artifact-schema.md)
 
     def to_dict(self) -> Json:
         return asdict(self)

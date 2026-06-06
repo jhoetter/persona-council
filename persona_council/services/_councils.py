@@ -19,7 +19,8 @@ from ..config import (
     ROOT, utc_now_iso, content_language, ensure_content_language, language_instruction,
     critic_threshold, critic_sample_k,
 )
-from ._authoring import MARKDOWN_CONTRACT
+from ._authoring import MARKDOWN_CONTRACT, PRIMITIVES_CONTRACT
+from .. import artifacts as _artifacts
 from ..models import (
     CalendarEvent,
     CouncilSession,
@@ -146,7 +147,7 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
             "is AUDITABLE (the UI shows it per voice). Ground every turn in agent_context, honest + "
             "anti-steering. Then a short summary + a rich Markdown exec_summary. Persist via "
             "record_council(project_id, prompt, persona_ids, turns, votes=[], proposal='', questions=[...], "
-            f"summary, exec_summary). {language_instruction(language)}" + MARKDOWN_CONTRACT
+            f"summary, exec_summary). {language_instruction(language)}" + MARKDOWN_CONTRACT + PRIMITIVES_CONTRACT
         ),
     }
 
@@ -247,7 +248,8 @@ def council_mode(council: dict[str, Any]) -> str:
 def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: list[dict[str, Any]],
                    votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "",
                    exec_summary: str = "", selection_reason: str = "", questions: list[str] | None = None,
-                   key: str | None = None, store: Store | None = None) -> dict[str, Any]:
+                   key: str | None = None, statements: list | None = None, findings: list | None = None,
+                   prompts: list | None = None, store: Store | None = None) -> dict[str, Any]:
     """Persist a host-authored council (openings/moderator/directed turns + synthesis). A council is a
     research artefact and MUST live inside a research project — `project_id` is required and validated
     (personas are global, but councils/studies/reports are scoped to a project; see
@@ -291,6 +293,9 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: 
         exec_summary=exec_summary, questions=[str(q).strip() for q in (questions or []) if str(q).strip()],
         created_at=(existing or {}).get("created_at") or utc_now_iso(),
         project_id=project["id"],
+        statements=[_artifacts.validate_statement(s) for s in (statements or [])],
+        findings=[_artifacts.validate_finding(f) for f in (findings or [])],
+        prompts=[_artifacts.validate_prompt(p) for p in (prompts or [])],
     ).to_dict()
     store.insert_council_session(session)
     # Register the council on its project so the project owns it directly (idempotent).

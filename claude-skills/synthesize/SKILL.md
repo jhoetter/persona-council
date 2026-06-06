@@ -86,3 +86,12 @@ Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis
 section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
 the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
 notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).
+
+## Unified primitives (preferred shape)
+
+Author content as the shared primitives (spec/unified-artifact-schema.md) so it renders through the one
+consistent renderer: **`statements`** (one per persona utterance: `{persona_id, text, stance:{value -2..2,
+label}, about:{kind:"prompt",id}, refs}`), **`findings`** (analysis items: `{text, kind:
+summary|key_problem|recommendation|open_question|…, score, refs}`), **`prompts`** (`{text, kind, id}`).
+One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment. Legacy fields
+(turns/votes/voices/key_problems/…) still work in parallel.

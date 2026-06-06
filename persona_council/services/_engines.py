@@ -354,11 +354,13 @@ def record_prototype_session(persona_id, prototype_id, session_id, date_value, r
     else:
         grounded = False  # session closed / harness unavailable — record but mark unverified
     now = utc_now_iso()
+    from .. import artifacts as _A
+    statements = [_A.validate_statement(s) for s in (reaction.get("statements") or [])]
     sess = PrototypeSession(
         id=(stable_id("protosession", key) if key else stable_id("protosession", persona_id, prototype_id, now)),
         persona_id=persona_id,
         prototype_id=proto["id"], session_id=session_id, date=date_value, reaction=reaction,
-        observed_state_refs=refs, created_at=now).to_dict()
+        observed_state_refs=refs, created_at=now, statements=statements).to_dict()
     sess["grounded_verified"] = grounded
     store.insert_prototype_session(sess)
     # write the real use into persona memory so the test council surfaces it
