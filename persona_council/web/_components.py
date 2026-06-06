@@ -338,7 +338,9 @@ def _nav(active: str, store: Store) -> str:
              h("div", {"class_": "sb-quick", "id": "favs"}))
     return fragment(h("nav", {"class_": "nav"}, render(work)),
                     h("div", {"class_": "navhead"}, t("library_h")),
-                    h("nav", {"class_": "nav"}, render(research)), favs)
+                    h("nav", {"class_": "nav"}, render(research)), favs,
+                    h("nav", {"class_": "nav nav-foot"},
+                      render([("/documentation", "docs", "overview", t("documentation"))])))
 
 
 def _user_menu() -> str:

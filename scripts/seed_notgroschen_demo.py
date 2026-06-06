@@ -23,7 +23,7 @@ NAME={A:"Aylin Yıldız",J:"Jonas Reinhardt",SO:"Sophie Bachmann",T:"Tobias Wege
 
 proj = S.create_research_project(
     TITLE,
-    goal="Jungen Erwachsenen mit knappem Budget helfen, einen verlässlichen **Notgroschen** aufzubauen — "
+    goal="Jungen Erwachsenen mit knappem Budget helfen, einen verlässlichen Notgroschen aufzubauen — "
          "ohne Frust, ohne Verkaufsdruck, in machbaren Mini-Schritten.",
     store=st)
 PID = proj["id"]
@@ -225,6 +225,38 @@ deliver = S.record_synthesis(
     },
     key=f"{PID}-deliver", store=st)
 print("deliver synthesis:", deliver.get("id") or (deliver.get("synthesis") or {}).get("id"))
+
+DELIVER_ID = deliver.get("id") or (deliver.get("synthesis") or {}).get("id")
+
+# ---- DEVELOP: hi-fi prototype (iterates on the eval-council's two requirements) ----
+S.register_prototype("notgroschen-starter-v02","Notgroschen-Starter v0.2","prototypes/notgroschen-starter-v02",
+  entry="index.html",run="static",version="v0.2",project_id=PID,fidelity="hi-fi",
+  notes="Hi-fi-Iteration: sichtbares erstes Ziel (1 Monatsmiete, Fortschrittsring), prominenter Stopp-Knopf, "
+        "transparente Aufrundung — setzt die zwei Auflagen aus dem Evaluation-Council um.",store=st)
+PROTO2=next(x["id"] for x in st.list_prototypes() if x["slug"]=="notgroschen-starter-v02")
+for i,(pid,nm,verdict) in enumerate([
+ (SO,"Sophie Bachmann","Jetzt sehe ich das **erste Ziel** (1 Monatsmiete) sofort — _das_ bringt mich ins Tun."),
+ (J,"Jonas Reinhardt","Der Pausieren-Knopf ist jetzt direkt sichtbar. Genau so vertraue ich dem."),
+]):
+    S.record_prototype_session(pid,PROTO2,f"{PID}-ps2-{i}","2026-06-06",
+      reaction={"persona":nm,"fidelity":"hi-fi","version":"v0.2",
+                "focus":"Lösen die zwei Council-Auflagen den Rest-Zweifel?","verdict":verdict,
+                "observed_state_refs":["Erstes Ziel: 1 Monatsmiete (520 €), Fortschrittsring 32%","Pausieren (Stopp-Knopf)"]},
+      key=f"{PID}-ps2-{i}",store=st)
+
+# ---- wire evidence into the plan's diamond (so the project graph shows it) ----
+# Evidence belongs on ACT tasks that consume a frame (diverge); syntheses sit on the verify tasks.
+from persona_council.services import _plan as PL
+PL.add_task(PID,"act","explore","Explore · Discover",consumes=["frame__discover"],task_id="act__discover",store=st)
+PL.add_task(PID,"act","explore","Evaluate · Develop",consumes=["frame__develop"],task_id="act__eval",store=st)
+PL.add_task(PID,"act","build","Build · Develop",consumes=["frame__develop"],task_id="act__build",store=st)
+for task,ref in [("act__discover",{"kind":"council","id":DISC_ID}),
+                 ("verify__define",{"kind":"synthesis","id":DEFINE_ID}),
+                 ("act__eval",{"kind":"council","id":EVAL_ID}),
+                 ("act__build",{"kind":"artifact","id":PROTO_ID}),
+                 ("act__build",{"kind":"artifact","id":PROTO2}),
+                 ("verify__deliver",{"kind":"synthesis","id":DELIVER_ID})]:
+    S.link_evidence(PID,task,ref,store=st)
 
 S.record_open_questions(PID, [
     "Default-Wochenbetrag: 3, 5 oder 7 € — was maximiert die Start-Rate?",
