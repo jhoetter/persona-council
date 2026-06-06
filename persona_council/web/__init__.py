@@ -10,7 +10,7 @@ from ._i18n import (  # noqa: F401  (public surface preserved)
 )
 from ._components import *  # noqa: F401,F403  (re-export render helpers / assets)
 from ._components import (  # noqa: F401  (explicit names used by callers/tests)
-    CSS, HEAD_JS, _RGRAPH_JS, _SYN_STYLE,
+    CSS, HEAD_JS, _RGRAPH_JS,
     _esc, _icon, _avatar, _artifact_present, _proto_tags,
     _EDGE_COLORS, _theme_color,
 )
