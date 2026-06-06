@@ -9,6 +9,7 @@ from ._components import (
     _esc, _icon, _artifact_present, _proto_tags, _EDGE_COLORS, _theme_color,
     _RGRAPH_JS,
 )
+from ._html import h, raw, fragment
 
 
 def _graph_layout(graph: dict) -> dict:
@@ -267,7 +268,7 @@ def _graph_interactive(graph: dict) -> str:
     background, scroll to zoom; click a node to open its synthesis."""
     nodes = graph["nodes"]
     if not nodes:
-        return f'<p class="muted">{_esc(t("no_synthesis"))}</p>'
+        return h("p", {"class_": "muted"}, t("no_synthesis"))
     vocab = graph["project"].get("themes", [])
     ml = _methodology_layout(graph)
     pos = ml["pos"] if ml else _graph_layout(graph)
@@ -342,8 +343,8 @@ def _graph_interactive(graph: dict) -> str:
         pts: list = []
         present_ids = [m for m in sec.get("member_ids", []) if m in bounds]
         for mid in present_ids:
-            x, y, w, h = bounds[mid]
-            pts += [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
+            x, y, w, bh = bounds[mid]
+            pts += [(x, y), (x + w, y), (x, y + bh), (x + w, y + bh)]
         if len(pts) < 3:
             continue
         poly = _expand_hull(_convex_hull(pts), 30)
@@ -377,8 +378,8 @@ def _graph_interactive(graph: dict) -> str:
             pts: list = []
             present_ids = [m for m in member_ids if m in bounds]
             for mid in present_ids:
-                x, y, w, h = bounds[mid]
-                pts += [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
+                x, y, w, bh = bounds[mid]
+                pts += [(x, y), (x + w, y), (x, y + bh), (x + w, y + bh)]
             if len(pts) < 3:
                 continue
             poly = _expand_hull(_convex_hull(pts), 46)
@@ -415,8 +416,9 @@ def _graph_interactive(graph: dict) -> str:
     # if rendered outside the full-bleed project layout.
     maxy = max((y for _x, y in pos.values()), default=0)
     height = max(360, int(maxy) + 64 + 48)
-    return (
-        '<div class="rgwrap">'
+    # The <svg> scene graph (self-closing SVG elements + JS-populated <g>s) is a raw() island; the
+    # surrounding chrome (controls, hint, minimap shell) is real h()-built HTML.
+    svg_main = (
         f'<svg id="rg" width="100%" height="{height}"><defs>'
         + "".join(f'<marker id="rgah-{i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
                   f'orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="{c}"/></marker>'
@@ -425,20 +427,20 @@ def _graph_interactive(graph: dict) -> str:
           '<circle cx="1.2" cy="1.2" r="1.1" fill="var(--line-2)"/></pattern>'
         + '</defs>'
         + '<rect id="rgbg" x="0" y="0" width="100%" height="100%" fill="url(#rggrid)"/>'
-        + '<g id="rgroot"><g id="rgrounds"></g><g id="rgphases"></g><g id="rgsections"></g><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>'
-        + f'<div class="rghint">{hint}</div>'
-        + '<div class="rgctrls">'
-          f'<div class="rgzl" id="rgzl">100%</div>'
-          f'<button class="rgbtn" data-act="groups" title="{t("groups_toggle")}">{_icon("squareGrid")}</button>'
-          f'<button class="rgbtn" data-act="zin" title="{zin_t}">+</button>'
-          f'<button class="rgbtn" data-act="zout" title="{zout_t}">−</button>'
-          f'<button class="rgbtn" data-act="fit" title="{fit_t}">⤢</button>'
-          f'<button class="rgbtn" data-act="reset" title="{reset_t}">↺</button>'
-          '</div>'
-        + '<svg class="rgmini" id="rgmini" viewBox="0 0 172 118" preserveAspectRatio="none">'
-          '<g id="rgmnodes"></g><rect id="rgmvp"></rect></svg>'
-        + '</div>'
-        f'<script type="application/json" id="rgdata">{data}</script>{_RGRAPH_JS}')
+        + '<g id="rgroot"><g id="rgrounds"></g><g id="rgphases"></g><g id="rgsections"></g><g id="rgdia"></g><g id="rgedges"></g><g id="rgnodes"></g></g></svg>')
+    mini_svg = ('<svg class="rgmini" id="rgmini" viewBox="0 0 172 118" preserveAspectRatio="none">'
+                '<g id="rgmnodes"></g><rect id="rgmvp"></rect></svg>')
+    return h("div", {"class_": "rgwrap"},
+             raw(svg_main),
+             h("div", {"class_": "rghint"}, raw(hint)),
+             h("div", {"class_": "rgctrls"},
+               h("div", {"class_": "rgzl", "id": "rgzl"}, "100%"),
+               h("button", {"class_": "rgbtn", "data-act": "groups", "title": t("groups_toggle")}, raw(_icon("squareGrid"))),
+               h("button", {"class_": "rgbtn", "data-act": "zin", "title": zin_t}, "+"),
+               h("button", {"class_": "rgbtn", "data-act": "zout", "title": zout_t}, "−"),
+               h("button", {"class_": "rgbtn", "data-act": "fit", "title": fit_t}, "⤢"),
+               h("button", {"class_": "rgbtn", "data-act": "reset", "title": reset_t}, "↺")),
+             raw(mini_svg)) + raw(f'<script type="application/json" id="rgdata">{data}</script>') + raw(_RGRAPH_JS)
 
 
 def _graph_svg(graph: dict) -> str:
@@ -446,7 +448,7 @@ def _graph_svg(graph: dict) -> str:
     (top→bottom), typed edges as colored right-side arcs. Nodes link to the synthesis."""
     nodes = graph["nodes"]
     if not nodes:
-        return f'<p class="muted">{_esc(t("no_synthesis"))}</p>'
+        return h("p", {"class_": "muted"}, t("no_synthesis"))
     vocab = graph["project"].get("themes", [])
     idx = {n["study_id"]: i for i, n in enumerate(nodes)}
     NW, NH, X0, ROW = 380, 60, 24, 92
@@ -517,13 +519,13 @@ def _plan_html(plan: dict, store) -> str:
         elif store.get_council_session(rid):
             href = f"/councils/{rid}"
         if href:
-            return f'<a class="ev" href="{href}">{_esc(label)} ↗</a>'
-        return f'<span class="ev">{_esc(label)}</span>'
+            return h("a", {"class_": "ev", "href": href}, label, " ↗")
+        return h("span", {"class_": "ev"}, label)
 
     def row(t: dict) -> str:
         mark, clr = STATUS.get(t["status"], ("circle", "var(--muted)"))
         cons = " · ".join(by_title.get(c, c) for c in t.get("consumes", []))
-        cons_html = f'<div class="small muted" style="margin-top:4px">⊂ {_esc(cons)}</div>' if cons else ""
+        cons_html = h("div", {"class_": "small muted", "style": "margin-top:4px"}, f"⊂ {cons}") if cons else ""
         req = t.get("requires", {}) or {}
         gates = []
         if req.get("min_inputs") is not None:
@@ -534,36 +536,38 @@ def _plan_html(plan: dict, store) -> str:
             gates.append(f"Session: {_pres.present(tg)['short']}")
         for tg in (req.get("artifact_tags") or []):
             gates.append(f"Artefakt: {_pres.present(tg)['short']}")
-        gates_html = "".join(f'<span class="gate">{_esc(x)}</span>' for x in gates)
+        gates_html = [h("span", {"class_": "gate"}, x) for x in gates]
         cap = t.get("capability", "")
-        cap_html = f'<span class="pcap">{_esc(cap)}</span>' if cap else ""
+        cap_html = h("span", {"class_": "pcap"}, cap) if cap else ""
         # skip the frame self-reference (a frame task produces a ref to itself); link the rest,
         # numbering same-kind sessions so 5 identical "session" chips become Session 1…5
-        evs, _sn = "", 0
+        evs, _sn = [], 0
         for r in t.get("produces", []):
             if r.get("id") == t["id"]:
                 continue
             if r.get("kind") == "session":
                 _sn += 1
-                evs += ev_chip(r, _sn)
+                evs.append(ev_chip(r, _sn))
             else:
-                evs += ev_chip(r)
-        ev_html = f'<div class="evs">{evs}</div>' if evs else ""
-        return (f'<div class="ptask"><div class="pmark" style="color:{clr}">{_icon(mark)}</div>'
-                f'<div class="pbody"><div class="prow1"><span class="ptitle">{_esc(t.get("title", t["id"]))}</span>'
-                f'{cap_html}{gates_html}</div>{cons_html}{ev_html}</div></div>')
+                evs.append(ev_chip(r))
+        ev_html = h("div", {"class_": "evs"}, fragment(*evs)) if evs else ""
+        return h("div", {"class_": "ptask"}, h("div", {"class_": "pmark", "style": f"color:{clr}"}, raw(_icon(mark))),
+                 h("div", {"class_": "pbody"},
+                   h("div", {"class_": "prow1"}, h("span", {"class_": "ptitle"}, t.get("title", t["id"])),
+                     cap_html, fragment(*gates_html)), cons_html, ev_html))
 
     secs = []
     for b, label in [("analyze", "Analyze · verstehen"), ("act", "Act · Councils, Prototypen, Tests"),
                      ("verify", "Verify · verdichten & entscheiden")]:
-        rows = "".join(row(t) for t in tasks if t["bucket"] == b)
-        if rows:
-            secs.append(f'<div class="psec"><div class="psec-h">{label}</div>{rows}</div>')
-    pill = (f'<span class="pill" style="color:var(--green)">{_icon("dot")} Plan komplett</span>' if complete
-            else f'<span class="pill">{len(tasks) - done} offen</span>')
-    head = (f'<div class="card plan-head"><div class="ph-goal">{_esc(plan.get("goal", ""))}</div>'
-            f'<div class="small muted" style="margin-top:6px">Methodik: '
-            f'<b>{_esc(plan.get("methodology") or "freiform")}</b> · {len(tasks)} Tasks · {done} erledigt &nbsp;{pill}</div></div>')
+        rrows = [row(t) for t in tasks if t["bucket"] == b]
+        if rrows:
+            secs.append(h("div", {"class_": "psec"}, h("div", {"class_": "psec-h"}, label), fragment(*rrows)))
+    pill = (h("span", {"class_": "pill", "style": "color:var(--green)"}, raw(_icon("dot")), " Plan komplett") if complete
+            else h("span", {"class_": "pill"}, f"{len(tasks) - done} offen"))
+    head = h("div", {"class_": "card plan-head"}, h("div", {"class_": "ph-goal"}, plan.get("goal", "")),
+             h("div", {"class_": "small muted", "style": "margin-top:6px"}, "Methodik: ",
+               h("b", {}, plan.get("methodology") or "freiform"),
+               f" · {len(tasks)} Tasks · {done} erledigt ", raw("&nbsp;"), pill))
     css = ("<style>.plan-head{margin-bottom:20px}.ph-goal{font-weight:650;font-size:16px;line-height:1.4}"
            ".psec{margin:0 0 24px}.psec-h{font-size:12px;text-transform:uppercase;letter-spacing:.05em;"
            "color:var(--muted);font-weight:600;margin:0 0 10px}"
@@ -575,7 +579,7 @@ def _plan_html(plan: dict, store) -> str:
            ".evs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ev{font-size:11px;color:var(--muted);"
            "background:var(--panel-2);border:1px solid var(--line);padding:2px 8px;border-radius:6px;text-decoration:none}"
            "a.ev:hover{color:var(--accent);border-color:var(--accent)}</style>")
-    return f'{css}<div class="page">{head}{"".join(secs)}</div>'
+    return raw(css) + h("div", {"class_": "page"}, head, fragment(*secs))
 
 
 def _outline_html(graph: dict) -> str:
@@ -666,20 +670,22 @@ def _outline_html(graph: dict) -> str:
             node_themes.setdefault(m, []).append(ti)
 
     def row(it: dict) -> str:
-        h = f' href="{_esc(it["href"])}"' if it["href"] else ""
         tw = "ol-tw" if it["indent"] else ""                  # folder-style tree connector for nested rows
         tis = node_themes.get(it["oid"], [])
-        pills = "".join(                                      # labelled pills (colour + name), not cryptic dots
-            f'<span class="olth-pill" title="{_esc(themes[i]["title"])}">'
-            f'<i style="background:{th_color[themes[i]["id"]]}"></i>{_esc(th_short[i])}</span>'
-            for i in tis)
-        return (f'<a class="olrow {tw}" data-oid="{_esc(it["oid"])}" data-th="{" ".join(map(str, tis))}" '
-                f'style="padding-left:{10 + it["indent"] * 26}px"{h}>'
-                f'<span class="ol-dot" style="background:{it["color"]}"></span>'
-                f'<span class="ol-ptag">{_esc(it["plabel"])}</span>'
-                f'<span class="ol-title">{_esc(it["title"])}</span>'
-                f'<span class="olth-pills">{pills}</span>'
-                f'<span class="ol-kind">{_esc(it["kind"])}</span></a>')
+        pills = [                                             # labelled pills (colour + name), not cryptic dots
+            h("span", {"class_": "olth-pill", "title": themes[i]["title"]},
+              h("i", {"style": f'background:{th_color[themes[i]["id"]]}'}), th_short[i])
+            for i in tis]
+        attrs = {"class_": f"olrow {tw}", "data-oid": it["oid"], "data-th": " ".join(map(str, tis)),
+                 "style": f'padding-left:{10 + it["indent"] * 26}px'}
+        if it["href"]:
+            attrs["href"] = it["href"]
+        return h("a", attrs,
+                 h("span", {"class_": "ol-dot", "style": f'background:{it["color"]}'}),
+                 h("span", {"class_": "ol-ptag"}, it["plabel"]),
+                 h("span", {"class_": "ol-title"}, it["title"]),
+                 h("span", {"class_": "olth-pills"}, fragment(*pills)),
+                 h("span", {"class_": "ol-kind"}, it["kind"]))
 
     # ROUND CAPTION (Linear: a group header should carry MEANING) — the essence of each round's most
     # converged output (its highest-depth synthesis, else its highest-depth node). Derived from the
@@ -700,26 +706,26 @@ def _outline_html(graph: dict) -> str:
 
     out = []
     if themes:                                                # theme filter bar (cross-cutting lens)
-        chips = "".join(
-            f'<button class="olth-chip" data-ti="{i}"><span class="olth-dot" '
-            f'style="background:{th_color[s["id"]]}"></span>{_esc(s["title"])}</button>'
-            for i, s in enumerate(themes))
-        out.append(f'<div class="olthemes"><span class="olth-l">{t("themes_h")}</span>{chips}</div>')
-    out.append('<div class="outline">')
+        chips = [h("button", {"class_": "olth-chip", "data-ti": str(i)},
+                   h("span", {"class_": "olth-dot", "style": f'background:{th_color[s["id"]]}'}), s["title"])
+                 for i, s in enumerate(themes)]
+        out.append(h("div", {"class_": "olthemes"}, h("span", {"class_": "olth-l"}, t("themes_h")), fragment(*chips)))
+    inner = []
     if nrounds > 1:
         for r in range(nrounds):
             ris = sorted((it for it in items if it["round"] == r), key=lambda it: (it["po"], it["order"]))
             if not ris:
                 continue
             cap = round_cap.get(r, "")
-            capH = f'<span class="ol-rcap">— {_esc(cap)}</span>' if cap else ""
-            out.append(f'<details class="ol-phase" open><summary><span class="ol-gl ol-round">↻</span>'
-                       f'<b>{t("round_n", n=r + 1)}</b> <span class="ol-cnt">{len(ris)}</span>{capH}</summary>'
-                       f'{"".join(row(it) for it in ris)}</details>')
+            capH = h("span", {"class_": "ol-rcap"}, f"— {cap}") if cap else ""
+            inner.append(h("details", {"class_": "ol-phase", "open": True},
+                           h("summary", {}, h("span", {"class_": "ol-gl ol-round"}, "↻"),
+                             h("b", {}, t("round_n", n=r + 1)), " ", h("span", {"class_": "ol-cnt"}, str(len(ris))), capH),
+                           fragment(*(row(it) for it in ris))))
     else:
         ris = sorted(items, key=lambda it: (it["po"], it["order"]))
-        out.append(f'<div class="ol-flat">{"".join(row(it) for it in ris)}</div>')
-    out.append("</div>")
+        inner.append(h("div", {"class_": "ol-flat"}, fragment(*(row(it) for it in ris))))
+    out.append(h("div", {"class_": "outline"}, fragment(*inner)))
     if themes:
         out.append(
             "<script>(function(){"

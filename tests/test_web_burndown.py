@@ -16,7 +16,7 @@ from persona_council import web
 # Remaining legacy-HTML units per file (esc + inline). LOWER as modules convert; never raise.
 BASELINE = {
     "_components.py": 27,
-    "_graph.py": 71,
+    "_graph.py": 15,
     "_palette.py": 0,
     "_rail.py": 0,
     "_routes_lists.py": 0,
