@@ -173,14 +173,16 @@ def _nav(active: str, store: Store) -> str:
                 ("/concepts", "concept", "bulb", t("concepts")),
                 ("/prototypes", "prototype", "prototype", t("prototypes_h")),
                 ("/syntheses", "syntheses", "syntheses", t("syntheses"))]
-    render = lambda items: "".join(
-        f'<a href="{h}" class="{"active" if k == active else ""}">{_icon(ic)}<span>{lbl}</span></a>'
-        for h, k, ic, lbl in items)
+    render = lambda items: fragment(*(
+        h("a", {"href": href, "class_": "active" if k == active else ""}, raw(_icon(ic)), h("span", {}, lbl))
+        for href, k, ic, lbl in items))
     # Favorites are stored client-side (localStorage); this container is filled by JS.
-    favs = (f'<div class="navhead">{t("favorites")}</div>'
-            f'<div class="sb-quick" id="favs"><span class="muted small" style="padding:5px 9px;display:block">{t("mark_with_star")}</span></div>')
-    return (f'<nav class="nav">{render(work)}</nav>'
-            f'<div class="navhead">{t("library_h")}</div><nav class="nav">{render(research)}</nav>{favs}')
+    favs = fragment(h("div", {"class_": "navhead"}, t("favorites")),
+                    h("div", {"class_": "sb-quick", "id": "favs"},
+                      h("span", {"class_": "muted small", "style": "padding:5px 9px;display:block"}, t("mark_with_star"))))
+    return fragment(h("nav", {"class_": "nav"}, render(work)),
+                    h("div", {"class_": "navhead"}, t("library_h")),
+                    h("nav", {"class_": "nav"}, render(research)), favs)
 
 
 def _user_menu() -> str:
@@ -189,34 +191,30 @@ def _user_menu() -> str:
     cur = _lang()
     themes = [("light", "sun", t("theme_light")), ("system", "monitor", t("theme_system")),
               ("dark", "moon", t("theme_dark"))]
-    theme_opts = "".join(
-        f'<button type="button" class="segbtn" data-theme-set="{val}" '
-        f'title="{_esc(label)}" aria-label="{_esc(label)}">{_icon(icon)}<span>{_esc(label)}</span></button>'
-        for val, icon, label in themes
-    )
+    theme_opts = [h("button", {"type": "button", "class_": "segbtn", "data-theme-set": val,
+                                "title": label, "aria-label": label}, raw(_icon(icon)), h("span", {}, label))
+                  for val, icon, label in themes]
     langs = [("de", "Deutsch", "DE"), ("en", "English", "EN")]
-    lang_opts = "".join(
-        f'<a class="segbtn{" on" if code == cur else ""}" href="?lang={code}" '
-        f'title="{_esc(full)}" aria-label="{_esc(full)}"><span>{short}</span></a>'
-        for code, full, short in langs
-    )
-    return (
-        '<div class="usermenu" id="usermenu">'
-        '<div class="um-pop" id="umpop" hidden>'
-        f'<div class="um-sec"><div class="um-lbl">{t("theme")}</div><div class="seg seg-theme">{theme_opts}</div></div>'
-        f'<div class="um-sec"><div class="um-lbl">{t("language")}</div><div class="seg">{lang_opts}</div></div>'
-        '</div>'
-        '<button type="button" class="um-trigger" id="umbtn" aria-haspopup="true" aria-expanded="false">'
-        f'<span class="um-ava">{_icon("settings")}</span><span class="um-name">{t("settings")}</span>'
-        f'<span class="um-caret">{_icon("chevron")}</span></button>'
-        '</div>'
-    )
+    lang_opts = [h("a", {"class_": f'segbtn{" on" if code == cur else ""}', "href": f"?lang={code}",
+                         "title": full, "aria-label": full}, h("span", {}, short))
+                 for code, full, short in langs]
+    return h("div", {"class_": "usermenu", "id": "usermenu"},
+             h("div", {"class_": "um-pop", "id": "umpop", "hidden": True},
+               h("div", {"class_": "um-sec"}, h("div", {"class_": "um-lbl"}, t("theme")),
+                 h("div", {"class_": "seg seg-theme"}, theme_opts)),
+               h("div", {"class_": "um-sec"}, h("div", {"class_": "um-lbl"}, t("language")),
+                 h("div", {"class_": "seg"}, lang_opts))),
+             h("button", {"type": "button", "class_": "um-trigger", "id": "umbtn",
+                          "aria-haspopup": "true", "aria-expanded": "false"},
+               h("span", {"class_": "um-ava"}, raw(_icon("settings"))),
+               h("span", {"class_": "um-name"}, t("settings")),
+               h("span", {"class_": "um-caret"}, raw(_icon("chevron")))))
 
 
 def _star(kind: str, ident: str, label: str, href: str) -> str:
-    return (f'<button class="starbtn" data-star="{_esc(kind)}:{_esc(ident)}" data-href="{_esc(href)}" '
-            f'data-label="{_esc(label)}" data-type="{_esc(kind)}" title="{_esc(t("favorite"))}" aria-label="{_esc(t("mark_as_favorite"))}">'
-            f'{_icon("star")}</button>')
+    return h("button", {"class_": "starbtn", "data-star": f"{kind}:{ident}", "data-href": href,
+                        "data-label": label, "data-type": kind, "title": t("favorite"),
+                        "aria-label": t("mark_as_favorite")}, raw(_icon("star")))
 
 
 _FAV_ICONS_JSON = json.dumps({"persona": _icon("personas"), "council": _icon("councils"), "synthesis": _icon("syntheses")})
@@ -290,10 +288,10 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
                empty_icon: str, empty_msg: str, active: str) -> str:
     """One index-page shell — title + count + lead + rows (or an empty state). Every list page
     (projects, personas, councils, syntheses, prototypes, concepts) renders identically through this."""
-    rows_html = "".join(rows) or f'<div class="list-empty">{_icon(empty_icon)}<span>{empty_msg}</span></div>'
-    cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
-    body = (f'<div class="page"><h1 class="h1">{title}{cnt}</h1>'
-            f'<p class="lead">{lead}</p><div class="rows">{rows_html}</div></div>')
+    rows_html = raw("".join(str(r) for r in rows)) if rows else h("div", {"class_": "list-empty"}, raw(_icon(empty_icon)), h("span", {}, empty_msg))
+    cnt = h("span", {"class_": "h1cnt"}, str(len(rows))) if rows else ""
+    body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, title, cnt),
+             h("p", {"class_": "lead"}, lead), h("div", {"class_": "rows"}, rows_html))
     return _layout(title, body, store, crumbs=[(title, None)], active=active)
 
 
@@ -412,10 +410,10 @@ def _rec_row(text: str) -> str:
     m = re.match(r"\s*\[?PRIO\s*(\d+)\]?\s*[—:\-]\s*(.*)", text, re.S)
     if m:
         n = int(m.group(1)); body = m.group(2)
-        badge = f'<span class="prio prio-{min(n, 5)}">PRIO {n}</span>'
+        badge = h("span", {"class_": f"prio prio-{min(n, 5)}"}, f"PRIO {n}")
     else:
-        body = text; badge = '<span class="prio prio-5">•</span>'
-    return f'<div class="rec">{badge}<div>{_srcchips(_esc(body))}</div></div>'
+        body = text; badge = h("span", {"class_": "prio prio-5"}, "•")
+    return h("div", {"class_": "rec"}, badge, h("div", {}, raw(_srcchips(_esc(body)))))
 
 
 def _rec_item(x) -> tuple:
@@ -425,8 +423,9 @@ def _rec_item(x) -> tuple:
 
 
 def _rec_row_n(i: int, text: str, a, n) -> str:
-    ax = f'<span class="axchip">{t("effort_value", a=a, n=n)}</span>' if (a and n) else ""
-    return f'<div class="rec" id="rec-{i}"><span class="recnum">{i}</span><div>{_srcchips(_esc(text))}{ax}</div></div>'
+    ax = h("span", {"class_": "axchip"}, t("effort_value", a=a, n=n)) if (a and n) else ""
+    return h("div", {"class_": "rec", "id": f"rec-{i}"}, h("span", {"class_": "recnum"}, str(i)),
+             h("div", {}, raw(_srcchips(_esc(text))), ax))
 
 
 _EI_LEV = {"g": ("var(--green)", "ei_high_leverage"), "a": ("var(--accent)", "ei_worthwhile"),
@@ -487,22 +486,24 @@ def _effort_impact(recs: list) -> str:
                 cls += " algn-r"
             elif lp <= 24:
                 cls += " algn-l"
-            pop = (f'<span class="ei-pop"><span class="ei-pop-h" style="color:{color}">#{i} · {levlabel}</span>'
-                   f'<span class="ei-pop-t">{_srcchips(_esc(txt))}</span>'
-                   f'<span class="ei-pop-m">{t("effort_value", a=a2, n=n2)}</span></span>')
-            dots.append(f'<span class="{cls}" tabindex="0" style="left:{lp:.2f}%;top:{tp:.2f}%;--c:{color}">'
-                        f'<span class="ei-num">{i}</span>{pop}</span>')
-    leg = ('<div class="ei-leg">'
-           f'<span><i style="background:var(--green)"></i>{t("ei_high_leverage")}</span>'
-           f'<span><i style="background:var(--accent)"></i>{t("ei_worthwhile")}</span>'
-           f'<span><i style="background:var(--amber)"></i>{t("ei_neutral")}</span>'
-           f'<span><i style="background:var(--red)"></i>{t("ei_critical")}</span></div>')
-    return f'<div class="ei-wrap"><div class="ei-plot">{svg}{"".join(dots)}</div>{leg}</div>'
+            pop = h("span", {"class_": "ei-pop"},
+                    h("span", {"class_": "ei-pop-h", "style": f"color:{color}"}, f"#{i} · {levlabel}"),
+                    h("span", {"class_": "ei-pop-t"}, raw(_srcchips(_esc(txt)))),
+                    h("span", {"class_": "ei-pop-m"}, t("effort_value", a=a2, n=n2)))
+            dots.append(h("span", {"class_": cls, "tabindex": "0", "style": f"left:{lp:.2f}%;top:{tp:.2f}%;--c:{color}"},
+                          h("span", {"class_": "ei-num"}, str(i)), pop))
+    leg = h("div", {"class_": "ei-leg"},
+            h("span", {}, h("i", {"style": "background:var(--green)"}), t("ei_high_leverage")),
+            h("span", {}, h("i", {"style": "background:var(--accent)"}), t("ei_worthwhile")),
+            h("span", {}, h("i", {"style": "background:var(--amber)"}), t("ei_neutral")),
+            h("span", {}, h("i", {"style": "background:var(--red)"}), t("ei_critical")))
+    return h("div", {"class_": "ei-wrap"}, h("div", {"class_": "ei-plot"}, raw(svg), fragment(*dots)), leg)
 
 
 def _doc(main: str, toc: str = "", rail: str = "") -> str:
     cls = "d3" if (toc and rail) else ("d2" if rail else "d1")
-    toc_html = f'<div class="toc">{toc}</div>' if toc else ""
-    rail_html = f'<aside class="rail">{rail}</aside>' if rail else ""
-    return f'<div class="page"><div class="doc {cls}">{toc_html}<div class="doc-main">{main}</div>{rail_html}</div></div>'
+    toc_html = h("div", {"class_": "toc"}, raw(toc)) if toc else ""
+    rail_html = h("aside", {"class_": "rail"}, raw(rail)) if rail else ""
+    return h("div", {"class_": "page"}, h("div", {"class_": f"doc {cls}"}, toc_html,
+             h("div", {"class_": "doc-main"}, raw(main)), rail_html))
 
