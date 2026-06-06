@@ -397,20 +397,29 @@ _STUDY_LEAD_CSS = register_css(
     ".qa-q::before{content:attr(data-label);display:block;font-size:var(--t-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}")
 
 
+# Long titles/subs (e.g. a council's full question-prompt) are clamped to a few lines + ellipsis — the
+# header stays scannable (Linear-style) and the full text is available on hover (title=) and in the body.
 _HERO_CSS = register_css(
-    ".hero h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650}"
+    ".hero h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650;"
+    "display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}"
     ".hero h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}"
-    ".hero .sub{color:var(--muted);font-size:var(--t-body);margin:0 0 4px;max-width:74ch}")
+    ".hero .sub{color:var(--muted);font-size:var(--t-body);margin:0 0 4px;max-width:74ch;"
+    "display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}")
 
 
 def _hero(title, *, sub=None, icon: str | None = None, hid: str | None = None, top=None) -> str:
     """The page hero used by every detail page: optional `top` slot (a pill, trusted HTML), a title
     (text → escaped, or Safe HTML kept) with an optional leading `icon`, and an optional `sub`
-    (text → escaped, or Safe HTML like a chip line). One component, co-located CSS."""
+    (text → escaped, or Safe HTML like a chip line). Title/sub are line-clamped (see _HERO_CSS); plain
+    text gets a full-text title= tooltip."""
+    h1_attrs = {"title": title} if type(title) is str else {}      # full text on hover (clamped display)
+    sub_attrs = {"class_": "sub"}
+    if type(sub) is str:
+        sub_attrs["title"] = sub
     return h("div", {"class_": "hero", "id": hid},
              raw(top) if top else None,
-             h("h1", {}, raw(_icon(icon)) if icon else None, title),
-             h("p", {"class_": "sub"}, sub) if sub else None)
+             h("h1", h1_attrs, raw(_icon(icon)) if icon else None, title),
+             h("p", sub_attrs, sub) if sub else None)
 
 
 def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
