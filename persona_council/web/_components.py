@@ -5,7 +5,7 @@ import json
 import re
 from collections import Counter, defaultdict
 
-from persona_icons import icon as _persona_icon
+from persona_icons import icon as _persona_icon, HIFI_ANIM_CSS as _ICON_ANIM_CSS
 
 from .. import services
 from .. import presentation as _pres
@@ -20,11 +20,16 @@ def _esc(value: object) -> str:
     return html.escape(str(value))
 
 
-def _icon(name: str) -> str:
+def _icon(name: str, animate: bool = False) -> str:
     # Chrome icons come from the shared persona-icons library (single source of
     # truth in ../persona-icons; geometry authored in icons.data.mjs). Returns
-    # "" for unknown names, same as the old inline ICONS lookup.
-    return _persona_icon(name)
+    # "" for unknown names, same as the old inline ICONS lookup. animate=True adds
+    # .pi-animate (opt-in hover micro-interaction; needs _ICON_ANIM_CSS, registered below).
+    return _persona_icon(name, animate=animate)
+
+
+# Icon hover micro-interactions (persona-icons HIFI_ANIM_CSS — covers regular .pi-animate icons too).
+register_css(_ICON_ANIM_CSS)
 
 
 _AV_COLORS = ["#3d7b5f", "#2f6f9f", "#a66b1f", "#7a5ea6", "#b3493f", "#4a7d7d", "#5a6b8a"]
@@ -235,8 +240,10 @@ def _nav(active: str, store: Store) -> str:
                 ("/concepts", "concept", "bulb", t("concepts")),
                 ("/prototypes", "prototype", "prototype", t("prototypes_h")),
                 ("/syntheses", "syntheses", "syntheses", t("syntheses"))]
+    # .pi-hover makes the row the animation trigger — the icon plays its micro-interaction on row hover.
     render = lambda items: fragment(*(
-        h("a", {"href": href, "class_": "active" if k == active else ""}, raw(_icon(ic)), h("span", {}, lbl))
+        h("a", {"href": href, "class_": "pi-hover active" if k == active else "pi-hover"},
+          raw(_icon(ic, animate=True)), h("span", {}, lbl))
         for href, k, ic, lbl in items))
     # Favorites are stored client-side (localStorage); the section is filled AND shown/hidden by JS
     # (renderStars) — it only appears once something is starred, so an empty sidebar stays clean.
