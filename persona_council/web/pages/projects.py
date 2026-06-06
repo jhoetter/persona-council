@@ -30,8 +30,10 @@ def register_projects(app) -> None:
         reports = store.list_meta_reports(proj["id"])
         meta_btn = (h("a", {"class_": "btn", "href": f'/projects/{proj["id"]}/meta'}, raw(_icon("syntheses")), " ", t("meta_report"))
                     if reports else "")
-        if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan view
-            meta_btn = fragment(h("a", {"class_": "btn", "href": f'/projects/{proj["id"]}/plan'}, raw(_icon("projects")), " Plan"), meta_btn)
+        if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan — opens in a right drawer
+            plan_url = f'/projects/{proj["id"]}/plan'
+            meta_btn = fragment(h("a", {"class_": "btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
+                                  raw(_icon("projects")), " Plan"), meta_btn)
         protos = graph.get("prototypes") or []
         # Q4: a TYPE filter row (also the LEGEND) — every node KIND present is a colored, glyph'd,
         # toggleable chip that filters the graph by type; capability/theme tags go to a 2nd muted row.

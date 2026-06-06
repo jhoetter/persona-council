@@ -217,6 +217,7 @@ SPA_JS = """
   document.addEventListener('click', function(e){
     if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
     var a=e.target.closest && e.target.closest('a'); if(!a) return;
+    if(a.hasAttribute('data-drawer')) return;                                // handled by the drawer
     var href=a.getAttribute('href');
     if(!href || href.charAt(0)!=='/' || href.indexOf('//')===0) return;     // internal absolute paths only
     if(a.target==='_blank' || a.hasAttribute('download') || a.getAttribute('rel')==='external') return;
@@ -226,6 +227,71 @@ SPA_JS = """
     navigate(href, true);
   });
   window.addEventListener('popstate', function(){ navigate(location.pathname+location.search, false); });
+})();
+</script>
+"""
+
+
+# Reusable right slide-over drawer. Any element with data-drawer="<url>" opens that page's content in a
+# peek panel (fetched + script-reexec via the same approach as SPA nav), without leaving the current page.
+# The trigger keeps its href as a graceful fallback (deep-linkable full page when JS is off).
+DRAWER_CSS = register_css(
+    ".drawer-wrap{position:fixed;inset:0;z-index:120;pointer-events:none}"
+    ".drawer-wrap.open{pointer-events:auto}"
+    ".drawer-bd{position:absolute;inset:0;background:rgba(10,12,16,.32);opacity:0;transition:opacity .2s var(--ease)}"
+    ".drawer-wrap.open .drawer-bd{opacity:1}"
+    ".drawer-panel{position:absolute;top:0;right:0;height:100%;width:min(620px,94vw);background:var(--panel);"
+    "border-left:1px solid var(--line);box-shadow:var(--shadow-lg);transform:translateX(100%);"
+    "transition:transform .24s var(--ease);overflow-y:auto;display:flex;flex-direction:column}"
+    ".drawer-wrap.open .drawer-panel{transform:none}"
+    ".drawer-head{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);"
+    "position:sticky;top:0;background:var(--panel);z-index:1}"
+    ".drawer-title{font-weight:600;font-size:var(--t-md);flex:1;min-width:0}"
+    ".drawer-x{border:0;background:none;cursor:pointer;color:var(--muted);border-radius:var(--radius-sm);"
+    "padding:4px;line-height:0;display:inline-flex}.drawer-x:hover{background:var(--hover);color:var(--ink)}"
+    ".drawer-body{padding:18px 22px;min-height:0}.drawer-body .page{padding:0;max-width:none}")
+
+DRAWER_MARKUP = (
+    '<div class="drawer-wrap" id="drawer">'
+    '<div class="drawer-bd" data-drawer-close></div>'
+    '<aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">'
+    '<header class="drawer-head"><span class="drawer-title" id="drawer-title"></span>'
+    '<button class="drawer-x" type="button" data-drawer-close aria-label="Close">✕</button></header>'
+    '<div class="drawer-body"></div></aside></div>')
+
+DRAWER_JS = """
+<script>
+(function(){
+  var wrap=document.getElementById('drawer'); if(!wrap || !window.fetch) return;
+  var body=wrap.querySelector('.drawer-body'), titleEl=wrap.querySelector('.drawer-title'), lastFocus=null;
+  function close(){ wrap.classList.remove('open'); if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
+  function runScripts(root){
+    root.querySelectorAll('script').forEach(function(old){ var s=document.createElement('script');
+      for(var i=0;i<old.attributes.length;i++){ s.setAttribute(old.attributes[i].name, old.attributes[i].value); }
+      s.textContent=old.textContent; old.parentNode.replaceChild(s, old); });
+  }
+  function open(url, title, trigger){
+    lastFocus=trigger||document.activeElement;
+    titleEl.textContent=title||'';
+    body.innerHTML='<p class="muted small">\\u2026</p>';
+    wrap.classList.add('open');
+    fetch(url, {headers:{'X-Requested-With':'drawer'}, credentials:'same-origin'}).then(function(r){
+      if(!r.ok) throw 0; return r.text();
+    }).then(function(html){
+      var doc=new DOMParser().parseFromString(html, 'text/html');
+      var sec=doc.querySelector('#main section') || doc.getElementById('main');
+      body.innerHTML='';
+      if(sec){ var imp=document.importNode(sec, true); body.appendChild(imp); runScripts(body); }
+      var sp=wrap.querySelector('.drawer-panel'); if(sp) sp.scrollTop=0;
+      document.dispatchEvent(new CustomEvent('spa:load'));   // re-apply star states inside the drawer
+    }).catch(function(){ location.href=url; });               // any failure -> just open the real page
+  }
+  document.addEventListener('click', function(e){
+    var t=e.target.closest && e.target.closest('[data-drawer]');
+    if(t){ e.preventDefault(); e.stopPropagation(); open(t.getAttribute('data-drawer'), t.getAttribute('data-drawer-title')||(t.textContent||'').trim(), t); return; }
+    if(e.target.closest && e.target.closest('[data-drawer-close]')){ e.preventDefault(); close(); }
+  });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && wrap.classList.contains('open')) close(); });
 })();
 </script>
 """
@@ -315,7 +381,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
       {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{palette_markup()}{PALETTE_JS}{app_js}{SPA_JS}</body></html>"""
+</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{app_js}{SPA_JS}{DRAWER_JS}</body></html>"""
 
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.
