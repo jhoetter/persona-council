@@ -512,62 +512,85 @@ def _pills(items: list[str]) -> str:
     return fragment(*(h("span", {"class_": "pill"}, item) for item in items))
 
 
+def _md_inline(s: str) -> str:
+    """Inline Markdown → HTML (auto-escaped): `code`, [text](/url), **bold**, ~~strike~~, _italic_,
+    *italic*. Code spans and links are processed first and protected so their content isn't re-formatted."""
+    s = _esc(s)
+    holds: list[str] = []
+    def _hold(html: str) -> str:
+        holds.append(html); return f"\x00{len(holds) - 1}\x00"
+    s = re.sub(r"`([^`]+)`", lambda m: _hold("<code>" + m.group(1) + "</code>"), s)
+    s = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+|/[^)\s]*)\)",
+               lambda m: _hold(f'<a href="{m.group(2)}">{m.group(1)}</a>'), s)
+    s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+    s = re.sub(r"~~(.+?)~~", r"<del>\1</del>", s)
+    s = re.sub(r"(?<![\w*])\*(?!\s)([^*]+?)(?<!\s)\*(?![\w*])", r"<em>\1</em>", s)      # *italic*
+    s = re.sub(r"(?<![\w_])_(?!\s)([^_]+?)(?<!\s)_(?![\w_])", r"<em>\1</em>", s)        # _italic_ (not word-internal)
+    for k, hh in enumerate(holds):
+        s = s.replace(f"\x00{k}\x00", hh)
+    return s
+
+
 def _md(text: str) -> str:
+    """Minimal-but-real GitHub-flavored Markdown → HTML (no deps). Covers the host-authored subset
+    (spec/markdown-authoring-harness.md): #/##/### headings, **bold**/_italic_/`code`/[links]/~~del~~,
+    `-`/`*` and `1.` lists, `>` blockquotes, `---` rules, ``` fenced code, pipe tables, paragraphs."""
     if not text:
         return ""
 
-    def fmt(s: str) -> str:
-        return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", _esc(s))
-
     def _cells(row: str) -> list[str]:
-        r = row.strip()
-        if r.startswith("|"): r = r[1:]
-        if r.endswith("|"): r = r[:-1]
-        return [c.strip() for c in r.split("|")]
+        return [c.strip() for c in row.strip().strip("|").split("|")]
 
     lines = text.split("\n")
-    n = len(lines)
-    out: list[str] = []
-    in_ul = False
-    i = 0
+    n = len(lines); out: list[str] = []; stack: list[str] = []; i = 0
+
+    def _close():                                  # close any open list(s)
+        while stack:
+            out.append(f"</{stack.pop()}>")
+
     while i < n:
         line = lines[i].rstrip(); stripped = line.lstrip()
-        # GitHub-style pipe table: header row, then a |---|---| separator row
-        if stripped.startswith("|") and i + 1 < n:
+        if stripped.startswith("```"):             # fenced code block
+            _close(); j = i + 1; buf = []
+            while j < n and not lines[j].lstrip().startswith("```"):
+                buf.append(_esc(lines[j])); j += 1
+            out.append("<pre><code>" + "\n".join(buf) + "</code></pre>"); i = j + 1; continue
+        if stripped.startswith("|") and i + 1 < n:  # pipe table (header + |---| separator)
             sep = lines[i + 1].strip()
             if sep.startswith("|") and "-" in sep and not set(sep) - set("|:- "):
-                if in_ul:
-                    out.append("</ul>"); in_ul = False
-                header = _cells(stripped)
-                j = i + 2
-                rows = []
+                _close(); header = _cells(stripped); j = i + 2; rows = []
                 while j < n and lines[j].strip().startswith("|"):
                     rows.append(_cells(lines[j])); j += 1
-                th = "".join(f"<th>{fmt(c)}</th>" for c in header)
-                trs = "".join("<tr>" + "".join(f"<td>{fmt(c)}</td>" for c in r) + "</tr>" for r in rows)
+                th = "".join(f"<th>{_md_inline(c)}</th>" for c in header)
+                trs = "".join("<tr>" + "".join(f"<td>{_md_inline(c)}</td>" for c in r) + "</tr>" for r in rows)
                 out.append(f'<table class="mdtable"><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>')
                 i = j; continue
         if not stripped:
-            if in_ul:
-                out.append("</ul>"); in_ul = False
-            i += 1; continue
-        if stripped.startswith(("- ", "* ")):
-            if not in_ul:
-                out.append("<ul>"); in_ul = True
-            out.append(f"<li>{fmt(stripped[2:])}</li>"); i += 1; continue
-        if in_ul:
-            out.append("</ul>"); in_ul = False
-        if line.startswith("### "):
-            out.append(f"<h4>{fmt(line[4:])}</h4>")
-        elif line.startswith("## "):
-            out.append(f"<h3>{fmt(line[3:])}</h3>")
-        elif line.startswith("# "):
-            out.append(f"<h3>{fmt(line[2:])}</h3>")
-        else:
-            out.append(f"<p>{fmt(line)}</p>")
+            _close(); i += 1; continue
+        if re.fullmatch(r"(-{3,}|\*{3,}|_{3,})", stripped):     # horizontal rule
+            _close(); out.append("<hr>"); i += 1; continue
+        if stripped.startswith(">"):                 # blockquote (consume consecutive > lines)
+            _close(); buf = []
+            while i < n and lines[i].lstrip().startswith(">"):
+                buf.append(lines[i].lstrip()[1:].lstrip()); i += 1
+            out.append("<blockquote>" + _md_inline(" ".join(buf)) + "</blockquote>"); continue
+        m = re.match(r"\d+\.\s+(.*)", stripped)      # ordered list
+        if m:
+            if not (stack and stack[-1] == "ol"):
+                _close(); out.append("<ol>"); stack.append("ol")
+            out.append(f"<li>{_md_inline(m.group(1))}</li>"); i += 1; continue
+        if stripped[:2] in ("- ", "* ") or stripped.startswith("• "):   # unordered list
+            if not (stack and stack[-1] == "ul"):
+                _close(); out.append("<ul>"); stack.append("ul")
+            out.append(f"<li>{_md_inline(stripped[2:].lstrip())}</li>"); i += 1; continue
+        _close()
+        if stripped.startswith("#### "): out.append(f"<h4>{_md_inline(stripped[5:])}</h4>")
+        elif stripped.startswith("### "): out.append(f"<h4>{_md_inline(stripped[4:])}</h4>")
+        elif stripped.startswith("## "): out.append(f"<h3>{_md_inline(stripped[3:])}</h3>")
+        elif stripped.startswith("# "): out.append(f"<h3>{_md_inline(stripped[2:])}</h3>")
+        else: out.append(f"<p>{_md_inline(line)}</p>")
         i += 1
-    if in_ul:
-        out.append("</ul>")
+    _close()
     return "\n".join(out)
 
 

@@ -269,7 +269,14 @@ details.sec[open]>summary::before,details.block[open]>summary.bh::before{transfo
    .es/.eyebrow/.qa-q now live co-located with _study_lead (component-SSR C2/C3). */
 .es-prose{font-size:var(--t-prose);line-height:1.62;color:var(--ink)}.es-prose.sm{font-size:var(--t-md);line-height:1.6}
 .es-prose p{margin:0 0 15px;max-width:74ch}.es-prose strong{font-weight:680}.es-prose h3{font-size:var(--t-md);margin:22px 0 8px;font-weight:680}
-.es-prose ul{margin:0 0 15px;padding-left:20px;max-width:74ch}.es-prose li{margin:0 0 6px}
+.es-prose ul,.es-prose ol{margin:0 0 15px;padding-left:22px;max-width:74ch}.es-prose li{margin:0 0 6px}.es-prose li>ul,.es-prose li>ol{margin:6px 0 0}
+.es-prose h4{font-size:var(--t-body);margin:18px 0 6px;font-weight:680}
+.es-prose em{font-style:italic}.es-prose del{color:var(--muted)}
+.es-prose a{color:var(--accent);text-decoration:none}.es-prose a:hover{text-decoration:underline}
+.es-prose code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.es-prose pre{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;overflow-x:auto;margin:0 0 15px}.es-prose pre code{background:none;border:0;padding:0;font-size:var(--t-sm)}
+.es-prose blockquote{margin:0 0 15px;padding:8px 14px;border-left:3px solid var(--accent);background:var(--accent-weak);border-radius:0 var(--radius-sm) var(--radius-sm) 0}.es-prose blockquote p{margin:0;max-width:none}
+.es-prose hr{border:0;border-top:1px solid var(--line);margin:22px 0}
 .rec{display:grid;grid-template-columns:74px 1fr;gap:13px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line-2)}
 .rec:last-child{border-bottom:0}
 .prio{display:inline-block;font-size:var(--t-xs);font-weight:700;letter-spacing:.03em;color:#fff;border-radius:6px;padding:3px 7px;text-align:center;white-space:nowrap}

@@ -17,7 +17,7 @@ from persona_council import web
 #
 # C1–C4 are COMPLETE: every page/component renders through the h() builder. The numbers below are the
 # LEGITIMATE FLOOR — raw HTML PRODUCERS, not page hand-HTML, and intentionally not converted:
-#   _components.py 27 — the _md markdown->HTML renderer (a streaming text transformer) + _effort_impact's
+#   _components.py 32 — the _md/_md_inline markdown->HTML renderer (a text transformer) + _effort_impact's
 #                       SVG quadrant chart (self-closing <rect/>/<line/>/<text>) + _srcchips(_esc(...)).
 #   _graph.py 15      — the _graph_svg scene + the _graph_interactive <svg> scene-graph raw() islands
 #                       (self-closing SVG; JS-populated <g>s) — spec §11.2.
@@ -25,7 +25,7 @@ from persona_council import web
 # These go through raw() by design (h() can't emit self-closing SVG; a markdown/citation transformer
 # legitimately produces HTML strings). The ratchet stays so nothing NEW creeps in.
 BASELINE = {
-    "_components.py": 27,
+    "_components.py": 32,
     "_graph.py": 15,
     "_palette.py": 0,
     "_rail.py": 0,
