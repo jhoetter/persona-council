@@ -503,9 +503,11 @@ def _plan_html(plan: dict, store) -> str:
     _syn_ids = {s["id"] for s in store.list_syntheses()}
     _protos = {p["id"]: p for p in store.list_prototypes(plan["project_id"])}
 
-    def ev_chip(r: dict) -> str:
+    def ev_chip(r: dict, n: int = 0) -> str:
         rid, kind = r.get("id", ""), r.get("kind", "")
         label = _pres.present(kind)["short"] if kind else rid
+        if kind == "session" and n:                            # distinguish the otherwise-identical "session" chips
+            label = f"{label} {n}"
         href = None
         if rid in _protos:
             p = _protos[rid]
@@ -535,8 +537,17 @@ def _plan_html(plan: dict, store) -> str:
         gates_html = "".join(f'<span class="gate">{_esc(x)}</span>' for x in gates)
         cap = t.get("capability", "")
         cap_html = f'<span class="pcap">{_esc(cap)}</span>' if cap else ""
-        # skip the frame self-reference (a frame task produces a ref to itself); link the rest
-        evs = "".join(ev_chip(r) for r in t.get("produces", []) if r.get("id") != t["id"])
+        # skip the frame self-reference (a frame task produces a ref to itself); link the rest,
+        # numbering same-kind sessions so 5 identical "session" chips become Session 1…5
+        evs, _sn = "", 0
+        for r in t.get("produces", []):
+            if r.get("id") == t["id"]:
+                continue
+            if r.get("kind") == "session":
+                _sn += 1
+                evs += ev_chip(r, _sn)
+            else:
+                evs += ev_chip(r)
         ev_html = f'<div class="evs">{evs}</div>' if evs else ""
         return (f'<div class="ptask"><div class="pmark" style="color:{clr}">{_icon(mark)}</div>'
                 f'<div class="pbody"><div class="prow1"><span class="ptitle">{_esc(t.get("title", t["id"]))}</span>'

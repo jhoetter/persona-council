@@ -150,7 +150,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "calendar": "Kalender", "no_days_yet": "Noch keine Tage.",
         "properties": "Eigenschaften", "role": "Rolle", "industry": "Branche",
         "size": "Größe", "tools": "Tools", "memory": "Memory", "open": "öffnen",
-        "n_projects": "{n} Projekte", "n_open": "{n} offen",
+        "n_projects": "{n} Projekte", "n_projects_one": "{n} Projekt", "n_nodes_one": "{n} Knoten", "n_open": "{n} offen",
         # activity detail
         "what_happened": "Was geschah", "thought": "Gedanke",
         "conversation": "Konversation", "none_f": "Keine.",
@@ -300,7 +300,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "calendar": "Calendar", "no_days_yet": "No days yet.",
         "properties": "Properties", "role": "Role", "industry": "Industry",
         "size": "Size", "tools": "Tools", "memory": "Memory", "open": "open",
-        "n_projects": "{n} projects", "n_open": "{n} open",
+        "n_projects": "{n} projects", "n_projects_one": "{n} project", "n_nodes_one": "{n} node", "n_open": "{n} open",
         # activity detail
         "what_happened": "What happened", "thought": "Thought",
         "conversation": "Conversation", "none_f": "None.",
@@ -341,6 +341,9 @@ def t(key: str, **kw: object) -> str:
     degrades visibly rather than raising. The parity test keeps this from ever
     firing in practice."""
     table = STRINGS.get(_lang(), STRINGS[FALLBACK_LANGUAGE])
+    # Singular form: when count is 1 and a "<key>_one" variant exists, prefer it ("1 Projekt", "1 node").
+    if kw.get("n") == 1 and (key + "_one") in table:
+        key = key + "_one"
     value = table.get(key)
     if value is None:
         value = STRINGS[FALLBACK_LANGUAGE].get(key, key)

@@ -181,3 +181,40 @@ This spec amends `spec/methodology-constellations.md`: the constellation model a
 *engine* tag-driven; this adds the **presentation-from-data** contract so the *UI and artifact
 subsystem* carry zero methodology/artifact values. After approval, implement P1–P4; the interim
 `_fid_label` helper (itself a violation) is removed by P1.
+
+---
+
+## 10. Cross-entity STUDY contract — divergent field names block one-component rendering (GAP, found 2026-06-06)
+**Context:** A Linear-consistency pass unified every detail page onto one shell (hero → content →
+Properties/Relations aside → minimap) and one *Question → Answer/Finding* typographic block
+(`_study_lead` + global `.es/.qa-q/.eyebrow/.es-prose`). Doing so surfaced a **data-contract gap**,
+not a style gap.
+
+**Finding.** Council and synthesis are both *studies* (a question + an answer/finding + voices +
+cited evidence), yet their MCP-authored records expose the SAME semantic roles under DIFFERENT keys:
+
+| role | council record | synthesis record |
+|---|---|---|
+| the question | `prompt` | `goal` ‖ `start_input` |
+| the answer / finding (rich md) | `exec_summary` (fallback `summary`) | `gesamtbild` |
+| answer label | (implicit "Finding") | `answer_exec_summary` |
+| voices | `turns` | `voices` / via `council_ids` |
+
+**Consequence.** The UI can only stay consistent by mapping per-type at the call site (council passes
+`exec_summary`+"Finding"; synthesis passes `gesamtbild`+`goal`+"Answer"). Today the *values exist on
+every record* (verified: all 7 councils have `prompt`+`exec_summary`; both syntheses have
+`goal`+`gesamtbild`) — so **no data patch was needed**; the fix was presentation-only (`_study_lead`,
+global typography). But the divergent shape is fragile: any new study-like entity must re-map, and a
+methodology that omits one of these fields silently renders an empty block.
+
+**Required methodology change (so data always fits the UI).** Normalize a **study head contract** —
+either:
+- (a) a services resolver `study_head(record) -> {question, answer_md, answer_label, voices}` that the
+  UI calls for ANY study entity (council/synthesis/future), mapping the per-type keys in ONE place; or
+- (b) have `record_council` / `record_synthesis` (and their MCP brief prompts) populate normalized
+  keys (`question`, `answer`, `answer_label`) alongside the methodology-specific ones.
+Prefer (a) — it keeps the authored records methodology-rich while giving the UI a single contract;
+the brief prompts then only need to guarantee the source fields are non-empty.
+
+**Status:** presentation unified (done); contract resolver = TODO (no data migration required when
+done, since the source values already exist).

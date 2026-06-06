@@ -7,7 +7,7 @@ from ..storage import Store
 from ._i18n import t
 from ._components import (
     _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _rec_item, _rec_row_n,
-    _effort_impact, _star, _SYN_STYLE,
+    _effort_impact, _star, _study_lead, _SYN_STYLE,
 )
 
 
@@ -334,13 +334,11 @@ def _persona_voices_html(store: Store, pid: str) -> str:
 def _synthesis_html(store: Store, syn: dict):
     done = syn.get("status", "done") == "done"
     sec = []  # (id, short_label, html)
-    # 1) Executive Summary — large prose, no box
+    # 1) Executive Summary — the unified Question → Answer lead (shared with the council 'finding')
     if syn.get("gesamtbild"):
-        question = _esc(syn.get("goal") or syn.get("start_input", ""))
-        sec.append(("exec", t("summary"),
-            f'<div class="es" id="exec"><p class="qa-q" data-label="{_esc(t("question"))}">{question}</p>'
-            f'<div class="eyebrow">{t("answer_exec_summary")}</div>'
-            f'<div class="es-prose">{_md(syn["gesamtbild"])}</div></div>'))
+        sec.append(("exec", t("summary"), _study_lead(
+            _md(syn["gesamtbild"]), t("answer_exec_summary"),
+            question=syn.get("goal") or syn.get("start_input", ""), qlabel=t("question"))))
     # 2) Cited evidence — councils are DECOUPLED: this synthesis is a standalone answer that may
     # CITE councils (or none). Render them as a compact reference list, NOT as the synthesis body.
     belege = None

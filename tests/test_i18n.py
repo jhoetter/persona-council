@@ -81,6 +81,8 @@ def test_no_legacy_unused_keys():
     def is_used(key: str) -> bool:
         if key in literals:
             return True
+        if key.endswith("_one") and key[:-4] in literals:   # singular variant of a used count key (t() plural)
+            return True
         return any(key != p and key.startswith(p) for p in prefixes)
 
     unused = sorted(k for k in defined if not is_used(k))

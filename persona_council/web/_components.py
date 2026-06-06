@@ -243,6 +243,17 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 </div>{palette_markup()}{PALETTE_JS}{app_js}</body></html>"""
 
 
+def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
+                qlabel: str = "", qid: str = "exec") -> str:
+    """Unified Question → Answer/Finding lead — the SAME typographic block on every study page
+    (council 'finding', synthesis 'answer'). The qa-q question is shown only when given (synthesis,
+    whose hero title is the thesis); council omits it because its hero title IS the question."""
+    q = f'<p class="qa-q" data-label="{_esc(qlabel)}">{_esc(question)}</p>' if question else ""
+    return (f'<div class="es" id="{_esc(qid)}">{q}'
+            f'<div class="eyebrow">{_esc(answer_label)}</div>'
+            f'<div class="es-prose">{answer_html}</div></div>')
+
+
 def _empty_state(title: str, message: str) -> str:
     return f'<div class="page"><div class="card"><h2>{_esc(title)}</h2><p class="muted">{_esc(message)}</p><p><a class="btn" href="/projects">{_icon("back")} {t("projects")}</a></p></div></div>'
 

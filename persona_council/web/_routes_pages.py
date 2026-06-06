@@ -8,7 +8,7 @@ from ..storage import Store
 from ._i18n import t, _lang
 from ._components import (
     _esc, _icon, _avatar, _label, _pills, _md, _layout, _empty_state, _doc,
-    _star, _stance_color, _EDGE_COLORS, _theme_color, _artifact_present,
+    _star, _stance_color, _EDGE_COLORS, _theme_color, _artifact_present, _study_lead,
 )
 from ._synthesis import (
     _area, _vote_label, _sentiment_section, _synthesis_html, _persona_voices_html,
@@ -414,25 +414,22 @@ def register_pages(app) -> None:
         if mode == "discovery":
             qs = session.get("questions") or ([session.get("prompt")] if session.get("prompt") else [])
             qlist = "".join(f'<li>{_esc(q)}</li>' for q in qs) or f'<li class="muted">—</li>'
-            lead_block = (f'<div class="callout motion"><span class="emj">{_icon("compass")}</span>'
-                          f'<div><strong>{t("council_questions_h")}</strong>'
-                          f'<ul style="margin:.4em 0 .2em 20px;font-size:1.02em">{qlist}</ul>'
-                          f'<p class="muted small">{t("council_questions_help", n=n_voices)}</p></div></div>')
+            lead_block = (f'<div class="es"><div class="eyebrow">{t("council_questions_h")}</div>'
+                          f'<ul class="es-prose">{qlist}</ul>'
+                          f'<p class="muted small">{t("council_questions_help", n=n_voices)}</p></div>')
             sentiment = ""                                    # a listening session has no vote/sentiment chart
         else:
             motion = (session.get("proposal") or "").strip()
             label = t("council_eval_h") if mode == "evaluation" else t("council_motion")
             help_ = t("council_eval_help", n=n_voices) if mode == "evaluation" else t("council_motion_help", n=n_voices)
-            lead_block = (f'<div class="callout motion"><span class="emj">{_icon("compass")}</span>'
-                          f'<div><strong>{label}</strong>'
-                          f'<p style="font-size:1.1em;margin:.35em 0">&bdquo;{_esc(motion)}&ldquo;</p>'
-                          f'<p class="muted small">{help_}</p></div></div>') if motion else ""
+            lead_block = (f'<div class="es"><div class="eyebrow">{label}</div>'
+                          f'<div class="es-prose">&bdquo;{_esc(motion)}&ldquo;</div>'
+                          f'<p class="muted small">{help_}</p></div>') if motion else ""
             sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         main = (f'<div class="hero" id="sec-question"><h1>{_esc(session["prompt"])}</h1>'
                 f'<p class="sub">{t("council_kicker_" + mode, n=n_voices)} · {_esc(session["selection_reason"])}</p></div>'
                 f'{lead_block}'
-                f'<div class="callout"><span class="emj">{_icon("bulb")}</span>'
-                f'<div><strong>{t("council_finding")}</strong>{exec_html}</div></div>'
+                f'{_study_lead(exec_html, t("council_finding"))}'
                 f'{sentiment}'
                 f'<div class="sec" id="stimmen"><h2>{voices_label}</h2>{turns_html}</div>'
                 f'<details class="sec"><summary>{summary_h}</summary><div class="card"><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
