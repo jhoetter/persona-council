@@ -24,23 +24,23 @@ from ._vm import study_head
 
 # ----------------------------- calendar helpers ----------------------------- #
 def _calendar_html(persona_id: str, day: str, blocks: list[dict]) -> str:
-    by_hour: dict[int, list[dict]] = {h: [] for h in range(7, 20)}
+    by_hour: dict[int, list[dict]] = {hr: [] for hr in range(7, 20)}
     for block in blocks:
         hour = int(block["calendar_event"]["start"][11:13])
         by_hour.setdefault(hour, []).append(block)
-    rows = []
+    cells = []
     for hour in range(7, 20):
-        rows.append(f'<div class="hour">{hour:02d}:00</div><div class="slot">')
+        cells.append(h("div", {"class_": "hour"}, f"{hour:02d}:00"))
+        slot = []
         for block in by_hour.get(hour, []):
             cal = block["calendar_event"]; activity = block.get("activity") or {}
             kind = activity.get("event_type", "focus")
-            rows.append(
-                f'<a class="block {kind}" href="/activities/{_esc(activity.get("id",""))}">'
-                f'<strong>{_esc(cal["start"][11:16])}-{_esc(cal["end"][11:16])} · {_esc(cal["title"])}</strong>'
-                f'<span class="meta">{_esc(block.get("collaboration_mode") or "")} · {_esc(cal["location_or_tool"])}</span><br>'
-                f'{_esc(block.get("persona_thought") or cal["outcome"])}</a>')
-        rows.append("</div>")
-    return f'<div class="calendar">{"".join(rows)}</div>'
+            slot.append(h("a", {"class_": f'block {kind}', "href": f'/activities/{activity.get("id","")}'},
+                          h("strong", {}, f'{cal["start"][11:16]}-{cal["end"][11:16]} · {cal["title"]}'),
+                          h("span", {"class_": "meta"}, f'{block.get("collaboration_mode") or ""} · {cal["location_or_tool"]}'),
+                          h("br"), block.get("persona_thought") or cal["outcome"]))
+        cells.append(h("div", {"class_": "slot"}, slot))
+    return h("div", {"class_": "calendar"}, cells)
 
 
 def _calendar_tabs(persona_id: str, selected_date: str, view: str) -> str:
@@ -64,20 +64,27 @@ def _period_calendar_html(persona_id: str, selected_date: str, view: str, period
     if view == "week":
         cells = []; current = start
         while current <= end:
-            dk = current.isoformat(); chips = "".join(_event_chip(e) for e in days.get(dk, [])[:4])
-            cells.append(f'<div class="daycell"><h4>{_esc(dk)}</h4>{chips or "<p class=\"muted small\">—</p>"}</div>'); current += timedelta(days=1)
-        return f'<div class="calendar-grid week">{"".join(cells)}</div>'
+            dk = current.isoformat(); chips = [_event_chip(e) for e in days.get(dk, [])[:4]]
+            cells.append(h("div", {"class_": "daycell"}, h("h4", {}, dk),
+                           fragment(*chips) if chips else h("p", {"class_": "muted small"}, "—")))
+            current += timedelta(days=1)
+        return h("div", {"class_": "calendar-grid week"}, cells)
     if view == "month":
         cells = []; current = start
         while current <= end:
-            dk = current.isoformat(); evs = days.get(dk, []); chips = "".join(_event_chip(e) for e in evs[:3])
-            cells.append(f'<div class="daycell monthcell"><h4>{current.day}</h4><div class="count">{t("n_events", n=len(evs))}</div>{chips}</div>'); current += timedelta(days=1)
-        return f'<div class="calendar-grid month">{"".join(cells)}</div>'
+            dk = current.isoformat(); evs = days.get(dk, [])
+            cells.append(h("div", {"class_": "daycell monthcell"}, h("h4", {}, current.day),
+                           h("div", {"class_": "count"}, t("n_events", n=len(evs))),
+                           fragment(*(_event_chip(e) for e in evs[:3]))))
+            current += timedelta(days=1)
+        return h("div", {"class_": "calendar-grid month"}, cells)
     cells = []
     for m in range(1, 13):
         me = [e for dk, evs in days.items() if date.fromisoformat(dk).month == m for e in evs]
-        cells.append(f'<div class="daycell"><h4>{start.year}-{m:02d}</h4><div class="count">{t("n_events", n=len(me))}</div>{"".join(_event_chip(e) for e in me[:2])}</div>')
-    return f'<div class="calendar-grid year">{"".join(cells)}</div>'
+        cells.append(h("div", {"class_": "daycell"}, h("h4", {}, f"{start.year}-{m:02d}"),
+                       h("div", {"class_": "count"}, t("n_events", n=len(me))),
+                       fragment(*(_event_chip(e) for e in me[:2]))))
+    return h("div", {"class_": "calendar-grid year"}, cells)
 
 
 def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None) -> str:
@@ -87,45 +94,61 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
     pid = p["id"]
     outdated_label = _label(t("outdated"), "var(--muted)", "outline", False)
     since_label = t("since")
-    none_html = f'<p class="muted">{t("none")}</p>'
+    none_html = h("p", {"class_": "muted"}, t("none"))
     proj_cards = []
     for proj in services.list_active_projects(pid, store=store):
         tl = services.get_project(pid, proj["entity_id"], store=store)["facts"]
-        rows = "".join(
-            f'<p class="{"muted" if not f["valid"] else ""}">{_esc(f["t_valid"][:10])} · <strong>{_esc(f.get("status") or "—")}</strong> · {_esc(f["fact"])}'
-            f'{" " + outdated_label if not f["valid"] else ""}</p>' for f in tl[-8:])
-        proj_cards.append(f'<div class="card"><h3>{_esc(proj["name"])} · <span class="muted">{_esc(proj.get("status") or "?")}</span></h3>{rows}</div>')
-    loops = "".join(f'<p>• {_esc(t["text"])} <span class="muted small">{since_label} {_esc((t.get("opened_on") or "")[:10])}</span></p>' for t in store.list_threads(pid, "open")[:20])
-    digests = "".join(f'<div class="card"><h3>{_esc(d["scope"])} · {_esc(d["period_start"][:10])}–{_esc(d["period_end"][:10])}</h3><p>{_esc(d.get("text",""))}</p></div>' for d in store.list_digests(pid)[-6:])
+        rows = [h("p", {"class_": "muted" if not f["valid"] else ""},
+                  f["t_valid"][:10], " · ", h("strong", {}, f.get("status") or "—"), " · ", f["fact"],
+                  (fragment(" ", outdated_label) if not f["valid"] else None)) for f in tl[-8:]]
+        proj_cards.append(h("div", {"class_": "card"},
+                            h("h3", {}, proj["name"], " · ", h("span", {"class_": "muted"}, proj.get("status") or "?")),
+                            fragment(*rows)))
+    loops = [h("p", {}, "• ", th["text"], " ",
+               h("span", {"class_": "muted small"}, f'{since_label} {(th.get("opened_on") or "")[:10]}'))
+             for th in store.list_threads(pid, "open")[:20]]
+    digests = [h("div", {"class_": "card"},
+                 h("h3", {}, d["scope"], " · ", f'{d["period_start"][:10]}–{d["period_end"][:10]}'),
+                 h("p", {}, d.get("text", ""))) for d in store.list_digests(pid)[-6:]]
     struct = services.evaluate_simulation(pid, store=store, persist=False)
     crit = services.latest_critic_report(pid, store=store)
-    struct_rows = "".join(_label(f'{c["name"]}: {c["status"]}', _stance_color(c["status"])) for c in struct["checks"])
-    crit_rows = ("".join(_label(f"{k}: {v}/5", "var(--green)" if v >= 4 else "var(--amber)") for k, v in crit["dimensions"].items()) if crit else f'<span class="muted">{t("no_critic_run")}</span>')
+    struct_rows = fragment(*(_label(f'{c["name"]}: {c["status"]}', _stance_color(c["status"])) for c in struct["checks"]))
+    crit_rows = (fragment(*(_label(f"{k}: {v}/5", "var(--green)" if v >= 4 else "var(--amber)") for k, v in crit["dimensions"].items()))
+                 if crit else h("span", {"class_": "muted"}, t("no_critic_run")))
     tt = ""
     if as_of:
         st = services.get_state_at(pid, as_of, store=store)
-        ent_rows = "".join(f'<p><strong>{_esc(e["name"])}</strong> <span class="muted">({_esc(e["kind"])})</span> → {_esc(e.get("status_at") or "—")}</p>' for e in st["entities"] if e.get("status_at"))
-        nothing_valid_html = f'<p class="muted">{t("nothing_valid")}</p>'
-        tt = (f'<div class="card"><h3>{t("state_at", date=_esc(as_of))}</h3>{ent_rows or nothing_valid_html}'
-              f'<p class="muted small">{t("open_threads_count", n=len(st.get("open_threads", [])))}</p></div>')
+        ent_rows = [h("p", {}, h("strong", {}, e["name"]), " ", h("span", {"class_": "muted"}, f'({e["kind"]})'),
+                      " → ", e.get("status_at") or "—") for e in st["entities"] if e.get("status_at")]
+        tt = h("div", {"class_": "card"}, h("h3", {}, t("state_at", date=as_of)),
+               fragment(*ent_rows) if ent_rows else h("p", {"class_": "muted"}, t("nothing_valid")),
+               h("p", {"class_": "muted small"}, t("open_threads_count", n=len(st.get("open_threads", [])))))
     rc = ""
     if q:
         hits = services.recall_memory(pid, q, store=store, k=8)["hits"]
-        nothing_html = f'<p class="muted">{t("nothing")}</p>'
-        rc = f'<div class="card"><h3>{t("recall")}</h3>' + ("".join(f'<p class="quote">[{_esc(h["obj_type"])}] {_esc(h.get("when") or "")} · score {_esc(h["score"])}<br>{_esc(h["text"])}</p>' for h in hits) or nothing_html) + "</div>"
-    mem_title = t("memory_title", name=_esc(p["display_name"]))
-    recall_ph = _esc(t("recall_placeholder"))
-    main = f"""
-    {_hero(mem_title, sub=t("memory_sub"), icon="memory")}
-    <div class="card"><h3>{t("quality")}</h3><p><strong>{t("structure")}:</strong> {_esc(struct["verdict"])} · {struct_rows}</p><p><strong>{t("critic")}:</strong> {crit_rows}</p></div>
-    <div class="grid two">
-      <form method="get" class="card"><h3>{t("time_travel")}</h3><input type="date" name="as_of" value="{_esc(as_of or '')}"> <button class="btn">{t("show_state")}</button></form>
-      <form method="get" class="card"><h3>{t("recall")}</h3><input type="text" name="q" value="{_esc(q or '')}" placeholder="{recall_ph}" style="width:58%"> <button class="btn">{t("search")}</button></form>
-    </div>{tt}{rc}
-    <div class="sec"><h2>{t("active_projects")}</h2><div class="grid two">{''.join(proj_cards) or none_html}</div></div>
-    <div class="sec"><h2>{t("open_threads")}</h2><div class="card">{loops or none_html}</div></div>
-    <div class="sec"><h2>{t("digests")}</h2>{digests or none_html}</div>
-    """
+        hit_rows = [h("p", {"class_": "quote"}, f'[{hit["obj_type"]}] {hit.get("when") or ""} · score {hit["score"]}',
+                      h("br"), hit["text"]) for hit in hits]
+        rc = h("div", {"class_": "card"}, h("h3", {}, t("recall")),
+               fragment(*hit_rows) if hit_rows else h("p", {"class_": "muted"}, t("nothing")))
+    mem_title = t("memory_title", name=p["display_name"])
+    date_in = h("input", {"type": "date", "name": "as_of", "value": as_of or ""})
+    q_in = h("input", {"type": "text", "name": "q", "value": q or "", "placeholder": t("recall_placeholder"), "style": "width:58%"})
+    main = fragment(
+        _hero(mem_title, sub=t("memory_sub"), icon="memory"),
+        h("div", {"class_": "card"}, h("h3", {}, t("quality")),
+          h("p", {}, h("strong", {}, f'{t("structure")}:'), " ", struct["verdict"], " · ", struct_rows),
+          h("p", {}, h("strong", {}, f'{t("critic")}:'), " ", crit_rows)),
+        h("div", {"class_": "grid two"},
+          h("form", {"method": "get", "class_": "card"}, h("h3", {}, t("time_travel")), date_in, " ",
+            h("button", {"class_": "btn"}, t("show_state"))),
+          h("form", {"method": "get", "class_": "card"}, h("h3", {}, t("recall")), q_in, " ",
+            h("button", {"class_": "btn"}, t("search")))),
+        tt, rc,
+        h("div", {"class_": "sec"}, h("h2", {}, t("active_projects")),
+          h("div", {"class_": "grid two"}, fragment(*proj_cards) if proj_cards else none_html)),
+        h("div", {"class_": "sec"}, h("h2", {}, t("open_threads")),
+          h("div", {"class_": "card"}, fragment(*loops) if loops else none_html)),
+        h("div", {"class_": "sec"}, h("h2", {}, t("digests")), fragment(*digests) if digests else none_html))
     return _doc(main)
 
 

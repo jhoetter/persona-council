@@ -20,7 +20,7 @@ BASELINE = {
     "_palette.py": 0,
     "_rail.py": 0,
     "_routes_lists.py": 0,
-    "_routes_pages.py": 239,
+    "_routes_pages.py": 180,
     "_synthesis.py": 3,
     "_vm.py": 0,
     "_detail.py": 0,
