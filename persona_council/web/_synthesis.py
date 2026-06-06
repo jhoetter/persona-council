@@ -336,6 +336,14 @@ def _persona_voices_html(store: Store, pid: str) -> str:
 def _synthesis_html(store: Store, syn: dict):
     done = syn.get("status", "done") == "done"
     sec = []  # (id, short_label, html)
+
+    def _block(bid, label, inner):                            # the shared section wrapper
+        return h("div", {"class_": "block", "id": bid}, h("h2", {"class_": "bh"}, label), inner)
+
+    def _segrow(head, body):
+        return h("div", {"class_": "segrow"}, h("div", {}, h("strong", {}, head), h("br"),
+                                                h("span", {"class_": "muted"}, body)))
+
     # 1) Executive Summary — the unified Question → Answer lead (shared with the council 'finding'),
     # fed by the shared study view-model so council/synthesis never branch on field names.
     if syn.get("gesamtbild"):
@@ -359,33 +367,27 @@ def _synthesis_html(store: Store, syn: dict):
             f'<span class="ref-bar">{_stacked(parts, thin=True)}</span><span class="ref-go">{_icon("arrowRight")}</span></a>')
     if ref_rows:
         belege = ("belege", t("councils"),
-                  f'<details class="block" id="belege"><summary class="bh" style="cursor:pointer">'
-                  f'{t("councils_overview")} <span class="cnt">{len(ref_rows)}</span></summary>'
-                  f'<p class="muted small" style="margin:6px 0 10px">{t("evidence_decoupled_note")}</p>'
-                  f'<div class="ref-list">{"".join(ref_rows)}</div></details>')
+                  h("details", {"class_": "block", "id": "belege"},
+                    h("summary", {"class_": "bh", "style": "cursor:pointer"},
+                      t("councils_overview"), " ", h("span", {"class_": "cnt"}, str(len(ref_rows)))),
+                    h("p", {"class_": "muted small", "style": "margin:6px 0 10px"}, t("evidence_decoupled_note")),
+                    h("div", {"class_": "ref-list"}, raw("".join(ref_rows)))))
     rec_items = [_rec_item(x) for x in syn.get("handlungsempfehlungen", [])]
     if rec_items:
         chart = _effort_impact(rec_items)
         if chart:
-            body = chart  # hover popovers replace the list
+            body = raw(chart)  # hover popovers replace the list
         else:
             rows = "".join(_rec_row_n(i, t, a, n) for i, (t, a, n) in enumerate(rec_items, 1))
-            body = f'<div class="reclist">{rows}</div>'
-        sec.append(("empfehlungen", t("recommendations"),
-                    f'<div class="block" id="empfehlungen"><h2 class="bh">{t("recommendations")}</h2>{body}</div>'))
+            body = h("div", {"class_": "reclist"}, raw(rows))
+        sec.append(("empfehlungen", t("recommendations"), _block("empfehlungen", t("recommendations"), body)))
     if syn.get("positionierung"):
         sec.append(("positionierung", t("positioning"),
-                    f'<div class="block" id="positionierung"><h2 class="bh">{t("positioning")}</h2><div class="es-prose sm">{_md(syn["positionierung"])}</div></div>'))
+                    _block("positionierung", t("positioning"),
+                           h("div", {"class_": "es-prose sm"}, raw(_md(syn["positionierung"]))))))
     # Structured convergence blocks (GAP-3): a methodology's key problems / affinity clusters /
     # down-select ranking + shortlist render as first-class answer content when present (data-driven —
     # labels via i18n, content free-text; no methodology value hardcoded).
-    def _block(bid, label, inner):                            # the shared section wrapper
-        return h("div", {"class_": "block", "id": bid}, h("h2", {"class_": "bh"}, label), inner)
-
-    def _segrow(head, body):
-        return h("div", {"class_": "segrow"}, h("div", {}, h("strong", {}, head), h("br"),
-                                                h("span", {"class_": "muted"}, body)))
-
     if syn.get("key_problems"):
         kp = fragment(*(h("div", {"class_": "psolve"}, raw(_srcchips(_esc(x)))) for x in syn["key_problems"]))
         sec.append(("keyproblems", t("key_problems"), _block("keyproblems", t("key_problems"), kp)))
