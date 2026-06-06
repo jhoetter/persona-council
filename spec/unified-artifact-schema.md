@@ -145,6 +145,37 @@ the zero-hardcoded-values gate satisfied.
 - **Non-breaking path**: the adapter layer delivers the visible win immediately; native authoring and
   backfill follow at leisure.
 
+## 5b. Completeness — the five are one of three layers
+
+Audited against the *whole* model set, the five primitives are **complete for artifact CONTENT**, and sit
+in a three-layer model:
+
+- **Layer 1 — content (the five):** Statement · Finding · Prompt · Ref · Stance. Cover every field inside
+  council / synthesis / prototype-session / note / meta-report. Nothing content-level is left over.
+- **Layer 2 — graph structure:**
+  - **Node** — the entity wrapper (id, kind, title, project_id, created_at, presentation). Persona,
+    Council, Synthesis, Prototype, Note, Section, MetaReport, OpenQuestion are all Nodes. *Already*
+    unified via `present(kind)`.
+  - **Edge** — a typed directed relation between nodes (`StudyEdge`: from/to/type/rationale —
+    based_on/feeds_into/refines/answers). NOT a Ref: a Ref grounds *content* in a source; an Edge wires
+    *nodes*. First-class graph structure.
+  - **Section** — a labeled set of node ids (a grouping overlay; a node-of-nodes).
+  - (`OpenQuestion` demonstrates the layering: a **Prompt** promoted to a **Node** with an `answers` Edge.)
+- **Layer 3 — persona memory / simulation (separate subsystem):**
+  - **Event** — a time-stamped life event (`ExperienceEvent`, `CalendarEvent`, `DailySummary`,
+    `Reflection`): actor + time + body + refs. This subsystem has the SAME duplication disease — e.g.
+    `pain_points` is modeled FIVE ways (ExperienceEvent, DailySummary, Reflection, PainPointObservation,
+    Persona). A `PainPoint` is a persona-scoped **Finding**. Out of scope for the artifact unification, but
+    the same treatment applies.
+
+**Deliberately not reduced:** **Persona** is the *Actor* Node with a rich attribute schema (its lists are
+Findings; its structured blocks define the entity). **Score/Metric** folds into `Finding.score` +
+`Stance` for now (name it later only if scores proliferate).
+
+So the full map: **5 content + 3 structural (Node/Edge/Section) + 1 temporal (Event)** — but Layer 1 is the
+only one with real, fixable duplication in the artifacts; Layer 2 is mostly unified already; Layer 3 is a
+separate cleanup with the same pattern.
+
 ## 6. Next step (not yet done)
 Implement Phase 1: `persona_council/web/_adapt.py` (the read adapters) + `render_statement/finding/prompt`
 in `_components`, and route the council/synthesis/session renderers through them. Then the four "looks
