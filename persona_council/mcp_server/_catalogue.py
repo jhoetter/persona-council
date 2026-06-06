@@ -64,7 +64,7 @@ def catalogue_md() -> str:
     total = sum(len(v) for v in by_domain.values())
     ndomains = sum(1 for v in by_domain.values() if v)
     lines = [
-        "# Persona Council — tool catalogue (by domain)",
+        "# Sonaloop — tool catalogue (by domain)",
         "",
         f"_{total} tools across {ndomains} domains — auto-generated from the live modules._",
         "",

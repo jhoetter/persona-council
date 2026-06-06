@@ -110,7 +110,7 @@ def register_council(mcp):
     def memory_schema() -> str:
         """Read-only: the memory object model + the simulate->consolidate->digest loop."""
         return (
-            "Persona Council memory model (schema v%d):\n"
+            "Sonaloop memory model (schema v%d):\n"
             "- entities(kind: project|person|org|building|authority|topic, status)\n"
             "- entity_facts(fact, status, t_valid, t_invalid, importance)  # bi-temporal, time-travel\n"
             "- threads(open loops with identity), event_entities(links), embeddings(semantic recall)\n"
@@ -126,7 +126,7 @@ def register_council(mcp):
     def research_guide() -> str:
         """THE FRONT DOOR — read this first: the canonical path to drive a research project via MCP."""
         return (
-            "Persona Council — the canonical research path (ESV). The PLAN is the single engine; a\n"
+            "Sonaloop — the canonical research path (ESV). The PLAN is the single engine; a\n"
             "deterministic run loop drives it, an independent critic decides when it's DONE.\n"
             "\n"
             "0. PERSONAS FIRST. Ensure a richly-segmented cohort with simulated memory exists\n"

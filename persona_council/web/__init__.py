@@ -40,7 +40,7 @@ def create_app():
         raise RuntimeError("Install web dependencies first: uv sync") from exc
 
     DATA_DIR.mkdir(exist_ok=True)
-    app = FastAPI(title="Persona Council")
+    app = FastAPI(title="Sonaloop")
     app.mount("/data", StaticFiles(directory="data"), name="data")
     # Serve prototype apps so they can be viewed directly in the inspector (read-only).
     from ..config import prototypes_dir as _proto_dir
@@ -82,7 +82,7 @@ def main() -> None:
     url = f"http://{host}:{port}"
     print(
         "\n" + "─" * 56 + "\n"
-        "  Persona Council inspector is ready.\n"
+        "  Sonaloop inspector is ready.\n"
         f"  → Open {url} in your browser.\n"
         + "─" * 56 + "\n",
         flush=True,

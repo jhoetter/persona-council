@@ -83,7 +83,7 @@ def _json_from_text(text: str) -> dict[str, Any]:
 def _call_llm_json(prompt: str, timeout: int = 180) -> dict[str, Any]:
     del timeout
     raise RuntimeError(
-        "Server-side text generation is disabled. Persona Council text must be "
+        "Server-side text generation is disabled. Sonaloop text must be "
         "authored by the MCP host agent, such as Claude Code or Codex, then "
         "submitted as JSON to validation/persistence tools. Prompt:\n\n" + prompt
     )

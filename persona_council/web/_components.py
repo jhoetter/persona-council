@@ -391,13 +391,13 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
               .replace("__UNSTAR__", json.dumps(t("unstar"))))
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{_esc(title)} · Persona Council</title>
+<title>{_esc(title)} · Sonaloop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 {HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style></head>
 <body><div class="app" id="app">
   <aside class="sidebar">
-    <div class="brand"><span class="mark"></span><a href="/">Persona&nbsp;Council</a></div>
+    <div class="brand"><span class="mark">{_icon("sonaloop")}</span><a href="/">Sonaloop</a></div>
     <div class="sb-scroll">{_nav(active, store)}</div>
     {_user_menu()}
   </aside>
