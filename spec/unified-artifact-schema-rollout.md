@@ -1,6 +1,6 @@
 # Unified artifact schema — detailed rollout plan
 
-Status: **Phase 0–2 DONE · Phase 3 backfill DONE · Phase 3 field-removal DEFERRED** (2026-06-06).
+Status: **Phase 0–4 DONE · Phase 3 field-removal DONE** (2026-06-06) — storage is primitives-only.
 Companion to `spec/unified-artifact-schema.md` (the design). Step-by-step execution plan for all phases.
 
 Progress:
@@ -22,15 +22,20 @@ Progress:
   council voices, synthesis voices and prototype sessions are the SAME `.turn` statement card; every
   finding section (key_problems/pain_solvers/clusters/segmente/ranking/recommendations + persona pains)
   is the SAME `.fitem` row; one stance scale everywhere.
-- ⏸ **Phase 3 (legacy-field removal)** — DELIBERATELY NOT PURSUED (engineering decision, not an
-  oversight). A grep shows **48 direct readers** of the duplicate fields across core engine logic
-  (council_mode derivation, vote tallies, `_council_brief_row`, the meta-report, the sentiment charts,
-  the whole simulation subsystem) plus intertwined helpers (`_voices_panel`/`_persona_voices_html` share
-  `_sent_color`/`_relbar`). Deleting the fields means rewiring all 48 with **zero UI change** (the UI
-  already reads via adapters/primitives) and real risk to a working, fully-consolidated app. The adapters
-  are PERMANENT dual-read, so this is the plan's "only breaking step, never required for correctness."
-  It stays a separately-gated follow-up (snapshot + golden-identity) if the internal dedup is ever worth
-  the churn.
+- ✅ **Phase 3 (legacy-field removal)** — DONE (2026-06-06; no backwards-compat needed — local dev,
+  test data only). Storage + model are **primitives-only**: `CouncilSession` dropped `turns`;
+  `Synthesis` dropped `key_problems/pain_solvers/handlungsempfehlungen/offene_fragen/shortlist/clusters/
+  segmente/ranking/voices`. `record_*` convert the validated payload (or accept native primitives) to
+  `statements/findings/prompts` at the write boundary and store ONLY those (+ canonical prose/ids).
+  `votes` is **retained** (it drives council mode + the vote tally — not a pure duplicate). All readers
+  (markdown export, study briefs, graph node, sentiment strip, persona voices, effort·impact chart,
+  council export) were rewired to primitives via read-projection helpers (`finding_texts` /
+  `synthesis_recommendations` / `synthesis_sentiment_counts`). The dead synthesis-voices cockpit
+  (`_voices_panel`/`VOICES_JS`/`_sent_color`/`_relbar`/`_session_card`) was removed and
+  `_persona_voices_html` now renders the unified `.turn` card. Demo re-seeded clean; 127 tests green;
+  `tests/test_render_consolidation.py` guards that voice/finding markup comes only from `_render.py`.
+  Remaining (NOT done, by choice): the host-authoring INPUT contract still accepts the convenient
+  `turns`/`key_problems` shapes and converts them — that's authoring convenience, not stored legacy.
 
 Guiding rules for every phase:
 - **Non-breaking until the last step.** Each phase ships independently and leaves the app green.

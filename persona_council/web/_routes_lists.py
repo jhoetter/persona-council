@@ -122,8 +122,8 @@ PRIMITIVES = [
      "The thing posed: a question, proposal, goal or focus — one shape for everything being investigated."),
     ("Ref", "Ein Beleg-Zeiger (Memory, Council, Prototyp-State, Zitat). Vereint memory_refs, evidence, observed_state_refs, `[C#]`.",
      "A grounding pointer (memory, council, prototype-state, quote). Unifies memory_refs, evidence, observed_state_refs, `[C#]`."),
-    ("Stance", "Eine einzige Positivitäts-Skala (−2 oppose … +2 support). Ersetzt votes, stance und sentiment.",
-     "One positivity scale (−2 oppose … +2 support). Replaces votes, stance and sentiment."),
+    ("Stance", "Eine einzige Positivitäts-Skala (−2 oppose … +2 support). Vereint stance, sentiment und votes zu EINER Darstellung.",
+     "One positivity scale (−2 oppose … +2 support). Unifies stance, sentiment and votes into ONE representation."),
 ]
 
 
