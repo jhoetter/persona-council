@@ -104,6 +104,9 @@ def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
         out.append({"id": p["id"], "slug": p["slug"], "title": p["title"], "goal": p.get("goal", ""),
                     "status": p.get("status", "active"),
                     "studies": sum(1 for n in graph["nodes"] if n.get("kind") == "synthesis"),
+                    "councils": sum(1 for n in graph["nodes"] if n.get("kind") == "council"),
+                    "concepts": sum(1 for n in graph["nodes"] if n.get("kind") == "concept"),
+                    "prototypes": len(graph.get("prototypes") or []),
                     "edges": graph["counts"].get("edges", 0),
                     "themes": p.get("themes", [])})
     return out

@@ -80,7 +80,7 @@ register_css(r"""
 .slot{border-top:1px solid var(--line-2);min-height:52px;padding:5px 8px}
 .calendar .block,.daycell .block{display:block;background:var(--panel-2);border-radius:7px;padding:7px 9px;margin:0 0 6px}.calendar .block::before,.daycell .block::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:1px}
 .daycell .block.focus::before,.calendar .block.focus::before{background:var(--green)}.daycell .block.interruption::before,.calendar .block.interruption::before{background:var(--red)}.daycell .block.admin::before,.calendar .block.admin::before{background:var(--amber)}
-.block strong{display:block}.block .meta{color:var(--muted);font-size:var(--t-sm)}
+.calendar .block strong,.daycell .block strong{display:block}.calendar .block .meta,.daycell .block .meta{color:var(--muted);font-size:var(--t-sm)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
 .tabs a{border:1px solid var(--line);border-radius:var(--radius-sm);padding:4px 11px;background:var(--panel);font-size:var(--t-sm)}.tabs a.active{background:var(--ink);color:var(--bg)}
 input,select{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 8px}

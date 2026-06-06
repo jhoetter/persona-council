@@ -227,6 +227,7 @@ h1,h2,h3,h4{color:var(--ink)}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 11px;font-size:var(--t-body);font-weight:500;color:var(--ink);cursor:pointer;min-height:30px;transition:background 120ms,border-color 120ms}
 .btn:hover{background:var(--hover)}
 .btn.active{background:var(--sel);color:var(--ink);border-color:var(--line)}
+.btn.disabled{color:var(--faint);cursor:default;opacity:.65}.btn.disabled:hover{background:var(--panel)}.btn.disabled svg{opacity:.7}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
 .btn.primary:hover{filter:brightness(1.06)}
 :focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}

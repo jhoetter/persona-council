@@ -108,10 +108,12 @@ def _projects_page() -> str:
     store = Store()
     rows = []
     for p in services.list_research_projects(store=store):
-        meta = fragment(                                       # non-zero counts only (no "0 Themes" noise)
+        counts = fragment(                                     # the project's real contents (non-zero only)
+            h("span", {}, f'{p["councils"]} {t("councils")}') if p.get("councils") else None,
             h("span", {}, f'{p["studies"]} {t("syntheses")}') if p["studies"] else None,
-            h("span", {}, f'{p["edges"]} {t("build_order_h")}') if p["edges"] else None,
-            h("span", {}, f'{len(p["themes"])} {t("themes_h")}') if p.get("themes") else None)
+            h("span", {}, f'{p["prototypes"]} {t("prototypes_h")}') if p.get("prototypes") else None,
+            h("span", {}, f'{p["concepts"]} {t("concepts")}') if p.get("concepts") else None)
+        meta = fragment(counts, raw(_star("project", p["id"], p["title"], f'/projects/{p["id"]}')))
         rows.append(_row(f'/projects/{p["id"]}', "projects", p["title"], meta, color="var(--accent)"))
     return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
                       empty_icon="projects", empty_msg=t("no_projects"), active="projects")

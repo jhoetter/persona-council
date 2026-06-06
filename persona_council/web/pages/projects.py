@@ -28,8 +28,12 @@ def register_projects(app) -> None:
         oqs = [o for o in graph["open_questions"] if o.get("status") == "open"]
         oq_html = fragment(*(h("li", {}, o["text"]) for o in oqs[:30])) or h("li", {"class_": "muted"}, "—")
         reports = store.list_meta_reports(proj["id"])
+        # The Meta-Report button is ALWAYS shown (a fixed affordance) — a live link when a report
+        # exists, a disabled button (with a hint) when it doesn't, so the action never disappears.
         meta_btn = (h("a", {"class_": "btn", "href": f'/projects/{proj["id"]}/meta'}, raw(_icon("syntheses")), " ", t("meta_report"))
-                    if reports else "")
+                    if reports else
+                    h("span", {"class_": "btn disabled", "title": t("meta_report_unavailable"), "aria-disabled": "true"},
+                      raw(_icon("syntheses")), " ", t("meta_report")))
         if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan — opens in a right drawer
             plan_url = f'/projects/{proj["id"]}/plan'
             meta_btn = fragment(h("a", {"class_": "btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
@@ -140,8 +144,9 @@ def register_projects(app) -> None:
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
                    h("p", {"class_": "lead"}, proj.get("goal", "")), head_tools),
                  main_view)
+        actions = fragment(meta_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
         return _layout(proj["title"], body, store, active="projects",
-                       crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=meta_btn)
+                       crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
 
     @app.get("/projects/{project_id}/meta", response_class=HTMLResponse)
     def project_meta(project_id: str) -> str:
