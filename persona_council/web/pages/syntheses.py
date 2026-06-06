@@ -28,19 +28,20 @@ def register_syntheses(app) -> None:
         syn = store.get_synthesis(synthesis_id)
         if not syn:
             return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared")), store, active="syntheses")
+        short_title = _display_title(syn["title"])             # short form for breadcrumb / tab / favourite only
         crumbs = [(t("projects"), "/projects")]
         proj = services.parent_project_of_synthesis(synthesis_id, store)
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
-        crumbs.append((syn["title"], None))
-        content, toc = _synthesis_html(store, syn)             # content carries its own hero (syn-head)
+        crumbs.append((short_title, None))
+        content, toc = _synthesis_html(store, syn)             # content carries its own hero (syn-head, full title)
         return detail_page(
-            store, title=syn["title"], active="projects", crumbs=crumbs,
+            store, title=short_title, active="projects", crumbs=crumbs,
             hero="", body=raw(content), rail_sections=toc,
             prop_rows=[("check", t("status"), t("done") if syn.get("status", "done") == "done" else t("running")),
                        ("councils", t("councils"), str(len(syn.get("council_ids", [])))),
                        ("dot", t("created"), syn.get("created_at", "")[:10]),
                        ("projects", t("project"), (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—"))],
             rel_study_id=f"synthesis:{synthesis_id}", rel_proj_id=(proj["id"] if proj else None),
-            star=("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}"))
+            star=("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}"))
 

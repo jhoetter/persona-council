@@ -183,6 +183,11 @@ APP_JS = """
   renderStars();
   // After an SPA content swap (sidebar persists), re-apply star states to the new page's buttons.
   document.addEventListener('spa:load', renderStars);
+  // Long hero titles/subs clamp to 3 lines; mark the truncated ones clickable to expand inline.
+  function initClamp(){ document.querySelectorAll('.hero h1,.syn-head h1,.hero .sub').forEach(function(el){
+    if(!el.classList.contains('expanded')) el.classList.toggle('is-clamped', el.scrollHeight-el.clientHeight>2); }); }
+  document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('.is-clamped'); if(t) t.classList.toggle('expanded'); });
+  initClamp(); document.addEventListener('spa:load',initClamp);
 })();
 </script>
 """
@@ -418,7 +423,9 @@ _HERO_CSS = register_css(
     "display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}"
     ".hero h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}"
     ".hero .sub{color:var(--muted);font-size:var(--t-body);margin:0 0 4px;max-width:74ch;"
-    "display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}")
+    "display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}"
+    ".is-clamped{cursor:pointer}"                                  # only set by JS when actually truncated
+    "h1.expanded,.sub.expanded{-webkit-line-clamp:unset;display:block;overflow:visible}")
 
 
 def _hero(title, *, sub=None, icon: str | None = None, hid: str | None = None, top=None) -> str:
