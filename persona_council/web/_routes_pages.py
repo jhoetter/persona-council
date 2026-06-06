@@ -433,7 +433,7 @@ def register_pages(app) -> None:
                 f'{sentiment}'
                 f'<div class="sec" id="stimmen"><h2>{voices_label}</h2>{turns_html}</div>'
                 f'<details class="sec"><summary>{summary_h}</summary><div class="card"><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')
-        prop_rows = [("personas", personas_h, str(n_voices))]
+        prop_rows = [("councils", t("type_h"), t("council_mode_" + mode)), ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
             vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
             prop_rows += [("dot", _vote_label(k), str(vc[k])) for k in vc]
