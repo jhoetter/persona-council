@@ -138,9 +138,11 @@ APP_JS = """
     var m=readStars();
     document.querySelectorAll('[data-star]').forEach(function(b){ b.classList.toggle('on', !!m[b.getAttribute('data-star')]); });
     var favs=document.getElementById('favs'); if(!favs) return;
+    var favsec=document.getElementById('favsec');
     var keys=Object.keys(m);
     favs.innerHTML='';
-    if(!keys.length){ var e=document.createElement('span'); e.className='muted small'; e.style.cssText='padding:5px 9px;display:block'; e.textContent=__FAV_EMPTY__; favs.appendChild(e); return; }
+    if(!keys.length){ if(favsec) favsec.hidden=true; return; }   // hide the whole section when nothing is starred
+    if(favsec) favsec.hidden=false;
     keys.forEach(function(k){ var f=m[k];
       var row=document.createElement('div'); row.className='favrow';
       var a=document.createElement('a'); a.href=f.href||'#'; a.title=f.label||'';
@@ -176,10 +178,11 @@ def _nav(active: str, store: Store) -> str:
     render = lambda items: fragment(*(
         h("a", {"href": href, "class_": "active" if k == active else ""}, raw(_icon(ic)), h("span", {}, lbl))
         for href, k, ic, lbl in items))
-    # Favorites are stored client-side (localStorage); this container is filled by JS.
-    favs = fragment(h("div", {"class_": "navhead"}, t("favorites")),
-                    h("div", {"class_": "sb-quick", "id": "favs"},
-                      h("span", {"class_": "muted small", "style": "padding:5px 9px;display:block"}, t("mark_with_star"))))
+    # Favorites are stored client-side (localStorage); the section is filled AND shown/hidden by JS
+    # (renderStars) — it only appears once something is starred, so an empty sidebar stays clean.
+    favs = h("div", {"id": "favsec", "hidden": True},
+             h("div", {"class_": "navhead"}, t("favorites")),
+             h("div", {"class_": "sb-quick", "id": "favs"}))
     return fragment(h("nav", {"class_": "nav"}, render(work)),
                     h("div", {"class_": "navhead"}, t("library_h")),
                     h("nav", {"class_": "nav"}, render(research)), favs)
@@ -226,7 +229,6 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     # Inject per-request translations into the static JS (client renders need them
     # too — same __PLACEHOLDER__ -> t() pattern used for the voices chart).
     app_js = (APP_JS.replace("__FAV_ICONS__", _FAV_ICONS_JSON)
-              .replace("__FAV_EMPTY__", json.dumps(t("mark_with_star")))
               .replace("__UNSTAR__", json.dumps(t("unstar"))))
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

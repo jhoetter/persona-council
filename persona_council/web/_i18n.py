@@ -28,7 +28,7 @@ _UI_LANG: contextvars.ContextVar[str | None] = contextvars.ContextVar("ui_lang",
 STRINGS: dict[str, dict[str, str]] = {
     "de": {
         "personas": "Personas", "councils": "Councils",
-        "syntheses": "Synthesen", "favorites": "Favoriten", "mark_with_star": "Mit Stern markieren",
+        "syntheses": "Synthesen", "favorites": "Favoriten",
         "sidebar": "Sidebar", "breadcrumb_aria": "Seitenposition",
         "settings": "Einstellungen", "theme": "Erscheinungsbild", "language": "Sprache",
         "theme_light": "Hell", "theme_dark": "Dunkel", "theme_system": "System",
@@ -181,7 +181,7 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "en": {
         "personas": "Personas", "councils": "Councils",
-        "syntheses": "Syntheses", "favorites": "Favorites", "mark_with_star": "Mark with a star",
+        "syntheses": "Syntheses", "favorites": "Favorites",
         "sidebar": "Sidebar", "breadcrumb_aria": "Page position",
         "settings": "Settings", "theme": "Appearance", "language": "Language",
         "theme_light": "Light", "theme_dark": "Dark", "theme_system": "System",
