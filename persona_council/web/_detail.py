@@ -99,11 +99,9 @@ def detail_page(store, *, title: str, active: str, crumbs: list, body,
     if rel_study_id:
         rel = _relations_html(store, rel_study_id, rel_proj_id, extra_in=rel_extra_in,
                               extra_out=rel_extra_out, aside=True)
+    # The right-edge TOC (scrollspy) indexes the MAIN-content sections only — Properties/Relations live in
+    # the aside, not the scrolling column, so they must NOT appear as TOC ticks.
     rail = list(rail_sections or [])
-    if props:
-        rail.append(("sec-properties", t("properties")))
-    if rel:
-        rail.append(("sec-relations", t("relations")))
     page = _doc(main, rail=raw(props) + raw(rel)) + _page_rail(rail)
     actions = raw(_star(*star)) if star else ""
     return _layout(title, page, store, crumbs=crumbs, active=active, actions=actions)
