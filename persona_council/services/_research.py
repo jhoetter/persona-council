@@ -218,7 +218,7 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
     syn = store.get_synthesis(study_id)
     if not syn:
         return None
-    sentiment = _A.synthesis_sentiment_counts(syn)        # derived from the voice statements' stance
+    sentiment = _A.synthesis_sentiment_counts(syn, store)   # aggregated over the REAL council voices
     return {
         "study_id": study_id, "title": syn.get("title", study_id),
         "status": syn.get("status", "done"), "created_at": syn.get("created_at", ""),

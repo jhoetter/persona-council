@@ -9,7 +9,7 @@ from ._components import (
     _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _prose, _rec_row_n,
     _effort_impact, _star, _study_lead,
 )
-from ._render import render_findings, render_statements, render_statement
+from ._render import render_findings, render_statement
 from .. import artifacts as _A
 from ._vm import study_head
 from ._html import h, raw, fragment, register_css
@@ -293,17 +293,17 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
 
 
 def _persona_voices_html(store: Store, pid: str) -> str:
-    """This persona's voice across the syntheses — rendered as the SAME .turn statement cards as every
-    other voice (one consolidated primitive); each links to its synthesis via a ref chip."""
+    """This persona's ACTUAL council statements — the ONE place their words live (no synthesis re-host;
+    spec/artifact-cross-references.md). Each card carries a cross-ref deep-link back to the council."""
     cards = []
-    for syn in store.list_syntheses():
-        for st in _A.synthesis_statements(syn):
+    for c in store.list_council_sessions():
+        for st in (c.get("statements") or []):
             if st.get("persona_id") != pid:
                 continue
-            st = dict(st)                                  # add a link to the synthesis this voice is in
-            st["refs"] = list(st.get("refs") or []) + [_A.ref("synthesis", id=syn["id"], quote=syn.get("title", ""))]
+            st = dict(st)
+            st["refs"] = list(st.get("refs") or []) + [
+                _A.ref("council", id=c["id"], anchor=st.get("id"), role="said_in", quote=c.get("prompt", ""))]
             cards.append(render_statement(st, store))
-            break
     if not cards:
         return ""
     return h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices_in_analyses")),
@@ -384,21 +384,14 @@ def _synthesis_html(store: Store, syn: dict):
         sec.append(s)
     if (s := _fsec("shortlist", t("shortlist"))):
         sec.append(s)
-    # voices — the SAME .turn statement cards as a council (one consolidated voice primitive across all
-    # detail pages); the per-council sentiment chart is the fallback when there are no structured voices.
-    voices = _A.synthesis_statements(syn)
-    if voices:
-        qp = _A.synthesis_question(syn)               # the study question, shown as the banner above the voices
-        vhtml = (render_statements(voices, store, group_by="prompt", prompts=[qp]) if qp
-                 else render_statements(voices, store, group_by="persona"))
-        sec.append(("stimmen", t("voices"),
-                    h("div", {"class_": "block", "id": "stimmen"}, h("h2", {"class_": "bh"}, t("voices")),
-                      h("p", {"class_": "ihint"}, t("voices_intro")), raw(vhtml))))
-    else:
-        syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]
-        sent = _sentiment_section(store, syn_sessions, title=t("sentiment_over_chain"), per_council=True)
-        if sent:
-            sec.append(("stimmen", t("voices"), h("div", {"class_": "block", "id": "stimmen"}, raw(sent))))
+    # A synthesis does NOT re-host council voices (spec/artifact-cross-references.md): the personas'
+    # actual words live ONCE, in the councils, and the findings above cross-reference the specific
+    # statements they derive from. Here we show only the AGGREGATE — the sentiment across the council
+    # chain — which is genuine cross-council analysis, not a copied transcript.
+    syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]
+    sent = _sentiment_section(store, syn_sessions, title=t("sentiment_over_chain"), per_council=True)
+    if sent:
+        sec.append(("stimmen", t("sentiment_block"), h("div", {"class_": "block", "id": "stimmen"}, raw(sent))))
     # supporting analysis (omit when empty — an empty section reads as a broken box)
     if (s := _fsec("segment", t("segments"))):
         sec.append(s)
@@ -416,7 +409,7 @@ def _synthesis_html(store: Store, syn: dict):
                       h("div", {"class_": "es-prose sm"}, raw(_md(_srcchips(syn["arc_narrative"])))))))
 
     # ---- slim meta strip (replaces the old Eigenschaften rail) ----
-    cs = _A.synthesis_sentiment_counts(syn)               # derived from the voice statements' stance
+    cs = _A.synthesis_sentiment_counts(syn, store)        # aggregated over the REAL council voices
     smeta = " · ".join(f"{cs[k]} {k}" for k in ("positiv", "bedingt", "neutral", "skeptisch", "ablehnend") if cs.get(k))
     mchips = [_label(t("completed") if done else t("running"), "var(--green)" if done else "var(--amber)")]
     mchips.append(h("span", {"class_": "mchip"}, f'{len(syn.get("council_ids", []))} {t("councils")}'))

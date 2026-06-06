@@ -357,12 +357,6 @@ def synthesis_statements(s: dict) -> list[dict]:
     return out
 
 
-def synthesis_question(s: dict) -> dict | None:
-    """The single study-question Prompt shown as the banner above the synthesis voices (id 'studyq')."""
-    txt = (s.get("start_input") or s.get("goal") or s.get("title") or "").strip()
-    return prompt(txt, kind="question", id="studyq") if txt else None
-
-
 # ---- read projections: readers (markdown export / briefs / graph node / sentiment strip) that think in
 # the old field shapes get them reconstructed from the stored findings/statements. Storage is
 # primitives-only; these are READ helpers, never written (spec/unified-artifact-schema).
@@ -386,11 +380,21 @@ def synthesis_recommendations(s: dict) -> list[tuple]:
     return out
 
 
-def synthesis_sentiment_counts(s: dict) -> dict[str, int]:
-    """Counts keyed by the legacy sentiment word, derived from the voice statements' stance."""
+def synthesis_sentiment_counts(s: dict, store: Any = None) -> dict[str, int]:
+    """Counts keyed by the legacy sentiment word, aggregated over the REAL council voices the synthesis
+    consolidates (the synthesis no longer holds its own voices — spec/artifact-cross-references.md).
+    `store` is duck-typed (get_council_session); without it, falls back to any stored synthesis voices."""
+    stmts: list[dict] = []
+    if store is not None:
+        for cid in s.get("council_ids") or []:
+            stmts.extend((store.get_council_session(cid) or {}).get("statements") or [])
+    if not stmts:
+        stmts = synthesis_statements(s)
     counts: dict[str, int] = {}
-    for st in synthesis_statements(s):
+    for st in stmts:
         val = (st.get("stance") or {}).get("value")
+        if val is None:
+            continue
         word = _STANCE_SENTIMENT.get(val, "neutral")
         counts[word] = counts.get(word, 0) + 1
     return counts

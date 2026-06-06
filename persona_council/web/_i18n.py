@@ -106,8 +106,6 @@ STRINGS: dict[str, dict[str, str]] = {
 
 
 
-        "voices_intro": "Pro Persona: Haltung, Relevanz und Schlüssel-Argument — mit Meinungswandel über "
-                        "die Council-Kette, wo vorhanden.",
 
 
 
@@ -255,8 +253,6 @@ STRINGS: dict[str, dict[str, str]] = {
 
 
 
-        "voices_intro": "Per persona: stance, relevance and key argument — with any shift of opinion "
-                        "across the council chain.",
 
 
 
