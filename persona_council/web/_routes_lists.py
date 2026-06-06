@@ -207,6 +207,21 @@ def register_lists(app) -> None:
         return _list_page(store, title=t("concepts"), lead=t("concepts_lead"), rows=rows,
                           empty_icon="bulb", empty_msg=t("no_concepts"), active="concept")
 
+    @app.get("/notes", response_class=HTMLResponse)
+    def notes_list() -> str:
+        store = Store()
+        rows = []
+        for proj in store.list_research_projects():
+            for n in services.list_notes(proj["id"], store=store):
+                if (n.get("kind") or "note") != "note":            # raw observations; concepts have their own list
+                    continue
+                right = fragment(h("span", {"class_": "muted small"}, proj["title"]),
+                                 raw(_star("note", n["id"], n.get("title", ""), f'/notes/{n["id"]}')))
+                title = n.get("title") or (n.get("text", "")[:60] or "—")
+                rows.append(_row(f'/notes/{n["id"]}', "panel", title, right, color="#f29900"))
+        return _list_page(store, title=t("notes"), lead=t("notes_lead"), rows=rows,
+                          empty_icon="panel", empty_msg=t("no_notes"), active="note")
+
 # Co-located CSS (spec/roadmap.md R3): linear list rows.
 register_css(r"""
 /* ---- linear list rows (G3) ---- */

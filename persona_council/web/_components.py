@@ -322,7 +322,8 @@ def _nav(active: str, store: Store) -> str:
     # methodology produces (council/concept/prototype/synthesis). (href, active-key, icon, label).
     work = [("/projects", "projects", "projects", t("projects")),
             ("/personas", "personas", "personas", t("personas"))]
-    research = [("/councils", "councils", "councils", t("councils")),
+    research = [("/notes", "note", "panel", t("notes")),
+                ("/councils", "councils", "councils", t("councils")),
                 ("/concepts", "concept", "bulb", t("concepts")),
                 ("/prototypes", "prototype", "prototype", t("prototypes_h")),
                 ("/syntheses", "syntheses", "syntheses", t("syntheses"))]
