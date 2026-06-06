@@ -102,19 +102,19 @@ STRINGS: dict[str, dict[str, str]] = {
         "per_council": "Pro Council",
         "personas_by_sentiment": "Personas nach Stimmung — Begeisterungs-Score (Befürwortung − Ablehnung)",
         "stance_of_contributions": "Haltung der Wortbeiträge",
-        "sentiment_label": "Sentiment", "relevance_label": "Relevanz",
-        "name_label": "Name",
-        "relevance_tooltip": "Relevanz / tangiert: {rel}",
-        "voices_count": "Stimmen ({n})",
+
+
+
+
         "voices_intro": "Pro Persona: Haltung, Relevanz und Schlüssel-Argument — mit Meinungswandel über "
                         "die Council-Kette, wo vorhanden.",
-        "search_arg_name": "Suche Argument / Name…",
-        "sort_by_sentiment": "Sortieren: Sentiment", "sort_relevance": "Relevanz",
-        "sort_shift_first": "Wandel zuerst",
-        "segment": "Segment",
-        "to_council": "→ Council",
-        "shift_label": "Wandel {a} → {b}:",
-        "voices_n_of_m": "{n} von {m} Stimmen",
+
+
+
+
+
+
+
         "voices_in_analyses": "Stimmen in Analysen",
         # synthesis report
         "answer_exec_summary": "Executive Summary",
@@ -251,19 +251,19 @@ STRINGS: dict[str, dict[str, str]] = {
         "per_council": "Per council",
         "personas_by_sentiment": "Personas by sentiment — enthusiasm score (support − opposition)",
         "stance_of_contributions": "Stance of the contributions",
-        "sentiment_label": "Sentiment", "relevance_label": "Relevance",
-        "name_label": "Name",
-        "relevance_tooltip": "Relevance / affected: {rel}",
-        "voices_count": "Voices ({n})",
+
+
+
+
         "voices_intro": "Per persona: stance, relevance and key argument — with any shift of opinion "
                         "across the council chain.",
-        "search_arg_name": "Search argument / name…",
-        "sort_by_sentiment": "Sort: sentiment", "sort_relevance": "Relevance",
-        "sort_shift_first": "Shift first",
-        "segment": "Segment",
-        "to_council": "→ Council",
-        "shift_label": "Shift {a} → {b}:",
-        "voices_n_of_m": "{n} of {m} voices",
+
+
+
+
+
+
+
         "voices_in_analyses": "Voices in analyses",
         # synthesis report
         "answer_exec_summary": "Executive Summary",

@@ -16,7 +16,7 @@ from ._components import (  # noqa: F401  (explicit names used by callers/tests)
 )
 from ._synthesis import *  # noqa: F401,F403  (re-export synthesis/voices/charts helpers)
 from ._synthesis import (  # noqa: F401  (public surface preserved)
-    VOICES_JS, _sentiment_section, _synthesis_html, _persona_voices_html,
+    _sentiment_section, _synthesis_html, _persona_voices_html,
 )
 from ._graph import (  # noqa: F401  (public surface preserved)
     _graph_layout, _graph_interactive, _graph_svg, _methodology_layout,

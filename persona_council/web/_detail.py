@@ -57,22 +57,6 @@ def _relations_html(store, study_id: str, proj_id: str | None,
              h("div", {"class_": "relh"}, raw(_icon("link")), " ", t("relations")), blocks)
 
 
-# Reaction keys that are meta/internal (shown via the badge/header), not user-facing content.
-_SESSION_SKIP = {"persona", "fidelity", "version", "observed_state_refs", "self_authored", "session_id",
-                 "grounded_verified", "grounded"}   # grounded shows once as the header badge (session is the source)
-
-
-def _session_card(store, sess: dict) -> str:
-    """One prototype/persona session → the ONE statement card (render_statement), so sessions read
-    identically to council voices. The grounded badge (session is the single source of truth) is injected
-    as the header's extra chip; the verdict/focus/observed-state map onto the Statement primitive."""
-    from ._render import render_statement
-    from .. import artifacts as _A
-    sts = _A.session_statements(sess)
-    grounded = bool(sess.get("grounded_verified"))         # SINGLE source of truth (the session, not the reaction)
-    badge = _label(t("grounded_yes") if grounded else t("grounded_no"), "var(--green)" if grounded else "var(--muted)")
-    return render_statement(sts[0], store, head_extra=raw(badge))
-
 
 def _properties_html(rows, aside: bool = False) -> str:
     """Linear-style Properties panel: an icon + label + value per row (skips empty values).

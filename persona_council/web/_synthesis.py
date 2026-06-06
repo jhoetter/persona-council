@@ -9,7 +9,7 @@ from ._components import (
     _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _prose, _rec_item, _rec_row_n,
     _effort_impact, _star, _study_lead,
 )
-from ._render import render_findings, render_statements
+from ._render import render_findings, render_statements, render_statement
 from .. import artifacts as _A
 from ._vm import study_head
 from ._html import h, raw, fragment, register_css
@@ -52,43 +52,6 @@ register_css(r"""
 .axis{display:flex;justify-content:space-between;color:var(--muted);font-size:var(--t-xs);margin-top:4px}
 @media (max-width:760px){.insights{grid-template-columns:1fr}}
 
-/* ---- voices / Stimmen panel (synthesis cockpit) ---- */
-.vtools{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-start;justify-content:space-between;margin:0 0 12px}
-.vfilters{display:flex;flex-wrap:wrap;gap:10px 16px}
-.fgroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.flabel{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin-right:2px}
-.vchip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-sm);padding:3px 10px;font-size:var(--t-sm);color:var(--ink);cursor:pointer}
-.vchip:hover{background:var(--hover)}
-.vchip.on{background:var(--accent-weak);border-color:transparent;color:var(--accent);font-weight:600}
-.vchip i{width:8px;height:8px;border-radius:50%}
-.vtools-right{display:flex;gap:8px;align-items:center}
-.vsearch{width:180px;font-size:var(--t-sm)}.vsort{font-size:var(--t-sm)}
-.vdist{display:grid;grid-template-columns:64px 1fr;gap:8px 10px;align-items:center;margin:0 0 10px;font-size:var(--t-sm);color:var(--muted)}
-.vdist .dk{text-align:right}
-.vcount{font-size:var(--t-sm);color:var(--muted);margin:0 0 8px}
-.vrows{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--panel)}
-.vrow{border-bottom:1px solid var(--line-2)}.vrow:last-child{border-bottom:0}
-.vrow.hide{display:none}
-.vrow-main{display:grid;grid-template-columns:30px 1fr auto;gap:11px;align-items:center;padding:10px 13px;cursor:pointer}
-.vrow-main:hover{background:var(--hover)}
-.vmeta{min-width:0}
-.vline1{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.vline1 b{font-size:var(--t-body)}
-.varg{color:var(--muted);font-size:var(--t-sm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vrow.open .varg{white-space:normal}
-.vright{display:flex;align-items:center;gap:9px;flex-shrink:0;color:var(--muted)}
-.vchev{transition:transform 150ms;color:var(--muted);font-size:var(--t-xs)}
-.vrow.open .vchev{transform:rotate(90deg)}
-.segchip{font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 7px;background:var(--panel-2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.relbar{display:inline-flex;gap:2px;align-items:center}
-.relbar i{width:3px;height:11px;border-radius:1px;background:var(--line)}
-.relbar i.on{background:var(--accent)}
-.shiftbadge{display:inline-flex;align-items:center;gap:4px;font-size:var(--t-xs);border-radius:var(--radius-sm);padding:1px 8px;background:var(--accent-weak);color:var(--accent);font-weight:600}
-.vexp{padding:0 13px 13px 54px;font-size:var(--t-sm)}
-.vexp .vshift{background:var(--panel-2);border-radius:8px;padding:8px 11px;margin:0 0 9px}
-.vexp .vev{padding:5px 11px;margin:6px 0;color:var(--ink)}
-.vexp .vev a{color:var(--muted);font-size:var(--t-xs)}
-.vempty{padding:18px;color:var(--muted);font-size:var(--t-sm);text-align:center}
 """)
 
 # Co-located CSS (spec/roadmap.md R3): the synthesis report styles (was _SYN_STYLE in body).
@@ -326,155 +289,24 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
     return h("div", {"class_": "sec", "id": sid}, h("h2", {}, title), fragment(*blocks))
 
 
-# --------------------------- voices / Stimmen panel --------------------------- #
-_SENT_COLOR = {"positiv": "var(--green)", "bedingt": "var(--amber)", "neutral": "var(--muted)",
-               "skeptisch": "var(--skep)", "ablehnend": "var(--red)"}
-_SENT_ORDER = ["positiv", "bedingt", "neutral", "skeptisch", "ablehnend"]
-_REL_ORDER = ["stark", "teilweise", "kaum", "irrelevant"]
-_REL_LEVEL = {"stark": 4, "teilweise": 2, "kaum": 1, "irrelevant": 0}
-
-
-def _sent_color(s: str) -> str:
-    return _SENT_COLOR.get(s, "var(--muted)")
-
-
-def _relbar(rel: str) -> str:
-    lvl = _REL_LEVEL.get(rel, 2)
-    ticks = [h("i", {"class_": "on" if i < lvl else ""}) for i in range(4)]
-    return h("span", {"class_": "relbar", "title": t("relevance_tooltip", rel=rel)}, ticks)
-
-
-VOICES_JS = """
-<script>
-(function(){
-  var root=document.getElementById('voices'); if(!root) return;
-  var rows=[].slice.call(root.querySelectorAll('.vrow'));
-  var chips=[].slice.call(root.querySelectorAll('.vchip'));
-  var search=root.querySelector('.vsearch'), sortSel=root.querySelector('.vsort');
-  var dist=root.querySelector('.vdist'), count=root.querySelector('.vcount'), box=root.querySelector('.vrows');
-  var SENT=['positiv','bedingt','neutral','skeptisch','ablehnend'], REL=['stark','teilweise','kaum','irrelevant'];
-  var SC={positiv:'var(--green)',bedingt:'var(--amber)',neutral:'var(--muted)',skeptisch:'var(--skep)',ablehnend:'var(--red)'};
-  var RC={stark:'var(--accent)',teilweise:'var(--accent)',kaum:'var(--muted)',irrelevant:'var(--line)'};
-  function active(f){ return chips.filter(function(c){return c.dataset.facet===f && c.classList.contains('on');}).map(function(c){return c.dataset.val;}); }
-  function ok(r){ var fs=['sentiment','relevance','segment'];
-    for(var i=0;i<fs.length;i++){ var a=active(fs[i]); if(a.length && a.indexOf(r.dataset[fs[i]])<0) return false; }
-    var q=(search.value||'').trim().toLowerCase(); if(q && (r.dataset.text||'').indexOf(q)<0) return false; return true; }
-  function bar(keys,colors,counts,tot){ return '<span class="stacked thin">'+keys.map(function(k){var v=counts[k]||0; return v?('<i title="'+k+': '+v+'" style="width:'+(v/tot*100)+'%;background:'+colors[k]+'"></i>'):''; }).join('')+'</span>'; }
-  function render(){
-    var vis=[]; rows.forEach(function(r){var v=ok(r); r.classList.toggle('hide',!v); if(v)vis.push(r);});
-    var cs={},cr={}; vis.forEach(function(r){cs[r.dataset.sentiment]=(cs[r.dataset.sentiment]||0)+1; cr[r.dataset.relevance]=(cr[r.dataset.relevance]||0)+1;});
-    var tot=vis.length||1;
-    dist.innerHTML='<span class="dk">__SENT_LABEL__</span>'+bar(SENT,SC,cs,tot)+'<span class="dk">__REL_LABEL__</span>'+bar(REL,RC,cr,tot);
-    count.textContent='__NOFM__'.replace('{n}',vis.length).replace('{m}',rows.length);
-    var key=sortSel.value, so={positiv:0,bedingt:1,neutral:2,skeptisch:3,ablehnend:4}, ro={stark:0,teilweise:1,kaum:2,irrelevant:3};
-    vis.sort(function(a,b){
-      if(key==='name') return (a.dataset.name||'').localeCompare(b.dataset.name||'');
-      if(key==='relevance') return (ro[a.dataset.relevance]-ro[b.dataset.relevance])||(a.dataset.name||'').localeCompare(b.dataset.name||'');
-      if(key==='shift') return (b.dataset.shift-a.dataset.shift)||(so[a.dataset.sentiment]-so[b.dataset.sentiment]);
-      return (so[a.dataset.sentiment]-so[b.dataset.sentiment])||(a.dataset.name||'').localeCompare(b.dataset.name||''); });
-    vis.forEach(function(r){box.appendChild(r);});
-  }
-  chips.forEach(function(c){ c.addEventListener('click',function(){c.classList.toggle('on'); render();}); });
-  search.addEventListener('input',render); sortSel.addEventListener('change',render);
-  rows.forEach(function(r){ var m=r.querySelector('.vrow-main'); if(!m) return;
-    m.addEventListener('click',function(e){ if(e.target.closest('[data-star]'))return; r.classList.toggle('open'); var ex=r.querySelector('.vexp'); if(ex) ex.hidden=!r.classList.contains('open'); }); });
-  render();
-})();
-</script>
-"""
-
-
-def _voices_panel(store: Store, syn: dict) -> str | None:
-    voices = syn.get("voices", [])
-    if not voices:
-        return None
-    personas = {p["id"]: p for p in services.list_personas(store=store)}
-    segments = sorted({v.get("segment", "") for v in voices if v.get("segment")})
-
-    def chip(facet: str, val: str, color: str | None = None) -> str:
-        dot = h("i", {"style": f"background:{color}"}) if color else ""
-        return h("button", {"class_": "vchip", "data-facet": facet, "data-val": val}, val, dot)
-
-    filt = fragment(
-        h("div", {"class_": "fgroup"}, h("span", {"class_": "flabel"}, t("sentiment_label")),
-          *(chip("sentiment", s, _sent_color(s)) for s in _SENT_ORDER)),
-        h("div", {"class_": "fgroup"}, h("span", {"class_": "flabel"}, t("relevance_label")),
-          *(chip("relevance", r) for r in _REL_ORDER)),
-        (h("div", {"class_": "fgroup"}, h("span", {"class_": "flabel"}, t("segment")),
-          *(chip("segment", s) for s in segments)) if segments else None))
-    tools = h("div", {"class_": "vtools"}, h("div", {"class_": "vfilters"}, filt),
-              h("div", {"class_": "vtools-right"},
-                h("input", {"class_": "vsearch", "type": "text", "placeholder": t("search_arg_name")}),
-                h("select", {"class_": "vsort"},
-                  h("option", {"value": "sentiment"}, t("sort_by_sentiment")),
-                  h("option", {"value": "relevance"}, t("sort_relevance")),
-                  h("option", {"value": "name"}, t("name_label")),
-                  h("option", {"value": "shift"}, t("sort_shift_first")))))
-
-    rows = []
-    for v in voices:
-        pid = v.get("persona_id", "")
-        name = v.get("persona_name") or (personas.get(pid, {}) or {}).get("display_name") or pid
-        p = personas.get(pid) or {"id": pid, "display_name": name}
-        sent = v.get("sentiment", "neutral"); rel = v.get("relevance", "teilweise"); seg = v.get("segment", "")
-        sh = v.get("shift")
-        has_shift = bool(sh and (sh.get("trigger") or sh.get("to")))
-        shbadge = (h("span", {"class_": "shiftbadge"}, sh.get("from", ""), " → ", sh.get("to", ""))
-                   if has_shift else "")
-        segchip = h("span", {"class_": "segchip", "title": seg}, seg) if seg else ""
-        exp = []
-        if has_shift:
-            cid = sh.get("council_id", "")
-            link = fragment(" ", h("a", {"href": f'/councils/{cid}'}, t("to_council"))) if cid else ""
-            exp.append(h("div", {"class_": "vshift"}, h("strong", {}, t("shift_label", a=sh.get("from", ""), b=sh.get("to", ""))),
-                         " ", sh.get("trigger", ""), link))
-        for e in v.get("evidence", []):
-            cid = e.get("council_id", "")
-            link = fragment(" ", h("a", {"href": f'/councils/{cid}'}, t("to_council"))) if cid else ""
-            exp.append(h("div", {"class_": "vev"}, "„", e.get("quote", ""), "“", link))
-        exp_html = h("div", {"class_": "vexp", "hidden": True}, fragment(*exp)) if exp else ""
-        text = f'{name} {v.get("key_argument","")} {seg}'.lower()
-        rows.append(h("div", {"class_": "vrow", "data-sentiment": sent, "data-relevance": rel, "data-segment": seg,
-                              "data-name": name, "data-shift": "1" if has_shift else "0", "data-text": text},
-                      h("div", {"class_": "vrow-main"}, h("span", {"class_": "vav"}, _avatar(p, 30)),
-                        h("div", {"class_": "vmeta"},
-                          h("div", {"class_": "vline1"}, h("b", {}, name), _label(sent, _sent_color(sent)), _relbar(rel), shbadge),
-                          h("div", {"class_": "varg"}, v.get("key_argument", ""))),
-                        h("div", {"class_": "vright"}, segchip, raw(_star("persona", pid, name, f"/personas/{pid}")),
-                          h("span", {"class_": "vchev"}, raw(_icon("caretRight"))))),
-                      exp_html))
-    js = (VOICES_JS.replace("__SENT_LABEL__", t("sentiment_label"))
-          .replace("__REL_LABEL__", t("relevance_label"))
-          .replace("__NOFM__", t("voices_n_of_m", n="{n}", m="{m}")))
-    return h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices_count", n=len(voices))),
-             h("p", {"class_": "ihint"}, t("voices_intro")),
-             h("div", {"class_": "voices", "id": "voices"}, tools, h("div", {"class_": "vdist"}),
-               h("div", {"class_": "vcount"}), h("div", {"class_": "vrows"}, fragment(*rows)))) + raw(js)
-
-
 def _persona_voices_html(store: Store, pid: str) -> str:
-    out = []
+    """This persona's voice across the syntheses — rendered as the SAME .turn statement cards as every
+    other voice (one consolidated primitive); each links to its synthesis via a ref chip."""
+    cards = []
     for syn in store.list_syntheses():
         for v in syn.get("voices", []):
             if v.get("persona_id") != pid:
                 continue
-            sent = v.get("sentiment", "neutral")
-            sh = v.get("shift")
-            shb = (h("span", {"class_": "shiftbadge"}, sh.get("from", ""), " → ", sh.get("to", ""))
-                   if (sh and (sh.get("trigger") or sh.get("to"))) else "")
-            out.append(h("div", {"class_": "vrow"},
-                h("div", {"class_": "vrow-main", "style": "cursor:default"}, h("span", {}),
-                  h("div", {"class_": "vmeta"},
-                    h("div", {"class_": "vline1"},
-                      h("a", {"href": f'/syntheses/{syn["id"]}'}, h("b", {}, syn["title"])),
-                      _label(sent, _sent_color(sent)), _relbar(v.get("relevance", "teilweise")), shb),
-                    h("div", {"class_": "varg", "style": "white-space:normal"}, v.get("key_argument", ""))),
-                  h("div", {"class_": "vright"}))))
+            st = _A.statement(pid, v.get("key_argument", ""),
+                              stance=_A.resolve_stance(v.get("sentiment")) if v.get("sentiment") else None,
+                              relevance=v.get("relevance"), shift=v.get("shift") or None,
+                              refs=[_A.ref("synthesis", id=syn["id"], quote=syn["title"])])
+            cards.append(render_statement(st, store))
             break
-    if not out:
+    if not cards:
         return ""
     return h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices_in_analyses")),
-             h("div", {"class_": "vrows"}, fragment(*out)))
+             h("div", {"style": "display:flex;flex-direction:column;gap:10px"}, fragment(*cards)))
 
 
 # --------------------------- synthesis report --------------------------- #
@@ -584,7 +416,7 @@ def _synthesis_html(store: Store, syn: dict):
 
     # ---- slim meta strip (replaces the old Eigenschaften rail) ----
     cs = Counter(v.get("sentiment", "neutral") for v in syn.get("voices", []))
-    smeta = " · ".join(f"{cs[k]} {k}" for k in _SENT_ORDER if cs.get(k))
+    smeta = " · ".join(f"{cs[k]} {k}" for k in ("positiv", "bedingt", "neutral", "skeptisch", "ablehnend") if cs.get(k))
     mchips = [_label(t("completed") if done else t("running"), "var(--green)" if done else "var(--amber)")]
     mchips.append(h("span", {"class_": "mchip"}, f'{len(syn.get("council_ids", []))} {t("councils")}'))
     if syn.get("iterations"):
