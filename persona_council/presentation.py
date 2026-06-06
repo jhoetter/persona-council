@@ -132,6 +132,24 @@ def discriminator_tags(type_tag: str) -> list[str]:
 
 
 @lru_cache(maxsize=1)
+def edge_colors() -> dict[str, str]:
+    """Graph edge-type → color, from suggestions/edge_types.json (DATA; no edge color hardcoded in
+    engine/UI — Layer 2). Empty if the file is missing; callers fall back to a generic grey."""
+    import json
+    p = suggestions_dir() / "edge_types.json"
+    out: dict[str, str] = {}
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return out
+        for it in data.get("items", []) or []:
+            if it.get("tag"):
+                out[it["tag"]] = (it.get("presentation") or {}).get("color") or "#9aa0a6"
+    return out
+
+
+@lru_cache(maxsize=1)
 def ideation_lenses() -> list[dict[str, Any]]:
     """SUGGESTED creativity lenses (DATA) surfaced on ideation steps to push the solution space toward
     non-obvious, innovative concepts (analogy, make-the-invisible-experienceable→simulation, reversal,

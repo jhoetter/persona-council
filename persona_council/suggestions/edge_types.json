@@ -1,0 +1,13 @@
+{
+  "kind": "edge_types",
+  "note": "Graph edge types + presentation (color) — the DATA source for how a StudyEdge/plan-evidence relation renders in the project graph + legend (spec/unified-artifact-schema-rollout.md Layer 2). Resolved via presentation.edge_colors(); no edge-type color hardcoded in engine/UI. Invent a type by adding an item.",
+  "items": [
+    {"tag": "spawned_from", "presentation": {"color": "#6b7cff"}},
+    {"tag": "refines",      "presentation": {"color": "#34a853"}},
+    {"tag": "contrasts",    "presentation": {"color": "#ea4335"}},
+    {"tag": "depends_on",   "presentation": {"color": "#a142f4"}},
+    {"tag": "duplicates",   "presentation": {"color": "#9aa0a6"}},
+    {"tag": "answers",      "presentation": {"color": "#f29900"}},
+    {"tag": "informs",      "presentation": {"color": "#5e6ad2"}}
+  ]
+}

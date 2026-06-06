@@ -473,9 +473,9 @@ def _empty_state(title: str, message: str) -> str:
              h("p", {}, h("a", {"class_": "btn", "href": "/projects"}, raw(_icon("back")), " ", t("projects")))))
 
 
-_EDGE_COLORS = {"spawned_from": "#6b7cff", "refines": "#34a853", "contrasts": "#ea4335",
-                "depends_on": "#a142f4", "duplicates": "#9aa0a6", "answers": "#f29900",
-                "informs": "#5e6ad2"}  # the diamond-to-diamond spine (GAP-6)
+# Edge-type → color is DATA (suggestions/edge_types.json via presentation.edge_colors); no edge color
+# hardcoded here (Layer 2). The spine type (GAP-6) "informs" lives in that file like the rest.
+_EDGE_COLORS = _pres.edge_colors()
 _THEME_PALETTE = ["#6b7cff", "#34a853", "#f29900", "#a142f4", "#ea4335", "#00897b", "#5f6368", "#d81b60"]
 
 

@@ -17,7 +17,7 @@ from ...storage import Store
 from ...presentation import glyph_icon
 from .._i18n import t, _lang
 from .._components import (
-    _esc, _icon, _avatar, _label, _pills, _md, _layout, _empty_state, _doc, _list_page,
+    _esc, _icon, _avatar, _label, _pills, _md, _prose, _layout, _empty_state, _doc, _list_page,
     _star, _stance_color, _EDGE_COLORS, _theme_color, _artifact_present, _study_lead, _hero,
     _display_title,
 )

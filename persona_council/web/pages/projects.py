@@ -79,7 +79,7 @@ def register_projects(app) -> None:
                     r = s.get("reaction", {})
                     gv = _icon("check") if s.get("grounded_verified") else _icon("circle")
                     nm = r.get("persona") or (store.get_persona(s.get("persona_id", "")) or {}).get("display_name") or s.get("persona_id", "")
-                    sl.append(h("li", {}, h("b", {}, nm), ": ", str(r.get("verdict") or r.get("reaction_text") or "")[:80],
+                    sl.append(h("li", {}, h("b", {}, nm), ": ", raw(_prose(r.get("verdict") or r.get("reaction_text") or "")),
                                 " ", h("span", {"class_": "muted small"}, raw(gv), " grounded")))
                 sl_html = (h("ul", {"style": "margin:4px 0 0 18px"}, fragment(*sl)) if sl
                            else h("div", {"class_": "muted small"}, "— keine Sessions —"))
