@@ -27,6 +27,7 @@ from ._routes_pages import (  # noqa: F401  (public surface preserved)
     _event_chip, _period_calendar_html, _memory_html,
 )
 from ._routes_api import register_api  # noqa: F401
+from ._routes_lists import register_lists  # noqa: F401
 
 
 def create_app():
@@ -64,6 +65,7 @@ def create_app():
         return response
 
     register_pages(app)
+    register_lists(app)
     register_api(app)
     return app
 

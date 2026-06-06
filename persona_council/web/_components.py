@@ -259,6 +259,22 @@ _STUDY_LEAD_CSS = register_css(
     ".qa-q::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}")
 
 
+_HERO_CSS = register_css(
+    ".hero h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650}"
+    ".hero h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}"
+    ".hero .sub{color:var(--muted);font-size:14px;margin:0 0 4px;max-width:74ch}")
+
+
+def _hero(title, *, sub=None, icon: str | None = None, hid: str | None = None, top=None) -> str:
+    """The page hero used by every detail page: optional `top` slot (a pill, trusted HTML), a title
+    (text → escaped, or Safe HTML kept) with an optional leading `icon`, and an optional `sub`
+    (text → escaped, or Safe HTML like a chip line). One component, co-located CSS."""
+    return h("div", {"class_": "hero", "id": hid},
+             raw(top) if top else None,
+             h("h1", {}, raw(_icon(icon)) if icon else None, title),
+             h("p", {"class_": "sub"}, sub) if sub else None)
+
+
 def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
                 qlabel: str = "", qid: str = "exec") -> str:
     """Unified Question → Answer/Finding lead — the SAME typographic block on every study page

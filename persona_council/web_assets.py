@@ -276,9 +276,7 @@ h1,h2,h3,h4{color:var(--ink)}
 .prop{display:flex;align-items:flex-start;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line-2);font-size:12.5px}
 .prop:last-child{border-bottom:0}.prop .k{color:var(--muted);width:84px;flex-shrink:0}
 .prop .v{color:var(--ink);min-width:0;font-weight:500}
-.hero h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650}
-.hero h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}
-.hero .sub{color:var(--muted);font-size:14px;margin:0 0 4px;max-width:74ch}
+/* .hero h1/.sub now co-located with the _hero component (component-SSR C3) */
 .mdtable{border-collapse:collapse;width:100%;margin:16px 0;font-size:13px;line-height:1.4}
 .mdtable th,.mdtable td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
 .mdtable th{background:var(--panel-2);font-weight:650;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}

@@ -5,11 +5,14 @@ from datetime import date, timedelta
 
 from .. import services
 from ..storage import Store
-from persona_icons import hifi as _persona_hifi, hifi_names as _hifi_names
+from persona_icons import (
+    hifi as _persona_hifi, hifi_names as _hifi_names,
+    icon as _persona_icon_fn, names as _icon_names,
+)
 from ._i18n import t, _lang
 from ._components import (
     _esc, _icon, _avatar, _label, _pills, _md, _layout, _empty_state, _doc, _list_page,
-    _star, _stance_color, _EDGE_COLORS, _theme_color, _artifact_present, _study_lead,
+    _star, _stance_color, _EDGE_COLORS, _theme_color, _artifact_present, _study_lead, _hero,
 )
 from ._synthesis import (
     _area, _vote_label, _sentiment_section, _synthesis_html, _persona_voices_html,
@@ -19,6 +22,7 @@ from ..presentation import glyph_icon
 from ._detail import _relations_html, _properties_html, _session_card
 from ._rail import _page_rail
 from ._routes_lists import _projects_page, _persona_row
+from ._html import raw
 
 
 # ----------------------------- calendar helpers ----------------------------- #
@@ -114,7 +118,7 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
     mem_title = t("memory_title", name=_esc(p["display_name"]))
     recall_ph = _esc(t("recall_placeholder"))
     main = f"""
-    <div class="hero"><h1 style="display:flex;align-items:center;gap:9px">{_icon("memory")} {mem_title}</h1><p class="sub">{t("memory_sub")}</p></div>
+    {_hero(mem_title, sub=t("memory_sub"), icon="memory")}
     <div class="card"><h3>{t("quality")}</h3><p><strong>{t("structure")}:</strong> {_esc(struct["verdict"])} · {struct_rows}</p><p><strong>{t("critic")}:</strong> {crit_rows}</p></div>
     <div class="grid two">
       <form method="get" class="card"><h3>{t("time_travel")}</h3><input type="date" name="as_of" value="{_esc(as_of or '')}"> <button class="btn">{t("show_state")}</button></form>
@@ -133,28 +137,40 @@ def register_pages(app) -> None:
 
     @app.get("/icons", response_class=HTMLResponse)
     def _icons_catalog():
-        # Internal catalog / playground for the shared persona-icons hi-fi set.
-        # Each tile is `.pi-hover`, so hovering plays the icon's animation (CSS
-        # injected into <head> via _layout). Honors prefers-reduced-motion.
+        # Internal catalog / playground for the shared persona-icons set (hi-fi +
+        # regular). Each tile is `.pi-hover` and every icon is rendered with
+        # animate=True, so hovering plays the animation (CSS injected into <head>
+        # via _layout). In real usage animation is opt-in; honors
+        # prefers-reduced-motion.
         store = Store()
-        cards = "".join(
-            '<button class="pi-hover" type="button" '
-            'style="display:flex;flex-direction:column;align-items:center;gap:10px;'
-            'padding:22px 8px 14px;border:1px solid rgba(128,128,128,.25);'
-            'border-radius:12px;background:transparent;color:inherit;cursor:pointer;font:inherit">'
-            f'{_persona_hifi(name, 56)}'
-            '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;opacity:.55">'
-            f'{_esc(name)}</span></button>'
-            for name in _hifi_names()
-        )
+
+        def _tile(svg: str, name: str) -> str:
+            return (
+                '<button class="pi-hover" type="button" '
+                'style="display:flex;flex-direction:column;align-items:center;gap:10px;'
+                'padding:20px 8px 12px;border:1px solid rgba(128,128,128,.25);'
+                'border-radius:12px;background:transparent;color:inherit;cursor:pointer;font:inherit">'
+                f'{svg}'
+                '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;opacity:.55">'
+                f'{_esc(name)}</span></button>'
+            )
+
+        grid = ('display:grid;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));'
+                'gap:13px;max-width:980px;margin:0 auto;padding:12px 24px 36px')
+        head = ('max-width:980px;margin:18px auto 0;padding:0 24px;'
+                'font:600 12px/1 ui-monospace,monospace;letter-spacing:.12em;'
+                'text-transform:uppercase;opacity:.5')
+        hi_cards = "".join(_tile(_persona_hifi(n, 56, animate=True), n) for n in _hifi_names())
+        rg_cards = "".join(_tile(_persona_icon_fn(n, animate=True), n) for n in _icon_names())
         body = (
-            '<div style="max-width:960px;margin:0 auto;padding:24px 24px 4px">'
+            # bump the council's 16px svg.ic so regular icons read in the catalog
+            '<style>.pi-cat-reg .ic{width:26px;height:26px}</style>'
+            '<div style="max-width:980px;margin:0 auto;padding:24px 24px 4px">'
             '<h1 style="margin:0 0 4px">persona-icons</h1>'
             '<p class="muted" style="margin:0">Hover (or keyboard-focus) any tile to play its '
-            'animation. Honors prefers-reduced-motion.</p></div>'
-            '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));'
-            'gap:14px;max-width:960px;margin:0 auto;padding:12px 24px 48px">'
-            f'{cards}</div>'
+            'animation. Animation is opt-in (animate=True); honors prefers-reduced-motion.</p></div>'
+            f'<h2 style="{head}">Hi-fi · 48</h2><div style="{grid}">{hi_cards}</div>'
+            f'<h2 style="{head}">Regular · 24</h2><div class="pi-cat-reg" style="{grid}">{rg_cards}</div>'
         )
         return _layout("Icons", body, store, active="")
 
@@ -197,7 +213,7 @@ def register_pages(app) -> None:
                     if act_pts else "")
         voices = _persona_voices_html(store, p["id"])
         main = f"""
-        <div class="hero"><h1>{_esc(p["display_name"])}</h1><p class="sub">{_esc(p["role"]["title"])} · {_esc(p["company_context"]["industry"])}</p></div>
+        {_hero(p["display_name"], sub=f'{p["role"]["title"]} · {p["company_context"]["industry"]}')}
         <div class="identity"><div>{avatar}</div><div>
           <div class="card"><h3>{t("current_state")}</h3><p><strong>{_esc(state["current_activity"])}</strong></p><p class="muted">{_esc(state["collaboration_mode"])}</p><p class="thought">{_esc(state["current_thought"])}</p></div>
         </div></div>
@@ -240,7 +256,7 @@ def register_pages(app) -> None:
         p = data["persona"]; a = data["activity"]
         alone_label = t("alone")
         main = f"""
-        <div class="hero"><h1>{_esc(a["task"])}</h1><p class="sub">{_esc(a["timestamp"])} · {_esc(a["event_type"])} · {_esc(a.get("collaboration_mode","unknown"))}</p></div>
+        {_hero(a["task"], sub=f'{a["timestamp"]} · {a["event_type"]} · {a.get("collaboration_mode","unknown")}')}
         <div class="grid two">
           <div class="card"><h3>{t("what_happened")}</h3><p>{_esc(a.get("what_happened", a["summary"]))}</p></div>
           <div class="card"><h3>{t("thought")}</h3><p class="thought">{_esc(a.get("persona_thought","—"))}</p></div></div>
@@ -407,8 +423,8 @@ def register_pages(app) -> None:
                           f'<div class="es-prose">&bdquo;{_esc(motion)}&ldquo;</div>'
                           f'<p class="muted small">{help_}</p></div>') if motion else ""
             sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
-        main = (f'<div class="hero" id="sec-question"><h1>{_esc(session["prompt"])}</h1>'
-                f'<p class="sub">{t("council_kicker_" + mode, n=n_voices)} · {_esc(session["selection_reason"])}</p></div>'
+        council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
+        main = (f'{_hero(session["prompt"], sub=council_sub, hid="sec-question")}'
                 f'{lead_block}'
                 f'{_study_lead(exec_html, t("council_finding"))}'
                 f'{sentiment}'
@@ -669,9 +685,8 @@ def register_pages(app) -> None:
             ("dot", t("type_h"), _esc(pr.get("short", sec.get("kind", "")))),
             ("projects", t("project"), f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>'),
         ], aside=True)
-        main = (f'<div class="hero"><h1>{_esc(sec["title"])}</h1>'
-                f'<div class="sub" style="display:flex;align-items:center;gap:8px">{chip}'
-                f'<span>{t("n_nodes", n=len(members))}</span></div>{note_sub}</div>'
+        sec_sub = raw(f'{chip} <span class="muted small">{t("n_nodes", n=len(members))}</span>')
+        main = (f'{_hero(sec["title"], sub=sec_sub)}{note_sub}'
                 f'<div style="margin-top:8px">{"".join(rows) or _empty_state(t("section"), t("no_members"))}</div>')
         return _layout(sec["title"], _doc(main, rail=sprops), store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
@@ -697,10 +712,9 @@ def register_pages(app) -> None:
             ("projects", t("project"), proj_link),
         ], aside=True)
         nrel = _relations_html(store, f"note:{note_id}", proj["id"], aside=True)
-        main = (f'<div class="hero" id="sec-content">'
-                f'<div style="margin-bottom:6px"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
-                f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(klabel)}</span></div>'
-                f'<h1>{_esc(note.get("title",""))}</h1></div>'
+        pill = (f'<div style="margin-bottom:6px"><span class="pill" style="border-color:{pr["color"]};color:{pr["color"]}">'
+                f'{_esc((pr.get("glyph") + " ") if pr.get("glyph") else "")}{_esc(klabel)}</span></div>')
+        main = (f'{_hero(note.get("title",""), hid="sec-content", top=pill)}'
                 f'<div class="es-prose" style="margin-top:4px">{_md(note.get("text",""))}</div>')
         nrail = [("sec-content", klabel)]
         if nprops:
@@ -711,36 +725,6 @@ def register_pages(app) -> None:
         return _layout(note.get("title") or klabel, body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (klabel, None)],
                        active=active)
-
-    @app.get("/prototypes", response_class=HTMLResponse)
-    def prototypes_list() -> str:
-        store = Store()
-        rows = []
-        for p in store.list_prototypes():
-            ap = _artifact_present(p)
-            proj = store.get_research_project(p["project_id"]) if p.get("project_id") else None
-            nsess = len(store.list_prototype_sessions(prototype_id=p["id"]))
-            right = ((f'<span class="muted small">{_esc(proj["title"])}</span>' if proj else "") + (f'<span>{t("sessions")} {nsess}</span>' if nsess else "") + (f'<span class="muted small">{_esc(p["version"])}</span>' if p.get("version") else ""))
-            rows.append(f'<a class="row" href="/prototypes/{_esc(p["slug"])}"><span class="rico" style="color:{ap["color"]}">{_icon("prototype")}</span>'
-                        f'<span class="title">{_esc(p["name"])}<span class="muted small"> · {_esc(ap["disc"] or ap["label"])}</span></span>'
-                        f'<span class="right">{right}{_star("prototype", p["id"], p["name"], f"/prototypes/{p["slug"]}")}</span></a>')
-        return _list_page(store, title=t("prototypes_h"), lead=t("prototypes_lead"), rows=rows,
-                          empty_icon="prototype", empty_msg=t("no_prototypes"), active="prototype")
-
-    @app.get("/concepts", response_class=HTMLResponse)
-    def concepts_list() -> str:
-        store = Store()
-        rows = []
-        for proj in store.list_research_projects():
-            for n in services.list_notes(proj["id"], store=store):
-                if (n.get("kind") or "note") != "concept":
-                    continue
-                rows.append(f'<a class="row" href="/concepts/{_esc(n["id"])}"><span class="rico" style="color:#ea4335">{_icon("bulb")}</span>'
-                            f'<span class="title">{_esc(n.get("title", ""))}</span>'
-                            f'<span class="right"><span class="muted small">{_esc(proj["title"])}</span>'
-                            f'{_star("concept", n["id"], n.get("title", ""), f"/concepts/{n['id']}")}</span></a>')
-        return _list_page(store, title=t("concepts"), lead=t("concepts_lead"), rows=rows,
-                          empty_icon="bulb", empty_msg=t("no_concepts"), active="concept")
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:
@@ -760,9 +744,10 @@ def register_pages(app) -> None:
         sessions = store.list_prototype_sessions(prototype_id=p["id"])
         sessions_html = ("".join(_session_card(store, s) for s in sessions)
                          or f'<div class="muted small">— {t("prototypes_h")}: {t("no_sessions")} —</div>')
+        proto_title = raw(f'{_esc(p["name"])} {fid}')
+        proto_sub = f'{p.get("version","")} · {slug}'
         main = (
-            f'<div class="hero"><h1>{_icon("prototype")}{_esc(p["name"])} {fid}</h1>'
-            f'<p class="sub">{_esc(p.get("version",""))} · {_esc(slug)}</p>'
+            f'{_hero(proto_title, icon="prototype", sub=proto_sub)}'
             f'<p style="margin:8px 0 16px"><a class="btn" href="{src}" target="_blank">{_icon("projects")} {t("open_in_new_tab")} {_icon("external")}</a></p>'
             f'<div class="protoframe"><iframe src="{src}" title="{_esc(p["name"])}" loading="lazy"></iframe></div>'
             f'<div class="sec" id="sec-sessions" style="margin-top:22px"><h2>{t("prototypes_h")} · {t("sessions")} ({len(sessions)})</h2>'
