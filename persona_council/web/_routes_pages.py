@@ -180,34 +180,39 @@ def register_pages(app) -> None:
         selected_date = date_value or (data["daily_summaries"][-1]["date"] if data["daily_summaries"] else date.today().isoformat())
         view = view if view in {"day", "week", "month", "year"} else "day"
         period = services.get_calendar_period(p["id"], selected_date, view, store)
-        avatar = f'<img class="avatar" src="/{_esc(p["avatar"]["path"])}" alt="">' if p.get("avatar") else f'<div>{_avatar(p, 120)}</div>'
-        date_links = "".join(
-            f'<a class="pill" href="/personas/{_esc(p["id"])}?date={_esc(s["date"])}&view={_esc(view)}">{_esc(s["date"])}</a>'
-            for s in data["daily_summaries"][-10:])
+        avatar = (h("img", {"class_": "avatar", "src": f'/{p["avatar"]["path"]}', "alt": ""})
+                  if p.get("avatar") else h("div", {}, _avatar(p, 120)))
+        date_links = fragment(*(
+            h("a", {"class_": "pill", "href": f'/personas/{p["id"]}?date={s["date"]}&view={view}'}, s["date"])
+            for s in data["daily_summaries"][-10:]))
         daycount = Counter()
         for e in store.list_experience_events(p["id"]):
             ts = e.get("timestamp") or ""
             if len(ts) >= 10:
                 daycount[ts[:10]] += 1
         act_pts = [(d[5:], daycount[d]) for d in sorted(daycount)]
-        activity = (f'<div class="sec" id="aktivitaet"><h2>{t("activity_over_time")}</h2>'
-                    f'<p class="ihint">{t("activities_per_day", n=sum(daycount.values()))}</p>{_area(act_pts)}</div>'
+        activity = (h("div", {"class_": "sec", "id": "aktivitaet"}, h("h2", {}, t("activity_over_time")),
+                      h("p", {"class_": "ihint"}, t("activities_per_day", n=sum(daycount.values()))), _area(act_pts))
                     if act_pts else "")
         voices = _persona_voices_html(store, p["id"])
-        main = f"""
-        {_hero(p["display_name"], sub=f'{p["role"]["title"]} · {p["company_context"]["industry"]}')}
-        <div class="identity"><div>{avatar}</div><div>
-          <div class="card"><h3>{t("current_state")}</h3><p><strong>{_esc(state["current_activity"])}</strong></p><p class="muted">{_esc(state["collaboration_mode"])}</p><p class="thought">{_esc(state["current_thought"])}</p></div>
-        </div></div>
-        {voices}
-        {activity}
-        <div class="sec" id="ziele"><h2>{t("goals")}</h2>{_pills(p["goals"])}</div>
-        <div class="sec" id="pains"><h2>{t("pain_points")}</h2>{_pills([x["issue"] for x in data["pain_points"]] or p["pain_points"])}</div>
-        <div class="sec" id="tools"><h2>{t("tools")}</h2>{_pills(p["tools"])}</div>
-        <div class="sec" id="bez"><h2>{t("relationships")}</h2>{''.join(f'<p><strong>{_esc(r["name"])}</strong> <span class="muted">— {_esc(r["type"])}: {_esc(r["friction"])}</span></p>' for r in p["relationships"])}</div>
-        <div class="sec" id="cal"><h2>{t("calendar")}</h2><p class="muted">{date_links or t("no_days_yet")}</p>
-        {_calendar_tabs(p["id"], selected_date, view)}{_period_calendar_html(p["id"], selected_date, view, period)}</div>
-        """
+        rel_rows = fragment(*(h("p", {}, h("strong", {}, r["name"]), " ",
+                              h("span", {"class_": "muted"}, f'— {r["type"]}: {r["friction"]}')) for r in p["relationships"]))
+        main = fragment(
+            _hero(p["display_name"], sub=f'{p["role"]["title"]} · {p["company_context"]["industry"]}'),
+            h("div", {"class_": "identity"}, h("div", {}, avatar), h("div", {},
+              h("div", {"class_": "card"}, h("h3", {}, t("current_state")),
+                h("p", {}, h("strong", {}, state["current_activity"])), h("p", {"class_": "muted"}, state["collaboration_mode"]),
+                h("p", {"class_": "thought"}, state["current_thought"])))),
+            raw(voices), activity,
+            h("div", {"class_": "sec", "id": "ziele"}, h("h2", {}, t("goals")), raw(_pills(p["goals"]))),
+            h("div", {"class_": "sec", "id": "pains"}, h("h2", {}, t("pain_points")),
+              raw(_pills([x["issue"] for x in data["pain_points"]] or p["pain_points"]))),
+            h("div", {"class_": "sec", "id": "tools"}, h("h2", {}, t("tools")), raw(_pills(p["tools"]))),
+            h("div", {"class_": "sec", "id": "bez"}, h("h2", {}, t("relationships")), rel_rows),
+            h("div", {"class_": "sec", "id": "cal"}, h("h2", {}, t("calendar")),
+              h("p", {"class_": "muted"}, date_links or t("no_days_yet")),
+              raw(_calendar_tabs(p["id"], selected_date, view)),
+              raw(_period_calendar_html(p["id"], selected_date, view, period))))
         props = _properties_html([
             ("personas", t("role"), _esc(p["role"]["title"])),
             ("projects", t("industry"), _esc(p["company_context"]["industry"])),
@@ -263,15 +268,16 @@ def register_pages(app) -> None:
         rows = []
         for c in services.list_councils(store=store):
             v = c["votes"]; tot = max(1, sum(v.values()))
-            bar = (f'<span class="votebar" title="SUPPORT {v["SUPPORT"]} · MAYBE {v["MAYBE"]} · OPPOSE {v["OPPOSE"]}">'
-                   f'<i style="width:{v["SUPPORT"]/tot*100}%;background:var(--green)"></i>'
-                   f'<i style="width:{v["MAYBE"]/tot*100}%;background:var(--amber)"></i>'
-                   f'<i style="width:{(v["OPPOSE"]+v["ABSTAIN"])/tot*100}%;background:var(--muted)"></i></span>')
-            rows.append(f'<a class="row" href="/councils/{_esc(c["id"])}">'
-                        f'<span class="rico" style="color:var(--blue)">{_icon("councils")}</span>'
-                        f'<span class="title">{_esc(c["prompt"])}</span>'
-                        f'<span class="right">{bar}<span>{c["personas"]} {t("personas")}</span><span>{_esc(c["created_at"][:10])}</span>'
-                        f'{_star("council", c["id"], c["prompt"][:60], f"/councils/{c['id']}")}</span></a>')
+            bar = h("span", {"class_": "votebar", "title": f'SUPPORT {v["SUPPORT"]} · MAYBE {v["MAYBE"]} · OPPOSE {v["OPPOSE"]}'},
+                    h("i", {"style": f'width:{v["SUPPORT"]/tot*100}%;background:var(--green)'}),
+                    h("i", {"style": f'width:{v["MAYBE"]/tot*100}%;background:var(--amber)'}),
+                    h("i", {"style": f'width:{(v["OPPOSE"]+v["ABSTAIN"])/tot*100}%;background:var(--muted)'}))
+            rows.append(h("a", {"class_": "row", "href": f'/councils/{c["id"]}'},
+                          h("span", {"class_": "rico", "style": "color:var(--blue)"}, raw(_icon("councils"))),
+                          h("span", {"class_": "title"}, c["prompt"]),
+                          h("span", {"class_": "right"}, bar, h("span", {}, f'{c["personas"]} {t("personas")}'),
+                            h("span", {}, c["created_at"][:10]),
+                            raw(_star("council", c["id"], c["prompt"][:60], f"/councils/{c['id']}")))))
         return _list_page(store, title=t("councils"), lead=t("councils_lead"), rows=rows,
                           empty_icon="councils", empty_msg=t("no_councils"), active="councils")
 
@@ -451,12 +457,14 @@ def register_pages(app) -> None:
         rows = []
         for s in store.list_syntheses():
             done = s.get("status", "done") == "done"
-            rows.append(f'<a class="row" href="/syntheses/{_esc(s["id"])}">'
-                        f'<span class="rico" style="color:var(--violet)">{_icon("syntheses")}</span>'
-                        f'<span class="title">{_esc(s["title"])}</span>'
-                        f'<span class="right">{_label(t("done") if done else t("running"), "var(--green)" if done else "var(--amber)")}'
-                        f'<span>{len(s.get("council_ids", []))} {t("councils")}</span><span>{_esc(s["created_at"][:10])}</span>'
-                        f'{_star("synthesis", s["id"], s["title"], f"/syntheses/{s['id']}")}</span></a>')
+            rows.append(h("a", {"class_": "row", "href": f'/syntheses/{s["id"]}'},
+                          h("span", {"class_": "rico", "style": "color:var(--violet)"}, raw(_icon("syntheses"))),
+                          h("span", {"class_": "title"}, s["title"]),
+                          h("span", {"class_": "right"},
+                            _label(t("done") if done else t("running"), "var(--green)" if done else "var(--amber)"),
+                            h("span", {}, f'{len(s.get("council_ids", []))} {t("councils")}'),
+                            h("span", {}, s["created_at"][:10]),
+                            raw(_star("synthesis", s["id"], s["title"], f"/syntheses/{s['id']}")))))
         return _list_page(store, title=t("syntheses"), lead=t("syntheses_lead"), rows=rows,
                           empty_icon="syntheses", empty_msg=t("no_synthesis"), active="syntheses")
 
