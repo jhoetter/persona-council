@@ -48,24 +48,18 @@ DOCS = [
      "The **report node**: folds councils into a big picture, key problems and recommendations.",
      ["Empfehlungen mit Aufwand·Nutzen", "Verkettet zu einem wachsenden Studien-Bogen"],
      ["Recommendations scored by effort·impact", "Chains into one growing study arc"]),
-    ("concept", "bulb", "concepts",
-     "Eine **Lösungs-Idee** (_Develop_) — dieselbe leichte Node wie eine Notiz, aber mit `kind: concept`; "
-     "bereit, von einem Council geprüft oder als Artefakt gebaut zu werden.",
-     "A **solution idea** (_Develop_) — the same lightweight node as a Note but with `kind: concept`; "
-     "ready to be evaluated by a council or built as an artefact.",
-     ["Brücke von Insight zu Artefakt", "Hat eine eigene Liste (Sidebar)"],
-     ["The bridge from insight to artefact", "Has its own list (sidebar)"]),
     ("prototype", "prototype", "prototypes_h",
      "Ein **lauffähiges Artefakt** (von grob bis hochauflösend), das Personas testen.",
      "A **runnable artefact** (low to high fidelity) that personas test.",
      ["Sessions erfassen geerdete Reaktionen", "Zeigt die Fidelity-Iteration im Develop-Diamanten"],
      ["Sessions capture grounded reactions", "Shows the fidelity iteration in the Develop diamond"]),
     ("note", "panel", None,
-     "Ein **leichtgewichtiges Signal** (_Discover_) — eine rohe Beobachtung im Projekt-Graph. Gleiche Node "
-     "wie ein Konzept, nur `kind: note` (rohe Beobachtung vs. ausgearbeitete Idee).",
-     "A **lightweight signal** (_Discover_) — a raw observation in the project graph. Same node as a "
-     "Concept, just `kind: note` (raw observation vs. worked-out idea).",
-     ["Methodologie-frei, jederzeit erfassbar"], ["Methodology-free, capture anytime"]),
+     "Die **leichtgewichtige Node** im Projekt-Graph — von der rohen Beobachtung bis zur ausgearbeiteten "
+     "Lösungs-Idee. Wird sie gebaut, verlinkt sie auf ihren Prototyp.",
+     "The **lightweight node** in the project graph — from a raw observation to a worked-out solution "
+     "idea. Once built, it links to its prototype.",
+     ["Methodologie-frei, jederzeit erfassbar", "Kann von einem Council geprüft / als Artefakt gebaut werden"],
+     ["Methodology-free, capture anytime", "Can be evaluated by a council / built as an artefact"]),
     ("section", "squareGrid", "section",
      "Eine **methodologie-unabhängige Gruppierung** von Graph-Knoten (ein Frame/Cluster).",
      "A **methodology-independent grouping** of graph nodes (a frame/cluster).",
@@ -145,7 +139,7 @@ def _projects_page() -> str:
             h("span", {}, f'{p["councils"]} {t("councils")}') if p.get("councils") else None,
             h("span", {}, f'{p["studies"]} {t("syntheses")}') if p["studies"] else None,
             h("span", {}, f'{p["prototypes"]} {t("prototypes_h")}') if p.get("prototypes") else None,
-            h("span", {}, f'{p["concepts"]} {t("concepts")}') if p.get("concepts") else None)
+            h("span", {}, f'{p["notes"]} {t("notes")}') if p.get("notes") else None)
         meta = fragment(counts, raw(_star("project", p["id"], p["title"], f'/projects/{p["id"]}')))
         rows.append(_row(f'/projects/{p["id"]}', "projects", p["title"], meta, color="var(--accent)"))
     return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
@@ -193,28 +187,12 @@ def register_lists(app) -> None:
         return _list_page(store, title=t("prototypes_h"), lead=t("prototypes_lead"), rows=rows,
                           empty_icon="prototype", empty_msg=t("no_prototypes"), active="prototype")
 
-    @app.get("/concepts", response_class=HTMLResponse)
-    def concepts_list() -> str:
-        store = Store()
-        rows = []
-        for proj in store.list_research_projects():
-            for n in services.list_notes(proj["id"], store=store):
-                if (n.get("kind") or "note") != "concept":
-                    continue
-                right = fragment(h("span", {"class_": "muted small"}, proj["title"]),
-                                 raw(_star("concept", n["id"], n.get("title", ""), f'/concepts/{n["id"]}')))
-                rows.append(_row(f'/concepts/{n["id"]}', "bulb", n.get("title", ""), right, color="#ea4335"))
-        return _list_page(store, title=t("concepts"), lead=t("concepts_lead"), rows=rows,
-                          empty_icon="bulb", empty_msg=t("no_concepts"), active="concept")
-
     @app.get("/notes", response_class=HTMLResponse)
     def notes_list() -> str:
         store = Store()
         rows = []
         for proj in store.list_research_projects():
-            for n in services.list_notes(proj["id"], store=store):
-                if (n.get("kind") or "note") != "note":            # raw observations; concepts have their own list
-                    continue
+            for n in services.list_notes(proj["id"], store=store):   # ONE note entity (concepts merged in)
                 right = fragment(h("span", {"class_": "muted small"}, proj["title"]),
                                  raw(_star("note", n["id"], n.get("title", ""), f'/notes/{n["id"]}')))
                 title = n.get("title") or (n.get("text", "")[:60] or "—")

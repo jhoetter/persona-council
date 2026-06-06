@@ -1,5 +1,5 @@
 """Detail-page building blocks: the shared detail_page() shell + the Linear-style Relations / Properties
-panels (spec/design-system.md). Every artifact detail page (council, synthesis, concept/note, section,
+panels (spec/design-system.md). Every artifact detail page (council, synthesis, note, section,
 prototype) is assembled by detail_page(), so the structure — hero, content column, Properties→Relations
 aside, section minimap, topbar star — is identical by construction instead of duplicated per route."""
 from __future__ import annotations

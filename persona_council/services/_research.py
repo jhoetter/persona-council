@@ -106,7 +106,7 @@ def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
                     "status": p.get("status", "active"),
                     "studies": sum(1 for n in graph["nodes"] if n.get("kind") == "synthesis"),
                     "councils": sum(1 for n in graph["nodes"] if n.get("kind") == "council"),
-                    "concepts": sum(1 for n in graph["nodes"] if n.get("kind") == "concept"),
+                    "notes": sum(1 for n in graph["nodes"] if n.get("kind") == "note"),
                     "prototypes": len(graph.get("prototypes") or []),
                     "edges": graph["counts"].get("edges", 0),
                     "themes": p.get("themes", [])})
@@ -421,23 +421,8 @@ def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
             if up_syn and up_syn != this_syn and f"synthesis:{up_syn}" in node_ids:
                 edges.append({"from_study": f"synthesis:{up_syn}", "to_study": f"synthesis:{this_syn}",
                               "type": "informs", "rationale": ""})
-    # Connect CONCEPT notes into the flow (ESV: concepts are first-class). A prototyped concept routes
-    # through its prototype (the layout draws concept→prototype→tested-synthesis); an un-prototyped
-    # concept feeds the ideation down-select directly — so no concept floats disconnected.
-    concept_notes = [n for n in nodes if n.get("note_kind") == "concept"]
-    if concept_notes:
-        def _cdepth(tid: str) -> int:
-            ct = _plan.task(plan, tid)
-            cons = (ct.get("consumes") or []) if ct else []
-            return 0 if not cons else 1 + max((_cdepth(c) for c in cons), default=0)
-        verifies = [t for t in plan["tasks"] if t["bucket"] == "verify" and syn_of_verify.get(t["id"])]
-        gated = [t for t in verifies if (t.get("requires") or {}).get("session_of_tags")]
-        target = min(gated or verifies, key=lambda t: _cdepth(t["id"]), default=None)
-        if target:
-            tsyn = f"synthesis:{syn_of_verify[target['id']]}"
-            for cn in concept_notes:
-                if not cn.get("prototype_id") and tsyn in node_ids:
-                    edges.append({"from_study": cn["study_id"], "to_study": tsyn, "type": "refines", "rationale": ""})
+    # ONE note entity: a BUILT note (data.prototype_id) routes through its prototype (the layout draws
+    # note→prototype→tested-synthesis); a plain note is a standalone observation. No concept-kind edge.
     ms = _plan_methodology_state(project, plan, store)
     if ms:
         step_tags = {s["key"]: list(s.get("tags") or []) for s in ms["steps"]}
@@ -505,10 +490,10 @@ def derive_sections(project_id: str, store: Store | None = None) -> dict[str, An
                    if n.get("bucket") == "verify" and str(n["study_id"]).startswith("synthesis:")]
     if verify_syns:
         _upsert("Deliver — Conclusion", "deliver", [verify_syns[-1]], note="Lösungspräsentation / buildbare Antwort")
-    concept_ids = [n["study_id"] for n in nodes if n.get("note_kind") == "concept"]
-    _upsert("Konzepte (Ideation)", "theme", concept_ids, note="Ideierte Lösungskonzepte (→ Prototypen)")
-    journal_ids = [n["study_id"] for n in nodes
-                   if str(n["study_id"]).startswith("note:") and n.get("note_kind") != "concept"]
+    # Built notes (data.prototype_id) — the ideas that became prototypes (former "concepts").
+    built_ids = [n["study_id"] for n in nodes if str(n["study_id"]).startswith("note:") and n.get("prototype_id")]
+    _upsert("Gebaute Ideen", "theme", built_ids, note="Notizen, die zu Prototypen wurden")
+    journal_ids = [n["study_id"] for n in nodes if str(n["study_id"]).startswith("note:")]
     _upsert("Run-Journal", "invented", journal_ids, note="Plan-Rationale + Iterations-Journal")
     return {"project_id": project_id, "created": created,
             "sections": len(list_sections(project_id, store=store))}

@@ -369,7 +369,10 @@ def brief_completeness_critic(project_id: str, store: Store | None = None) -> di
     frame_tasks = [t for t in plan["tasks"] if t.get("capability") == "frame" and t.get("status") == "done"]
     acted_frames = {c for t in plan["tasks"] if t.get("bucket") == "act"
                     and any(r.get("kind") != "frame" for r in t.get("produces", [])) for c in t.get("consumes", [])}
-    concept_notes = [n for n in list_notes(project_id, store=store) if n.get("kind") == "concept"]  # noqa: F821
+    # Solution-idea notes (one note entity; the former 'concept'): identified by their structured `data`
+    # (a lens/artifact_kind from ideation), not a separate kind. Raw observations carry no such data.
+    concept_notes = [n for n in list_notes(project_id, store=store)  # noqa: F821
+                     if (n.get("data") or {}).get("artifact_kind") or (n.get("data") or {}).get("lens")]
     risks = [o["text"] for o in store.list_open_questions(project_id) if o.get("status") == "open"]
     declared_fids: set[str] = set()
     for t in plan["tasks"]:

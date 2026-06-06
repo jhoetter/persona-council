@@ -410,8 +410,8 @@ def test_completeness_critic_surfaces_gaps_and_refuses_dishonest_pass(store):
         {"kind": "concept", "what": "build the dark-horse", "suggested_action": "scaffold + test it"}],
         "scores": {"exploration_depth": 3}, "rationale": "thin"}, store=store)
     assert rec["passed"] is False and rec["missing"][0]["kind"] == "concept"
-    # once the concept is marked built, it drops out of the gap
-    note = [n for n in services.list_notes(pid, store=store) if n.get("kind") == "concept"][0]
+    # once the idea note is marked built, it drops out of the gap
+    note = [n for n in services.list_notes(pid, store=store) if (n.get("data") or {}).get("artifact_kind")][0]
     services.set_note_data(note["id"], {"prototype_id": "prototype_x"}, store=store)
     b2 = services.brief_completeness_critic(pid, store=store)
     assert b2["frame"]["breadth_candidates"]["concepts_not_prototyped"] == []

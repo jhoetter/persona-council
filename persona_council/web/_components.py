@@ -325,7 +325,6 @@ def _nav(active: str, store: Store) -> str:
             ("/documentation", "docs", "overview", t("documentation"))]
     research = [("/notes", "note", "panel", t("notes")),
                 ("/councils", "councils", "councils", t("councils")),
-                ("/concepts", "concept", "bulb", t("concepts")),
                 ("/prototypes", "prototype", "prototype", t("prototypes_h")),
                 ("/syntheses", "syntheses", "syntheses", t("syntheses"))]
     # .pi-hover makes the row the animation trigger — the icon plays its micro-interaction on row hover.

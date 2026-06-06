@@ -94,10 +94,11 @@ def register_sections(mcp):
     @mcp.tool()
     def create_note(project_id: str, text: str, title: str = "", kind: str = "note",
                     data: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Create a lightweight observation NOTE node — the atomic unit for affinity work. `kind` is a
-        free tag (default 'note'); a `concept` note carries structured `data`
-        {title, lens, artifact_kind, prototype_id|null} so the completeness critic can track the
-        solution space (set prototype_id via set_note_data once the concept is built)."""
+        """Create a lightweight NOTE node — the ONE note entity (from a raw observation to a worked-out
+        solution idea; there is no separate 'concept'). For a solution idea, pass structured `data`
+        {lens, artifact_kind, prototype_id|null} so the completeness critic can track the solution space
+        and the graph pairs it with its prototype once built (set prototype_id via set_note_data). `kind`
+        is accepted for back-compat but normalized to 'note'."""
         t = time.perf_counter()
         return _env("create_note", services.create_note(project_id, text, title, kind, data), t)
 

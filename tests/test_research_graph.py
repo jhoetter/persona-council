@@ -166,25 +166,20 @@ def test_derive_sections_and_scaffold_meta_report_finish_by_construction(store):
     assert services.scaffold_meta_report(pid, store=store)["id"]  # returns existing, no error
 
 
-def test_concept_notes_connect_into_the_graph(store):
-    """Connectivity: a concept note carries note_kind+prototype_id (so the layout can route
-    concept→prototype→tested-synthesis), and an UN-prototyped concept note gets a plan_graph edge to
-    the ideation down-select synthesis — so no concept floats disconnected (the 'no lines' fix)."""
+def test_notes_are_one_entity_built_notes_carry_prototype(store):
+    """ONE note entity (concepts merged in): every note is note_kind='note' (no 'concept' kind), and a
+    note that was BUILT carries data.prototype_id so the graph/outline can pair it with its prototype."""
     proj = services.start_project("CN", "hmw?", "double_diamond_deep", persona_ids=["p1"], store=store)
     pid = proj["id"]
-    services.record_frame(pid, "frame__ideate", ["q?"], memory_refs=["m"], store=store)
-    services.create_note(pid, "an un-prototyped bold idea", "Dark-horse", kind="concept",
-                         data={"lens": "reversal", "artifact_kind": "flow", "prototype_id": None}, store=store)
-    # a down-select synthesis exists (the verify with a session gate)
-    syn = services.record_synthesis("Down-Select", "x", [], {"gesamtbild": "G" * 250, "positionierung": "P" * 250},
-                                    key="cn:sel", store=store)
-    services.link_evidence(pid, "verify__lofi_select", {"kind": "synthesis", "id": syn["id"]}, store=store)
+    services.create_note(pid, "a bold idea that got built", "Dark-horse",
+                         data={"lens": "reversal", "prototype_id": "proto_x"}, store=store)
+    services.create_note(pid, "a raw observation", "Obs", store=store)
     g = services.get_project_graph(pid, store=store)
-    cn = next(n for n in g["nodes"] if n.get("note_kind") == "concept")
-    assert cn["prototype_id"] is None and cn["kind_label"] == "Konzept"
-    # the un-prototyped concept is wired to the down-select synthesis (no float)
-    assert any(e["from_study"] == cn["study_id"] and e["to_study"] == f"synthesis:{syn['id']}"
-               for e in g["edges"]), "un-prototyped concept must connect to the down-select synthesis"
+    note_nodes = [n for n in g["nodes"] if str(n["study_id"]).startswith("note:")]
+    assert len(note_nodes) == 2 and all(n.get("note_kind") == "note" for n in note_nodes)  # no concept kind
+    assert all(n["href"].startswith("/notes/") for n in note_nodes)                          # one list/route
+    built = next(n for n in note_nodes if n.get("prototype_id"))
+    assert built["prototype_id"] == "proto_x"                                                # pairs with prototype
 
 
 def test_council_modes_discovery_evaluation_decision(store):

@@ -210,8 +210,7 @@ def _methodology_layout(graph: dict) -> dict | None:
         nxt = outs[0] if outs else bk
         # prefer the CONCEPT NOTE that realizes this prototype as its upstream idea (ESV: concepts are
         # first-class; this gives the prototype an incoming edge so it doesn't float), else fuzzy-match.
-        cnote = next((n for n in graph["nodes"] if n.get("note_kind") == "concept"
-                      and n.get("prototype_id") == pr["id"]), None)
+        cnote = next((n for n in graph["nodes"] if n.get("prototype_id") == pr["id"]), None)
         src = cnote or _match(pr.get("name", ""), bk)
         cx = (col_x[bk] + _NW + col_x[nxt]) / 2 - PW / 2
         if cnote:                                                    # round-aware: place in the cnote's lane
@@ -240,12 +239,12 @@ def _methodology_layout(graph: dict) -> dict | None:
                 test_step = s; break
         if test_step:
             proto_edges.append((pr["id"], test_step["convergence_node"], True))  # artifact → tested-at (dashed)
-    # un-prototyped concept notes: stack them in the ideation column (their plan_graph edge to the
-    # down-select synthesis then renders) so no concept floats in the far-right dump.
+    # un-built notes (no prototype): stack them in the ideation column so none float in the far-right
+    # dump. A BUILT note (data.prototype_id) is positioned next to its prototype instead (see above).
     ideate_x = col_x.get(build_steps[0]["key"], X0) if build_steps else X0
     st: dict[int, int] = {}
     for n in graph["nodes"]:
-        if n.get("note_kind") == "concept" and not n.get("prototype_id"):
+        if str(n["study_id"]).startswith("note:") and not n.get("prototype_id"):
             r = node_round.get(n["study_id"], 0)
             pos[n["study_id"]] = (ideate_x, AXIS + r * BAND - 150 - st.get(r, 0) * 72)
             st[r] = st.get(r, 0) + 1
@@ -621,10 +620,12 @@ def _outline_html(graph: dict) -> str:
     ordered = sorted(steps, key=lambda s: depth[s["key"]])
     pmeta = {s["key"]: (i, (s.get("name") or s["key"]).split("·")[-1].strip() or s["key"])
              for i, s in enumerate(ordered)}
-    concepts = sorted((n for n in nodes if n.get("note_kind") == "concept"),
-                      key=lambda n: n.get("created_at", ""))
     protos = graph.get("prototypes") or []
-    pro_of = {c["study_id"]: [p for p in protos if p["id"] == c.get("prototype_id")] for c in concepts}
+    # ONE note entity: a BUILT note (data.prototype_id) pairs with its prototype, indented beneath it
+    # (the former concept→prototype pairing); plain notes are standalone observation rows.
+    note_nodes = [n for n in nodes if str(n["study_id"]).startswith("note:")]
+    pro_of = {n["study_id"]: [p for p in protos if p["id"] == n.get("prototype_id")]
+              for n in note_nodes if n.get("prototype_id")}
     used = {p["id"] for ps in pro_of.values() for p in ps}
 
     items: list[dict] = []
@@ -635,29 +636,26 @@ def _outline_html(graph: dict) -> str:
                       "plabel": plabel, "po": po, "round": r, "order": order, "indent": indent})
 
     for n in nodes:
-        if n.get("note_kind") == "concept" or n.get("phase", "") not in pmeta:
+        if n.get("phase", "") not in pmeta:        # councils/syntheses; notes (phase-free) added below
             continue
         add(n["study_id"], n.get("color", ""), n.get("title", ""), n.get("kind_label", n.get("kind", "")),
             n.get("href", ""), n.get("phase", ""), node_round[n["study_id"]], n.get("created_at", ""))
-    for c in concepts:
-        cr = node_round.get(c["study_id"], 0)
-        add(c["study_id"], c.get("color", "#a142f4"), c.get("title", ""), "Konzept", c.get("href", ""),
-            ideation, cr, c.get("created_at", ""))
-        for p in pro_of.get(c["study_id"], []):
-            add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
-                f'/prototypes/{p["slug"]}', ideation, cr, c.get("created_at", "") + "~", indent=1)
-    for p in protos:
+    for p in protos:                               # prototypes NOT paired under a built note → standalone
         if p["id"] not in used:
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
                 f'/prototypes/{p["slug"]}', ideation, 0, p.get("created_at", ""))
-    # Notes are phase-free project observations — they have no methodology step, so add them explicitly
-    # (the loop above skips phase-less nodes). Tag them with the FIRST (discover) phase so the phase
-    # column reads meaningfully ("observations belong to discovery"), not an empty gap.
+    # Notes (phase-free): a BUILT note (+ its prototype) sits at the ideation phase; a plain observation
+    # at the FIRST (discover) phase, so the phase column reads meaningfully instead of an empty gap.
     notes_phase = ordered[0]["key"] if ordered else ""
-    for nt in sorted((n for n in nodes if n.get("note_kind") == "note"), key=lambda n: n.get("created_at", "")):
+    for nt in sorted(note_nodes, key=lambda n: n.get("created_at", "")):
+        cr = node_round.get(nt["study_id"], 0)
+        built = pro_of.get(nt["study_id"]) or []
         add(nt["study_id"], nt.get("color", "#f29900"), nt.get("title", "") or "—",
-            nt.get("kind_label", ""), nt.get("href", ""), notes_phase, node_round.get(nt["study_id"], 0),
+            nt.get("kind_label", ""), nt.get("href", ""), ideation if built else notes_phase, cr,
             nt.get("created_at", ""))
+        for p in built:
+            add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
+                f'/prototypes/{p["slug"]}', ideation, cr, nt.get("created_at", "") + "~", indent=1)
 
     # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
     # "Prototypen-Leiter", "Konzepte (Ideation)" … (phase/journal sections are skipped — phase already

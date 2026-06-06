@@ -1,4 +1,4 @@
-"""Library detail pages: sections, notes/concepts, prototypes (spec/roadmap.md R2)."""
+"""Library detail pages: sections, notes, prototypes (spec/roadmap.md R2)."""
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
@@ -37,30 +37,25 @@ def register_library(app) -> None:
             star=("section", sec["id"], sec["title"], f'/sections/{sec["id"]}'))
 
     @app.get("/notes/{note_id}", response_class=HTMLResponse)
-    @app.get("/concepts/{note_id}", response_class=HTMLResponse)        # a concept is a note with kind=concept
     def note_view(note_id: str) -> str:
         store = Store()
-        from ... import presentation as _pres
         try:
             data = services.get_note(note_id, store=store)
         except KeyError:
             return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared")), store, active="projects")
         note, proj = data["note"], data["project"]
-        kind = note.get("kind") or "note"                              # present by the record's OWN kind
-        pr = _pres.present(kind)
-        klabel = t("concept_h") if kind == "concept" else (t("notes_h") if kind == "note" else (pr.get("label") or kind))
-        active = "concept" if kind == "concept" else "projects"
+        klabel = t("notes_h")                                          # ONE note entity (concepts merged in)
         ntitle = note.get("title") or klabel
         return detail_page(
-            store, title=ntitle, active=active,
+            store, title=ntitle, active="note",
             crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (ntitle, None)],
-            icon=("bulb" if kind == "concept" else "square"), sub=klabel, hid="sec-content",
+            icon="panel", sub=klabel, hid="sec-content",
             body=h("div", {"class_": "es-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))),
             prop_rows=[("dot", t("created"), note.get("created_at", "")[:10]),
                        ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]))],
             rel_study_id=f"note:{note_id}", rel_proj_id=proj["id"],
             rail_sections=[("sec-content", klabel)],
-            star=(kind, note_id, ntitle, f'/{"concepts" if kind == "concept" else "notes"}/{note_id}'))
+            star=("note", note_id, ntitle, f'/notes/{note_id}'))
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:

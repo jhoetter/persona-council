@@ -173,18 +173,20 @@ def _notes(project: dict) -> list[dict]:
 
 def create_note(project_id: str, text: str, title: str = "", kind: str = "note",
                 data: dict[str, Any] | None = None, store=None) -> dict[str, Any]:
-    """Create a lightweight observation note node in the project graph (no methodology required).
-    `kind` is a free tag (default 'note'); a `concept` note carries structured `data`
-    {title, lens, artifact_kind, prototype_id|null} so the completeness critic + novelty signal can
-    reason over the solution space (ESV/OD-3). `data` is a small free dict (capped)."""
+    """Create a lightweight note node in the project graph (no methodology required) — the ONE note
+    entity (the former 'concept' is merged in). A note that gets BUILT carries structured `data`
+    {lens, artifact_kind, prototype_id} so the layout pairs it with its prototype + the completeness
+    critic can reason over the solution space. `kind` is accepted for back-compat but normalized to
+    'note' ('concept' is no longer a separate kind). `data` is a small free dict (capped)."""
     store = store or Store()  # noqa: F821
     project = _require_research_project(store, project_id)  # noqa: F821
     if not str(text).strip():
         raise ValueError("a note needs non-empty text")
+    kind = "note" if (str(kind or "note").strip().lower() in ("note", "concept")) else str(kind).strip()[:40]
     now = utc_now_iso()  # noqa: F821
     note = {"id": stable_id("note", project["id"], text, now),  # noqa: F821
             "title": (str(title).strip() or str(text).strip()[:60])[:120],
-            "text": str(text).strip()[:2000], "kind": str(kind or "note").strip()[:40],
+            "text": str(text).strip()[:2000], "kind": kind,
             "data": dict(list((data or {}).items())[:20]), "created_at": now}
     _notes(project).append(note)
     project["updated_at"] = now
@@ -249,9 +251,8 @@ def section_members(section_id: str, store=None) -> dict[str, Any]:
         elif mid.startswith("note:"):
             nnid = mid.split(":", 1)[1]
             n = notes.get(nnid, {})
-            is_concept = (n.get("kind") or "note") == "concept"
-            out.append({"id": mid, "kind": "concept" if is_concept else "note", "title": n.get("title", mid),
-                        "summary": n.get("text", ""), "href": f"/concepts/{nnid}" if is_concept else f"/notes/{nnid}"})
+            out.append({"id": mid, "kind": "note", "title": n.get("title", mid),
+                        "summary": n.get("text", ""), "href": f"/notes/{nnid}"})
         else:
             pr = store.get_prototype(mid) or {}
             out.append({"id": mid, "kind": "prototype", "title": pr.get("name", mid),
@@ -284,14 +285,13 @@ def note_graph_nodes(project: dict) -> list[dict[str, Any]]:
     out = []
     for n in _notes(project):
         title = n.get("title") or n.get("text", "")[:60]
-        nkind = n.get("kind") or "note"
         data = n.get("data") or {}
-        is_concept = nkind == "concept"
-        out.append({"study_id": f"note:{n['id']}", "kind": "note", "note_kind": nkind,
+        # ONE note entity (concepts merged in): a note that was BUILT carries data.prototype_id and links
+        # to its prototype in the graph — that is the only former "concept" behaviour that remains.
+        out.append({"study_id": f"note:{n['id']}", "kind": "note", "note_kind": "note",
                     "prototype_id": data.get("prototype_id"), "lens": data.get("lens", ""),
                     "title": title, "phase": "", "bucket": "", "created_at": n.get("created_at", ""),
                     "council_count": 0, "voices": 0, "sentiment": {}, "recommendations": 0, "role": "", "mode": "",
-                    "theme_tags": [nkind], "color": ("#a142f4" if is_concept else pres["color"]),
-                    "kind_label": ("Konzept" if is_concept else pres["label"]),
-                    "href": f"/concepts/{n['id']}" if is_concept else f"/notes/{n['id']}"})
+                    "theme_tags": ["note"], "color": pres["color"], "kind_label": pres["label"],
+                    "href": f"/notes/{n['id']}"})
     return out
