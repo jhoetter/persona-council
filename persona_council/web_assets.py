@@ -196,6 +196,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .topbar{height:var(--row-h);flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel)}
 .iconbtn{border:1px solid var(--line);background:var(--panel);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--muted);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+#sbt{display:none}.app.collapsed #sbt{display:inline-flex}   /* the show-sidebar toggle appears only when collapsed */
 .iconbtn:hover{background:var(--hover);color:var(--ink)}
 .spacer{flex:1}
 .tb-actions{display:flex;align-items:center;gap:8px}
