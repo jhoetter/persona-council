@@ -435,16 +435,16 @@ def _synthesis_html(store: Store, syn: dict):
     cs = Counter(v.get("sentiment", "neutral") for v in syn.get("voices", []))
     smeta = " · ".join(f"{cs[k]} {k}" for k in _SENT_ORDER if cs.get(k))
     mchips = [_label(t("completed") if done else t("running"), "var(--green)" if done else "var(--amber)")]
-    mchips.append(f'<span class="mchip">{len(syn.get("council_ids", []))} {t("councils")}</span>')
+    mchips.append(h("span", {"class_": "mchip"}, f'{len(syn.get("council_ids", []))} {t("councils")}'))
     if syn.get("iterations"):
-        mchips.append(f'<span class="mchip">{syn["iterations"]} {t("iterations")}</span>')
+        mchips.append(h("span", {"class_": "mchip"}, f'{syn["iterations"]} {t("iterations")}'))
     if smeta:
-        mchips.append(f'<span class="mchip">{t("voices_meta", s=_esc(smeta))}</span>')
-    mchips.append(f'<span class="mchip">{_esc(syn["created_at"][:10])}</span>')
-    head = (f'<header class="syn-head"><h1>{_esc(syn["title"])}</h1>'
-            f'<div class="syn-meta">{"".join(mchips)}</div></header>')
+        mchips.append(h("span", {"class_": "mchip"}, raw(t("voices_meta", s=_esc(smeta)))))
+    mchips.append(h("span", {"class_": "mchip"}, syn["created_at"][:10]))
+    head = h("header", {"class_": "syn-head"}, h("h1", {}, syn["title"]),
+             h("div", {"class_": "syn-meta"}, fragment(*mchips)))
 
-    main = head + "".join(h for _, _, h in sec)
+    main = head + raw("".join(str(html) for _, _, html in sec))   # section htmls are all trusted (h() Safe or built strings)
     # Unified detail shell: the caller wraps this content in _doc (content column + Properties/Relations
     # aside) and renders the section minimap via _page_rail(toc) — same as every other detail page.
     toc = [(sid, lbl) for sid, lbl, _ in sec]
