@@ -13,7 +13,7 @@ from .. import presentation as _pres
 from ..storage import Store
 from ..web_assets import CSS, HEAD_JS, _RGRAPH_JS, _SYN_STYLE  # noqa: F401  (extracted assets)
 from ._i18n import t, _lang
-from ._html import h, raw, register_css, collect_css  # noqa: F401  (component-SSR foundation)
+from ._html import h, raw, fragment, register_css, collect_css  # noqa: F401  (component-SSR foundation)
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
 
 
@@ -33,12 +33,13 @@ _AV_COLORS = ["#3d7b5f", "#2f6f9f", "#a66b1f", "#7a5ea6", "#b3493f", "#4a7d7d", 
 
 def _avatar(p: dict, size: int = 36) -> str:
     if (p.get("avatar") or {}).get("path"):
-        return f'<img class="av" style="width:{size}px;height:{size}px" src="/{_esc(p["avatar"]["path"])}" alt="">'
+        return h("img", {"class_": "av", "style": f"width:{size}px;height:{size}px",
+                         "src": f'/{p["avatar"]["path"]}', "alt": ""})
     name = p.get("display_name", "?")
     ini = "".join(w[0] for w in name.split()[:2]).upper() or "?"
     c = _AV_COLORS[sum(map(ord, p.get("id", "x"))) % len(_AV_COLORS)]
     fs = max(10, size // 3)
-    return f'<span class="av" style="width:{size}px;height:{size}px;background:{c};font-size:{fs}px">{_esc(ini)}</span>'
+    return h("span", {"class_": "av", "style": f"width:{size}px;height:{size}px;background:{c};font-size:{fs}px"}, ini)
 
 
 def _stance_color(s: str) -> str:
@@ -55,8 +56,8 @@ def _stance_color(s: str) -> str:
 
 
 def _label(text: str, color: str | None = None, variant: str = "soft", dot: bool = True) -> str:
-    d = f'<span class="ld" style="background:{color or "var(--muted)"}"></span>' if dot else ""
-    return f'<span class="lbl lbl-{variant}">{d}{_esc(text)}</span>'
+    d = h("span", {"class_": "ld", "style": f"background:{color or 'var(--muted)'}"}) if dot else None
+    return h("span", {"class_": f"lbl lbl-{variant}"}, d, text)
 
 
 def _crumbs_html(crumbs: list) -> str:
@@ -64,12 +65,12 @@ def _crumbs_html(crumbs: list) -> str:
     for i, (label, href) in enumerate(crumbs):
         last = i == len(crumbs) - 1
         if href and not last:
-            parts.append(f'<a class="bc-link" href="{_esc(href)}" title="{_esc(label)}">{_esc(label)}</a>')
+            parts.append(h("a", {"class_": "bc-link", "href": href, "title": label}, label))
         else:
-            parts.append(f'<span class="bc-cur" title="{_esc(label)}">{_esc(label)}</span>')
+            parts.append(h("span", {"class_": "bc-cur", "title": label}, label))
         if not last:
-            parts.append('<span class="bc-sep" aria-hidden="true">›</span>')
-    return f'<nav class="breadcrumb" aria-label="{_esc(t("breadcrumb_aria"))}">' + "".join(parts) + "</nav>"
+            parts.append(h("span", {"class_": "bc-sep", "aria-hidden": "true"}, "›"))
+    return h("nav", {"class_": "breadcrumb", "aria-label": t("breadcrumb_aria")}, parts)
 
 
 
@@ -298,7 +299,9 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
 
 
 def _empty_state(title: str, message: str) -> str:
-    return f'<div class="page"><div class="card"><h2>{_esc(title)}</h2><p class="muted">{_esc(message)}</p><p><a class="btn" href="/projects">{_icon("back")} {t("projects")}</a></p></div></div>'
+    return h("div", {"class_": "page"}, h("div", {"class_": "card"},
+             h("h2", {}, title), h("p", {"class_": "muted"}, message),
+             h("p", {}, h("a", {"class_": "btn", "href": "/projects"}, raw(_icon("back")), " ", t("projects")))))
 
 
 _EDGE_COLORS = {"spawned_from": "#6b7cff", "refines": "#34a853", "contrasts": "#ea4335",
@@ -339,7 +342,7 @@ def _artifact_present(pr: dict) -> dict:
 
 
 def _pills(items: list[str]) -> str:
-    return "".join(f'<span class="pill">{_esc(item)}</span>' for item in items)
+    return fragment(*(h("span", {"class_": "pill"}, item) for item in items))
 
 
 def _md(text: str) -> str:
