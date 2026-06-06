@@ -605,7 +605,11 @@ def _outline_html(graph: dict) -> str:
     depth_of = {s["key"]: depth[s["key"]] for s in steps}
     node_round: dict[str, int] = {}
     rnd, reached = 0, False
-    for n in sorted(nodes, key=lambda n: n.get("created_at", "")):
+    # Detect ITERATIONS chronologically. Break created_at ties by DAG DEPTH so a single
+    # Discover→Define→Develop→Deliver pass authored in one batch (identical timestamps) stays ONE round in
+    # flow order — otherwise the round split falls back to list order (e.g. syntheses before councils) and
+    # a synthesis wrongly lands a round BEFORE the council it consolidates.
+    for n in sorted(nodes, key=lambda n: (n.get("created_at", ""), depth_of.get(n.get("phase", ""), 99))):
         d = depth_of.get(n.get("phase", ""))
         if d is not None:
             if d == 0 and reached:
