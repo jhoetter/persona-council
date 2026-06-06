@@ -11,6 +11,9 @@ CSS = """
   --radius:8px;--radius-sm:6px;--row-h:48px;--ease:cubic-bezier(.4,0,.2,1);
   --shadow-sm:0 1px 2px rgba(20,22,26,.05);
   --shadow-lg:0 8px 28px rgba(20,22,26,.14),0 1px 2px rgba(20,22,26,.08);
+  /* design-system scales (spec/design-system.md §2) — adopt incrementally; additive, no pixel change */
+  --t-display:24px;--t-h2:15px;--t-h3:13px;--t-body:13px;--t-sm:12px;--t-xs:11px;
+  --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-8:32px;
 }
 @media (prefers-color-scheme: dark){:root{
   --bg:#101113;--sidebar:#0d0e10;--panel:#16171a;--panel-2:#1c1d21;--overlay:#1a1b1e;
