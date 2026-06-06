@@ -120,7 +120,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "voices_n_of_m": "{n} von {m} Stimmen",
         "voices_in_analyses": "Stimmen in Analysen",
         # synthesis report
-        "answer_exec_summary": "Antwort · Executive Summary",
+        "answer_exec_summary": "Executive Summary",
         "question": "Frage",
         "councils_overview": "Referenzierte Councils (Belege)",
         "evidence_decoupled_note": "Diese Synthese ist eigenständig. Councils sind zitierte Evidenz — kein Bestandteil der Synthese (entkoppelt).",
@@ -273,7 +273,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "voices_n_of_m": "{n} of {m} voices",
         "voices_in_analyses": "Voices in analyses",
         # synthesis report
-        "answer_exec_summary": "Answer · Executive Summary",
+        "answer_exec_summary": "Executive Summary",
         "question": "Question",
         "councils_overview": "Referenced councils (evidence)",
         "evidence_decoupled_note": "This synthesis stands alone. Councils are cited evidence — not part of the synthesis (decoupled).",

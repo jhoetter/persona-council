@@ -163,11 +163,14 @@ def register_councils(app) -> None:
             sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
         short_title = _display_title(session["prompt"])        # short form for breadcrumb / tab / favourite only
+        # Executive Summary (the short TL;DR) sits at the TOP — same block/name as the synthesis — not a
+        # bottom toggle. The long exec_summary stays below as "what this council found" (the detail).
+        has_summary = bool((session.get("summary") or "").strip())
+        summary_lead = (raw(_study_lead(_md(session["summary"]), t("answer_exec_summary"), qid="sec-summary"))
+                        if has_summary else "")
         body = fragment(
-            raw(lead_block), raw(_study_lead(exec_html, vm["answer_label"])), raw(sentiment),
-            h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, voices_label), raw(turns_html)),
-            h("details", {"class_": "sec"}, h("summary", {}, summary_h),
-              h("div", {"class_": "card"}, h("strong", {}, summary_h), h("p", {}, session["summary"]))))
+            raw(lead_block), summary_lead, raw(_study_lead(exec_html, vm["answer_label"])), raw(sentiment),
+            h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, voices_label), raw(turns_html)))
         prop_rows = [("councils", t("type_h"), t("council_mode_" + mode)), ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
             vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
@@ -188,5 +191,7 @@ def register_councils(app) -> None:
             hero=_hero(session["prompt"], icon="councils", sub=council_sub, hid="sec-question"), body=body,
             prop_rows=prop_rows,
             rel_study_id=f"council:{session_id}", rel_proj_id=(proj["id"] if proj else None),
-            rail_sections=[("sec-question", t("question")), ("stimmen", t("voices"))],
+            rail_sections=([("sec-question", t("question"))]
+                           + ([("sec-summary", t("answer_exec_summary"))] if has_summary else [])
+                           + [("stimmen", t("voices"))]),
             star=("council", session_id, short_title, f"/councils/{session_id}"))
