@@ -26,14 +26,14 @@ def _vote_label(k: str) -> str:
 def _stacked(parts: list[tuple], thin: bool = False) -> str:
     """parts: [(value, color, label)]. Renders a single horizontal stacked bar."""
     total = sum(v for v, _, _ in parts) or 1
-    segs = "".join(f'<i style="width:{v / total * 100:.3f}%;background:{c}" title="{_esc(lbl)}: {v}"></i>'
-                   for v, c, lbl in parts if v)
-    return f'<div class="stacked{" thin" if thin else ""}">{segs}</div>'
+    segs = [h("i", {"style": f"width:{v / total * 100:.3f}%;background:{c}", "title": f"{lbl}: {v}"})
+            for v, c, lbl in parts if v]
+    return h("div", {"class_": f'stacked{" thin" if thin else ""}'}, segs)
 
 
 def _legend(parts: list[tuple]) -> str:
-    return '<div class="legend">' + "".join(
-        f'<span><i style="background:{c}"></i>{_esc(lbl)} {v}</span>' for v, c, lbl in parts) + "</div>"
+    return h("div", {"class_": "legend"},
+             [h("span", {}, h("i", {"style": f"background:{c}"}), f"{lbl} {v}") for v, c, lbl in parts])
 
 
 def _donut(parts: list[tuple], size: int = 118) -> str:
@@ -45,16 +45,18 @@ def _donut(parts: list[tuple], size: int = 118) -> str:
         start = acc / total * 100; acc += v; end = acc / total * 100
         stops.append(f"{c} {start:.3f}% {end:.3f}%")
     grad = "conic-gradient(" + ",".join(stops or ["var(--line-2) 0 100%"]) + ")"
-    return f'<div class="donut" style="--g:{grad};width:{size}px;height:{size}px"></div>'
+    return h("div", {"class_": "donut", "style": f"--g:{grad};width:{size}px;height:{size}px"})
 
 
 def _hbars(rows: list[tuple], maxv: int | None = None) -> str:
     """rows: [(label, value, color)]. Horizontal bar chart."""
     mx = maxv or max((v for _, v, _ in rows), default=0) or 1
-    return "".join(
-        f'<div class="brow"><span class="blab" title="{_esc(lbl)}">{_esc(lbl)}</span>'
-        f'<span class="btrack"><i style="width:{v / mx * 100:.2f}%;background:{c}"></i></span>'
-        f'<span class="bval">{v}</span></div>' for lbl, v, c in rows)
+    return fragment(*(
+        h("div", {"class_": "brow"},
+          h("span", {"class_": "blab", "title": lbl}, lbl),
+          h("span", {"class_": "btrack"}, h("i", {"style": f"width:{v / mx * 100:.2f}%;background:{c}"})),
+          h("span", {"class_": "bval"}, str(v)))
+        for lbl, v, c in rows))
 
 
 def _area(points: list[tuple], w: int = 560, h: int = 140) -> str:
