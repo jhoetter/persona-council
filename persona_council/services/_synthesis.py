@@ -169,6 +169,10 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
     findings = [_A.validate_finding(f) for f in (_pl.get("findings") or [])] or _A.synthesis_findings(data)
     statements = [_A.validate_statement(s) for s in (_pl.get("statements") or [])] or _A.synthesis_statements(data)
     prompts = [_A.validate_prompt(p) for p in (_pl.get("prompts") or [])] or _A.synthesis_prompts(data)
+    # Stable part ids so findings/voices are addressable + deep-linkable (spec/artifact-cross-references).
+    _A.assign_part_ids(findings, "f")
+    _A.assign_part_ids(statements, "st")
+    _A.assign_part_ids(prompts, "p")
     existing = store.get_synthesis(synthesis_id) if synthesis_id else None
     # honor an explicit/keyed synthesis_id even on first create (so a keyed run is idempotent)
     sid = (existing or {}).get("id") or synthesis_id or stable_id("synthesis", title or "synthesis", utc_now_iso())

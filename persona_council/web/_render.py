@@ -20,22 +20,35 @@ def render_stance(st: dict | None) -> str:
     return _label(t("stance_" + st.get("label", "neutral")), meta["color"])   # t("stance_"+term) → label_key
 
 
-def render_ref(r: dict) -> str:
-    """A grounding chip: a memory/observed-state note, an internal link, or a quote. The kind→route
+def render_ref(r: dict, store=None) -> str:
+    """A cross-reference chip (spec/artifact-cross-references.md). With a `store` and a record-pointing
+    Ref, it RESOLVES the addressed artifact/part LIVE — showing the current persona/title + the typed
+    role + a deep-link to the part (never a stale copy); a broken ref renders honestly. Without a store
+    (or for memory/observed-state/external refs) it falls back to the plain grounding chip. The kind→route
     mapping lives in the domain layer (artifacts.ref_href) so no kind literal is hardcoded here."""
+    role = r.get("role")
+    rolebit = (" · " + role.replace("_", " ")) if role else ""
+    if store is not None and r.get("id") and _A.ref_href(r):
+        res = _A.resolve_ref(r, store)
+        who = (store.get_persona(res["persona_id"]) or {}).get("display_name") if res.get("persona_id") else ""
+        label = who or res.get("title") or r.get("id")
+        cls = "srcchip xref" + ("" if res.get("exists") else " xref-broken")
+        return h("a", {"class_": cls, "href": res["href"], "title": (res.get("text") or "")[:240]},
+                 raw(_icon("link")), " ", label,
+                 h("span", {"class_": "xref-role"}, rolebit) if rolebit else None)
     href = _A.ref_href(r)
     txt = r.get("quote") or r.get("text") or r.get("id") or ""
     if href:
-        return h("a", {"class_": "srcchip", "href": href}, raw(_icon("link")), " ", txt)
+        return h("a", {"class_": "srcchip", "href": href}, raw(_icon("link")), " ", txt, rolebit or None)
     ico = "memory" if r.get("kind") == "memory" else ("compass" if r.get("kind") == "prototype_state" else "link")
     return h("span", {"class_": "srcchip"}, raw(_icon(ico)), " ", txt)
 
 
-def _refs_line(refs: list, label: str) -> str:
+def _refs_line(refs: list, label: str, store=None) -> str:
     if not refs:
         return ""
     return h("p", {"class_": "muted small turn-refs"}, label, ": ",
-             fragment(*(raw(render_ref(r)) for r in refs)))
+             fragment(*(raw(render_ref(r, store)) for r in refs)))
 
 
 def render_prompt(p: dict, *, n: int | None = None) -> str:
@@ -49,8 +62,9 @@ def render_prompt(p: dict, *, n: int | None = None) -> str:
                h("p", {}, raw(_prose(p.get("text", ""))))))
 
 
-def _statement_body(st: dict) -> str:
-    """One utterance's body: optional focus line, input snapshot, the prose, pushback, shift, refs."""
+def _statement_body(st: dict, store=None) -> str:
+    """One utterance's body: optional focus line, input snapshot, the prose, pushback, shift, refs. The
+    wrapper carries id=<part-id> so other artifacts can deep-link to this exact statement."""
     meta = st.get("meta") or {}
     focus = h("p", {"class_": "muted small", "style": "font-style:italic;margin:0 0 4px"}, meta["focus"]) if meta.get("focus") else None
     given = h("details", {"class_": "turn-input"},
@@ -61,8 +75,11 @@ def _statement_body(st: dict) -> str:
     shift_html = h("p", {"class_": "muted small"}, raw(_icon("exchange")), " ",
                    f'{shift.get("from","")} → {shift.get("to","")}',
                    (f' · {shift["trigger"]}' if shift.get("trigger") else "")) if shift else None
-    return h("div", {"class_": "turn-ans"}, focus, given, h("p", {}, raw(_prose(st.get("text", "")))),
-             pushback, shift_html, raw(_refs_line(st.get("refs") or [], t("council_drew_on"))))
+    attrs = {"class_": "turn-ans"}
+    if st.get("id"):
+        attrs["id"] = st["id"]
+    return h("div", attrs, focus, given, h("p", {}, raw(_prose(st.get("text", "")))),
+             pushback, shift_html, raw(_refs_line(st.get("refs") or [], t("council_drew_on"), store)))
 
 
 def _persona_card(sts: list, store, *, head_extra=None) -> str:
@@ -90,7 +107,7 @@ def _persona_card(sts: list, store, *, head_extra=None) -> str:
     return h("div", {"class_": "turn"},
              h("div", {"class_": "hd"}, who, " ", stance_chip, grounded_chip, head_extra, rel_html,
                h("div", {"class_": "muted small turn-ctx"}, ctx) if ctx else None),
-             fragment(*(_statement_body(s) for s in sts)))
+             fragment(*(_statement_body(s, store) for s in sts)))
 
 
 def render_statement(st: dict, store, *, head_extra=None) -> str:
@@ -135,10 +152,11 @@ def render_statements(items: list, store, *, group_by: str = "persona", prompts:
              fragment(*(_persona_card(g, store) for g in _by_persona(items))))
 
 
-def render_finding(f: dict, *, n: int | None = None) -> str:
+def render_finding(f: dict, *, n: int | None = None, store=None) -> str:
     """One authored finding — the ONE row every finding section uses (key_problem, pain_solver, cluster,
     segment, ranking, recommendation, …): a left block (prose title, optional muted detail, members,
-    grounding refs) and right-aligned chips (effort·impact score + stance). Numbered → the .rec form."""
+    grounding refs) and right-aligned chips (effort·impact score + stance). Numbered → the .rec form.
+    The row carries id=<part-id> so other artifacts can deep-link to this exact finding."""
     meta = f.get("meta") or {}
     score = f.get("score")
     detail = meta.get("detail")
@@ -147,7 +165,7 @@ def render_finding(f: dict, *, n: int | None = None) -> str:
         left.append(h("div", {"class_": "muted small", "style": "margin-top:2px"}, raw(_prose(detail))))
     if meta.get("members"):
         left.append(h("div", {"class_": "muted small", "style": "margin-top:2px"}, "· " + ", ".join(str(m) for m in meta["members"])))
-    rl = _refs_line(f.get("refs") or [], t("rel_based_on"))
+    rl = _refs_line(f.get("refs") or [], t("rel_based_on"), store)
     if rl:
         left.append(raw(rl))
     chips = []
@@ -158,11 +176,14 @@ def render_finding(f: dict, *, n: int | None = None) -> str:
     num = h("span", {"class_": "recnum"}, str(n)) if n is not None else None
     body = h("div", {"class_": "fbody"}, fragment(*left))
     right = h("div", {"class_": "fchips"}, fragment(*chips)) if chips else None
-    return h("div", {"class_": "rec" if n is not None else "fitem"}, num, body, right)
+    attrs = {"class_": "rec" if n is not None else "fitem"}
+    if f.get("id"):
+        attrs["id"] = f["id"]
+    return h("div", attrs, num, body, right)
 
 
-def render_findings(items: list, *, numbered: bool = False) -> str:
+def render_findings(items: list, *, numbered: bool = False, store=None) -> str:
     """The rows of a finding list section (one render_finding per item). The caller wraps them in a
     section with the data-driven id (artifacts.finding_kind(kind)['id']) and an i18n label."""
-    rows = [render_finding(f, n=(i if numbered else None)) for i, f in enumerate(items, 1)]
+    rows = [render_finding(f, n=(i if numbered else None), store=store) for i, f in enumerate(items, 1)]
     return fragment(*rows)

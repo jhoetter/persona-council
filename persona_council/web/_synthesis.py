@@ -358,7 +358,7 @@ def _synthesis_html(store: Store, syn: dict):
         if not items:
             return None
         sid = _A.finding_kind(kind)["id"]
-        return (sid, toc or label, _block(sid, label, render_findings(items)))
+        return (sid, toc or label, _block(sid, label, render_findings(items, store=store)))
 
     rec_items = _A.synthesis_recommendations(syn)         # [(text, effort, value)] from recommendation findings
     if rec_items:

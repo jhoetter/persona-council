@@ -284,6 +284,13 @@ details.sec[open]>summary::before,details.block[open]>summary.bh::before{transfo
 .prio{display:inline-block;font-size:var(--t-xs);font-weight:700;letter-spacing:.03em;color:#fff;border-radius:6px;padding:3px 7px;text-align:center;white-space:nowrap}
 .prio-1{background:#b3493f}.prio-2{background:#a66b1f}.prio-3{background:#2f6f9f}.prio-4{background:#3d7b5f}.prio-5{background:#6d7378}
 .srcchip{display:inline-block;font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-left:6px;background:var(--panel-2);white-space:nowrap}
+a.srcchip{text-decoration:none}a.srcchip:hover{border-color:var(--accent);color:var(--ink)}
+.xref .xref-role{opacity:.7;font-variant:all-small-caps;letter-spacing:.02em}
+.xref-broken{border-style:dashed;color:var(--red);opacity:.75}
+/* deep-link arrival: briefly highlight the referenced statement/finding */
+.turn-ans:target,.fitem:target,.rec:target{animation:xreflash 2s ease-out 1}
+@keyframes xreflash{0%,40%{background:var(--accent-weak);box-shadow:0 0 0 6px var(--accent-weak)}100%{background:transparent;box-shadow:none}}
+[id]{scroll-margin-top:70px}
 .psolve{padding:9px 0;border-bottom:1px solid var(--line-2);max-width:74ch}.psolve:last-child{border-bottom:0}
 .psolve .es-prose,.psolve p{max-width:none}.psolve p{margin:0}
 /* unified finding row (every finding section: key_problem/pain_solver/cluster/segment/ranking/…) */

@@ -297,6 +297,12 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: 
     nat_prompts = [_artifacts.validate_prompt(p) for p in (prompts or [])]
     prompts_out = nat_prompts or _artifacts.council_prompts(
         {"prompt": prompt, "questions": qs, "proposal": proposal})
+    findings_out = [_artifacts.validate_finding(f) for f in (findings or [])]
+    # Stable part ids so other artifacts can cross-reference these statements/findings + the UI can
+    # deep-link to them (spec/artifact-cross-references.md). Prompts keep their semantic ids (q0/proposal).
+    _artifacts.assign_part_ids(statements_out, "st")
+    _artifacts.assign_part_ids(findings_out, "f")
+    _artifacts.assign_part_ids(prompts_out, "p")
     session = CouncilSession(
         id=cid,
         prompt=prompt, persona_ids=persona_ids, selection_reason=selection_reason or "host-authored",
@@ -305,7 +311,7 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: 
         created_at=(existing or {}).get("created_at") or utc_now_iso(),
         project_id=project["id"],
         statements=statements_out,
-        findings=[_artifacts.validate_finding(f) for f in (findings or [])],
+        findings=findings_out,
         prompts=prompts_out,
     ).to_dict()
     store.insert_council_session(session)

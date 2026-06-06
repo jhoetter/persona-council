@@ -110,15 +110,89 @@ _REF_ROUTES = {"council": "/councils/", "synthesis": "/syntheses/", "persona": "
 
 def ref_href(r: dict) -> str | None:
     """The internal link for a record-pointing Ref (kept in the DOMAIN layer so the web renderer never
-    hardcodes a kind→route literal — the kind-vocabulary grep gate)."""
+    hardcodes a kind→route literal — the kind-vocabulary grep gate). When the ref carries an `anchor`
+    (a part within the artifact) the link deep-links to that part via `#<anchor>`."""
     base = _REF_ROUTES.get(r.get("kind"))
-    return (base + r["id"]) if base and r.get("id") else None
+    if not (base and r.get("id")):
+        return None
+    return base + r["id"] + (f'#{r["anchor"]}' if r.get("anchor") else "")
 
 
-def ref(kind: str, *, id: str | None = None, text: str | None = None, quote: str | None = None) -> dict:
-    """A grounding pointer. kind: memory|council|synthesis|prototype_state|persona|external. Carries an
-    `id` (points at a record) or `text` (a free observed-state string), and an optional `quote`."""
-    return _clean({"kind": kind, "id": id, "text": text, "quote": quote})
+def ref(kind: str, *, id: str | None = None, anchor: str | None = None, role: str | None = None,
+        text: str | None = None, quote: str | None = None) -> dict:
+    """A typed cross-reference (spec/artifact-cross-references.md). kind: memory|council|synthesis|note|
+    prototype|persona|prototype_state|external. `id` points at a record; `anchor` addresses a PART within
+    it (a statement/finding/prose-block id, None = whole artifact); `role` is the typed relation
+    (cites|reinterprets|derived_from|answers|supports|refutes|…, open vocab). `quote` is an OPTIONAL
+    cached display hint — the source of truth is resolved LIVE from the addressed part. `text` is only for
+    anchor-less observed-state strings."""
+    return _clean({"kind": kind, "id": id, "anchor": anchor, "role": role, "text": text, "quote": quote})
+
+
+def part_address(kind: str, id: str, anchor: str | None = None) -> str:
+    """Canonical URI for an artifact or one of its parts: 'kind:id' or 'kind:id#part'."""
+    return f"{kind}:{id}" + (f"#{anchor}" if anchor else "")
+
+
+def parse_address(addr: str) -> dict[str, Any]:
+    """Inverse of part_address: 'kind:id#part' -> {kind, id, anchor}."""
+    kind, _, rest = (addr or "").partition(":")
+    rid, _, anchor = rest.partition("#")
+    return {"kind": kind, "id": rid, "anchor": anchor or None}
+
+
+def assign_part_ids(parts: list[dict], prefix: str) -> list[dict]:
+    """Give each part a STABLE id (prefix + 1-based index) if it lacks one, so other artifacts can address
+    it via a Ref anchor + the UI can deep-link to it. Returns the same list (ids assigned in place)."""
+    for i, p in enumerate(parts, 1):
+        if isinstance(p, dict) and not p.get("id"):
+            p["id"] = f"{prefix}{i}"
+    return parts
+
+
+# Named prose blocks a Ref can anchor to (synthesis), kept here so the addressing vocab is in one place.
+_PROSE_PARTS = ("gesamtbild", "positionierung", "arc_narrative", "exec_summary", "summary")
+
+
+def _find_part(art: dict, anchor: str) -> dict | None:
+    """Find the part with id == anchor inside an artifact (statements/findings/prompts), or a named prose
+    block wrapped as {text}. Returns None for a broken anchor."""
+    if anchor in _PROSE_PARTS:
+        return {"text": art.get(anchor, "")} if art.get(anchor) else None
+    for key in ("statements", "findings", "prompts"):
+        for p in (art.get(key) or []):
+            if isinstance(p, dict) and p.get("id") == anchor:
+                return p
+    # sessions live outside the artifact dict; the resolver handles those by id directly
+    return None
+
+
+def resolve_ref(r: dict, store: Any) -> dict[str, Any]:
+    """Resolve a Ref to the LIVE content of the artifact/part it addresses — never a stale copy
+    (spec/artifact-cross-references.md). `store` is duck-typed (get_council_session/get_synthesis/
+    get_prototype/get_persona). Returns {kind,id,anchor,role,href,exists,title,text,persona_id}; a missing
+    record or broken anchor yields exists=False so the UI can show it honestly."""
+    kind, rid, anchor = r.get("kind"), r.get("id"), r.get("anchor")
+    out = {"kind": kind, "id": rid, "anchor": anchor, "role": r.get("role"), "href": ref_href(r),
+           "exists": False, "title": "", "text": r.get("quote") or r.get("text") or "", "persona_id": ""}
+    if not rid:                                          # free observed-state / external string ref
+        out["exists"] = bool(out["text"])
+        return out
+    getter = {"council": "get_council_session", "synthesis": "get_synthesis",
+              "prototype": "get_prototype", "persona": "get_persona"}.get(kind)
+    art = getattr(store, getter)(rid) if (getter and hasattr(store, getter)) else None
+    if not art:
+        return out
+    out["exists"] = True
+    out["title"] = art.get("title") or art.get("prompt") or art.get("name") or rid
+    if anchor:
+        part = _find_part(art, anchor)
+        if part is None:
+            out["exists"] = False                       # broken anchor (part edited away / renumbered)
+        else:
+            out["text"] = part.get("text") or part.get("body") or out["text"]
+            out["persona_id"] = part.get("persona_id", "")
+    return out
 
 
 def stance(value: int, *, label: str | None = None) -> dict:
@@ -132,21 +206,23 @@ def prompt(text: str, *, kind: str = "question", id: str | None = None) -> dict:
     return _clean({"text": text or "", "kind": kind, "id": id})
 
 
-def statement(persona_id: str, text: str, *, stance: dict | None = None, about: dict | None = None,
-              refs: list | tuple = (), relevance: str | None = None, shift: dict | None = None,
-              meta: dict | None = None) -> dict:
+def statement(persona_id: str, text: str, *, id: str | None = None, stance: dict | None = None,
+              about: dict | None = None, refs: list | tuple = (), relevance: str | None = None,
+              shift: dict | None = None, meta: dict | None = None) -> dict:
     """A persona's utterance — the unifier for council turns, synthesis voices and prototype reactions.
-    `about` is a Ref/Prompt-id it responds to; `refs` is the grounding; artifact extras go in `meta`."""
-    return _clean({"persona_id": persona_id or "", "text": text or "", "stance": stance,
+    `id` is the stable part id (for addressing/deep-link); `about` is a Ref/Prompt-id it responds to;
+    `refs` is the grounding; artifact extras go in `meta`."""
+    return _clean({"id": id, "persona_id": persona_id or "", "text": text or "", "stance": stance,
                    "about": about, "refs": list(refs), "relevance": relevance,
                    "shift": shift, "meta": meta})
 
 
-def finding(text: str, *, kind: str, score: dict | int | None = None, refs: list | tuple = (),
-            meta: dict | None = None) -> dict:
+def finding(text: str, *, kind: str, id: str | None = None, score: dict | int | None = None,
+            refs: list | tuple = (), meta: dict | None = None) -> dict:
     """An authored analysis item (key_problem, recommendation, open_question, cluster, …): markdown text,
-    optional score (e.g. {effort,value}), optional grounding refs, kind-specific extras in `meta`."""
-    return _clean({"text": text or "", "kind": kind, "score": score, "refs": list(refs), "meta": meta})
+    optional score (e.g. {effort,value}), optional grounding refs, kind-specific extras in `meta`. `id` is
+    the stable part id (for addressing/deep-link)."""
+    return _clean({"id": id, "text": text or "", "kind": kind, "score": score, "refs": list(refs), "meta": meta})
 
 
 def event(persona_id: str, time: str, *, kind: str, body: str, refs: list | tuple = (),
