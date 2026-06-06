@@ -6,7 +6,8 @@ HOVERED tick's label shows (no overlap). Items: a list of (anchor_id, label); ne
 from __future__ import annotations
 
 from ._i18n import t
-from ._components import _esc
+from ._components import _esc  # noqa: F401
+from ._html import h, raw
 
 _RAIL_CSS = """<style>
 .pgrail{position:fixed;right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;z-index:40;padding:10px 4px;align-items:flex-end}
@@ -36,8 +37,8 @@ def _page_rail(items: list[tuple[str, str]]) -> str:
     items = [(i, l) for i, l in (items or []) if i and l]
     if len(items) < 2:
         return ""
-    ticks = "".join(
-        f'<a class="tick" href="#{_esc(i)}"><span class="tk-label">{_esc(l)}</span>'
-        f'<span class="tk-bar"></span></a>'
-        for i, l in items)
-    return _RAIL_CSS + f'<nav class="pgrail" aria-label="{_esc(t("sections"))}">{ticks}</nav>' + _RAIL_JS
+    ticks = [h("a", {"class_": "tick", "href": f"#{i}"},
+               h("span", {"class_": "tk-label"}, l), h("span", {"class_": "tk-bar"}))
+             for i, l in items]
+    nav = h("nav", {"class_": "pgrail", "aria-label": t("sections")}, ticks)
+    return raw(_RAIL_CSS) + nav + raw(_RAIL_JS)

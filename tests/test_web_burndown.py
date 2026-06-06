@@ -17,8 +17,8 @@ from persona_council import web
 BASELINE = {
     "_components.py": 72,
     "_graph.py": 71,
-    "_palette.py": 5,
-    "_rail.py": 6,
+    "_palette.py": 0,
+    "_rail.py": 0,
     "_routes_lists.py": 0,
     "_routes_pages.py": 239,
     "_synthesis.py": 102,

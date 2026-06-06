@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 
 from ._i18n import t
+from ._html import h, raw
 
 
 PALETTE_CSS = r"""
@@ -47,17 +48,18 @@ def palette_markup() -> str:
                    "council": t("councils"), "synthesis": t("syntheses"),
                    "prototype": t("prototypes_h"), "section": t("sections"), "note": t("notes_h")},
     })
-    return (
-        '<div class="cmdk" id="cmdk" hidden>'
-        '<div class="cmdk-bd" data-cmdk-close></div>'
-        '<div class="cmdk-panel" role="dialog" aria-modal="true">'
-        f'<input id="cmdk-in" class="cmdk-in" type="text" autocomplete="off" spellcheck="false" placeholder="{t("cmdk_placeholder")}">'
-        f'<div class="cmdk-list" id="cmdk-list" data-empty="{t("cmdk_empty")}"></div>'
-        f'<div class="cmdk-foot"><span><kbd>↑↓</kbd>{t("cmdk_nav")}</span>'
-        f'<span><kbd>↵</kbd>{t("cmdk_open")}</span><span><kbd>esc</kbd>{t("cmdk_close")}</span></div>'
-        '</div></div>'
-        f'<script id="cmdk-cfg" type="application/json">{cfg}</script>'
-    )
+    foot = h("div", {"class_": "cmdk-foot"},
+             h("span", {}, h("kbd", {}, "↑↓"), t("cmdk_nav")),
+             h("span", {}, h("kbd", {}, "↵"), t("cmdk_open")),
+             h("span", {}, h("kbd", {}, "esc"), t("cmdk_close")))
+    overlay = h("div", {"class_": "cmdk", "id": "cmdk", "hidden": True},
+                h("div", {"class_": "cmdk-bd", "data-cmdk-close": True}),
+                h("div", {"class_": "cmdk-panel", "role": "dialog", "aria-modal": "true"},
+                  h("input", {"id": "cmdk-in", "class_": "cmdk-in", "type": "text", "autocomplete": "off",
+                              "spellcheck": "false", "placeholder": t("cmdk_placeholder")}),
+                  h("div", {"class_": "cmdk-list", "id": "cmdk-list", "data-empty": t("cmdk_empty")}),
+                  foot))
+    return overlay + h("script", {"id": "cmdk-cfg", "type": "application/json"}, raw(cfg))
 
 
 PALETTE_JS = r"""<script>(function(){
