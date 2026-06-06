@@ -143,3 +143,57 @@ elements) — revisit only if the home-grown builder proves limiting. Recorded s
 ## 9. Out of scope (for now)
 Client-side interactivity beyond today's tiny vanilla JS; a virtual DOM/hydration; streaming. This is
 SSR structure only.
+
+---
+
+## 10. Progress (2026-06-06)
+Landed: **C1** (`_html.py` h()/Safe/esc/raw/fragment + tests) · **C2** (CSS co-location registry;
+`_study_lead` on h() with co-located CSS) · **C3** (`_hero` component replacing all 7 hand-written
+heroes; list routes split into `_routes_lists.py`) · **C4a** (`web/_vm.py` `study_head()` view-model
+unifying council+synthesis). Real shared components now: `_hero`, `_study_lead`, `_list_page` (+
+`_properties_html`/`_relations_html`/`_session_card`/`_artifact_present` from earlier).
+
+## 11. Rollout across the WHOLE app — the remaining surface & the recipe
+**Measured surface to convert** (inline `f'<…>'` / `_esc()` per file): `_routes_pages` 142/134 ·
+`_synthesis` 86/54 · `_graph` 49/22 · `_components` 62/30 · `_detail` 17/9 · `_routes_lists` 19/14.
+≈360 inline-HTML f-strings and ≈270 hand-escapes remain. CSS monolith (`web_assets`) ≈756 LOC.
+
+### 11.1 The per-unit recipe (repeatable, one PR-sized step each)
+For each component / page, in this order:
+1. **Leaf components first** (lowest risk): convert the f-string body to `h()`; move its CSS rules
+   from `web_assets.CSS`/`_SYN_STYLE` into a `register_css(...)` fragment beside it; delete its
+   `_esc` calls (h() auto-escapes); wrap already-HTML (markdown, icons, child components) in `raw()`.
+2. **Then the page**: introduce a `*_vm(record)` view-model (typed dict/dataclass) and a `*_page(vm)`
+   function composing the leaf components; shrink the route to `fetch → vm → page → _layout`.
+3. **Verify**: full `pytest` green + a TestClient render + a Playwright screenshot diff (functional
+   equivalence, not byte-identical once markup improves). Commit one unit per commit.
+
+### 11.2 Conversion inventory & order
+- **Leaf components (in `_components`/`_detail`)** — convert next: `_label`, `_pills`, `_avatar`,
+  `_crumbs_html`, `_empty_state`, `_properties_html`, `_relations_html`, `_session_card`,
+  `_list_page` rows, `_page_rail`/`_palette` markup. (Many are small; each removes several `_esc`.)
+- **Detail pages → `*_page(vm)`**: note → section → persona → activity → prototype → council →
+  synthesis (hardest: the transcript engine + the section builder). council/synthesis already share
+  `study_head`; extend the VM to cover voices + properties so the whole page is VM-driven.
+- **List pages**: already through `_list_page`; convert the row builders to `h()` + a `ListRowVM`.
+- **Big custom views** (separate, later): `_graph.py` (interactive SVG graph + plan + outline) and
+  the **calendar** (`_calendar_*`), **plan**, **meta-report** — these are bespoke; convert their
+  static scaffolding to `h()` but keep the SVG/JS bodies as `raw()` islands.
+
+### 11.3 C5 — collapse the monoliths (after pages are components)
+- **CSS**: migrate rules out of `web_assets.CSS` and `_SYN_STYLE` into the owning components'
+  `register_css` fragments; `CSS` shrinks to base tokens (`:root` vars, reset, layout primitives).
+  `_SYN_STYLE` disappears (its rules co-locate with synthesis sub-components).
+- **Routes**: split `_routes_pages.py` into a `web/pages/` package (one module per page), each
+  exporting `register(app)`; `create_app` calls them. The ~800-LOC bar then holds naturally.
+
+### 11.4 Driveable progress metric (add as a soft gate)
+A test that counts, per `web/` file, `_esc(`/`html.escape(` and inline `f'<`/`f"<` occurrences and
+asserts the totals only ever **decrease** (a ratchet). Converted modules trend to 0; the number is
+the burndown for "the rest of the app." (Soft/ratchet, not a hard cap, so it never blocks a feature.)
+
+### 11.5 Definition of done (whole app)
+Every page is `fetch → vm → page(vm)`; no `_esc`/`html.escape` in `web/pages/`; no inline `<` literal
+in route modules; `web_assets.CSS` is tokens-only and `_SYN_STYLE` is gone; component CSS is
+co-located; the burndown metric is ~0. Then the UI is, structurally, a React-style component app —
+in pure Python SSR.
