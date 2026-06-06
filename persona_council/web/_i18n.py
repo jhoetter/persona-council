@@ -32,7 +32,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "sidebar": "Sidebar", "breadcrumb_aria": "Seitenposition",
         "settings": "Einstellungen", "theme": "Erscheinungsbild", "language": "Sprache",
         "theme_light": "Hell", "theme_dark": "Dunkel", "theme_system": "System",
-        "personas_lead": "{n} synthetische Kundenprofile.",
+        "personas_lead": "Synthetische Kundenprofile.",
         "councils_lead": "Memory-geerdete Persona-Debatten.",
         "syntheses_lead": "Studien-Bögen über Council-Ketten — die Reports.",
         "projects": "Projekte",
@@ -43,6 +43,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "type_h": "Typ", "tags_h": "Tags", "clear_filter": "zurücksetzen", "legend": "Legende", "groups_toggle": "Gruppen ein/aus (Themen & Phasen-Hüllen)", "round_n": "Runde {n}", "relations": "Beziehungen", "rel_based_on": "Basiert auf", "rel_feeds_into": "Fließt ein in",
         "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Synthese.",
         "prototypes_lead": "Lauffähige Artefakte — von Personas getestet.", "no_prototypes": "Noch keine Artefakte.",
+        "concepts": "Konzepte", "concept_h": "Konzept", "concepts_lead": "Lösungs-Ideen aus der Ideation.", "no_concepts": "Noch keine Konzepte.", "library_h": "Bibliothek",
         # graph canvas controls
         "graph_hint": "Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen",
         "graph_fit": "Einpassen (F)", "graph_reset": "Layout zurücksetzen (R)",
@@ -184,7 +185,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "sidebar": "Sidebar", "breadcrumb_aria": "Page position",
         "settings": "Settings", "theme": "Appearance", "language": "Language",
         "theme_light": "Light", "theme_dark": "Dark", "theme_system": "System",
-        "personas_lead": "{n} synthetic customer profiles.",
+        "personas_lead": "Synthetic customer profiles.",
         "councils_lead": "Memory-grounded persona debates.",
         "syntheses_lead": "Study arcs across council chains — the reports.",
         "projects": "Projects",
@@ -195,6 +196,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "type_h": "Type", "tags_h": "Tags", "clear_filter": "clear", "legend": "Legend", "groups_toggle": "Toggle groups (theme & phase hulls)", "round_n": "Round {n}", "relations": "Relations", "rel_based_on": "Based on", "rel_feeds_into": "Feeds into",
         "no_councils": "No councils yet.", "no_synthesis": "No synthesis yet.",
         "prototypes_lead": "Runnable artifacts — tested by personas.", "no_prototypes": "No artifacts yet.",
+        "concepts": "Concepts", "concept_h": "Concept", "concepts_lead": "Solution ideas from ideation.", "no_concepts": "No concepts yet.", "library_h": "Library",
         # graph canvas controls
         "graph_hint": "drag · pan background · pinch / ⌘+scroll to zoom · F to fit",
         "graph_fit": "Fit to view (F)", "graph_reset": "Reset layout (R)",

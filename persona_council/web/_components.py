@@ -163,17 +163,22 @@ APP_JS = """
 
 
 def _nav(active: str, store: Store) -> str:
-    items = [("/projects", "projects", t("projects")), ("/personas", "personas", t("personas")),
-             ("/councils", "councils", t("councils")), ("/syntheses", "syntheses", t("syntheses")),
-             ("/prototypes", "prototype", t("prototypes_h"))]
-    nav = "".join(
-        f'<a href="{href}" class="{"active" if key == active else ""}">{_icon(key)}<span>{label}</span></a>'
-        for href, key, label in items
-    )
+    # Workspace = the inputs/containers; Research = the methodology-agnostic primitives any
+    # methodology produces (council/concept/prototype/synthesis). (href, active-key, icon, label).
+    work = [("/projects", "projects", "projects", t("projects")),
+            ("/personas", "personas", "personas", t("personas"))]
+    research = [("/councils", "councils", "councils", t("councils")),
+                ("/concepts", "concept", "bulb", t("concepts")),
+                ("/prototypes", "prototype", "prototype", t("prototypes_h")),
+                ("/syntheses", "syntheses", "syntheses", t("syntheses"))]
+    render = lambda items: "".join(
+        f'<a href="{h}" class="{"active" if k == active else ""}">{_icon(ic)}<span>{lbl}</span></a>'
+        for h, k, ic, lbl in items)
     # Favorites are stored client-side (localStorage); this container is filled by JS.
     favs = (f'<div class="navhead">{t("favorites")}</div>'
             f'<div class="sb-quick" id="favs"><span class="muted small" style="padding:5px 9px;display:block">{t("mark_with_star")}</span></div>')
-    return f'<nav class="nav">{nav}</nav>{favs}'
+    return (f'<nav class="nav">{render(work)}</nav>'
+            f'<div class="navhead">{t("library_h")}</div><nav class="nav">{render(research)}</nav>{favs}')
 
 
 def _user_menu() -> str:
@@ -253,6 +258,17 @@ def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
     return (f'<div class="es" id="{_esc(qid)}">{q}'
             f'<div class="eyebrow">{_esc(answer_label)}</div>'
             f'<div class="es-prose">{answer_html}</div></div>')
+
+
+def _list_page(store: Store, *, title: str, lead: str, rows: list,
+               empty_icon: str, empty_msg: str, active: str) -> str:
+    """One index-page shell — title + count + lead + rows (or an empty state). Every list page
+    (projects, personas, councils, syntheses, prototypes, concepts) renders identically through this."""
+    rows_html = "".join(rows) or f'<div class="list-empty">{_icon(empty_icon)}<span>{empty_msg}</span></div>'
+    cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
+    body = (f'<div class="page"><h1 class="h1">{title}{cnt}</h1>'
+            f'<p class="lead">{lead}</p><div class="rows">{rows_html}</div></div>')
+    return _layout(title, body, store, crumbs=[(title, None)], active=active)
 
 
 def _empty_state(title: str, message: str) -> str:

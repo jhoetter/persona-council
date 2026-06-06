@@ -7,7 +7,7 @@ from .. import services
 from ..storage import Store
 from ._i18n import t, _lang
 from ._components import (
-    _esc, _icon, _avatar, _label, _pills, _md, _layout, _empty_state, _doc,
+    _esc, _icon, _avatar, _label, _pills, _md, _layout, _empty_state, _doc, _list_page,
     _star, _stance_color, _EDGE_COLORS, _theme_color, _artifact_present, _study_lead,
 )
 from ._synthesis import (
@@ -24,21 +24,14 @@ def _projects_page() -> str:
     store = Store()
     rows = []
     for p in services.list_research_projects(store=store):
-        meta = []                                              # only show counts that are non-zero (no "0 Themes" noise)
-        if p["studies"]:
-            meta.append(f'<span>{p["studies"]} {t("syntheses")}</span>')
-        if p["edges"]:
-            meta.append(f'<span>{p["edges"]} {t("build_order_h")}</span>')
-        if p.get("themes"):
-            meta.append(f'<span>{len(p["themes"])} {t("themes_h")}</span>')
+        meta = ((f'<span>{p["studies"]} {t("syntheses")}</span>' if p["studies"] else "")   # non-zero only (no "0 Themes")
+                + (f'<span>{p["edges"]} {t("build_order_h")}</span>' if p["edges"] else "")
+                + (f'<span>{len(p["themes"])} {t("themes_h")}</span>' if p.get("themes") else ""))
         rows.append(f'<a class="row" href="/projects/{_esc(p["id"])}">'
                     f'<span class="rico" style="color:var(--accent)">{_icon("projects")}</span>'
-                    f'<span class="title">{_esc(p["title"])}</span>'
-                    f'<span class="right">{"".join(meta)}</span></a>')
-    rows_html = "".join(rows) or f'<div class="list-empty">{_icon("projects")}<span>{t("no_projects")}</span></div>'
-    cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
-    body = f'<div class="page"><h1 class="h1">{t("projects")}{cnt}</h1><p class="lead">{t("projects_lead")}</p><div class="rows">{rows_html}</div></div>'
-    return _layout(t("projects"), body, store, crumbs=[(t("projects"), None)], active="projects")
+                    f'<span class="title">{_esc(p["title"])}</span><span class="right">{meta}</span></a>')
+    return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
+                      empty_icon="projects", empty_msg=t("no_projects"), active="projects")
 
 
 # ----------------------------- calendar helpers ----------------------------- #
@@ -180,12 +173,9 @@ def register_pages(app) -> None:
     @app.get("/personas", response_class=HTMLResponse)
     def personas_list() -> str:
         store = Store()
-        personas = services.list_personas(store=store)
-        rows = "".join(_persona_row(p, store) for p in personas) or f'<div class="list-empty">{_icon("personas")}<span>{t("no_personas")}</span></div>'
-        cnt = f'<span class="h1cnt">{len(personas)}</span>' if personas else ""
-        body = (f'<div class="page"><h1 class="h1">{t("personas")}{cnt}</h1>'
-                f'<p class="lead">{t("personas_lead", n=len(personas))}</p><div class="rows">{rows}</div></div>')
-        return _layout(t("personas"), body, store, crumbs=[(t("personas"), None)], active="personas")
+        rows = [_persona_row(p, store) for p in services.list_personas(store=store)]
+        return _list_page(store, title=t("personas"), lead=t("personas_lead"), rows=rows,
+                          empty_icon="personas", empty_msg=t("no_personas"), active="personas")
 
     @app.get("/personas/{persona_id}", response_class=HTMLResponse)
     def persona_detail(persona_id: str, date_value: str | None = Query(default=None, alias="date"), view: str = Query(default="day")) -> str:
@@ -291,10 +281,8 @@ def register_pages(app) -> None:
                         f'<span class="title">{_esc(c["prompt"])}</span>'
                         f'<span class="right">{bar}<span>{c["personas"]} {t("personas")}</span><span>{_esc(c["created_at"][:10])}</span>'
                         f'{_star("council", c["id"], c["prompt"][:60], f"/councils/{c['id']}")}</span></a>')
-        rows_html = "".join(rows) or f'<div class="list-empty">{_icon("councils")}<span>{t("no_councils")}</span></div>'
-        cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
-        body = f'<div class="page"><h1 class="h1">{t("councils")}{cnt}</h1><p class="lead">{t("councils_lead")}</p><div class="rows">{rows_html}</div></div>'
-        return _layout(t("councils"), body, store, crumbs=[(t("councils"), None)], active="councils")
+        return _list_page(store, title=t("councils"), lead=t("councils_lead"), rows=rows,
+                          empty_icon="councils", empty_msg=t("no_councils"), active="councils")
 
     @app.get("/councils/{session_id}", response_class=HTMLResponse)
     def council_detail(session_id: str) -> str:
@@ -471,10 +459,8 @@ def register_pages(app) -> None:
                         f'<span class="right">{_label(t("done") if done else t("running"), "var(--green)" if done else "var(--amber)")}'
                         f'<span>{len(s.get("council_ids", []))} {t("councils")}</span><span>{_esc(s["created_at"][:10])}</span>'
                         f'{_star("synthesis", s["id"], s["title"], f"/syntheses/{s['id']}")}</span></a>')
-        rows_html = "".join(rows) or f'<div class="list-empty">{_icon("syntheses")}<span>{t("no_synthesis")}</span></div>'
-        cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
-        body = f'<div class="page"><h1 class="h1">{t("syntheses")}{cnt}</h1><p class="lead">{t("syntheses_lead")}</p><div class="rows">{rows_html}</div></div>'
-        return _layout(t("syntheses"), body, store, crumbs=[(t("syntheses"), None)], active="syntheses")
+        return _list_page(store, title=t("syntheses"), lead=t("syntheses_lead"), rows=rows,
+                          empty_icon="syntheses", empty_msg=t("no_synthesis"), active="syntheses")
 
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:
@@ -699,16 +685,19 @@ def register_pages(app) -> None:
                        active="projects")
 
     @app.get("/notes/{note_id}", response_class=HTMLResponse)
+    @app.get("/concepts/{note_id}", response_class=HTMLResponse)        # a concept is a note with kind=concept
     def note_view(note_id: str) -> str:
         store = Store()
         from .. import presentation as _pres
-        pr = _pres.present("note")           # label/color/glyph from data (no hardcoded vocab)
-        klabel = pr.get("label") or "note"
         try:
             data = services.get_note(note_id, store=store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state(klabel, t("runtime_maybe_cleared")), store, active="projects")
+            return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared")), store, active="projects")
         note, proj = data["note"], data["project"]
+        kind = note.get("kind") or "note"                              # present by the record's OWN kind
+        pr = _pres.present(kind)
+        klabel = t("concept_h") if kind == "concept" else (t("notes_h") if kind == "note" else (pr.get("label") or kind))
+        active = "concept" if kind == "concept" else "projects"
         proj_link = f'<a href="/projects/{_esc(proj["id"])}">{_esc(proj["title"])}</a>'
         nprops = _properties_html([
             ("dot", t("created"), _esc(note.get("created_at", "")[:10])),
@@ -728,7 +717,7 @@ def register_pages(app) -> None:
         body = _doc(main, rail=nprops + nrel) + _page_rail(nrail)
         return _layout(note.get("title") or klabel, body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (klabel, None)],
-                       active="projects")
+                       active=active)
 
     @app.get("/prototypes", response_class=HTMLResponse)
     def prototypes_list() -> str:
@@ -738,17 +727,27 @@ def register_pages(app) -> None:
             ap = _artifact_present(p)
             proj = store.get_research_project(p["project_id"]) if p.get("project_id") else None
             nsess = len(store.list_prototype_sessions(prototype_id=p["id"]))
-            right = ((f'<span class="muted small">{_esc(proj["title"])}</span>' if proj else "")
-                     + (f'<span>{t("sessions")} {nsess}</span>' if nsess else "")
-                     + (f'<span class="muted small">{_esc(p["version"])}</span>' if p.get("version") else ""))
+            right = ((f'<span class="muted small">{_esc(proj["title"])}</span>' if proj else "") + (f'<span>{t("sessions")} {nsess}</span>' if nsess else "") + (f'<span class="muted small">{_esc(p["version"])}</span>' if p.get("version") else ""))
             rows.append(f'<a class="row" href="/prototypes/{_esc(p["slug"])}"><span class="rico" style="color:{ap["color"]}">{_icon("prototype")}</span>'
                         f'<span class="title">{_esc(p["name"])}<span class="muted small"> · {_esc(ap["disc"] or ap["label"])}</span></span>'
                         f'<span class="right">{right}{_star("prototype", p["id"], p["name"], f"/prototypes/{p["slug"]}")}</span></a>')
-        rows_html = "".join(rows) or f'<div class="list-empty">{_icon("prototype")}<span>{t("no_prototypes")}</span></div>'
-        cnt = f'<span class="h1cnt">{len(rows)}</span>' if rows else ""
-        body = (f'<div class="page"><h1 class="h1">{t("prototypes_h")}{cnt}</h1>'
-                f'<p class="lead">{t("prototypes_lead")}</p><div class="rows">{rows_html}</div></div>')
-        return _layout(t("prototypes_h"), body, store, crumbs=[(t("prototypes_h"), None)], active="prototype")
+        return _list_page(store, title=t("prototypes_h"), lead=t("prototypes_lead"), rows=rows,
+                          empty_icon="prototype", empty_msg=t("no_prototypes"), active="prototype")
+
+    @app.get("/concepts", response_class=HTMLResponse)
+    def concepts_list() -> str:
+        store = Store()
+        rows = []
+        for proj in store.list_research_projects():
+            for n in services.list_notes(proj["id"], store=store):
+                if (n.get("kind") or "note") != "concept":
+                    continue
+                rows.append(f'<a class="row" href="/concepts/{_esc(n["id"])}"><span class="rico" style="color:#ea4335">{_icon("bulb")}</span>'
+                            f'<span class="title">{_esc(n.get("title", ""))}</span>'
+                            f'<span class="right"><span class="muted small">{_esc(proj["title"])}</span>'
+                            f'{_star("concept", n["id"], n.get("title", ""), f"/concepts/{n['id']}")}</span></a>')
+        return _list_page(store, title=t("concepts"), lead=t("concepts_lead"), rows=rows,
+                          empty_icon="bulb", empty_msg=t("no_concepts"), active="concept")
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:

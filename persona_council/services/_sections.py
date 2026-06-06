@@ -249,8 +249,9 @@ def section_members(section_id: str, store=None) -> dict[str, Any]:
         elif mid.startswith("note:"):
             nnid = mid.split(":", 1)[1]
             n = notes.get(nnid, {})
-            out.append({"id": mid, "kind": "note", "title": n.get("title", mid), "summary": n.get("text", ""),
-                        "href": f"/notes/{nnid}"})
+            is_concept = (n.get("kind") or "note") == "concept"
+            out.append({"id": mid, "kind": "concept" if is_concept else "note", "title": n.get("title", mid),
+                        "summary": n.get("text", ""), "href": f"/concepts/{nnid}" if is_concept else f"/notes/{nnid}"})
         else:
             pr = store.get_prototype(mid) or {}
             out.append({"id": mid, "kind": "prototype", "title": pr.get("name", mid),
@@ -292,5 +293,5 @@ def note_graph_nodes(project: dict) -> list[dict[str, Any]]:
                     "council_count": 0, "voices": 0, "sentiment": {}, "recommendations": 0, "role": "", "mode": "",
                     "theme_tags": [nkind], "color": ("#a142f4" if is_concept else pres["color"]),
                     "kind_label": ("Konzept" if is_concept else pres["label"]),
-                    "href": f"/notes/{n['id']}"})
+                    "href": f"/concepts/{n['id']}" if is_concept else f"/notes/{n['id']}"})
     return out
