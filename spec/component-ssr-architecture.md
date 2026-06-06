@@ -146,17 +146,43 @@ SSR structure only.
 
 ---
 
-## 10. Progress (2026-06-06)
-Landed: **C1** (`_html.py` h()/Safe/esc/raw/fragment + tests) · **C2** (CSS co-location registry;
-`_study_lead` on h() with co-located CSS) · **C3** (`_hero` component replacing all 7 hand-written
-heroes; list routes split into `_routes_lists.py`) · **C4a** (`web/_vm.py` `study_head()` view-model
-unifying council+synthesis). Real shared components now: `_hero`, `_study_lead`, `_list_page` (+
-`_properties_html`/`_relations_html`/`_session_card`/`_artifact_present` from earlier).
+## 10. Progress (updated 2026-06-06) — DONE so far
+- **C1 Foundation** — `_html.py` (`h/Safe/esc/raw/fragment` + `register_css/collect_css`) + 11 tests.
+- **C2 CSS co-location** — `_layout` emits `collect_css()`; components register their own fragments.
+- **C3 `_hero`** — one component replaced all 7 hand-written heroes; list routes split to
+  `_routes_lists.py` (+ `register_lists`).
+- **C4a `study_head()` view-model** (`web/_vm.py`) — council & synthesis feed one shared shape.
+- **Shared/leaf components on `h()`:** `_avatar, _label, _pills, _crumbs_html, _empty_state, _hero,
+  _study_lead`; **`_detail.py` 100%** (`_properties_html`/`_relations_html`/`_session_card` → 0 `_esc`).
+- **Two full domain engines on `h()`:** **synthesis** (all section builders, belege, recommendations,
+  positioning, head/meta) and the **council transcript** (answer/persona-head/blocks/rounds/cards).
+- **Method proven:** every conversion verified **byte-identical** against a golden HTML snapshot of all
+  17 pages (`/tmp/verify.py`, body-diff to ignore the parallel icon-CSS); **ratchet test**
+  (`tests/test_web_burndown.py`) blocks regressions. **Burndown: 606 → 528 units; 110 tests green.**
 
-## 11. Rollout across the WHOLE app — the remaining surface & the recipe
-**Measured surface to convert** (inline `f'<…>'` / `_esc()` per file): `_routes_pages` 142/134 ·
-`_synthesis` 86/54 · `_graph` 49/22 · `_components` 62/30 · `_detail` 17/9 · `_routes_lists` 19/14.
-≈360 inline-HTML f-strings and ≈270 hand-escapes remain. CSS monolith (`web_assets`) ≈756 LOC.
+## 11. Rollout across the WHOLE app — what's LEFT (exact, 2026-06-06)
+**Remaining = 528 legacy-HTML units** (`_esc`/`html.escape` + inline `f'<`), per file:
+- **`_routes_pages.py` — 239.** Still f-strings: the **calendar grid** (`_calendar_html`,
+  `_period_calendar_html` — note: not visually verifiable today, the demo persona is unsimulated →
+  no calendar data), **`_memory_html`** (persona memory page), the **persona profile** body
+  (identity/current-state/goals/pains/tools/relationships sections), the **project page** assembly +
+  toolbar/oqpanel, **plan** page, **meta-report**, **prototype sessions wrapper**, **/icons** catalog.
+- **`_synthesis.py` — 102.** The remaining helpers: `_voices_panel`, `_sentiment_section`, `_rec_row_n`,
+  `_rec_item`, `_stacked`, `_srcchips`, `_persona_voices_html`, `_area`, `_effort_impact`, the
+  `ref_rows` builder, `_vote_label`.
+- **`_graph.py` — 71.** The bespoke **interactive graph SVG** + **plan** + **outline** builders. Keep
+  the SVG/JS bodies as `raw()` islands; convert their static scaffolding.
+- **`_components.py` — 72.** `_memory_html`-adjacent helpers, `_crumbs`/nav remnants, `APP_JS`-adjacent
+  markup, any leaf helpers not yet on `h()`.
+- **`_routes_lists.py` — 33.** The list-row builders (projects/personas/councils/syntheses/prototypes/
+  concepts rows) → a `ListRowVM` + `h()`.
+- **`_palette.py` 5, `_rail.py` 6.** Small static markup (palette overlay, page-rail ticks).
+
+**Then C5 — collapse the monoliths:** migrate the remaining `web_assets.CSS` / `_SYN_STYLE` rules into
+their components' `register_css` fragments (CSS → base tokens only; `_SYN_STYLE` deleted); split
+`_routes_pages.py` into a `web/pages/` package (one module per page, each `register(app)`); re-tune the
+LOC guard. **Recipe per unit (unchanged):** convert → `/tmp/verify.py` body-identical → lower the
+ratchet baseline → commit. Done when every file's baseline is 0 and §11.5 holds.
 
 ### 11.1 The per-unit recipe (repeatable, one PR-sized step each)
 For each component / page, in this order:
