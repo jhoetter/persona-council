@@ -1,6 +1,6 @@
 # Markdown authoring harness — generated prose is Markdown, not ALL-CAPS
 
-Status: **harness DONE** (2026-06-06) — new Markdown-first project next.
+Status: **DONE** (2026-06-06) — harness + Markdown-first demo project.
 
 ## 1. Problem (the big picture)
 
@@ -86,4 +86,4 @@ showcases the target style immediately.
 - [x] inject into `brief_synthesis` / `brief_meta_report` / `brief_meta_section`
 - [x] skills updated (5)
 - [x] suite green
-- [ ] new Markdown-first design-thinking project created & viewable
+- [x] new Markdown-first design-thinking project created & viewable (scripts/seed_notgroschen_demo.py)
