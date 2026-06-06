@@ -96,6 +96,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
         # stance buckets
         "stance_positive": "Positiv / begeistert", "stance_skeptical": "Skeptisch / ablehnend",
+        "stance_support": "Befürwortend", "stance_oppose": "Ablehnend",
         "stance_neutral": "Neutral", "stance_conditional": "Bedingt / teils",
         "stance_other": "Sonstige",
         # sentiment section
@@ -249,6 +250,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "vote_abstain": "Abstain", "vote_oppose": "Against",
         # stance buckets
         "stance_positive": "Positive / enthusiastic", "stance_skeptical": "Skeptical / opposed",
+        "stance_support": "Support", "stance_oppose": "Oppose",
         "stance_neutral": "Neutral", "stance_conditional": "Conditional / partly",
         "stance_other": "Other",
         # sentiment section

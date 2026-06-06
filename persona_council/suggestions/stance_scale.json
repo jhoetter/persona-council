@@ -1,0 +1,18 @@
+{
+  "kind": "stance_scale",
+  "note": "The ONE positivity vocabulary (spec/unified-artifact-schema.md). Unifies council votes, turn.stance and synthesis voice.sentiment onto a single ordered scale (-2 oppose … +2 support). Resolved via artifacts.resolve_stance()/stance_meta(); colors here, labels via i18n label_key (no stance words hardcoded in engine/UI). `aliases` maps every legacy token onto a canonical term — add an alias, no code change.",
+  "items": [
+    {"tag": "support",     "value":  2, "label_key": "stance_support",     "presentation": {"color": "var(--green)"}},
+    {"tag": "conditional", "value":  1, "label_key": "stance_conditional", "presentation": {"color": "var(--accent)"}},
+    {"tag": "neutral",     "value":  0, "label_key": "stance_neutral",     "presentation": {"color": "var(--muted)"}},
+    {"tag": "skeptical",   "value": -1, "label_key": "stance_skeptical",   "presentation": {"color": "var(--amber)"}},
+    {"tag": "oppose",      "value": -2, "label_key": "stance_oppose",      "presentation": {"color": "var(--red)"}}
+  ],
+  "aliases": {
+    "SUPPORT": "support", "dafür": "support", "dafuer": "support", "positiv": "support", "positive": "support", "befürwortend": "support", "enthusiastic": "support", "for": "support",
+    "MAYBE": "conditional", "bedingt": "conditional", "teils": "conditional", "partly": "conditional", "mixed": "conditional",
+    "ABSTAIN": "neutral", "enthaltung": "neutral", "neutral ": "neutral",
+    "skeptisch": "skeptical", "ablehnend (mild)": "skeptical",
+    "OPPOSE": "oppose", "dagegen": "oppose", "ablehnend": "oppose", "against": "oppose", "negativ": "oppose", "negative": "oppose"
+  }
+}

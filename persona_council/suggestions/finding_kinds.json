@@ -1,0 +1,15 @@
+{
+  "kind": "finding_kinds",
+  "note": "The kinds an authored Finding can take (spec/unified-artifact-schema.md), with the section `id` (graph/minimap anchor) and `label_key` (i18n) each renders under. Unifies the synthesis list fields (key_problems/pain_solvers/offene_fragen/shortlist/handlungsempfehlungen/clusters/segmente/ranking) + the council exec_summary/summary. Invent a kind by adding an item — no code change.",
+  "items": [
+    {"tag": "summary",        "id": "sec-summary",  "label_key": "answer_exec_summary"},
+    {"tag": "key_problem",    "id": "keyproblems",  "label_key": "key_problems"},
+    {"tag": "pain_solver",    "id": "painsolver",   "label_key": "validated_pain_solvers"},
+    {"tag": "open_question",  "id": "offene",       "label_key": "open_questions_next_study"},
+    {"tag": "recommendation", "id": "recs",         "label_key": "recommendations"},
+    {"tag": "cluster",        "id": "clusters",     "label_key": "affinity_clusters"},
+    {"tag": "segment",        "id": "segmente",     "label_key": "segments"},
+    {"tag": "shortlist",      "id": "shortlist",    "label_key": "shortlist"},
+    {"tag": "ranking",        "id": "ranking",      "label_key": "ranking"}
+  ]
+}

@@ -1,0 +1,65 @@
+"""Phase 0 — unified artifact primitives (spec/unified-artifact-schema-rollout.md)."""
+from __future__ import annotations
+
+import json
+
+from persona_council import artifacts as A
+
+
+def test_constructors_drop_empties_and_serialize():
+    st = A.statement("p1", "hi")
+    assert st == {"persona_id": "p1", "text": "hi"}          # empties (stance/about/refs/…) dropped
+    assert json.loads(json.dumps(st)) == st                  # JSON round-trips
+    f = A.finding("x", kind="key_problem")
+    assert f == {"text": "x", "kind": "key_problem"}
+    r = A.ref("memory", id="m1")
+    assert r == {"kind": "memory", "id": "m1"}
+    p = A.prompt("Q?")
+    assert p == {"text": "Q?", "kind": "question"}
+
+
+def test_full_statement_keeps_fields():
+    st = A.statement("p1", "t", stance=A.stance(1), about=A.ref("council", id="c1"),
+                     refs=[A.ref("memory", id="m1")], relevance="strong", meta={"input": "ctx"})
+    assert st["stance"] == {"value": 1, "label": "conditional"}
+    assert st["about"]["id"] == "c1" and st["refs"][0]["id"] == "m1"
+    assert st["relevance"] == "strong" and st["meta"]["input"] == "ctx"
+
+
+def test_stance_alias_resolution_covers_legacy_vocab():
+    # every legacy vote/stance/sentiment token resolves to a canonical value
+    cases = {"SUPPORT": 2, "dafür": 2, "positiv": 2, "MAYBE": 1, "bedingt": 1,
+             "ABSTAIN": 0, "skeptisch": -1, "OPPOSE": -2, "dagegen": -2, "ablehnend": -2}
+    for token, val in cases.items():
+        assert A.resolve_stance(token)["value"] == val, token
+    assert A.resolve_stance(2)["value"] == 2                 # numeric passthrough
+    assert A.resolve_stance("")  is None                     # empty → None
+    assert A.resolve_stance("totally-unknown")["value"] == 0  # unknown → neutral fallback
+
+
+def test_stance_meta_is_data_driven():
+    m = A.stance_meta(2)
+    assert m["label_key"] == "stance_support" and m["color"]
+    assert A.stance_meta(-2)["label_key"] == "stance_oppose"
+
+
+def test_finding_kind_lookup_and_fallback():
+    assert A.finding_kind("key_problem")["id"] == "keyproblems"
+    assert A.finding_kind("recommendation")["label_key"] == "recommendations"
+    inv = A.finding_kind("totally-new-kind")                 # invented kind → generic, no code change
+    assert inv["id"] == "totally-new-kind" and inv["label_key"] == "totally-new-kind"
+
+
+def test_finding_kind_label_keys_exist_in_i18n():
+    from persona_council.web._i18n import STRINGS
+    de = STRINGS["de"]
+    for kind in ("summary", "key_problem", "pain_solver", "open_question", "recommendation",
+                 "cluster", "segment", "shortlist", "ranking"):
+        assert A.finding_kind(kind)["label_key"] in de
+
+
+def test_stance_label_keys_exist_in_i18n():
+    from persona_council.web._i18n import STRINGS
+    de = STRINGS["de"]
+    for v in (-2, -1, 0, 1, 2):
+        assert A.stance_meta(v)["label_key"] in de
