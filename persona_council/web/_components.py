@@ -252,15 +252,15 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.
 _STUDY_LEAD_CSS = register_css(
     ".es{margin:22px 0 4px}"
-    ".eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin:0 0 12px}"
-    ".qa-q{font-size:18px;line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 18px}"
-    ".qa-q::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}")
+    ".eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin:0 0 12px}"
+    ".qa-q{font-size:var(--t-lg);line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 18px}"
+    ".qa-q::before{content:attr(data-label);display:block;font-size:var(--t-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}")
 
 
 _HERO_CSS = register_css(
-    ".hero h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650}"
+    ".hero h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650}"
     ".hero h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}"
-    ".hero .sub{color:var(--muted);font-size:14px;margin:0 0 4px;max-width:74ch}")
+    ".hero .sub{color:var(--muted);font-size:var(--t-body);margin:0 0 4px;max-width:74ch}")
 
 
 def _hero(title, *, sub=None, icon: str | None = None, hid: str | None = None, top=None) -> str:
@@ -509,16 +509,16 @@ def _doc(main: str, toc: str = "", rail: str = "") -> str:
 # Co-located CSS (spec/roadmap.md R3): labels/avatars, stat strip, stars/favorites.
 register_css(r"""
 /* ---- labels / avatars (G5) ---- */
-.lbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.lbl{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-sm);border-radius:6px;padding:2px 8px;white-space:nowrap}
 .lbl-soft{background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
 .lbl-outline{border:1px solid var(--line);color:var(--muted)}
 .lbl .ld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.av{border-radius:50%;object-fit:cover;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;border:1px solid var(--line)}
+.av{border-radius:50%;object-fit:cover;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:var(--t-xs);font-weight:600;color:#fff;border:1px solid var(--line)}
 .avs{display:inline-flex}.avs .av{margin-left:-6px;box-shadow:0 0 0 2px var(--panel)}.avs .av:first-child{margin-left:0}
 /* ---- stat strip + persona cards (G2) ---- */
 .stats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
 .stat{display:flex;align-items:baseline;gap:7px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px 12px}
-.stat b{font-size:17px;font-weight:700}.stat span{color:var(--muted);font-size:12.5px}
+.stat b{font-size:var(--t-lg);font-weight:700}.stat span{color:var(--muted);font-size:var(--t-sm)}
 /* ---- stars / favorites ---- */
 .starbtn{border:0;background:none;cursor:pointer;color:var(--muted);padding:2px;line-height:0;border-radius:6px;display:inline-flex}
 .starbtn:hover{color:#e3a008;background:var(--hover)}
@@ -526,7 +526,7 @@ register_css(r"""
 .starbtn.on{color:#e3a008}.starbtn.on .star{fill:#e3a008;stroke:#e3a008}
 #favs a{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .favrow{display:flex;align-items:center;gap:2px}
-.favx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:1px 7px;border-radius:6px;opacity:0;transition:opacity 120ms}
+.favx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:var(--t-prose);line-height:1;padding:1px 7px;border-radius:6px;opacity:0;transition:opacity 120ms}
 .favrow:hover .favx{opacity:1}.favx:hover{color:#e3a008;background:var(--hover)}
 """)
 
@@ -534,7 +534,7 @@ register_css(r"""
 register_css(r"""
 /* ---- turn cards / detail ---- */
 .turn{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:13px}
-.turn .hd{display:flex;align-items:center;gap:8px;margin:0 0 7px;flex-wrap:wrap}.turn .hd b{font-size:13.5px}
+.turn .hd{display:flex;align-items:center;gap:8px;margin:0 0 7px;flex-wrap:wrap}.turn .hd b{font-size:var(--t-body)}
 .turn.mod{background:var(--panel-2)}
 .turn-who{display:inline-flex;align-items:center;gap:7px;color:var(--ink);text-decoration:none}
 .turn-who:hover b{color:var(--accent)}
@@ -547,15 +547,15 @@ register_css(r"""
 .qround{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
 .qround-q{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;background:var(--accent-weak);border-bottom:1px solid var(--line)}
 .qround-q>svg{color:var(--accent);flex-shrink:0;width:18px;height:18px;margin-top:1px}
-.qround-q p{margin:2px 0 0;font-weight:600;font-size:14.5px;line-height:1.35}
-.qround-n{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+.qround-q p{margin:2px 0 0;font-weight:600;font-size:var(--t-md);line-height:1.35}
+.qround-n{font-size:var(--t-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
 .qa-ans{padding:12px 15px}
 .qa-ans+.qa-ans{border-top:1px solid var(--line-2)}
 .qa-who{margin-bottom:7px}
 .qa-ans .turn-ans+.turn-ans{margin-top:9px;padding-top:9px}
 .turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
 .turn-input summary{cursor:pointer}
-.detail{max-width:980px}.thought{font-size:15px;padding:9px 12px;background:var(--panel-2);border-radius:8px}
+.detail{max-width:980px}.thought{font-size:var(--t-md);padding:9px 12px;background:var(--panel-2);border-radius:8px}
 .quote{padding:8px 12px;background:var(--panel-2);margin:6px 0;border-radius:8px}
 .identity{display:grid;grid-template-columns:160px 1fr;gap:20px;align-items:start}
 .identity .avatar{width:160px;height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}

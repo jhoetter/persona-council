@@ -568,15 +568,15 @@ def _plan_html(plan: dict, store) -> str:
              h("div", {"class_": "small muted", "style": "margin-top:6px"}, "Methodik: ",
                h("b", {}, plan.get("methodology") or "freiform"),
                f" · {len(tasks)} Tasks · {done} erledigt ", raw("&nbsp;"), pill))
-    css = ("<style>.plan-head{margin-bottom:20px}.ph-goal{font-weight:650;font-size:16px;line-height:1.4}"
-           ".psec{margin:0 0 24px}.psec-h{font-size:12px;text-transform:uppercase;letter-spacing:.05em;"
+    css = ("<style>.plan-head{margin-bottom:20px}.ph-goal{font-weight:650;font-size:var(--t-prose);line-height:1.4}"
+           ".psec{margin:0 0 24px}.psec-h{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.05em;"
            "color:var(--muted);font-weight:600;margin:0 0 10px}"
            ".ptask{display:flex;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius);"
            "background:var(--panel);margin-bottom:8px}.pmark{font-weight:700;width:16px;text-align:center;flex:none}"
            ".pbody{flex:1;min-width:0}.prow1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ptitle{font-weight:550}"
-           ".pcap{font-size:11px;color:var(--accent);background:var(--accent-weak);padding:1px 8px;border-radius:999px}"
-           ".gate{font-size:11px;color:var(--muted);background:var(--hover);padding:1px 8px;border-radius:999px}"
-           ".evs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ev{font-size:11px;color:var(--muted);"
+           ".pcap{font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);padding:1px 8px;border-radius:999px}"
+           ".gate{font-size:var(--t-xs);color:var(--muted);background:var(--hover);padding:1px 8px;border-radius:999px}"
+           ".evs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ev{font-size:var(--t-xs);color:var(--muted);"
            "background:var(--panel-2);border:1px solid var(--line);padding:2px 8px;border-radius:6px;text-decoration:none}"
            "a.ev:hover{color:var(--accent);border-color:var(--accent)}</style>")
     return raw(css) + h("div", {"class_": "page"}, head, fragment(*secs))
