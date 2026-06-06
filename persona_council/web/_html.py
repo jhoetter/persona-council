@@ -1,0 +1,79 @@
+"""Tiny auto-escaping element builder — the foundation of the component-based SSR layer.
+
+spec/component-ssr-architecture.md (C1). Zero dependencies. HTML is a TREE, not a string:
+text children/attrs are escaped by default; trusted HTML is opt-in via raw(). Components built with
+h() never hand-escape again.
+
+    h("a", {"class": "row", "href": url}, h("span", {"class": "t"}, title), badge)
+    -> '<a class="row" href="...">...'    # title escaped, badge (a Safe) kept verbatim
+"""
+from __future__ import annotations
+
+import html
+from typing import Any, Iterable
+
+# void (self-closing) elements — no closing tag, no children
+_VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input",
+         "link", "meta", "param", "source", "track", "wbr"}
+
+
+class Safe(str):
+    """A string already safe to emit as HTML — h()/esc()/raw() return this, and h() will NOT
+    re-escape a Safe child. Any plain str reaching a child/attr slot IS escaped."""
+    __slots__ = ()
+
+
+def esc(value: Any) -> Safe:
+    """Escape arbitrary text to Safe HTML. Idempotent on Safe (never double-escapes)."""
+    if isinstance(value, Safe):
+        return value
+    return Safe(html.escape("" if value is None else str(value)))
+
+
+def raw(value: Any) -> Safe:
+    """Mark already-HTML (markdown render, inline SVG icon, a legacy f-string component) as trusted.
+    Use only for HTML you control — the whole point of Safe is that everything else is escaped."""
+    return Safe("" if value is None else str(value))
+
+
+def _attrs(attrs: dict | None) -> str:
+    if not attrs:
+        return ""
+    out = []
+    for key, val in attrs.items():
+        if val is None or val is False:
+            continue                                  # skip absent attrs
+        name = "class" if key == "class_" else key.replace("_", "-")
+        if val is True:
+            out.append(f" {name}")                     # bare boolean attr
+        else:
+            out.append(f' {name}="{html.escape(str(val), quote=True)}"')
+    return "".join(out)
+
+
+def _children(nodes: Iterable[Any]) -> str:
+    parts: list[str] = []
+    for node in nodes:
+        if node is None or node is False:
+            continue
+        if isinstance(node, Safe):
+            parts.append(node)
+        elif isinstance(node, (list, tuple)) or (hasattr(node, "__iter__") and not isinstance(node, (str, bytes))):
+            parts.append(_children(node))              # flatten iterables of children
+        else:
+            parts.append(esc(node))                    # plain str / number / etc → escaped
+    return "".join(parts)
+
+
+def h(tag: str, attrs: dict | None = None, *children: Any) -> Safe:
+    """Build one element. attrs: dict (None/False skip; True = bare attr; class_ → class; _ → -).
+    children: Safe (kept), str/number (escaped), iterable (flattened), None/False (skipped)."""
+    open_tag = f"<{tag}{_attrs(attrs)}>"
+    if tag in _VOID:
+        return Safe(open_tag)
+    return Safe(f"{open_tag}{_children(children)}</{tag}>")
+
+
+def fragment(*children: Any) -> Safe:
+    """A parent-less group of children (escaped/kept per the same rules) — no wrapping element."""
+    return Safe(_children(children))
