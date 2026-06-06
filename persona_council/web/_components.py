@@ -13,6 +13,7 @@ from .. import presentation as _pres
 from ..storage import Store
 from ..web_assets import CSS, HEAD_JS, _RGRAPH_JS, _SYN_STYLE  # noqa: F401  (extracted assets)
 from ._i18n import t, _lang
+from ._html import h, raw, register_css, collect_css  # noqa: F401  (component-SSR foundation)
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
 
 
@@ -234,7 +235,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 <title>{_esc(title)} · Persona Council</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-{HEAD_JS}<style>{CSS}{PALETTE_CSS}{_HIFI_ANIM_CSS}</style></head>
+{HEAD_JS}<style>{CSS}{PALETTE_CSS}{_HIFI_ANIM_CSS}{collect_css()}</style></head>
 <body><div class="app" id="app">
   <aside class="sidebar">
     <div class="brand"><span class="mark"></span><a href="/">Persona&nbsp;Council</a></div>
@@ -250,15 +251,23 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 </div>{palette_markup()}{PALETTE_JS}{app_js}</body></html>"""
 
 
+# First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.
+_STUDY_LEAD_CSS = register_css(
+    ".es{margin:22px 0 4px}"
+    ".eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin:0 0 12px}"
+    ".qa-q{font-size:18px;line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 18px}"
+    ".qa-q::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}")
+
+
 def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
                 qlabel: str = "", qid: str = "exec") -> str:
     """Unified Question → Answer/Finding lead — the SAME typographic block on every study page
     (council 'finding', synthesis 'answer'). The qa-q question is shown only when given (synthesis,
     whose hero title is the thesis); council omits it because its hero title IS the question."""
-    q = f'<p class="qa-q" data-label="{_esc(qlabel)}">{_esc(question)}</p>' if question else ""
-    return (f'<div class="es" id="{_esc(qid)}">{q}'
-            f'<div class="eyebrow">{_esc(answer_label)}</div>'
-            f'<div class="es-prose">{answer_html}</div></div>')
+    return h("div", {"class_": "es", "id": qid},
+             h("p", {"class_": "qa-q", "data_label": qlabel}, question) if question else None,
+             h("div", {"class_": "eyebrow"}, answer_label),
+             h("div", {"class_": "es-prose"}, raw(answer_html)))
 
 
 def _list_page(store: Store, *, title: str, lead: str, rows: list,

@@ -293,14 +293,11 @@ details.sec>summary::-webkit-details-marker,details.block>summary.bh::-webkit-de
 details.sec>summary::before,details.block>summary.bh::before{content:"\\25b8";color:var(--muted);transition:transform 150ms;font-size:11px}
 details.sec[open]>summary::before,details.block[open]>summary.bh::before{transform:rotate(90deg)}
 .doc-main p{max-width:74ch}.es-prose,.detail{overflow-wrap:break-word}.es-prose pre,pre{overflow-x:auto;max-width:100%}.es-prose img,.detail img{max-width:100%;height:auto}.es-prose .mdtable{display:block;overflow-x:auto}
-/* Shared study typography (council finding, synthesis answer, note body) — global so every page is consistent */
-.es{margin:22px 0 4px}
-.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin:0 0 12px}
+/* .es-prose typography is shared by many pages (note/section/synthesis prose) — stays global.
+   .es/.eyebrow/.qa-q now live co-located with _study_lead (component-SSR C2/C3). */
 .es-prose{font-size:16px;line-height:1.62;color:var(--ink)}.es-prose.sm{font-size:14.5px;line-height:1.6}
 .es-prose p{margin:0 0 15px;max-width:74ch}.es-prose strong{font-weight:680}.es-prose h3{font-size:15px;margin:22px 0 8px;font-weight:680}
 .es-prose ul{margin:0 0 15px;padding-left:20px;max-width:74ch}.es-prose li{margin:0 0 6px}
-.qa-q{font-size:18px;line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 18px}
-.qa-q::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
 .rec{display:grid;grid-template-columns:74px 1fr;gap:13px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line-2)}
 .rec:last-child{border-bottom:0}
 .prio{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:#fff;border-radius:6px;padding:3px 7px;text-align:center;white-space:nowrap}

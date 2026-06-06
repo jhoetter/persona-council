@@ -77,3 +77,19 @@ def h(tag: str, attrs: dict | None = None, *children: Any) -> Safe:
 def fragment(*children: Any) -> Safe:
     """A parent-less group of children (escaped/kept per the same rules) — no wrapping element."""
     return Safe(_children(children))
+
+
+# ---- CSS co-location (spec C2): a component registers its own rules; _layout collects them ----
+_CSS_FRAGMENTS: list[str] = []
+
+
+def register_css(css: str) -> str:
+    """Register a component's CSS fragment (deduped, order-preserving). Call at module import; the
+    layout emits collect_css() once. Lets a component own its styles instead of a global blob."""
+    if css and css not in _CSS_FRAGMENTS:
+        _CSS_FRAGMENTS.append(css)
+    return css
+
+
+def collect_css() -> str:
+    return "".join(_CSS_FRAGMENTS)
