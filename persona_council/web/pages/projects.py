@@ -61,7 +61,7 @@ def register_projects(app) -> None:
                          (fragment(h("span", {"class_": "ptlabel ptlabel-2"}, t("tags_h")), tag_chips) if tag_chips else ""),
                          h("a", {"class_": "rgclear", "style": "display:none"}, t("clear_filter"))) if type_chips else "")
         oqbtn = h("button", {"class_": "btn", "id": "oqbtn"}, f'{t("legend")} · {t("open_questions_h")} ({len(oqs)})')
-        toolbar = h("div", {"class_": "ptoolbar"}, left, h("span", {"class_": "spacer"}), oqbtn, meta_btn)
+        toolbar = h("div", {"class_": "ptoolbar"}, left, h("span", {"class_": "spacer"}), oqbtn)  # Plan/Meta now in topbar
         # Artifact viewer: artifacts + recorded persona sessions (read-only).
         proto_html = ""
         if protos:
@@ -131,15 +131,15 @@ def register_projects(app) -> None:
         # via indentation + hover-highlight). The spatial graph is retired from the UI but still reachable
         # by URL (?view=graph) — code kept, just unlinked — so nothing is destroyed and it's reversible.
         is_graph = view == "graph"
-        head_tools = (fragment(h("div", {"class_": "ptoolbar"}, h("span", {"class_": "spacer"})), toolbar) if is_graph
-                      else h("div", {"class_": "ptoolbar"}, h("span", {"class_": "spacer"}), meta_btn))
+        head_tools = toolbar if is_graph else ""   # graph view keeps the type-filter toolbar; list view has none
         main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
                      if is_graph else h("div", {"class_": "outlinecard"}, raw(_outline_html(graph))))
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
                    h("p", {"class_": "lead"}, proj.get("goal", "")), head_tools),
                  main_view)
-        return _layout(proj["title"], body, store, crumbs=[(t("projects"), "/projects"), (proj["title"], None)], active="projects")
+        return _layout(proj["title"], body, store, active="projects",
+                       crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=meta_btn)
 
     @app.get("/projects/{project_id}/meta", response_class=HTMLResponse)
     def project_meta(project_id: str) -> str:
