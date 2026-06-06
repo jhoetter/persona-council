@@ -221,8 +221,9 @@ def export_council_session(session_id: str, format: str = "json", store: Store |
         h_votes = "Stimmen" if de else "Votes"
         h_summary = "Zusammenfassung" if de else "Summary"
         lines = [f"# {h_session}", "", f"**Prompt:** {session['prompt']}", "", f"## {h_turns}"]
-        for turn in session["turns"]:
-            lines.append(f"- **{turn['speaker']}**: {turn['content']}")
+        for st in _artifacts.council_statements(session):
+            who = (store.get_persona(st.get("persona_id", "")) or {}).get("name") or st.get("persona_id", "")
+            lines.append(f"- **{who}**: {st.get('text', '')}")
         lines.extend(["", f"## {h_proposal}", session["proposal"], "", f"## {h_votes}"])
         for v in session["votes"]:
             lines.append(f"- **{v.get('speaker') or v.get('persona_id', '')}**: {v.get('vote', '')} - {v.get('reason', '')}")
@@ -286,16 +287,26 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: 
 
     turns = [_nturn(t) for t in (turns or [])]
     votes = [_nvote(v) for v in (votes or [])]
+    qs = [str(q).strip() for q in (questions or []) if str(q).strip()]
+    # Primitives-only storage (spec/unified-artifact-schema): `statements` are the ONE voice
+    # representation. Author them natively if given, else convert the normalized turns (+votes for the
+    # stance) at this boundary via the adapter. `turns` are NOT stored; `votes` stay (mode + tally signal).
+    nat_statements = [_artifacts.validate_statement(s) for s in (statements or [])]
+    statements_out = nat_statements or _artifacts.council_statements(
+        {"turns": turns, "votes": votes, "questions": qs, "proposal": proposal})
+    nat_prompts = [_artifacts.validate_prompt(p) for p in (prompts or [])]
+    prompts_out = nat_prompts or _artifacts.council_prompts(
+        {"prompt": prompt, "questions": qs, "proposal": proposal})
     session = CouncilSession(
         id=cid,
         prompt=prompt, persona_ids=persona_ids, selection_reason=selection_reason or "host-authored",
-        turns=turns, proposal=proposal, votes=votes, summary=summary,
-        exec_summary=exec_summary, questions=[str(q).strip() for q in (questions or []) if str(q).strip()],
+        proposal=proposal, votes=votes, summary=summary,
+        exec_summary=exec_summary, questions=qs,
         created_at=(existing or {}).get("created_at") or utc_now_iso(),
         project_id=project["id"],
-        statements=[_artifacts.validate_statement(s) for s in (statements or [])],
+        statements=statements_out,
         findings=[_artifacts.validate_finding(f) for f in (findings or [])],
-        prompts=[_artifacts.validate_prompt(p) for p in (prompts or [])],
+        prompts=prompts_out,
     ).to_dict()
     store.insert_council_session(session)
     # Register the council on its project so the project owns it directly (idempotent).
@@ -320,7 +331,7 @@ def get_council(session_id: str, store: Store | None = None) -> dict[str, Any]:
 def list_councils(store: Store | None = None) -> list[dict[str, Any]]:
     store = store or Store()
     return [{"id": c["id"], "prompt": c["prompt"], "created_at": c["created_at"],
-             "personas": len(c.get("persona_ids", [])), "turns": len(c.get("turns", [])),
+             "personas": len(c.get("persona_ids", [])), "turns": len(_artifacts.council_statements(c)),
              "votes": {v: sum(1 for x in c.get("votes", []) if x.get("vote") == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}}
             for c in store.list_council_sessions()]
 

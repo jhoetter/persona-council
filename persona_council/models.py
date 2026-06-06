@@ -136,9 +136,8 @@ class CouncilSession:
     prompt: str
     persona_ids: list[str]
     selection_reason: str
-    turns: list[Json]
     proposal: str
-    votes: list[Json]
+    votes: list[Json]            # formal decision votes — kept (drives council mode + the vote tally)
     summary: str
     created_at: str
     exec_summary: str = ""  # rich markdown synthesis shown in the UI

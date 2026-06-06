@@ -79,10 +79,10 @@ def _council_brief_row(store: Store, cid: str) -> dict[str, Any]:
     c = store.get_council_session(cid)
     if not c:
         return {"council_id": cid, "missing": True}
-    # Per-persona material so the host can author the `voices` layer (who/why/shift).
-    turns = [{"persona_id": t.get("persona_id"), "speaker": t.get("speaker"),
-              "stance": t.get("stance"), "content": t.get("content")}
-             for t in c.get("turns", [])]
+    # Per-persona material so the host can author the `voices` layer (who/why) — from the statements.
+    turns = [{"persona_id": st.get("persona_id"), "stance": (st.get("stance") or {}).get("label"),
+              "content": st.get("text")}
+             for st in _A.council_statements(c)]
     votes = [{"persona_id": v.get("persona_id"), "speaker": v.get("speaker"),
               "vote": v.get("vote"), "reason": v.get("reason")}
              for v in c.get("votes", [])]

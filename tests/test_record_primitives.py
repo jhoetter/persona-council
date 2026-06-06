@@ -38,12 +38,13 @@ def test_synthesis_native_primitives_via_payload(store):
     assert A.synthesis_findings(s) == s["findings"]
 
 
-def test_legacy_council_still_renders_via_adapter(store):
-    """A legacy record (no primitive fields) is unaffected — the adapter derives primitives from turns."""
+def test_legacy_council_input_converts_to_statements(store):
+    """The convenient `turns` INPUT converts to statements at the record boundary — storage is
+    primitives-only; `turns` is not stored."""
     proj = services.create_research_project("L", store=store)
     res = services.record_council(proj["id"], "Q?", ["p1"],
                                   turns=[{"persona_id": "p1", "content": "legacy answer"}], key="k2", store=store)
     c = store.get_council_session(res["id"])
-    assert not c["statements"]                        # nothing native
-    sts = A.council_statements(c)                      # derived from turns
-    assert sts[0]["text"] == "legacy answer"
+    assert "turns" not in c                            # legacy field NOT stored
+    assert c["statements"][0]["text"] == "legacy answer"   # converted to a statement at the boundary
+    assert A.council_statements(c) == c["statements"]

@@ -190,7 +190,7 @@ def _stance_bucket(s: str) -> tuple[str, str]:
         return (t("stance_skeptical"), "var(--red)")
     if any(k in s for k in ["neutral", "abstain", "enthalt"]):
         return (t("stance_neutral"), "var(--muted)")
-    if any(k in s for k in ["bedingt", "maybe", "teilweise", "passt", "tangiert", "hebel"]):
+    if any(k in s for k in ["bedingt", "maybe", "teilweise", "passt", "tangiert", "hebel", "conditional"]):
         return (t("stance_conditional"), "var(--amber)")
     return (t("stance_other"), "var(--accent)")
 
@@ -254,8 +254,11 @@ def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
 def _stance_dist_html(sessions: list[dict]) -> str:
     sb: Counter = Counter(); colors: dict = {}
     for s in sessions:
-        for turn in s.get("turns", []):
-            lbl, col = _stance_bucket(turn.get("stance"))
+        for st in _A.council_statements(s):
+            stv = st.get("stance")
+            if not stv:
+                continue
+            lbl, col = _stance_bucket(stv.get("label", ""))
             sb[lbl] += 1; colors[lbl] = col
     rows = [(lbl, v, colors[lbl]) for lbl, v in sb.most_common()]
     return _hbars(rows) if rows else ""
@@ -269,7 +272,7 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
     sessions = [s for s in sessions if s]
     tot, parts = _vote_parts(sessions)
     nvotes = sum(v for v, _, _ in parts)
-    has_turns = any(s.get("turns") for s in sessions)
+    has_turns = any(_A.council_statements(s) for s in sessions)
     if not nvotes and not has_turns:
         return None
     scope = t("sentiment_scope_chain") if per_council else t("sentiment_scope_session")
