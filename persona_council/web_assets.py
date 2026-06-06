@@ -144,7 +144,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
    highlights its members (.rel) and dims the rest (.dim). */
 .olthemes{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:900px;margin:4px auto 2px;padding:0 24px}
 .olth-l{font-size:var(--t-sm);color:var(--faint);margin-right:2px}
-.olth-chip{display:inline-flex;align-items:center;gap:6px;max-width:230px;padding:3px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--muted);font-size:var(--t-sm);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.olth-chip{display:inline-flex;align-items:center;gap:6px;max-width:230px;padding:3px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel);color:var(--muted);font-size:var(--t-sm);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .olth-chip:hover{background:var(--hover)}
 .olth-chip.on{border-color:transparent;background:var(--accent-weak);color:var(--accent);font-weight:600}
 .olth-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -177,7 +177,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ptlabel{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-sm);color:var(--muted)}.ptlabel .ic{width:14px;height:14px}
 .ptlabel-2{margin-left:8px;padding-left:10px;border-left:1px solid var(--line);opacity:.85}
 .rgchip.tagchip{font-size:var(--t-sm);padding:2px 9px;opacity:.82}
-.rgchip{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;font-size:var(--t-sm);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.rgchip{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:var(--radius-sm);padding:3px 11px;font-size:var(--t-sm);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .rgchip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,#9aa0a6)}
 .rgchip:hover{background:var(--hover)}
 .rgchip.active{border-color:var(--c,var(--accent));background:color-mix(in srgb,var(--c) 14%,var(--panel));font-weight:600}

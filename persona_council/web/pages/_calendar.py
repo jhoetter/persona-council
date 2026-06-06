@@ -82,6 +82,6 @@ register_css(r"""
 .daycell .block.focus::before,.calendar .block.focus::before{background:var(--green)}.daycell .block.interruption::before,.calendar .block.interruption::before{background:var(--red)}.daycell .block.admin::before,.calendar .block.admin::before{background:var(--amber)}
 .block strong{display:block}.block .meta{color:var(--muted);font-size:var(--t-sm)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
-.tabs a{border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--panel);font-size:var(--t-sm)}.tabs a.active{background:var(--ink);color:var(--bg)}
+.tabs a{border:1px solid var(--line);border-radius:var(--radius-sm);padding:4px 11px;background:var(--panel);font-size:var(--t-sm)}.tabs a.active{background:var(--ink);color:var(--bg)}
 input,select{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 8px}
 """)

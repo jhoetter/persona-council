@@ -50,10 +50,12 @@ primitive — collapsing them all to one radius would erase a deliberate visual 
 - **Round interactive** (`--t-sm`, radius 999px): `.rgchip`, `.vchip`, `.gate`, `.mchip` — filters/toggles/meta.
 - **Micro tag** (`--t-xs`, radius 5px, `1px 7px`): `.segchip`, `.axchip` — tiny inline tags.
 
-✅ Fixed the one true outlier: `.mchip` had an arbitrary `20px` radius → `999px` (+ `2px 10px`→`3px 10px`)
-to join the round tier. Paddings within each tier are otherwise consistent.
-**[needs your eye]** The open Linear-style question: flatten soft (6px) → round (999px) app-wide so *all*
-chips are pills? That's an opinionated, app-wide visual shift — decide on the running app, not blind.
+✅ **Unified to one radius language (2026-06-06): the Linear rounded-rect.** Linear's aesthetic is crisp
+subtly-rounded rectangles (~6px), not fully-round pills — so all 11 chip/badge radii were flattened to
+`var(--radius-sm)` (6px): `.rgchip .vchip .gate .mchip .pcap .shiftbadge .tabs a` (were 999px),
+`.segchip .axchip` (were 5px), `.block .bh .cnt .olth-chip` (were arbitrary 20px). A cascade-diff
+confirmed border-radius is the ONLY property that changed (zero other deltas). Padding still scales with
+role (compact labels vs interactive chips) — that's intentional, not a radius concern.
 
 ## 3. Component ownership (C5, now unblocked)
 
@@ -86,8 +88,8 @@ cascade). This is why C5 belongs here, with the design pass, not as blind churn.
    (11/12/13/15/16/18/24). A var-resolving cascade-diff confirmed the only deltas are the intended
    roundings (49 imperceptible ±0.5px + `.stat b` 17→18, `.syn-head h1` 21→24). *Spacing px → `--s-*` is
    deferred* — it's high-churn/low-visible-payoff; do opportunistically, not as a sweep.
-3. ◐ **Chips:** documented the 3-tier system (§2) and fixed the `.mchip` 20px outlier → round. The
-   app-wide soft→round flatten remains **[needs your eye]** on the running app.
+3. ✅ **Chips:** unified all 11 chip/badge radii to `var(--radius-sm)` (6px) — the Linear rounded-rect
+   language (not fully-round pills). Cascade-diff confirmed border-radius was the only property changed.
 4. ✅ **C5 co-location:** done — see `spec/roadmap.md` R3 (CSS in component `register_css`; `_SYN_STYLE`
    deleted; `web_assets.CSS` 295 LOC; computed cascade identical across all 23 pages).
 5. ☐ **Consistency sweep:** apply §4 rules where any page still deviates (the `.ihint`/`.eyebrow` overlap

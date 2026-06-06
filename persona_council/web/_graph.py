@@ -574,8 +574,8 @@ def _plan_html(plan: dict, store) -> str:
            ".ptask{display:flex;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius);"
            "background:var(--panel);margin-bottom:8px}.pmark{font-weight:700;width:16px;text-align:center;flex:none}"
            ".pbody{flex:1;min-width:0}.prow1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ptitle{font-weight:550}"
-           ".pcap{font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);padding:1px 8px;border-radius:999px}"
-           ".gate{font-size:var(--t-xs);color:var(--muted);background:var(--hover);padding:1px 8px;border-radius:999px}"
+           ".pcap{font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);padding:1px 8px;border-radius:var(--radius-sm)}"
+           ".gate{font-size:var(--t-xs);color:var(--muted);background:var(--hover);padding:1px 8px;border-radius:var(--radius-sm)}"
            ".evs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ev{font-size:var(--t-xs);color:var(--muted);"
            "background:var(--panel-2);border:1px solid var(--line);padding:2px 8px;border-radius:6px;text-decoration:none}"
            "a.ev:hover{color:var(--accent);border-color:var(--accent)}</style>")
