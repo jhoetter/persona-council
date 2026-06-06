@@ -22,7 +22,7 @@ from ..presentation import glyph_icon
 from ._detail import _relations_html, _properties_html, _session_card
 from ._rail import _page_rail
 from ._routes_lists import _projects_page, _persona_row
-from ._html import raw
+from ._html import raw, h
 from ._vm import study_head
 
 
@@ -49,15 +49,16 @@ def _calendar_html(persona_id: str, day: str, blocks: list[dict]) -> str:
 
 def _calendar_tabs(persona_id: str, selected_date: str, view: str) -> str:
     labels = {"day": t("tab_day"), "week": t("tab_week"), "month": t("tab_month"), "year": t("tab_year")}
-    return '<div class="tabs">' + "".join(
-        f'<a class="{"active" if view == tab else ""}" href="/personas/{_esc(persona_id)}?date={_esc(selected_date)}&view={tab}">{labels[tab]}</a>'
-        for tab in ["day", "week", "month", "year"]) + "</div>"
+    return h("div", {"class_": "tabs"}, [
+        h("a", {"class_": "active" if view == tab else "",
+                "href": f"/personas/{persona_id}?date={selected_date}&view={tab}"}, labels[tab])
+        for tab in ["day", "week", "month", "year"]])
 
 
 def _event_chip(event: dict) -> str:
-    return (f'<a class="block {event.get("event_type","focus")}" href="/activities/{_esc(event["id"])}">'
-            f'<strong>{_esc(event["timestamp"][11:16])} · {_esc(event["task"])}</strong>'
-            f'<span class="meta">{_esc(event.get("tool",""))}</span></a>')
+    return h("a", {"class_": f'block {event.get("event_type", "focus")}', "href": f'/activities/{event["id"]}'},
+             h("strong", {}, f'{event["timestamp"][11:16]} · {event["task"]}'),
+             h("span", {"class_": "meta"}, event.get("tool", "")))
 
 
 def _period_calendar_html(persona_id: str, selected_date: str, view: str, period: dict) -> str:
