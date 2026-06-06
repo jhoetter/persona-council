@@ -353,7 +353,11 @@ def _star(kind: str, ident: str, label: str, href: str) -> str:
                         "aria-label": t("mark_as_favorite")}, raw(_icon("star")))
 
 
-_FAV_ICONS_JSON = json.dumps({"persona": _icon("personas"), "council": _icon("councils"), "synthesis": _icon("syntheses")})
+_FAV_ICONS_JSON = json.dumps({
+    "persona": _icon("personas"), "council": _icon("councils"), "synthesis": _icon("syntheses"),
+    "project": _icon("projects"), "prototype": _icon("prototype"), "concept": _icon("bulb"),
+    "note": _icon("square"), "section": _icon("squareGrid"),
+})
 
 
 def _layout(title: str, body: str, store: Store, crumbs: list | None = None,

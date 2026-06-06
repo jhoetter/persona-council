@@ -28,8 +28,7 @@ def register_syntheses(app) -> None:
         syn = store.get_synthesis(synthesis_id)
         if not syn:
             return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared")), store, active="syntheses")
-        actions = (raw(_star("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}"))
-                   + h("button", {"class_": "btn", "onclick": "window.print()"}, t("export_pdf")))
+        actions = raw(_star("synthesis", synthesis_id, syn["title"], f"/syntheses/{synthesis_id}"))
         crumbs = [(t("projects"), "/projects")]
         proj = services.parent_project_of_synthesis(synthesis_id, store)
         if proj:

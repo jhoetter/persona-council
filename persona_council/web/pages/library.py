@@ -33,7 +33,7 @@ def register_library(app) -> None:
                           fragment(*rows) if rows else raw(_empty_state(t("section"), t("no_members")))))
         return _layout(sec["title"], _doc(main, rail=sprops), store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
-                       active="projects")
+                       active="projects", actions=raw(_star("section", sec["id"], sec["title"], f'/sections/{sec["id"]}')))
 
     @app.get("/notes/{note_id}", response_class=HTMLResponse)
     @app.get("/concepts/{note_id}", response_class=HTMLResponse)        # a concept is a note with kind=concept
@@ -66,9 +66,10 @@ def register_library(app) -> None:
         if nrel:
             nrail.append(("sec-relations", t("relations")))
         body = _doc(main, rail=nprops + nrel) + _page_rail(nrail)
+        star_url = f'/{"concepts" if kind == "concept" else "notes"}/{note_id}'
         return _layout(note.get("title") or klabel, body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (klabel, None)],
-                       active=active)
+                       active=active, actions=raw(_star(kind, note_id, note.get("title") or klabel, star_url)))
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:
@@ -121,4 +122,5 @@ def register_library(app) -> None:
         if rel_html:
             rail.append(("sec-relations", t("relations")))
         body = _doc(main, rail=prop_html + rel_html) + _page_rail(rail)
-        return _layout(p["name"], body, store, crumbs=crumbs, active="prototype")
+        return _layout(p["name"], body, store, crumbs=crumbs, active="prototype",
+                       actions=raw(_star("prototype", p["id"], p["name"], f'/prototypes/{slug}')))
