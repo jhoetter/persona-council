@@ -20,6 +20,20 @@ def _esc(value: object) -> str:
     return html.escape(str(value))
 
 
+def _display_title(text: str, n: int = 90) -> str:
+    """A short, header-safe title from possibly-long prose. Some records overload their 'title' with a
+    long question-prompt; a title should be a scannable label, so the H1 shows this short form while the
+    full text lives in the body (and a real editable title field will supersede it later). Returns the
+    first sentence when it fits, else a word-boundary truncation — both with an ellipsis when shortened."""
+    s = " ".join((text or "").split())
+    if len(s) <= n:
+        return s
+    first = re.split(r"(?<=[.?!])\s", s, 1)[0]
+    if 0 < len(first) <= n:
+        return first + ("…" if len(first) < len(s) else "")
+    return s[:n].rsplit(" ", 1)[0].rstrip(" ,;:—-") + "…"
+
+
 def _icon(name: str, animate: bool = False) -> str:
     # Chrome icons come from the shared persona-icons library (single source of
     # truth in ../persona-icons; geometry authored in icons.data.mjs). Returns

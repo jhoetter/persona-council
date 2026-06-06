@@ -162,7 +162,10 @@ def register_councils(app) -> None:
                             h("p", {"class_": "muted small"}, help_)) if motion else "")
             sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
+        short_title = _display_title(session["prompt"])        # the H1 is a short title; the full prompt is the Question block
         body = fragment(
+            h("div", {"class_": "es", "id": "sec-question"},   # full question, verbatim & always visible
+              h("div", {"class_": "eyebrow"}, t("question")), h("div", {"class_": "es-prose sm"}, session["prompt"])),
             raw(lead_block), raw(_study_lead(exec_html, vm["answer_label"])), raw(sentiment),
             h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, voices_label), raw(turns_html)),
             h("details", {"class_": "sec"}, h("summary", {}, summary_h),
@@ -181,11 +184,11 @@ def register_councils(app) -> None:
                     if (ps := services.parent_study_of_council(session_id, store)) else None))
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
-        crumbs.append((session["prompt"][:50], None))
+        crumbs.append((short_title, None))
         return detail_page(
-            store, title=council_title, active="projects", crumbs=crumbs,
-            hero=_hero(session["prompt"], icon="councils", sub=council_sub, hid="sec-question"), body=body,
+            store, title=short_title, active="projects", crumbs=crumbs,
+            hero=_hero(short_title, icon="councils", sub=council_sub), body=body,
             prop_rows=prop_rows,
             rel_study_id=f"council:{session_id}", rel_proj_id=(proj["id"] if proj else None),
             rail_sections=[("sec-question", t("question")), ("stimmen", t("voices"))],
-            star=("council", session_id, session["prompt"][:60], f"/councils/{session_id}"))
+            star=("council", session_id, short_title, f"/councils/{session_id}"))

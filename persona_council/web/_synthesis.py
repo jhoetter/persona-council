@@ -7,7 +7,7 @@ from ..storage import Store
 from ._i18n import t
 from ._components import (
     _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _rec_item, _rec_row_n,
-    _effort_impact, _star, _study_lead,
+    _effort_impact, _star, _study_lead, _display_title,
 )
 from ._vm import study_head
 from ._html import h, raw, fragment, register_css
@@ -589,7 +589,8 @@ def _synthesis_html(store: Store, syn: dict):
     if smeta:
         mchips.append(h("span", {"class_": "mchip"}, raw(t("voices_meta", s=_esc(smeta)))))
     mchips.append(h("span", {"class_": "mchip"}, syn["created_at"][:10]))
-    head = h("header", {"class_": "syn-head"}, h("h1", {"title": syn["title"]}, raw(_icon("syntheses")), syn["title"]),
+    head = h("header", {"class_": "syn-head"},
+             h("h1", {"title": syn["title"]}, raw(_icon("syntheses")), _display_title(syn["title"])),
              h("div", {"class_": "syn-meta"}, fragment(*mchips)))
 
     main = head + raw("".join(str(html) for _, _, html in sec))   # section htmls are all trusted (h() Safe or built strings)
