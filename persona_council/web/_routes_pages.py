@@ -23,6 +23,7 @@ from ._detail import _relations_html, _properties_html, _session_card
 from ._rail import _page_rail
 from ._routes_lists import _projects_page, _persona_row
 from ._html import raw
+from ._vm import study_head
 
 
 # ----------------------------- calendar helpers ----------------------------- #
@@ -401,12 +402,13 @@ def register_pages(app) -> None:
                      + "".join(_answer_html(tn) for tn in tns) + '</div>'
                      for pid, tns, is_mod in grouped]
             turns_html = help_html + '<div style="display:grid;gap:12px">' + "".join(cards) + "</div>"
-        exec_html = _md(session.get("exec_summary", "")) or f'<p>{_esc(session["summary"])}</p>'
         n_voices = len(session.get("persona_ids", []))
         # A council has THREE honest shapes (derived, no stored type): DISCOVERY (open questions →
         # answers, no vote — listening), EVALUATION (react to a concept), DECISION (a motion put to a
         # vote). Lead the page with the right framing so "what is the question?" is always answered.
-        mode = services.council_mode(session)
+        vm = study_head(session)                       # shared study view-model (question/answer/mode)
+        mode = vm["mode"]
+        exec_html = _md(vm["answer_md"])
         voices_label = t("council_voices_answers") if mode == "discovery" else voices_detail_h
         if mode == "discovery":
             qs = session.get("questions") or ([session.get("prompt")] if session.get("prompt") else [])
@@ -426,7 +428,7 @@ def register_pages(app) -> None:
         council_sub = f'{t("council_kicker_" + mode, n=n_voices)} · {session["selection_reason"]}'
         main = (f'{_hero(session["prompt"], sub=council_sub, hid="sec-question")}'
                 f'{lead_block}'
-                f'{_study_lead(exec_html, t("council_finding"))}'
+                f'{_study_lead(exec_html, vm["answer_label"])}'
                 f'{sentiment}'
                 f'<div class="sec" id="stimmen"><h2>{voices_label}</h2>{turns_html}</div>'
                 f'<details class="sec"><summary>{summary_h}</summary><div class="card"><strong>{summary_h}</strong><p>{_esc(session["summary"])}</p></div></details>')

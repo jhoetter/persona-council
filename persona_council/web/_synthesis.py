@@ -9,6 +9,7 @@ from ._components import (
     _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _rec_item, _rec_row_n,
     _effort_impact, _star, _study_lead, _SYN_STYLE,
 )
+from ._vm import study_head
 
 
 # ----------------------------- chart primitives ----------------------------- #
@@ -334,11 +335,12 @@ def _persona_voices_html(store: Store, pid: str) -> str:
 def _synthesis_html(store: Store, syn: dict):
     done = syn.get("status", "done") == "done"
     sec = []  # (id, short_label, html)
-    # 1) Executive Summary — the unified Question → Answer lead (shared with the council 'finding')
+    # 1) Executive Summary — the unified Question → Answer lead (shared with the council 'finding'),
+    # fed by the shared study view-model so council/synthesis never branch on field names.
     if syn.get("gesamtbild"):
+        vm = study_head(syn, is_synthesis=True)
         sec.append(("exec", t("summary"), _study_lead(
-            _md(syn["gesamtbild"]), t("answer_exec_summary"),
-            question=syn.get("goal") or syn.get("start_input", ""), qlabel=t("question"))))
+            _md(vm["answer_md"]), vm["answer_label"], question=vm["question"], qlabel=t("question"))))
     # 2) Cited evidence — councils are DECOUPLED: this synthesis is a standalone answer that may
     # CITE councils (or none). Render them as a compact reference list, NOT as the synthesis body.
     belege = None
