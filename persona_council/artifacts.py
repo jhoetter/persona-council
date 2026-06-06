@@ -287,6 +287,39 @@ def synthesis_question(s: dict) -> dict | None:
     return prompt(txt, kind="question", id="studyq") if txt else None
 
 
+# ---- read projections: readers (markdown export / briefs / graph node / sentiment strip) that think in
+# the old field shapes get them reconstructed from the stored findings/statements. Storage is
+# primitives-only; these are READ helpers, never written (spec/unified-artifact-schema).
+
+# stance value (-2..+2) → the legacy sentiment word, for the synthesis header's count strip.
+_STANCE_SENTIMENT = {2: "positiv", 1: "bedingt", 0: "neutral", -1: "skeptisch", -2: "ablehnend"}
+
+
+def finding_texts(s: dict, kind: str) -> list[str]:
+    """The text of every finding of `kind` (e.g. 'key_problem', 'pain_solver', 'open_question')."""
+    return [f.get("text", "") for f in synthesis_findings(s) if f.get("kind") == kind]
+
+
+def synthesis_recommendations(s: dict) -> list[tuple]:
+    """[(text, effort, value)] for the recommendation findings — the effort·impact chart + report."""
+    out = []
+    for f in synthesis_findings(s):
+        if f.get("kind") == "recommendation":
+            sc = f.get("score") or {}
+            out.append((f.get("text", ""), sc.get("effort"), sc.get("value")))
+    return out
+
+
+def synthesis_sentiment_counts(s: dict) -> dict[str, int]:
+    """Counts keyed by the legacy sentiment word, derived from the voice statements' stance."""
+    counts: dict[str, int] = {}
+    for st in synthesis_statements(s):
+        val = (st.get("stance") or {}).get("value")
+        word = _STANCE_SENTIMENT.get(val, "neutral")
+        counts[word] = counts.get(word, 0) + 1
+    return counts
+
+
 def synthesis_findings(s: dict) -> list[dict]:
     """The synthesis LIST findings (key_problems/pain_solvers/open_questions/shortlist/recommendations).
     Prose blocks (gesamtbild/positionierung/arc) and the 2-col clusters/segmente stay separate for now."""

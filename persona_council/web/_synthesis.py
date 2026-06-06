@@ -6,7 +6,7 @@ from .. import services
 from ..storage import Store
 from ._i18n import t
 from ._components import (
-    _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _prose, _rec_item, _rec_row_n,
+    _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _prose, _rec_row_n,
     _effort_impact, _star, _study_lead,
 )
 from ._render import render_findings, render_statements, render_statement
@@ -294,13 +294,11 @@ def _persona_voices_html(store: Store, pid: str) -> str:
     other voice (one consolidated primitive); each links to its synthesis via a ref chip."""
     cards = []
     for syn in store.list_syntheses():
-        for v in syn.get("voices", []):
-            if v.get("persona_id") != pid:
+        for st in _A.synthesis_statements(syn):
+            if st.get("persona_id") != pid:
                 continue
-            st = _A.statement(pid, v.get("key_argument", ""),
-                              stance=_A.resolve_stance(v.get("sentiment")) if v.get("sentiment") else None,
-                              relevance=v.get("relevance"), shift=v.get("shift") or None,
-                              refs=[_A.ref("synthesis", id=syn["id"], quote=syn["title"])])
+            st = dict(st)                                  # add a link to the synthesis this voice is in
+            st["refs"] = list(st.get("refs") or []) + [_A.ref("synthesis", id=syn["id"], quote=syn.get("title", ""))]
             cards.append(render_statement(st, store))
             break
     if not cards:
@@ -359,7 +357,7 @@ def _synthesis_html(store: Store, syn: dict):
         sid = _A.finding_kind(kind)["id"]
         return (sid, toc or label, _block(sid, label, render_findings(items)))
 
-    rec_items = [_rec_item(x) for x in syn.get("handlungsempfehlungen", [])]
+    rec_items = _A.synthesis_recommendations(syn)         # [(text, effort, value)] from recommendation findings
     if rec_items:
         chart = _effort_impact(rec_items)
         if chart:
@@ -415,7 +413,7 @@ def _synthesis_html(store: Store, syn: dict):
                       h("div", {"class_": "es-prose sm"}, raw(_md(_srcchips(syn["arc_narrative"])))))))
 
     # ---- slim meta strip (replaces the old Eigenschaften rail) ----
-    cs = Counter(v.get("sentiment", "neutral") for v in syn.get("voices", []))
+    cs = _A.synthesis_sentiment_counts(syn)               # derived from the voice statements' stance
     smeta = " · ".join(f"{cs[k]} {k}" for k in ("positiv", "bedingt", "neutral", "skeptisch", "ablehnend") if cs.get(k))
     mchips = [_label(t("completed") if done else t("running"), "var(--green)" if done else "var(--amber)")]
     mchips.append(h("span", {"class_": "mchip"}, f'{len(syn.get("council_ids", []))} {t("councils")}'))

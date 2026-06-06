@@ -112,15 +112,18 @@ def test_synthesis_preserves_structured_blocks_and_warns_when_thin(store):
         "ranking": [{"prototype_id": "proto_a", "score_rationale": "ehrlichster Pfad"}],
         "shortlist": ["proto_a"],
     }
+    from persona_council import artifacts as A
     rec = services.record_synthesis("Define POV", "hmw", ["c1"], payload, store=store)
     got = services.get_synthesis(rec["id"], store=store)
-    assert got["clusters"][0]["label"] == "Sprachbarriere"
-    assert got["key_problems"] == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
-    assert got["ranking"][0]["prototype_id"] == "proto_a" and got["shortlist"] == ["proto_a"]
+    # storage is primitives-only: the legacy payload converts to findings at the record boundary
+    by_kind = {f["kind"]: f for f in got["findings"]}
+    assert by_kind["cluster"]["text"] == "Sprachbarriere"
+    assert A.finding_texts(got, "key_problem") == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
+    assert by_kind["ranking"]["text"] == "proto_a" and A.finding_texts(got, "shortlist") == ["proto_a"]
     # re-recording the SAME id without re-supplying a block keeps it (additive-safe update)
     rec2 = services.record_synthesis("Define POV", "hmw", ["c1"], {"gesamtbild": "更新", "synthesis_id": got["id"]},
                                      synthesis_id=got["id"], store=store)
-    assert services.get_synthesis(rec2["id"], store=store)["key_problems"] == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
+    assert A.finding_texts(services.get_synthesis(rec2["id"], store=store), "key_problem") == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
     # web + export surface the structured content
     html, toc = web._synthesis_html(store, got)
     assert "Sprachbarriere" in html and "Shortlist" in html and "proto_a" in html

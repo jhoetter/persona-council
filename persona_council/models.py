@@ -171,11 +171,7 @@ class Synthesis:
     council_ids: list[str]
     arc_narrative: str
     gesamtbild: str
-    handlungsempfehlungen: list  # [{text, aufwand, nutzen}] — plain strings tolerated (legacy)
     positionierung: str
-    pain_solvers: list[str]
-    segmente: list[Json]
-    offene_fragen: list[str]
     references: list[Json]
     created_at: str
     goal: str = ""                       # what this study arc is trying to learn
@@ -183,21 +179,15 @@ class Synthesis:
     next_council_question: str = ""      # self-contained Q for the next council (if continuing)
     stop_reason: str = ""                # why the loop stopped (goal reached / no follow-up / max)
     iterations: int = 0                  # councils consumed so far
-    voices: list[Json] = field(default_factory=list)  # structured per-persona voice records
     citations: list[Json] = field(default_factory=list)  # inline provenance: [{kind, ref, quote}]
-    # each voice: {persona_id, persona_name, segment, sentiment, relevance,
-    #              key_argument, shift:{from,to,trigger,council_id}|None, evidence:[{council_id,quote}]}
     # --- methodology-engine metadata (spec/methodology-engine-and-prototyping.md) ---
     phase: str = ""          # which constellation step produced this node (step id, e.g. "discover")
     mode: str = ""           # display label: "diverge" (one of a fan) | "converge" (the waist)
     role: str = ""           # free role tag (= the step's produces.role)
     methodology: str = ""    # methodology key this node belongs to
-    # converge-node enrichments (spec/deep-design-thinking-and-diamond.md §4):
-    clusters: list[Json] = field(default_factory=list)   # [{label, member_node_ids, insight}]
-    key_problems: list[str] = field(default_factory=list)
-    ranking: list[Json] = field(default_factory=list)    # down-select: [{prototype_id, score_rationale}]
-    shortlist: list[str] = field(default_factory=list)   # prototype_ids carried to mid-fi
-    # Unified primitives (spec/unified-artifact-schema.md) — native shape, optional during the transition.
+    # Unified primitives (spec/unified-artifact-schema.md) — the ONE representation. findings carry the
+    # former key_problems/pain_solvers/recommendations/clusters/segmente/ranking/shortlist/offene_fragen;
+    # statements carry the former per-persona voices; prompts the study question.
     statements: list = field(default_factory=list)
     findings: list = field(default_factory=list)
     prompts: list = field(default_factory=list)

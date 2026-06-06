@@ -37,6 +37,7 @@ from ..models import (
     Synthesis,
 )
 from ..storage import Store
+from .. import artifacts as _A
 from ..taxonomy import GENERIC_TOOLS, normalized_tool_ids, normalized_tools
 from .. import memory as memory_mod
 from .. import evaluation as evaluation_mod
@@ -217,16 +218,13 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
     syn = store.get_synthesis(study_id)
     if not syn:
         return None
-    sentiment: dict[str, int] = {}
-    for v in syn.get("voices", []) or []:
-        s = v.get("sentiment", "neutral")
-        sentiment[s] = sentiment.get(s, 0) + 1
+    sentiment = _A.synthesis_sentiment_counts(syn)        # derived from the voice statements' stance
     return {
         "study_id": study_id, "title": syn.get("title", study_id),
         "status": syn.get("status", "done"), "created_at": syn.get("created_at", ""),
         "goal": syn.get("goal", ""), "council_count": len(syn.get("council_ids", [])),
         "voices": sum(sentiment.values()), "sentiment": sentiment,
-        "recommendations": len(syn.get("handlungsempfehlungen", [])),
+        "recommendations": len(_A.synthesis_recommendations(syn)),
         "phase": syn.get("phase", ""), "mode": syn.get("mode", ""), "role": syn.get("role", ""),
     }
 

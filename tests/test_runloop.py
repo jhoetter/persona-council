@@ -139,8 +139,10 @@ def test_pipeline_regression_score_and_memory_depth(store):
     # the finished project is organized + concluded + handed-off, with a structured terminal synthesis
     g = services.get_project_graph(pid, store=store)
     assert len(g["sections"]) >= 1 and store.list_meta_reports(pid)
+    from persona_council import artifacts as A
     syns = store.list_syntheses()
-    assert any((s.get("gesamtbild") or "").strip() and (s.get("key_problems") or s.get("pain_solvers")) for s in syns)
+    assert any((s.get("gesamtbild") or "").strip()
+               and (A.finding_texts(s, "key_problem") or A.finding_texts(s, "pain_solver")) for s in syns)
     # memory_depth: a 1-persona cohort with no simulated life is flagged thin
     md = services.assess_project(pid, store=store)["memory_depth"]
     assert md["personas"] == 1 and md["hint"].startswith("thin")

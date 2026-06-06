@@ -161,10 +161,14 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
     if key and not synthesis_id:        # deterministic id → idempotent resumable upsert (HX6)
         synthesis_id = stable_id("synthesis", key)
     data = validate_synthesis_payload(payload or {})
-    _pl = payload or {}                                   # Phase 2 native primitives (optional; dual-read)
-    _sts = [_A.validate_statement(s) for s in (_pl.get("statements") or [])]
-    _fnds = [_A.validate_finding(f) for f in (_pl.get("findings") or [])]
-    _prmpts = [_A.validate_prompt(p) for p in (_pl.get("prompts") or [])]
+    _pl = payload or {}
+    # Primitives-only storage (spec/unified-artifact-schema): findings/statements/prompts are the ONE
+    # representation. Author them natively if present, else convert the validated payload (key_problems/
+    # voices/clusters/… → findings/statements) at this boundary via the adapters. The legacy list/voice
+    # fields are NOT stored — they live on only as accepted INPUT shapes.
+    findings = [_A.validate_finding(f) for f in (_pl.get("findings") or [])] or _A.synthesis_findings(data)
+    statements = [_A.validate_statement(s) for s in (_pl.get("statements") or [])] or _A.synthesis_statements(data)
+    prompts = [_A.validate_prompt(p) for p in (_pl.get("prompts") or [])] or _A.synthesis_prompts(data)
     existing = store.get_synthesis(synthesis_id) if synthesis_id else None
     # honor an explicit/keyed synthesis_id even on first create (so a keyed run is idempotent)
     sid = (existing or {}).get("id") or synthesis_id or stable_id("synthesis", title or "synthesis", utc_now_iso())
@@ -173,33 +177,25 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
     rec = Synthesis(
         id=sid, title=title, start_input=start_input, council_ids=council_ids,
         arc_narrative=data["arc_narrative"], gesamtbild=data["gesamtbild"],
-        handlungsempfehlungen=data["handlungsempfehlungen"], positionierung=data["positionierung"],
-        pain_solvers=data["pain_solvers"], segmente=data["segmente"],
-        offene_fragen=data["offene_fragen"], references=data["references"],
+        positionierung=data["positionierung"], references=data["references"],
         created_at=created,
         goal=goal or prev.get("goal", ""),
         status=data["status"], next_council_question=data["next_council_question"],
         stop_reason=data["stop_reason"], iterations=len(council_ids),
-        voices=data["voices"], citations=data["citations"],
-        # Structured convergence blocks (GAP-3): persist what the methodology authored; on an update
-        # that omits one, keep the prior value so re-recording an arc doesn't wipe it.
-        clusters=data["clusters"] or prev.get("clusters", []),
-        key_problems=data["key_problems"] or prev.get("key_problems", []),
-        ranking=data["ranking"] or prev.get("ranking", []),
-        shortlist=data["shortlist"] or prev.get("shortlist", []),
-        statements=_sts or prev.get("statements", []),
-        findings=_fnds or prev.get("findings", []),
-        prompts=_prmpts or prev.get("prompts", []),
+        citations=data["citations"],
+        # The findings/statements/prompts primitives; on an update that omits one, keep the prior value
+        # so re-recording an arc in place doesn't wipe it.
+        statements=statements or prev.get("statements", []),
+        findings=findings or prev.get("findings", []),
+        prompts=prompts or prev.get("prompts", []),
     ).to_dict()
     rec["updated_at"] = utc_now_iso()
     store.upsert_synthesis(rec)
-    # Soft honesty signal (GAP-3 / spec/harness-run-observations): the synthesis IS the answer — flag
-    # (don't block) when it persists with no prose AND no structured blocks AND no voices, so the host
-    # notices a hollow answer node instead of stranding substance in councils/notes.
+    # Soft honesty signal (GAP-3): the synthesis IS the answer — flag (don't block) when it persists with
+    # no prose AND no findings AND no voices, so the host notices a hollow answer node.
     out = dict(rec)
     has_substance = any([rec["gesamtbild"].strip(), rec["positionierung"].strip(), rec["arc_narrative"].strip(),
-                         rec["clusters"], rec["key_problems"], rec["ranking"], rec["shortlist"],
-                         rec["pain_solvers"], rec["voices"], rec["segmente"]])
+                         rec["findings"], rec["statements"]])
     if not has_substance:
         out["warnings"] = ["SYNTHESIS_THIN: this synthesis persisted with no prose (gesamtbild/"
                            "positionierung) and no structured blocks (clusters/key_problems/ranking/"
@@ -282,46 +278,47 @@ def export_synthesis(synthesis_id: str, format: str = "md", store: Store | None 
              f"## {L['arc']}", syn.get("arc_narrative", ""), "",
              f"## {L['big_picture']}", syn.get("gesamtbild", ""), "",
              f"## {L['recommendations']}"]
-    def _rec_md(x: Any) -> str:
-        if isinstance(x, dict):
-            txt = x.get("text", ""); a, n = x.get("aufwand"), x.get("nutzen")
-            return f"{txt} _({L['effort']} {a}/5 · {L['value']} {n}/5)_" if a and n else str(txt)
-        return str(x)
-    lines += [f"{i}. {_rec_md(x)}" for i, x in enumerate(syn.get("handlungsempfehlungen", []), 1)] or ["—"]
+    # Report blocks are reconstructed from the stored findings/statements (storage is primitives-only).
+    _fs = _A.synthesis_findings(syn)
+    def _fmeta(kind, key):  # collect a meta value across findings of a kind
+        return [( (f.get("meta") or {}).get(key, ""), f.get("text", "")) for f in _fs if f.get("kind") == kind]
+    recs = _A.synthesis_recommendations(syn)
+    lines += [f"{i}. " + (f"{txt} _({L['effort']} {a}/5 · {L['value']} {n}/5)_" if a and n else txt)
+              for i, (txt, a, n) in enumerate(recs, 1)] or ["—"]
     lines += ["", f"## {L['positioning']}", syn.get("positionierung", "")]
     # Structured convergence blocks (GAP-3): render when present so the methodology's converge output
     # (key problems / affinity clusters / down-select ranking + shortlist) survives into the report.
-    if syn.get("key_problems"):
-        lines += ["", f"## {L['key_problems']}"] + [f"- {x}" for x in syn["key_problems"]]
-    if syn.get("clusters"):
-        lines += ["", f"## {L['clusters']}"] + [f"- **{c.get('label','')}** — {c.get('insight','')}" for c in syn["clusters"]]
-    if syn.get("ranking"):
-        lines += ["", f"## {L['ranking']}"] + [f"- **{r.get('prototype_id','')}**: {r.get('score_rationale','')}" for r in syn["ranking"]]
-    if syn.get("shortlist"):
-        lines += ["", f"## {L['shortlist']}"] + [f"- {x}" for x in syn["shortlist"]]
+    if _A.finding_texts(syn, "key_problem"):
+        lines += ["", f"## {L['key_problems']}"] + [f"- {x}" for x in _A.finding_texts(syn, "key_problem")]
+    if _fmeta("cluster", "detail"):
+        lines += ["", f"## {L['clusters']}"] + [f"- **{label}** — {insight}" for insight, label in _fmeta("cluster", "detail")]
+    if _fmeta("ranking", "detail"):
+        lines += ["", f"## {L['ranking']}"] + [f"- **{ref}**: {rat}" for rat, ref in _fmeta("ranking", "detail")]
+    if _A.finding_texts(syn, "shortlist"):
+        lines += ["", f"## {L['shortlist']}"] + [f"- {x}" for x in _A.finding_texts(syn, "shortlist")]
     lines += ["", f"## {L['pain_solvers']}"]
-    lines += [f"- {x}" for x in syn.get("pain_solvers", [])] or ["—"]
+    lines += [f"- {x}" for x in _A.finding_texts(syn, "pain_solver")] or ["—"]
     lines += ["", f"## {L['segments']}"]
-    lines += [f"- **{s['segment']}** ({s.get('stance','')}): {s.get('why','')}" for s in syn.get("segmente", [])] or ["—"]
-    voices = syn.get("voices", [])
+    lines += [f"- **{seg}**: {why}" for why, seg in _fmeta("segment", "detail")] or ["—"]
+    voices = _A.synthesis_statements(syn)
     if voices:
         lines += ["", f"## {L['voices']}"]
-        order = {"positiv": 0, "bedingt": 1, "neutral": 2, "skeptisch": 3, "ablehnend": 4}
-        for v in sorted(voices, key=lambda x: order.get(x.get("sentiment", "neutral"), 2)):
-            name = v.get("persona_name") or v.get("persona_id")
-            head = f"- **{name}** — {v.get('sentiment','')} · {L['relevance']}: {v.get('relevance','')}"
-            if v.get("segment"):
-                head += f" · {v['segment']}"
+        for v in sorted(voices, key=lambda x: -((x.get("stance") or {}).get("value", 0))):
+            name = store.get_persona(v.get("persona_id", "")) or {}
+            head = f"- **{name.get('name') or v.get('persona_id','')}**"
+            if v.get("relevance"):
+                head += f" — {L['relevance']}: {v['relevance']}"
             lines.append(head)
-            if v.get("key_argument"):
-                lines.append(f"  - {L['argument']}: {v['key_argument']}")
+            if v.get("text"):
+                lines.append(f"  - {L['argument']}: {v['text']}")
             sh = v.get("shift")
             if sh and (sh.get("trigger") or sh.get("to")):
                 lines.append(f"  - {L['shift']}: {sh.get('from','')}→{sh.get('to','')} — {sh.get('trigger','')}")
-            for e in v.get("evidence", []):
-                lines.append(f"  - „{e.get('quote','')}“ [{e.get('council_id','')}]")
+            for e in v.get("refs", []):
+                if e.get("kind") == "council" and e.get("quote"):
+                    lines.append(f"  - „{e.get('quote','')}“ [{e.get('id','')}]")
     lines += ["", f"## {L['open_questions']}"]
-    lines += [f"- {x}" for x in syn.get("offene_fragen", [])] or ["—"]
+    lines += [f"- {x}" for x in _A.finding_texts(syn, "open_question")] or ["—"]
     cites = syn.get("citations", [])
     if cites:
         cite_label = "Belege (Evidenz / Recall)" if content_language() == "de" else "Citations (evidence / recall)"
@@ -365,8 +362,7 @@ def _study_compact(store: Store, study_id: str, tags: list[str]) -> dict[str, An
     return {"study_id": study_id, "title": syn.get("title", study_id), "goal": syn.get("goal", ""),
             "theme_tags": tags, "gesamtbild": syn.get("gesamtbild", ""),
             "positionierung": syn.get("positionierung", ""),
-            "top_recommendations": [r.get("text") if isinstance(r, dict) else str(r)
-                                    for r in (syn.get("handlungsempfehlungen", []) or [])[:3]],
+            "top_recommendations": [txt for txt, _a, _n in _A.synthesis_recommendations(syn)[:3]],
             "created_at": syn.get("created_at", "")}
 
 
@@ -379,11 +375,12 @@ def _study_full(store: Store, study_id: str) -> dict[str, Any]:
         councils.append({"council_id": cid, "prompt": c.get("prompt", ""), "exec_summary": c.get("exec_summary", "")})
     return {"study_id": study_id, "title": syn.get("title", study_id), "goal": syn.get("goal", ""),
             "arc_narrative": syn.get("arc_narrative", ""), "gesamtbild": syn.get("gesamtbild", ""),
-            "positionierung": syn.get("positionierung", ""), "pain_solvers": syn.get("pain_solvers", []),
-            "handlungsempfehlungen": syn.get("handlungsempfehlungen", []), "segmente": syn.get("segmente", []),
-            "voices": [{"persona_name": v.get("persona_name"), "sentiment": v.get("sentiment"),
-                        "key_argument": v.get("key_argument")} for v in (syn.get("voices", []) or [])],
-            "offene_fragen": syn.get("offene_fragen", []), "councils": councils}
+            "positionierung": syn.get("positionierung", ""), "pain_solvers": _A.finding_texts(syn, "pain_solver"),
+            "handlungsempfehlungen": [{"text": t, "aufwand": a, "nutzen": n} for t, a, n in _A.synthesis_recommendations(syn)],
+            "voices": [{"persona_id": v.get("persona_id"),
+                        "sentiment": _A._STANCE_SENTIMENT.get((v.get("stance") or {}).get("value"), "neutral"),
+                        "key_argument": v.get("text")} for v in _A.synthesis_statements(syn)],
+            "offene_fragen": _A.finding_texts(syn, "open_question"), "councils": councils}
 
 
 
