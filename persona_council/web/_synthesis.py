@@ -557,6 +557,7 @@ def _synthesis_html(store: Store, syn: dict):
     if voices:
         sec.append(("stimmen", t("voices"),
                     h("div", {"class_": "block", "id": "stimmen"}, h("h2", {"class_": "bh"}, t("voices")),
+                      h("p", {"class_": "ihint"}, t("voices_intro")),
                       raw(render_statements(voices, store, group_by="persona")))))
     else:
         syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]

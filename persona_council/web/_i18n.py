@@ -106,8 +106,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "name_label": "Name",
         "relevance_tooltip": "Relevanz / tangiert: {rel}",
         "voices_count": "Stimmen ({n})",
-        "voices_intro": "Pro Persona: Sentiment, Relevanz (tangiert), Schlüssel-Argument und Wandel — "
-                        "filtern, sortieren, aufklappen für Belege.",
+        "voices_intro": "Pro Persona: Haltung, Relevanz und Schlüssel-Argument — mit Meinungswandel über "
+                        "die Council-Kette, wo vorhanden.",
         "search_arg_name": "Suche Argument / Name…",
         "sort_by_sentiment": "Sortieren: Sentiment", "sort_relevance": "Relevanz",
         "sort_shift_first": "Wandel zuerst",
@@ -255,8 +255,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "name_label": "Name",
         "relevance_tooltip": "Relevance / affected: {rel}",
         "voices_count": "Voices ({n})",
-        "voices_intro": "Per persona: sentiment, relevance (affected), key argument and shift — "
-                        "filter, sort, expand for evidence.",
+        "voices_intro": "Per persona: stance, relevance and key argument — with any shift of opinion "
+                        "across the council chain.",
         "search_arg_name": "Search argument / name…",
         "sort_by_sentiment": "Sort: sentiment", "sort_relevance": "Relevance",
         "sort_shift_first": "Shift first",
