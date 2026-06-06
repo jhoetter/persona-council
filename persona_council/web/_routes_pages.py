@@ -22,7 +22,7 @@ from ..presentation import glyph_icon
 from ._detail import _relations_html, _properties_html, _session_card
 from ._rail import _page_rail
 from ._routes_lists import _projects_page, _persona_row
-from ._html import raw, h
+from ._html import raw, h, fragment
 from ._vm import study_head
 
 
@@ -324,12 +324,15 @@ def register_pages(app) -> None:
             """One answer (a single turn): optional input snapshot, the text, concerns, memory refs."""
             body = tn.get("content") or tn.get("text") or tn.get("message") or ""   # tolerate body field variants
             given = tn.get("input") or tn.get("context_given") or ""
-            given_html = (f'<details class="turn-input"><summary class="muted small">{t("council_input_given")}</summary>'
-                          f'<p class="muted small" style="white-space:pre-wrap">{_esc(given)}</p></details>') if given else ""
-            concerns = "".join(f'<p class="muted small">• {_esc(q)}</p>' for q in (tn.get("questions_or_pushback") or [])[:4])
+            given_html = h("details", {"class_": "turn-input"},
+                           h("summary", {"class_": "muted small"}, t("council_input_given")),
+                           h("p", {"class_": "muted small", "style": "white-space:pre-wrap"}, given)) if given else None
+            concerns = fragment(*(h("p", {"class_": "muted small"}, f"• {q}")
+                                  for q in (tn.get("questions_or_pushback") or [])[:4]))
             mrefs = (tn.get("memory_refs") or tn.get("memory_used") or [])[:3]
-            mem = (f'<p class="muted small">{_icon("memory")} {t("council_drew_on")}: ' + ", ".join(_esc(m) for m in mrefs) + '</p>') if mrefs else ""
-            return f'<div class="turn-ans">{given_html}<p>{_esc(body)}</p>{concerns}{mem}</div>'
+            mem = h("p", {"class_": "muted small"}, raw(_icon("memory")), " ", t("council_drew_on"),
+                    ": ", ", ".join(mrefs)) if mrefs else None
+            return h("div", {"class_": "turn-ans"}, given_html, h("p", {}, body), concerns, mem)
 
         def _persona_head(pid, tns: list) -> str:
             """Avatar + name + life-context + first declared stance, for a persona's answer block."""
@@ -337,13 +340,14 @@ def register_pages(app) -> None:
             stance_src = next((x for x in tns if x.get("stance") and not _is_mod(x)), None)
             stance = _label(stance_src["stance"], _stance_color(stance_src["stance"])) if stance_src else ""
             if not p:
-                return f'<b>{_esc(tns[0].get("speaker", ""))}</b> {stance}'
+                return fragment(h("b", {}, tns[0].get("speaker", "")), " ", stance)
             seg = p.get("segment") or {}
             desc = " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
                 or (p.get("source_description") or "")[:130]
-            return (f'<a href="/personas/{_esc(p["id"])}" class="turn-who">{_avatar(p, 26)}'
-                    f'<b>{_esc(p.get("display_name") or tns[0].get("speaker", ""))}</b></a> {stance}'
-                    f'<div class="muted small turn-ctx">{_esc(desc)}</div>')
+            return fragment(
+                h("a", {"href": f'/personas/{p["id"]}', "class_": "turn-who"},
+                  _avatar(p, 26), h("b", {}, p.get("display_name") or tns[0].get("speaker", ""))),
+                " ", stance, h("div", {"class_": "muted small turn-ctx"}, desc))
 
         def _by_persona(tlist: list) -> list:
             order, by = [], {}
@@ -355,8 +359,8 @@ def register_pages(app) -> None:
             return [(pid, by[pid]) for pid in order]
 
         def _answer_block(pid, tns: list) -> str:
-            return (f'<div class="qa-ans"><div class="qa-who hd">{_persona_head(pid, tns)}</div>'
-                    + "".join(_answer_html(tn) for tn in tns) + '</div>')
+            return h("div", {"class_": "qa-ans"}, h("div", {"class_": "qa-who hd"}, _persona_head(pid, tns)),
+                     fragment(*(_answer_html(tn) for tn in tns)))
 
         answer_turns = [tn for tn in session["turns"] if not _is_mod(tn) and tn.get("persona_id")]
         questions = session.get("questions") or []
