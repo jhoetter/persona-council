@@ -49,17 +49,22 @@ DOCS = [
      ["Empfehlungen mit Aufwand·Nutzen", "Verkettet zu einem wachsenden Studien-Bogen"],
      ["Recommendations scored by effort·impact", "Chains into one growing study arc"]),
     ("concept", "bulb", "concepts",
-     "Eine **Lösungs-Idee** aus der Ideation — bereit, von einem Council geprüft oder als Artefakt gebaut zu werden.",
-     "A **solution idea** from ideation — ready to be evaluated by a council or built as an artefact.",
-     ["Brücke von Insight zu Artefakt"], ["The bridge from insight to artefact"]),
+     "Eine **Lösungs-Idee** (_Develop_) — dieselbe leichte Node wie eine Notiz, aber mit `kind: concept`; "
+     "bereit, von einem Council geprüft oder als Artefakt gebaut zu werden.",
+     "A **solution idea** (_Develop_) — the same lightweight node as a Note but with `kind: concept`; "
+     "ready to be evaluated by a council or built as an artefact.",
+     ["Brücke von Insight zu Artefakt", "Hat eine eigene Liste (Sidebar)"],
+     ["The bridge from insight to artefact", "Has its own list (sidebar)"]),
     ("prototype", "prototype", "prototypes_h",
      "Ein **lauffähiges Artefakt** (von grob bis hochauflösend), das Personas testen.",
      "A **runnable artefact** (low to high fidelity) that personas test.",
      ["Sessions erfassen geerdete Reaktionen", "Zeigt die Fidelity-Iteration im Develop-Diamanten"],
      ["Sessions capture grounded reactions", "Shows the fidelity iteration in the Develop diamond"]),
     ("note", "panel", None,
-     "Ein **leichtgewichtiges Signal** im Projekt-Graph — eine rohe Beobachtung.",
-     "A **lightweight signal** in the project graph — a raw observation.",
+     "Ein **leichtgewichtiges Signal** (_Discover_) — eine rohe Beobachtung im Projekt-Graph. Gleiche Node "
+     "wie ein Konzept, nur `kind: note` (rohe Beobachtung vs. ausgearbeitete Idee).",
+     "A **lightweight signal** (_Discover_) — a raw observation in the project graph. Same node as a "
+     "Concept, just `kind: note` (raw observation vs. worked-out idea).",
      ["Methodologie-frei, jederzeit erfassbar"], ["Methodology-free, capture anytime"]),
     ("section", "squareGrid", "section",
      "Eine **methodologie-unabhängige Gruppierung** von Graph-Knoten (ein Frame/Cluster).",
