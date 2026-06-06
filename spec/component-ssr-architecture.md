@@ -146,7 +146,28 @@ SSR structure only.
 
 ---
 
-## 10. Progress (updated 2026-06-06) — DONE so far
+## 10. Progress (updated 2026-06-06) — C1–C4 COMPLETE (burndown 606 → 45 legitimate floor)
+
+**Status: the component-SSR conversion is done.** Every page and component renders through the `h()`
+builder. The whole app was converted file-by-file, each step verified **byte-identical** against a
+23-page golden HTML snapshot (`/tmp/verify.py`, whitespace/entity-normalized) and gated by the burndown
+ratchet (`tests/test_web_burndown.py`). 110 tests green throughout.
+
+**Remaining 45 units are the legitimate floor** — raw HTML *producers*, not page hand-HTML:
+`_components` 27 (the `_md` markdown renderer + `_effort_impact` SVG chart + `_srcchips(_esc)` chips),
+`_graph` 15 (the `_graph_svg`/`_graph_interactive` `<svg>` scene-graph raw() islands — self-closing
+SVG), `_synthesis` 3 (`_srcchips`/`voices_meta` text-escaping). These use `raw()` by design. A handful
+of latent bugs were fixed in passing (unescaped `&`, `None`→literal "None", `&bdquo;`→literal char) —
+proper-escaping improvements, pixel-identical.
+
+**C5 (monolith collapse) — remaining & sequenced.** `web_assets.CSS` (756 LOC) and `_SYN_STYLE` should
+migrate into component `register_css` fragments, and `_routes_pages.py` (778 LOC, under the 800 bar)
+could split into a `web/pages/` package. The CSS move is best done WITH the upcoming design-system pass
+(it *is* a design-system concern, and reordering the `<style>` cascade carries visual risk the
+design-system work re-verifies anyway); the route split is optional cleanliness (routes share a
+`register_pages` closure, so it's entangled, and the file is within budget). Tracked, not yet done.
+
+### Earlier milestones
 - **C1 Foundation** — `_html.py` (`h/Safe/esc/raw/fragment` + `register_css/collect_css`) + 11 tests.
 - **C2 CSS co-location** — `_layout` emits `collect_css()`; components register their own fragments.
 - **C3 `_hero`** — one component replaced all 7 hand-written heroes; list routes split to
