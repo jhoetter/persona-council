@@ -38,9 +38,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .app{display:flex;height:100vh;overflow:hidden;--sidebar-w:248px}
 .sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width 200ms var(--ease),min-width 200ms var(--ease),border-right-width 200ms}
 .app.collapsed .sidebar{width:0;min-width:0;border-right-width:0}
-.brand{height:var(--row-h);display:flex;align-items:center;gap:8px;padding:0 14px;font-weight:680;font-size:var(--t-body);border-bottom:1px solid var(--line);white-space:nowrap}
+.brand{height:var(--row-h);flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 14px;font-weight:680;font-size:var(--t-body);border-bottom:1px solid var(--line);white-space:nowrap}
 .brand .mark{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--violet));flex-shrink:0}
-.sb-scroll{overflow:auto;padding:10px 8px;flex:1}
+.sb-scroll{overflow:auto;padding:10px 8px;flex:1;min-height:0}
 .nav{display:flex;flex-direction:column;gap:1px}
 .nav a{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:6px;color:var(--ink);font-weight:500;position:relative;min-height:30px}
 .nav a .ic{color:var(--faint)}
@@ -55,7 +55,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .sb-foot{padding:10px 14px;border-top:1px solid var(--line);font-size:var(--t-sm)}
 .sb-foot a{color:var(--muted)}.sb-foot a:hover{color:var(--accent)}
 /* ---- sidebar user / settings menu ---- */
-.usermenu{position:relative;border-top:1px solid var(--line);padding:8px}
+.usermenu{position:relative;flex-shrink:0;border-top:1px solid var(--line);padding:8px}
 .um-trigger{width:100%;display:flex;align-items:center;gap:9px;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;cursor:pointer;color:var(--ink);font-size:var(--t-body);font-weight:500;font-family:inherit}
 .um-trigger:hover{background:var(--hover)}
 .usermenu.open .um-trigger{background:var(--hover)}
