@@ -361,8 +361,7 @@ def _md(text: str) -> str:
     in_ul = False
     i = 0
     while i < n:
-        raw = lines[i]
-        line = raw.rstrip(); stripped = line.lstrip()
+        line = lines[i].rstrip(); stripped = line.lstrip()
         # GitHub-style pipe table: header row, then a |---|---| separator row
         if stripped.startswith("|") and i + 1 < n:
             sep = lines[i + 1].strip()

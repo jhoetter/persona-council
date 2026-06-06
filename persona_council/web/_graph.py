@@ -292,7 +292,7 @@ def _graph_interactive(graph: dict) -> str:
         x, y = pos[n["study_id"]]
         sent = max(n.get("sentiment", {}).items(), key=lambda kv: kv[1])[0] if n.get("sentiment") else "—"
         if n.get("kind"):                         # heterogeneous evidence node (plan graph)
-            sub = f'{n.get("kind_label", "")} · ' + (", ".join(t for t in tags if t != n["kind"] and t != ntype)[:48] or "—")
+            sub = f'{n.get("kind_label", "")} · ' + (", ".join(tg for tg in tags if tg != n["kind"] and tg != ntype)[:48] or "—")
             color = n.get("color") or "#9aa0a6"
             href = n.get("href") or ""
         else:                                     # legacy synthesis node
@@ -494,9 +494,9 @@ def _graph_svg(graph: dict) -> str:
 
 def _plan_html(plan: dict, store) -> str:
     tasks = plan.get("tasks", [])
-    done = sum(1 for t in tasks if t["status"] == "done")
+    done = sum(1 for tk in tasks if tk["status"] == "done")
     complete = bool(tasks) and done == len(tasks)
-    by_title = {t["id"]: t.get("title", t["id"]) for t in tasks}
+    by_title = {tk["id"]: tk.get("title", tk["id"]) for tk in tasks}
     # Status marks are persona-icons (single source of truth); colour drives currentColor.
     STATUS = {"done": ("check", "var(--green)"), "active": ("half", "var(--accent)"),
               "todo": ("circle", "var(--muted)"), "blocked": ("alert", "var(--red)")}
@@ -522,11 +522,11 @@ def _plan_html(plan: dict, store) -> str:
             return h("a", {"class_": "ev", "href": href}, label, " ↗")
         return h("span", {"class_": "ev"}, label)
 
-    def row(t: dict) -> str:
-        mark, clr = STATUS.get(t["status"], ("circle", "var(--muted)"))
-        cons = " · ".join(by_title.get(c, c) for c in t.get("consumes", []))
+    def row(tk: dict) -> str:
+        mark, clr = STATUS.get(tk["status"], ("circle", "var(--muted)"))
+        cons = " · ".join(by_title.get(c, c) for c in tk.get("consumes", []))
         cons_html = h("div", {"class_": "small muted", "style": "margin-top:4px"}, f"⊂ {cons}") if cons else ""
-        req = t.get("requires", {}) or {}
+        req = tk.get("requires", {}) or {}
         gates = []
         if req.get("min_inputs") is not None:
             gates.append(f"min. {req['min_inputs']} Inputs")
@@ -537,13 +537,13 @@ def _plan_html(plan: dict, store) -> str:
         for tg in (req.get("artifact_tags") or []):
             gates.append(f"Artefakt: {_pres.present(tg)['short']}")
         gates_html = [h("span", {"class_": "gate"}, x) for x in gates]
-        cap = t.get("capability", "")
+        cap = tk.get("capability", "")
         cap_html = h("span", {"class_": "pcap"}, cap) if cap else ""
         # skip the frame self-reference (a frame task produces a ref to itself); link the rest,
         # numbering same-kind sessions so 5 identical "session" chips become Session 1…5
         evs, _sn = [], 0
-        for r in t.get("produces", []):
-            if r.get("id") == t["id"]:
+        for r in tk.get("produces", []):
+            if r.get("id") == tk["id"]:
                 continue
             if r.get("kind") == "session":
                 _sn += 1
@@ -553,13 +553,13 @@ def _plan_html(plan: dict, store) -> str:
         ev_html = h("div", {"class_": "evs"}, fragment(*evs)) if evs else ""
         return h("div", {"class_": "ptask"}, h("div", {"class_": "pmark", "style": f"color:{clr}"}, raw(_icon(mark))),
                  h("div", {"class_": "pbody"},
-                   h("div", {"class_": "prow1"}, h("span", {"class_": "ptitle"}, t.get("title", t["id"])),
+                   h("div", {"class_": "prow1"}, h("span", {"class_": "ptitle"}, tk.get("title", tk["id"])),
                      cap_html, fragment(*gates_html)), cons_html, ev_html))
 
     secs = []
     for b, label in [("analyze", "Analyze · verstehen"), ("act", "Act · Councils, Prototypen, Tests"),
                      ("verify", "Verify · verdichten & entscheiden")]:
-        rrows = [row(t) for t in tasks if t["bucket"] == b]
+        rrows = [row(tk) for tk in tasks if tk["bucket"] == b]
         if rrows:
             secs.append(h("div", {"class_": "psec"}, h("div", {"class_": "psec-h"}, label), fragment(*rrows)))
     pill = (h("span", {"class_": "pill", "style": "color:var(--green)"}, raw(_icon("dot")), " Plan komplett") if complete

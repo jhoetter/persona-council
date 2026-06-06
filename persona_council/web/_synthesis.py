@@ -151,8 +151,8 @@ def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
 def _stance_dist_html(sessions: list[dict]) -> str:
     sb: Counter = Counter(); colors: dict = {}
     for s in sessions:
-        for t in s.get("turns", []):
-            lbl, col = _stance_bucket(t.get("stance"))
+        for turn in s.get("turns", []):
+            lbl, col = _stance_bucket(turn.get("stance"))
             sb[lbl] += 1; colors[lbl] = col
     rows = [(lbl, v, colors[lbl]) for lbl, v in sb.most_common()]
     return _hbars(rows) if rows else ""
@@ -386,7 +386,7 @@ def _synthesis_html(store: Store, syn: dict):
         if chart:
             body = raw(chart)  # hover popovers replace the list
         else:
-            rows = "".join(_rec_row_n(i, t, a, n) for i, (t, a, n) in enumerate(rec_items, 1))
+            rows = "".join(_rec_row_n(i, txt, a, n) for i, (txt, a, n) in enumerate(rec_items, 1))
             body = h("div", {"class_": "reclist"}, raw(rows))
         sec.append(("empfehlungen", t("recommendations"), _block("empfehlungen", t("recommendations"), body)))
     if syn.get("positionierung"):
