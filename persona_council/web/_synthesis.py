@@ -10,8 +10,84 @@ from ._components import (
     _effort_impact, _star, _study_lead, _SYN_STYLE,
 )
 from ._vm import study_head
-from ._html import h, raw, fragment
+from ._html import h, raw, fragment, register_css
 
+
+# Co-located CSS (spec/roadmap.md R3): analytics charts + voices/Stimmen cockpit.
+register_css(r"""
+/* ---- analytics (Linear-style insight cards) ---- */
+.insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.insight{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:16px}
+.insight.wide{grid-column:1 / -1}
+.insight h3{margin:0 0 2px;font-size:13px}
+.insight .ihint{color:var(--muted);font-size:12px;margin:0 0 14px}
+.kpi{display:flex;align-items:baseline;gap:6px;margin:2px 0 10px}
+.kpi b{font-size:26px;font-weight:720;letter-spacing:-.01em}.kpi span{color:var(--muted);font-size:12.5px}
+.stacked{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--line-2);border:1px solid var(--line)}
+.stacked i{display:block;height:100%}
+.stacked.thin{height:8px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:11px 0 0;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.dnrow{display:flex;align-items:center;gap:18px}
+.donut{width:118px;height:118px;border-radius:50%;background:var(--g);flex-shrink:0;
+  -webkit-mask:radial-gradient(closest-side,transparent 60%,#000 61%);mask:radial-gradient(closest-side,transparent 60%,#000 61%)}
+.brow{display:grid;grid-template-columns:118px 1fr 30px;gap:10px;align-items:center;padding:5px 0;font-size:12.5px}
+.brow .blab{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .btrack{height:9px;border-radius:5px;background:var(--line-2);overflow:hidden}
+.brow .btrack i{display:block;height:100%}
+.brow .bval{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.crow{display:grid;grid-template-columns:1fr 150px 64px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line-2)}
+.crow:last-child{border-bottom:0}.crow .ct{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.crow .cn{text-align:right;color:var(--muted);font-size:12px}
+.prow{display:grid;grid-template-columns:150px 1fr 38px;gap:11px;align-items:center;padding:6px 0}
+.prow .pn{display:flex;align-items:center;gap:8px;overflow:hidden}.prow .pn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.prow .ps{text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.area svg{display:block;width:100%;height:140px}
+.area .ln{fill:none;stroke:var(--accent);stroke-width:2}
+.area .fl{fill:var(--accent);opacity:.10}
+.area .dot{fill:var(--accent)}
+.axis{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:4px}
+@media (max-width:760px){.insights{grid-template-columns:1fr}}
+
+/* ---- voices / Stimmen panel (synthesis cockpit) ---- */
+.vtools{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-start;justify-content:space-between;margin:0 0 12px}
+.vfilters{display:flex;flex-wrap:wrap;gap:10px 16px}
+.fgroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.flabel{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin-right:2px}
+.vchip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--ink);cursor:pointer}
+.vchip:hover{background:var(--hover)}
+.vchip.on{background:var(--accent-weak);border-color:transparent;color:var(--accent);font-weight:600}
+.vchip i{width:8px;height:8px;border-radius:50%}
+.vtools-right{display:flex;gap:8px;align-items:center}
+.vsearch{width:180px;font-size:12.5px}.vsort{font-size:12.5px}
+.vdist{display:grid;grid-template-columns:64px 1fr;gap:8px 10px;align-items:center;margin:0 0 10px;font-size:11.5px;color:var(--muted)}
+.vdist .dk{text-align:right}
+.vcount{font-size:12px;color:var(--muted);margin:0 0 8px}
+.vrows{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--panel)}
+.vrow{border-bottom:1px solid var(--line-2)}.vrow:last-child{border-bottom:0}
+.vrow.hide{display:none}
+.vrow-main{display:grid;grid-template-columns:30px 1fr auto;gap:11px;align-items:center;padding:10px 13px;cursor:pointer}
+.vrow-main:hover{background:var(--hover)}
+.vmeta{min-width:0}
+.vline1{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.vline1 b{font-size:13px}
+.varg{color:var(--muted);font-size:12.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vrow.open .varg{white-space:normal}
+.vright{display:flex;align-items:center;gap:9px;flex-shrink:0;color:var(--muted)}
+.vchev{transition:transform 150ms;color:var(--muted);font-size:11px}
+.vrow.open .vchev{transform:rotate(90deg)}
+.segchip{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 7px;background:var(--panel-2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.relbar{display:inline-flex;gap:2px;align-items:center}
+.relbar i{width:3px;height:11px;border-radius:1px;background:var(--line)}
+.relbar i.on{background:var(--accent)}
+.shiftbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;border-radius:999px;padding:1px 8px;background:var(--accent-weak);color:var(--accent);font-weight:600}
+.vexp{padding:0 13px 13px 54px;font-size:12.5px}
+.vexp .vshift{background:var(--panel-2);border-radius:8px;padding:8px 11px;margin:0 0 9px}
+.vexp .vev{padding:5px 11px;margin:6px 0;color:var(--ink)}
+.vexp .vev a{color:var(--muted);font-size:11px}
+.vempty{padding:18px;color:var(--muted);font-size:12.5px;text-align:center}
+""")
 
 # ----------------------------- chart primitives ----------------------------- #
 # Vanilla inline charts (CSS/conic-gradient/SVG) — no build step, dark-mode safe.

@@ -6,7 +6,7 @@ from .. import services
 from ..storage import Store
 from ._i18n import t
 from ._components import _icon, _avatar, _label, _star, _list_page, _artifact_present
-from ._html import h, raw, fragment
+from ._html import h, raw, fragment, register_css
 
 
 def _row(href: str, ric, title, right=None, *, color: str | None = None, sub=None) -> str:
@@ -82,3 +82,23 @@ def register_lists(app) -> None:
                 rows.append(_row(f'/concepts/{n["id"]}', "bulb", n.get("title", ""), right, color="#ea4335"))
         return _list_page(store, title=t("concepts"), lead=t("concepts_lead"), rows=rows,
                           empty_icon="bulb", empty_msg=t("no_concepts"), active="concept")
+
+# Co-located CSS (spec/roadmap.md R3): linear list rows.
+register_css(r"""
+/* ---- linear list rows (G3) ---- */
+.group{margin:18px 0 2px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-weight:600}
+.group .cnt{color:var(--muted);font-weight:500}
+.rows{border:0;border-top:1px solid var(--line-2);background:transparent}
+.row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-bottom:1px solid var(--line-2);min-height:40px;border-radius:7px;transition:background 110ms}
+.row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
+.row>svg.ic,.row>.ic{color:var(--faint);flex-shrink:0;width:16px;height:16px}.row:hover>svg.ic{color:var(--muted)}
+.rico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;border-radius:6px;background:var(--panel-2)}
+.rico svg{width:15px;height:15px}
+.h1cnt{font-size:14px;font-weight:500;color:var(--faint);margin-left:7px;vertical-align:middle}
+.list-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 0;color:var(--muted);text-align:center}.list-empty svg{width:26px;height:26px;color:var(--faint)}
+.row .title{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.row .sub{color:var(--muted);font-size:12px;flex-shrink:0}
+.row .right{display:flex;align-items:center;gap:11px;flex-shrink:0;color:var(--faint);font-size:12px}
+.votebar{display:inline-flex;height:6px;width:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line)}
+.votebar i{display:block;height:100%}
+""")

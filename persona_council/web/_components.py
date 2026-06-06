@@ -506,3 +506,26 @@ def _doc(main: str, toc: str = "", rail: str = "") -> str:
     return h("div", {"class_": "page"}, h("div", {"class_": f"doc {cls}"}, toc_html,
              h("div", {"class_": "doc-main"}, raw(main)), rail_html))
 
+# Co-located CSS (spec/roadmap.md R3): labels/avatars, stat strip, stars/favorites.
+register_css(r"""
+/* ---- labels / avatars (G5) ---- */
+.lbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.lbl-soft{background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
+.lbl-outline{border:1px solid var(--line);color:var(--muted)}
+.lbl .ld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.av{border-radius:50%;object-fit:cover;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;border:1px solid var(--line)}
+.avs{display:inline-flex}.avs .av{margin-left:-6px;box-shadow:0 0 0 2px var(--panel)}.avs .av:first-child{margin-left:0}
+/* ---- stat strip + persona cards (G2) ---- */
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+.stat{display:flex;align-items:baseline;gap:7px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px 12px}
+.stat b{font-size:17px;font-weight:700}.stat span{color:var(--muted);font-size:12.5px}
+/* ---- stars / favorites ---- */
+.starbtn{border:0;background:none;cursor:pointer;color:var(--muted);padding:2px;line-height:0;border-radius:6px;display:inline-flex}
+.starbtn:hover{color:#e3a008;background:var(--hover)}
+.starbtn .star{fill:none}
+.starbtn.on{color:#e3a008}.starbtn.on .star{fill:#e3a008;stroke:#e3a008}
+#favs a{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.favrow{display:flex;align-items:center;gap:2px}
+.favx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:1px 7px;border-radius:6px;opacity:0;transition:opacity 120ms}
+.favrow:hover .favx{opacity:1}.favx:hover{color:#e3a008;background:var(--hover)}
+""")

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from ._ctx import services, date, timedelta, t, h, fragment
+from .._html import register_css
 
 
 def _calendar_html(persona_id: str, day: str, blocks: list[dict]) -> str:
@@ -67,3 +68,20 @@ def _period_calendar_html(persona_id: str, selected_date: str, view: str, period
                        h("div", {"class_": "count"}, t("n_events", n=len(me))),
                        fragment(*(_event_chip(e) for e in me[:2]))))
     return h("div", {"class_": "calendar-grid year"}, cells)
+
+# Co-located CSS (spec/roadmap.md R3): persona calendar grid.
+register_css(r"""
+/* ---- calendar (kept, var-ized) ---- */
+.calendar{display:grid;grid-template-columns:62px 1fr;border:1px solid var(--line);background:var(--panel);border-radius:8px;overflow:hidden}
+.calendar-grid{display:grid;gap:8px}.week{grid-template-columns:repeat(7,minmax(0,1fr))}.month{grid-template-columns:repeat(7,minmax(0,1fr))}.year{grid-template-columns:repeat(4,minmax(0,1fr))}
+.daycell{min-height:110px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px}.monthcell{min-height:140px}
+.daycell h4{margin:0 0 6px;font-size:13px}.count{font-size:12px;color:var(--muted)}
+.hour{border-top:1px solid var(--line-2);padding:6px 8px;color:var(--muted);font-size:12px;min-height:52px}
+.slot{border-top:1px solid var(--line-2);min-height:52px;padding:5px 8px}
+.calendar .block,.daycell .block{display:block;background:var(--panel-2);border-radius:7px;padding:7px 9px;margin:0 0 6px}.calendar .block::before,.daycell .block::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:1px}
+.daycell .block.focus::before,.calendar .block.focus::before{background:var(--green)}.daycell .block.interruption::before,.calendar .block.interruption::before{background:var(--red)}.daycell .block.admin::before,.calendar .block.admin::before{background:var(--amber)}
+.block strong{display:block}.block .meta{color:var(--muted);font-size:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+.tabs a{border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--panel);font-size:12.5px}.tabs a.active{background:var(--ink);color:var(--bg)}
+input,select{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 8px}
+""")
