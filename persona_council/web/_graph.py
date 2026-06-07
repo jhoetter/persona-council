@@ -651,15 +651,21 @@ def _outline_html(graph: dict) -> str:
     # Notes (phase-free): a BUILT note (+ its prototype) sits at the ideation phase; a plain observation
     # at the FIRST (discover) phase, so the phase column reads meaningfully instead of an empty gap.
     notes_phase = ordered[0]["key"] if ordered else ""
+    # Sequence the note→prototype pairs so each prototype sorts IMMEDIATELY after ITS note even when all
+    # notes share a created_at (batch-authored) — a per-pair index, not the (tying) timestamp, keeps the
+    # prototype indented under the right concept instead of all prototypes collecting under the last one.
+    seq = 0
     for nt in sorted(note_nodes, key=lambda n: n.get("created_at", "")):
         cr = node_round.get(nt["study_id"], 0)
         built = pro_of.get(nt["study_id"]) or []
         add(nt["study_id"], nt.get("color", "#f29900"), nt.get("title", "") or "—",
             nt.get("kind_label", ""), nt.get("href", ""), ideation if built else notes_phase, cr,
-            nt.get("created_at", ""))
+            f'{nt.get("created_at", "")}#{seq:04d}')
+        seq += 1
         for p in built:
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
-                f'/prototypes/{p["slug"]}', ideation, cr, nt.get("created_at", "") + "~", indent=1)
+                f'/prototypes/{p["slug"]}', ideation, cr, f'{nt.get("created_at", "")}#{seq:04d}', indent=1)
+            seq += 1
 
     # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
     # "Prototypen-Leiter", "Konzepte (Ideation)" … (phase/journal sections are skipped — phase already
