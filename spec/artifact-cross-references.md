@@ -1,6 +1,6 @@
 # Artifact cross-references — addressable parts, typed links, live resolution
 
-Status: **P0–P2 + P4 DONE** (2026-06-07) · P3 (generalize remaining relations) = next. Foundational.
+Status: **P0–P4 DONE** (2026-06-07). All STRUCTURED artifact relationships run on the one Ref model.
 
 Implemented: stable part ids (statement/finding/prompt) assigned at record time; `ref()` carries
 `{anchor, role}`; `part_address`/`parse_address`/`resolve_ref` (live resolution, broken-ref honest);
@@ -10,10 +10,17 @@ re-hosts council voices** — its findings cross-reference the source statements
 the persona's words live once, in the council. **Backlinks** (`services.ref_backlinks`) give every
 council statement its "cited by …" reverse links. Demo authored with cross-refs; purged + rebuilt.
 
-NOT yet migrated (P3, deliberate — touches the methodology/plan engine, no new user-visible value
-beyond backlinks): `StudyEdge`, `open_question.answered_by`, `note.data.prototype_id`, meta-report
-citations still use their own fields. They remain valid; the ref model is designed to subsume them when
-that migration is worth the churn.
+P3 (generalize the rest) — done:
+- **StudyEdge: removed** (the model + all imports). Its creator was already retired; project-graph edges
+  are DERIVED from the plan DAG (+ part-refs power the backlinks). No edge records anywhere.
+- **note → prototype**: a built note carries `data.prototype_id` — surfaced as a cross-reference (the
+  prototype's Relations show its source note; the graph/outline pair them); demo wires it.
+- **persona ↔ councils**: the persona page shows the persona's real council statements, deep-linked.
+
+Out of scope (NOT structured part-refs — they are PROSE/EXPORT-embedded provenance): synthesis inline
+`citations`, meta-report section citations, `open_question.answered_by`. These live in authored Markdown
+/ export text (e.g. `[C#]` markers), not the structured graph; turning them into structured refs is an
+authoring-harness change, tracked separately. The Ref model is ready for them when that's done.
 
 ## 1. The problem (whole-app, not just councils)
 

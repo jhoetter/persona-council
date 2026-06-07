@@ -259,19 +259,8 @@ class Section:
         return asdict(self)
 
 
-@dataclass
-class StudyEdge:
-    """A typed relation between two studies in a project graph."""
-    id: str
-    project_id: str
-    from_study: str
-    to_study: str
-    type: str                   # spawned_from|refines|contrasts|depends_on|duplicates|answers
-    rationale: str
-    created_at: str
-
-    def to_dict(self) -> Json:
-        return asdict(self)
+# NOTE: the old StudyEdge model is retired — project-graph edges are DERIVED (from the plan DAG +
+# cross-references, spec/artifact-cross-references.md), never stored as edge records.
 
 
 @dataclass

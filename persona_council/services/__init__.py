@@ -36,7 +36,6 @@ from ..models import (
     Reflection,
     ResearchProject,
     SimulationResult,
-    StudyEdge,
     Synthesis,
 )
 from ..storage import Store
