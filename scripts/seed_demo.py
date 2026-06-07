@@ -371,6 +371,7 @@ print("memory fixture: 4 entities + 3 open threads for Lena")
 _b = S.brief_meta_report(PID, store=st)
 _notes = [s for s in _b["study_ids"] if s.startswith("note:")]
 _mo = S.record_meta_outline(PID, {
+    "title": "Stakeholder-Report — Wochenplan-Starter",
     "build_order_narrative": ("Von vier Discovery-Gesprächen über eine scharfe Problem-Definition und "
         "einen im Council evaluierten **Wochenplan-Starter** zur dev-fertigen Spec."),
     "sections": [
@@ -411,4 +412,20 @@ for _s in _secs:
     S.record_meta_section(PID, _s["id"], {"markdown": _mbodies[_s["id"]], "citations": _mcites.get(_s["id"], []),
                                           "figures": _mfigs.get(_s["id"], [])}, store=st)
 print("meta-report: 3 sections authored")
+
+# a SECOND, compact report — meta-reports are arbitrarily-many artifacts (different audience/angle).
+_mo2 = S.record_meta_outline(PID, {
+    "title": "Executive Summary",
+    "build_order_narrative": "Eine Seite für die Leitung: Problem, Lösung, Empfehlung.",
+    "sections": [{"heading": "Auf einen Blick", "theme_tags": ["summary"],
+                  "source_study_ids": [f"synthesis:{DEFINE}", f"synthesis:{DELIVER}"], "intent": "Kurz & entscheidbar"}]},
+    store=st)
+S.record_meta_section(PID, _mo2["outline"][0]["id"], {
+    "markdown": (":::key\nGesund essen scheitert am **Abend**, nicht am Wissen — der Engpass ist Planung + Einkauf.\n:::\n\n"
+        "**Lösung:** ein **Wochenplan-Starter** — 3 verlässliche Gerichte/Woche + automatische Einkaufsliste, "
+        "in 10 Minuten, ohne Abo.\n\n:::recommendation\n**Bauen — schlank.** Mit 20-Minuten-Garantie, Portionen 1–4 "
+        "und Budget-Hinweis. Im Council breit getragen, kein Gegenwind.\n:::"),
+    "citations": [{"study_id": DELIVER, "council_id": EVAL, "quote": "Bauen — schlank, mit den drei Council-Auflagen als Pflicht."}]},
+    store=st)
+print("meta-report 2: Executive Summary authored")
 print("DONE — demo project:", PID)

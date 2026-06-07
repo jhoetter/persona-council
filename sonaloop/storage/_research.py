@@ -56,6 +56,10 @@ class ResearchMixin:
             "SELECT data FROM meta_reports WHERE project_id=? ORDER BY created_at DESC", (project_id,)).fetchall()
         return [json.loads(r["data"]) for r in rows]
 
+    def list_all_meta_reports(self) -> list[dict[str, Any]]:
+        rows = self.conn.execute("SELECT data FROM meta_reports ORDER BY created_at DESC").fetchall()
+        return [json.loads(r["data"]) for r in rows]
+
     # ---- ESV: the resumable run object ----
     def upsert_run(self, run: dict[str, Any]) -> None:
         self.conn.execute(

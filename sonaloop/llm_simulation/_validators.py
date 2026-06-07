@@ -316,6 +316,7 @@ def validate_meta_outline_payload(payload: dict[str, Any], study_ids: list[str] 
     if not sections:
         raise ValueError("Meta outline must contain at least one section with a heading.")
     return {"build_order_narrative": str(payload.get("build_order_narrative", "")).strip()[:6000],
+            "title": str(payload.get("title", "")).strip()[:200],
             "sections": sections[:40]}
 
 

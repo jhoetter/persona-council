@@ -34,12 +34,12 @@ def register_projects(app) -> None:
         oqs = [o for o in graph["open_questions"] if o.get("status") == "open"]
         oq_html = fragment(*(h("li", {}, o["text"]) for o in oqs[:30])) or h("li", {"class_": "muted"}, "—")
         reports = store.list_meta_reports(proj["id"])
-        # The Meta-Report button is ALWAYS shown (a fixed affordance) — a live link when a report
-        # exists, a disabled button (with a hint) when it doesn't, so the action never disappears.
-        meta_btn = (h("a", {"class_": "btn", "href": f'/projects/{proj["id"]}/meta'}, raw(_icon("syntheses")), " ", t("meta_report"))
+        # The Meta-Report button is ALWAYS shown (a fixed affordance) — opens the latest report when one
+        # exists (all of them are listed in the project panel), disabled with a hint when none.
+        meta_btn = (h("a", {"class_": "btn", "href": f'/meta-reports/{reports[0]["id"]}'}, raw(_icon("report")), " ", t("meta_report"))
                     if reports else
                     h("span", {"class_": "btn disabled", "title": t("meta_report_unavailable"), "aria-disabled": "true"},
-                      raw(_icon("syntheses")), " ", t("meta_report")))
+                      raw(_icon("report")), " ", t("meta_report")))
         if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan — opens in a right drawer
             plan_url = f'/projects/{proj["id"]}/plan'
             meta_btn = fragment(h("a", {"class_": "btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
@@ -98,6 +98,18 @@ def register_projects(app) -> None:
                                 "ansehen ", raw(_icon("external"))), sl_html))
             proto_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("prototypes_h")} ({len(protos)})'),
                                   fragment(*rows))
+        # Meta-reports — first-class artifacts of this project (arbitrarily many), each its own page + PDF.
+        mr_html = ""
+        if reports:
+            rows = []
+            for r in reports:
+                rows.append(h("div", {"class_": "strow"},
+                              h("a", {"href": f'/meta-reports/{r["id"]}'}, raw(_icon("report")), h("b", {}, r.get("title", ""))), " ",
+                              h("span", {"class_": "muted small"}, t("n_sections", n=len(r.get("outline") or []))), " ",
+                              h("a", {"class_": "btn", "style": "padding:2px 8px", "href": f'/meta-reports/{r["id"]}.pdf'},
+                                "PDF ", raw(_icon("external")))))
+            mr_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("meta_reports")} ({len(reports)})'),
+                               fragment(*rows))
         # Sections outline (methodology-independent groupings) — a navigable list in the panel.
         from ... import presentation as _pres
         secs = sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0))
@@ -133,7 +145,7 @@ def register_projects(app) -> None:
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("build_order_h")} (edges)'),
                   h("div", {"class_": "pills", "style": "margin:6px 0 14px"}, edge_leg), sec_html,
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("open_questions_h")),
-                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html)
+                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html, mr_html)
         oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"
                  "p=document.getElementById('oqpanel');if(!b||!p)return;"
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
@@ -154,41 +166,22 @@ def register_projects(app) -> None:
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
 
-    @app.get("/projects/{project_id}/meta", response_class=HTMLResponse)
-    def project_meta(project_id: str) -> str:
-        store = Store()
-        try:
-            proj = services.get_research_project(project_id, store=store)
-        except KeyError:
-            return _layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared"), icon="overview"), store, active="projects")
-        reports = store.list_meta_reports(project_id)
-        if not reports:
-            return _layout(proj["title"] + " — " + t("meta_report"),
-                           _empty_state(t("meta_report"), t("meta_report_unavailable"), icon="overview"),
-                           store, active="projects",
-                           crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)])
-        body = h("div", {"class_": "page"}, raw(render_meta_report(reports[0], store)))
-        actions = h("a", {"class_": "btn", "href": f"/projects/{project_id}/meta.pdf"}, t("export_pdf"))
-        return _layout(proj["title"] + " — " + t("meta_report"), body, store,
-                       crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)],
-                       active="projects", actions=actions)
-
-    @app.get("/projects/{project_id}/meta.pdf")
-    def project_meta_pdf(project_id: str, request: Request):
+    # ---- meta-reports are first-class artifacts: arbitrarily many per project, each its own page +
+    #      PDF (mirrors how prototypes are surfaced). The .pdf route is registered FIRST so it wins
+    #      the match over the generic {report_id} route. ----
+    @app.get("/meta-reports/{report_id}.pdf")
+    def meta_report_pdf(report_id: str, request: Request):
         """Proper PDF via headless Chromium (spec/meta-report-presentation-and-pdf Phase 3): navigate to
-        the live /meta page (so CSS + /data/assets resolve), emulate print media, page.pdf(). Reuses the
+        the live report page (so CSS + /data/assets resolve), emulate print media, page.pdf(). Reuses the
         EXACT report HTML — one rendering path. Playwright is a hard dependency (chromium via make install)."""
         store = Store()
-        try:
-            proj = services.get_research_project(project_id, store=store)
-        except KeyError:
+        rep = store.get_meta_report(report_id)
+        if not rep:
             return Response(t("not_found"), status_code=404)
-        if not store.list_meta_reports(project_id):
-            return RedirectResponse(f"/projects/{project_id}/meta")
-        from playwright.sync_api import sync_playwright   # a hard dependency now (no fallback)
-        url = str(request.base_url).rstrip("/") + f"/projects/{project_id}/meta"
+        from playwright.sync_api import sync_playwright
+        url = str(request.base_url).rstrip("/") + f"/meta-reports/{report_id}"
         _hf = "font-size:8px;color:#9aa0a6;width:100%;padding:0 16mm"
-        header = h("div", {"style": _hf}, f'{proj["title"]} · {t("meta_report")}')
+        header = h("div", {"style": _hf}, f'{rep["title"]}')
         footer = h("div", {"style": _hf + ";text-align:center;padding:0"},
                    h("span", {"class_": "pageNumber"}), " / ", h("span", {"class_": "totalPages"}))
         with sync_playwright() as pw:
@@ -201,9 +194,37 @@ def register_projects(app) -> None:
                          margin={"top": "18mm", "bottom": "16mm", "left": "16mm", "right": "16mm"},
                          display_header_footer=True, header_template=header, footer_template=footer)
             b.close()
-        fn = (re.sub(r"[^\w\-]+", "-", proj["title"]).strip("-").lower() or "report") + "-meta-report.pdf"
+        fn = (re.sub(r"[^\w\-]+", "-", rep["title"]).strip("-").lower() or "meta-report") + ".pdf"
         return Response(pdf, media_type="application/pdf",
                         headers={"Content-Disposition": f'inline; filename="{fn}"'})
+
+    @app.get("/meta-reports/{report_id}", response_class=HTMLResponse)
+    def meta_report_view(report_id: str) -> str:
+        store = Store()
+        rep = store.get_meta_report(report_id)
+        if not rep:
+            return _layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared"), icon="overview"), store, active="meta")
+        proj = services.get_research_project(rep["project_id"], store=store) if rep.get("project_id") else None
+        body = h("div", {"class_": "page"}, raw(render_meta_report(rep, store)))
+        actions = h("a", {"class_": "btn", "href": f"/meta-reports/{report_id}.pdf"}, t("export_pdf"))
+        crumbs = ([(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (rep["title"], None)]
+                  if proj else [(t("meta_reports"), "/meta-reports"), (rep["title"], None)])
+        return _layout(rep["title"], body, store, crumbs=crumbs, active="meta", actions=actions)
+
+    @app.get("/projects/{project_id}/meta")                     # back-compat → the project's latest report
+    def project_meta(project_id: str):
+        store = Store()
+        reports = store.list_meta_reports(project_id)
+        if reports:
+            return RedirectResponse(f'/meta-reports/{reports[0]["id"]}')
+        try:
+            proj = services.get_research_project(project_id, store=store)
+        except KeyError:
+            return HTMLResponse(_layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared"), icon="overview"), store, active="projects"))
+        return HTMLResponse(_layout(proj["title"] + " — " + t("meta_report"),
+                                    _empty_state(t("meta_report"), t("meta_report_unavailable"), icon="overview"),
+                                    store, active="projects",
+                                    crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)]))
 
     @app.get("/projects/{project_id}/plan", response_class=HTMLResponse)
     def project_plan(project_id: str) -> str:

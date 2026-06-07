@@ -108,7 +108,8 @@ def render_meta_report(report: dict, store) -> str:
     authored = {s["section_id"]: s for s in report.get("sections", [])}
     outline = report.get("outline", [])
     n_studies = len({x for sec in outline for x in sec.get("source_study_ids", [])})
-    project_title = report.get("title", "").rsplit(" — ", 1)[0]
+    _t = report.get("title", "")           # the default title ends in " — Meta-Report"; custom titles show as-is
+    project_title = _t[:-len(" — Meta-Report")] if _t.endswith(" — Meta-Report") else _t
     de = content_language() == "de"
     meta_line = " · ".join([
         f"{len(outline)} " + ("Abschnitte" if de else "sections"),

@@ -407,7 +407,7 @@ def record_meta_outline(project_id: str, outline: dict[str, Any], store: Store |
     now = utc_now_iso()
     report = MetaReport(
         id=stable_id("metareport", project["id"], now), project_id=project["id"],
-        title=f"{project['title']} — Meta-Report", outline=data["sections"], sections=[],
+        title=data.get("title") or f"{project['title']} — Meta-Report", outline=data["sections"], sections=[],
         build_order_narrative=data["build_order_narrative"],
         graph_snapshot=get_project_graph(project["id"], store=store), created_at=now,
     ).to_dict()

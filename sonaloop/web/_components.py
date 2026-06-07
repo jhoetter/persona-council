@@ -335,7 +335,8 @@ def _nav(active: str, store: Store) -> str:
     research = [("/notes", "note", "panel", t("notes")),
                 ("/councils", "councils", "councils", t("councils")),
                 ("/prototypes", "prototype", "prototype", t("prototypes_h")),
-                ("/syntheses", "syntheses", "syntheses", t("syntheses"))]
+                ("/syntheses", "syntheses", "syntheses", t("syntheses")),
+                ("/meta-reports", "meta", "report", t("meta_reports"))]
     # .pi-hover makes the row the animation trigger — the icon plays its micro-interaction on row hover.
     render = lambda items: fragment(*(
         h("a", {"href": href, "class_": "pi-hover active" if k == active else "pi-hover"},

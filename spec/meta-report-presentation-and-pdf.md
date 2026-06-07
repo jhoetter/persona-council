@@ -1,8 +1,16 @@
 # Meta-report presentation & PDF — report-grade output with figures, export-ready
 
-Status: **Phase 1-3 DONE** (2026-06-07). Author: design brainstorm triggered by "make the
-meta-report almost presentation-like (Notion-quality), able to embed prototype screenshots/images, and
-later export to a proper PDF."
+Status: **Phase 1-3 DONE + artifact model** (2026-06-07). Author: design brainstorm triggered by "make
+the meta-report almost presentation-like (Notion-quality), able to embed prototype screenshots/images,
+and later export to a proper PDF."
+
+**Update (2026-06-07): meta-reports are now first-class artifacts** — arbitrarily many per project,
+like syntheses/councils (per the request "diese sind einfach dann teil der projekt-elemente … eine art
+artefakt"). Each report has a `title` (host-authored in the outline payload; default `"<project> —
+Meta-Report"`), its own page `/meta-reports/{id}` + PDF `/meta-reports/{id}.pdf`, a library list
+`/meta-reports` + sidebar nav (`report` icon), and is surfaced in the project panel alongside
+prototypes. `/projects/{id}/meta` redirects to the project's latest report (back-compat). Modelled on
+the prototype-artifact pattern (a parallel artifact list, not a plan-graph node).
 
 Builds on `spec/research-graph-and-meta-report.md` (the meta-report data model + authoring loop),
 `spec/markdown-authoring-harness.md` (host authors Markdown), and `spec/linear-design-system.md` /

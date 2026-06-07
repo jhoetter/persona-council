@@ -200,6 +200,21 @@ def register_lists(app) -> None:
         return _list_page(store, title=t("notes"), lead=t("notes_lead"), rows=rows,
                           empty_icon="panel", empty_msg=t("no_notes"), active="note")
 
+    @app.get("/meta-reports", response_class=HTMLResponse)
+    def meta_reports_list() -> str:
+        store = Store()
+        rows = []
+        for r in store.list_all_meta_reports():
+            proj = store.get_research_project(r["project_id"]) if r.get("project_id") else None
+            right = fragment(
+                h("span", {"class_": "muted small"}, proj["title"]) if proj else None,
+                h("span", {}, t("n_sections", n=len(r.get("outline") or []))),
+                h("span", {"class_": "muted small"}, (r.get("created_at") or "")[:10]),
+                raw(_star("meta", r["id"], r.get("title", ""), f'/meta-reports/{r["id"]}')))
+            rows.append(_row(f'/meta-reports/{r["id"]}', "report", r.get("title", "—"), right, color="var(--accent)"))
+        return _list_page(store, title=t("meta_reports"), lead=t("meta_reports_lead"), rows=rows,
+                          empty_icon="report", empty_msg=t("meta_report_unavailable"), active="meta")
+
 # Co-located CSS (spec/roadmap.md R3): linear list rows.
 register_css(r"""
 /* ---- linear list rows (G3) ---- */
