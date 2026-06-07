@@ -314,7 +314,9 @@ def _persona_voices_html(store: Store, pid: str) -> str:
 # --------------------------- synthesis report --------------------------- #
 
 
-def _synthesis_html(store: Store, syn: dict):
+def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
+    # embed=True omits the bespoke syn-head so the content can sit inside the unified report shell
+    # (rp-cover + report typography) — spec/unified-synthesis-report.md §3 (one renderer).
     done = syn.get("status", "done") == "done"
     sec = []  # (id, short_label, html)
 
@@ -409,19 +411,21 @@ def _synthesis_html(store: Store, syn: dict):
                       h("summary", {"class_": "bh", "style": "cursor:pointer"}, t("arc_course")),
                       h("div", {"class_": "es-prose sm"}, raw(_md(_srcchips(syn["arc_narrative"])))))))
 
-    # ---- slim meta strip (replaces the old Eigenschaften rail) ----
-    cs = _A.synthesis_sentiment_counts(syn, store)        # aggregated over the REAL council voices
-    smeta = " · ".join(f"{cs[k]} {k}" for k in ("positiv", "bedingt", "neutral", "skeptisch", "ablehnend") if cs.get(k))
-    mchips = [_label(t("completed") if done else t("running"), "var(--green)" if done else "var(--amber)")]
-    mchips.append(h("span", {"class_": "mchip"}, f'{len(syn.get("council_ids", []))} {t("councils")}'))
-    if syn.get("iterations"):
-        mchips.append(h("span", {"class_": "mchip"}, f'{syn["iterations"]} {t("iterations")}'))
-    if smeta:
-        mchips.append(h("span", {"class_": "mchip"}, raw(t("voices_meta", s=_esc(smeta)))))
-    mchips.append(h("span", {"class_": "mchip"}, syn["created_at"][:10]))
-    head = h("header", {"class_": "syn-head"},
-             h("h1", {"title": syn["title"]}, raw(_icon("syntheses")), syn["title"]),
-             h("div", {"class_": "syn-meta"}, fragment(*mchips)))
+    # ---- slim meta strip (replaces the old Eigenschaften rail) — omitted when embedded in the report shell
+    head = ""
+    if not embed:
+        cs = _A.synthesis_sentiment_counts(syn, store)        # aggregated over the REAL council voices
+        smeta = " · ".join(f"{cs[k]} {k}" for k in ("positiv", "bedingt", "neutral", "skeptisch", "ablehnend") if cs.get(k))
+        mchips = [_label(t("completed") if done else t("running"), "var(--green)" if done else "var(--amber)")]
+        mchips.append(h("span", {"class_": "mchip"}, f'{len(syn.get("council_ids", []))} {t("councils")}'))
+        if syn.get("iterations"):
+            mchips.append(h("span", {"class_": "mchip"}, f'{syn["iterations"]} {t("iterations")}'))
+        if smeta:
+            mchips.append(h("span", {"class_": "mchip"}, raw(t("voices_meta", s=_esc(smeta)))))
+        mchips.append(h("span", {"class_": "mchip"}, syn["created_at"][:10]))
+        head = h("header", {"class_": "syn-head"},
+                 h("h1", {"title": syn["title"]}, raw(_icon("syntheses")), syn["title"]),
+                 h("div", {"class_": "syn-meta"}, fragment(*mchips)))
 
     main = head + raw("".join(str(html) for _, _, html in sec))   # section htmls are all trusted (h() Safe or built strings)
     # Unified detail shell: the caller wraps this content in _doc (content column + Properties/Relations

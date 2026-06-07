@@ -116,13 +116,31 @@ def _body(md_text: str, figs: list) -> str:
 
 
 def render_meta_report(report: dict, store) -> str:
-    """Report-grade render of a project-scope synthesis (the unified report — sections + figures)."""
+    """Report-grade render of ANY synthesis (spec/unified-synthesis-report.md §3 — one renderer):
+    project scope → narrative sections + figures; convergence scope → the structured analysis
+    (findings → 2×2, voices) in the SAME report shell (cover + report typography)."""
+    de = content_language() == "de"
+    _t = report.get("title", "")           # the default title ends in " — Meta-Report"; custom titles show as-is
+    project_title = _t[:-len(" — Meta-Report")] if _t.endswith(" — Meta-Report") else _t
+
+    if report.get("scope") != "project":
+        # a convergence synthesis, rendered in the unified report shell.
+        from ._synthesis import _synthesis_html
+        status = report.get("status", "done")
+        meta_line = " · ".join(x for x in [
+            (f'{len(report.get("council_ids", []))} {t("councils")}' if report.get("council_ids") else ""),
+            (t("done") if status == "done" else t("running")),
+            (report.get("created_at") or "")[:10]] if x)
+        cover = h("header", {"class_": "rp-cover"},
+                  h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind")),
+                  h("h1", {"class_": "rp-title"}, project_title),
+                  h("div", {"class_": "rp-metaline"}, meta_line))
+        body, _toc = _synthesis_html(store, report, embed=True)
+        return h("article", {"class_": "report report-syn"}, cover, raw(body))
+
     rtitle = _ref_titler(report, store)
     sections = report.get("sections", [])
     n_studies = len({x for sec in sections for x in sec.get("source_study_ids", [])})
-    _t = report.get("title", "")           # the default title ends in " — Meta-Report"; custom titles show as-is
-    project_title = _t[:-len(" — Meta-Report")] if _t.endswith(" — Meta-Report") else _t
-    de = content_language() == "de"
     meta_line = " · ".join([
         f"{len(sections)} " + ("Abschnitte" if de else "sections"),
         f"{n_studies} " + ("Studien" if de else "studies"),
@@ -211,6 +229,10 @@ register_css(r"""
   font-size:var(--t-xs);display:inline-flex;align-items:center;justify-content:center;color:var(--faint)}
 .rp-cites b{color:var(--ink);font-weight:550}.rp-cite-q{color:var(--muted)}
 .rp-src{margin-top:10px;font-size:var(--t-xs);color:var(--faint)}
+/* convergence synthesis embedded in the report shell — its blocks inherit report typography;
+   drop the first block's top divider so it sits cleanly under the cover (spec/unified-synthesis-report §3) */
+.report-syn .syn-main>.block:first-child,.report-syn .syn-main>section:first-child .block{border-top:0;margin-top:6px;padding-top:0}
+.report-syn .block{max-width:none}
 /* figures (Phase 2) — prototype screenshots, images, charts */
 .rp-fig{margin:22px 0}
 .rp-fig img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}

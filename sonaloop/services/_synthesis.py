@@ -259,6 +259,8 @@ def export_synthesis(synthesis_id: str, format: str = "md", store: Store | None 
     """Render the synthesis as a stakeholder report (Markdown), referencing each council."""
     store = store or Store()
     syn = get_synthesis(synthesis_id, store)
+    if syn.get("scope") == "project":      # a report → the report exporter (one export across scopes)
+        return export_meta_report(syn.get("project_id", ""), report_id=synthesis_id, format=format, store=store)
     if format == "json":
         return json.dumps(syn, indent=2, ensure_ascii=False)
     role = {r["council_id"]: r.get("role", "") for r in syn.get("references", [])}

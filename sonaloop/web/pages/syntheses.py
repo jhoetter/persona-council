@@ -67,28 +67,18 @@ def register_syntheses(app) -> None:
         syn = store.get_synthesis(synthesis_id)
         if not syn:
             return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared"), icon="syntheses"), store, active="syntheses")
-        # project-scope synthesis = the report → report-grade renderer + PDF export.
-        if syn.get("scope") == "project":
-            proj = store.get_research_project(syn.get("project_id")) if syn.get("project_id") else None
-            crumbs = ([(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (syn["title"], None)]
-                      if proj else [(t("syntheses"), "/syntheses"), (syn["title"], None)])
-            body = h("div", {"class_": "page"}, raw(render_meta_report(syn, store)))
-            actions = h("a", {"class_": "btn", "href": f"/syntheses/{synthesis_id}.pdf"}, t("export_pdf"))
-            return _layout(syn["title"], body, store, crumbs=crumbs, active="syntheses", actions=actions)
-        # convergence synthesis = the structured analysis view (findings → 2×2, voices).
-        short_title = _display_title(syn["title"])             # short form for breadcrumb / tab / favourite only
+        # ONE renderer for every scope (spec/unified-synthesis-report.md §3): the report shell — a
+        # convergence synthesis shows its structured analysis (findings → 2×2, voices), a project report
+        # its narrative sections; both report-grade + PDF-exportable.
+        is_project = syn.get("scope") == "project"
+        proj = (store.get_research_project(syn.get("project_id")) if (is_project and syn.get("project_id"))
+                else services.parent_project_of_synthesis(synthesis_id, store))
+        short_title = _display_title(syn["title"])
         crumbs = [(t("projects"), "/projects")]
-        proj = services.parent_project_of_synthesis(synthesis_id, store)
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
-        content, toc = _synthesis_html(store, syn)             # content carries its own hero (syn-head, full title)
-        return detail_page(
-            store, title=short_title, active="projects", crumbs=crumbs,
-            hero="", body=raw(content), rail_sections=toc,
-            prop_rows=[("check", t("status"), t("done") if syn.get("status", "done") == "done" else t("running")),
-                       ("councils", t("councils"), str(len(syn.get("council_ids", [])))),
-                       ("dot", t("created"), syn.get("created_at", "")[:10]),
-                       ("projects", t("project"), (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—"))],
-            rel_study_id=f"synthesis:{synthesis_id}", rel_proj_id=(proj["id"] if proj else None),
-            star=("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}"))
+        body = h("div", {"class_": "page"}, raw(render_meta_report(syn, store)))
+        actions = fragment(h("a", {"class_": "btn", "href": f"/syntheses/{synthesis_id}.pdf"}, t("export_pdf")),
+                           raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}")))
+        return _layout(short_title, body, store, crumbs=crumbs, active="syntheses", actions=actions)
