@@ -240,38 +240,21 @@ def council_mode(council: dict[str, Any]) -> str:
     return "discovery"
 
 
-def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: list[dict[str, Any]],
-                   votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "",
-                   exec_summary: str = "", selection_reason: str = "", questions: list[str] | None = None,
-                   key: str | None = None, statements: list | None = None, findings: list | None = None,
+def record_council(project_id: str, prompt: str, persona_ids: list[str],
+                   statements: list | None = None, votes: list[dict[str, Any]] | None = None,
+                   proposal: str = "", summary: str = "", exec_summary: str = "",
+                   selection_reason: str = "", questions: list[str] | None = None,
+                   key: str | None = None, findings: list | None = None,
                    prompts: list | None = None, store: Store | None = None) -> dict[str, Any]:
-    """Persist a host-authored council (openings/moderator/directed turns + synthesis). A council is a
-    research artefact and MUST live inside a research project — `project_id` is required and validated
-    (personas are global, but councils/studies/reports are scoped to a project; see
-    spec/research-graph-and-meta-report.md §4-5). Pass a stable `key` (e.g. "<project>:<step>:<angle>")
-    to get a DETERMINISTIC id so re-running the step is an idempotent upsert — makes long autonomous
-    runs resumable/replayable (spec/harness-evaluation HX6)."""
+    """Persist a host-authored council. A council is a research artefact and MUST live inside a research
+    project — `project_id` is required and validated. Author the voices as `statements` (the ONE voice
+    primitive: {persona_id, text, stance, about:{kind:'prompt',id}, refs}); set `questions` (discovery) or
+    `proposal`(+`votes` for a decision) to shape the mode. `findings`/`prompts` are optional. Pass a stable
+    `key` for a DETERMINISTIC id (idempotent upsert → resumable runs; spec/harness-evaluation HX6)."""
     store = store or Store()
     project = _require_research_project(store, project_id)  # fail fast if no/unknown project
     existing = store.get_council_session(stable_id("council", key)) if key else None
     cid = stable_id("council", key) if key else stable_id("council", prompt, utc_now_iso())
-    # Normalize turn/vote field variants to the canonical schema so the UI always renders the
-    # authored content (subagents sometimes use text/message for the body, or stance/label on votes).
-    def _nturn(tn):
-        tn = dict(tn) if isinstance(tn, dict) else {"content": str(tn)}
-        if not tn.get("content"):
-            tn["content"] = tn.get("text") or tn.get("message") or ""
-        # question_index = which moderator question (index into `questions`) this answer addresses.
-        # First-class so the council page can render a moderated Q->A transcript; tolerate the
-        # question_idx alias and a stringified int.
-        qi = tn.get("question_index", tn.get("question_idx"))
-        if isinstance(qi, bool):
-            qi = None
-        elif isinstance(qi, str) and qi.strip().lstrip("-").isdigit():
-            qi = int(qi)
-        if isinstance(qi, int):
-            tn["question_index"] = qi
-        return tn
 
     def _nvote(v):
         v = dict(v) if isinstance(v, dict) else {"vote": str(v)}
@@ -279,15 +262,11 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: 
             v["vote"] = v.get("stance") or v.get("label") or ""   # keep a displayable value
         return v
 
-    turns = [_nturn(t) for t in (turns or [])]
     votes = [_nvote(v) for v in (votes or [])]
     qs = [str(q).strip() for q in (questions or []) if str(q).strip()]
-    # Primitives-only storage (spec/unified-artifact-schema): `statements` are the ONE voice
-    # representation. Author them natively if given, else convert the normalized turns (+votes for the
-    # stance) at this boundary via the adapter. `turns` are NOT stored; `votes` stay (mode + tally signal).
-    nat_statements = [_artifacts.validate_statement(s) for s in (statements or [])]
-    statements_out = nat_statements or _artifacts.council_statements(
-        {"turns": turns, "votes": votes, "questions": qs, "proposal": proposal})
+    # Primitives-only: statements are the ONE voice representation; prompts are built from the council's
+    # canonical question/proposal fields when not authored explicitly.
+    statements_out = [_artifacts.validate_statement(s) for s in (statements or [])]
     nat_prompts = [_artifacts.validate_prompt(p) for p in (prompts or [])]
     prompts_out = nat_prompts or _artifacts.council_prompts(
         {"prompt": prompt, "questions": qs, "proposal": proposal})

@@ -27,15 +27,13 @@ def test_full_round_trip(store):
     # gather then host-authored write-back
     gathered = services.brief_council(pid, "Would a diff/freigabe view help?", [a, b], store=store)
     assert "instructions" in gathered and gathered["project_id"] == pid
-    turns = [
-        {"speaker": "Alpha", "persona_id": a, "stance": "MAYBE", "headline": "useful if traceable",
-         "content": "Could help, but only with provenance.", "concerns": ["trust"], "would_use": True},
-        {"speaker": "Beta", "persona_id": b, "stance": "MAYBE", "headline": "early only",
-         "content": "I want a range, not a model.", "concerns": ["speed"], "would_use": True},
+    statements = [
+        {"persona_id": a, "text": "Could help, but only with provenance.", "stance": {"value": 1}},
+        {"persona_id": b, "text": "I want a range, not a model.", "stance": {"value": 1}},
     ]
     votes = [{"persona_id": a, "persona_name": "Alpha", "vote": "MAYBE"},
              {"persona_id": b, "persona_name": "Beta", "vote": "MAYBE"}]
-    council = services.record_council(pid, "Would a diff/freigabe view help?", [a, b], turns, votes=votes,
+    council = services.record_council(pid, "Would a diff/freigabe view help?", [a, b], statements, votes=votes,
                                       summary="conditional", store=store)
     cid = council["id"]
     assert council["project_id"] == pid
@@ -51,17 +49,18 @@ def test_full_round_trip(store):
     payload = {
         "arc_narrative": "one council, conditional interest",
         "gesamtbild": "diff view is conditionally valuable",
-        "handlungsempfehlungen": [{"text": "build the diff view", "aufwand": 4, "nutzen": 5}],
         "positionierung": "a traceable diff",
-        "pain_solvers": ["who-computes-on-stale"],
-        "segmente": [{"segment": "coordination", "stance": "bedingt", "why": "daily pain"}],
-        "offene_fragen": ["integration?"],
+        "findings": [
+            {"text": "build the diff view", "kind": "recommendation", "score": {"effort": 4, "value": 5}},
+            {"text": "who-computes-on-stale", "kind": "pain_solver"},
+            {"text": "coordination", "kind": "segment", "meta": {"detail": "daily pain", "stance": {"value": 1}}},
+            {"text": "integration?", "kind": "open_question"},
+        ],
+        "statements": [{"persona_id": a, "text": "needs provenance", "stance": {"value": 1}, "relevance": "stark",
+                        "refs": [{"kind": "council", "id": cid, "role": "derived_from"}]}],
         "references": [{"council_id": cid, "role": "seed council"}],
         "citations": [{"kind": "evidence", "ref": ev_refs[0], "quote": "costs ~2h/week"},
                       {"kind": "council", "ref": cid, "quote": "only with provenance"}],
-        "voices": [{"persona_id": a, "persona_name": "Alpha", "segment": "coordination",
-                    "sentiment": "bedingt", "relevance": "stark", "key_argument": "needs provenance",
-                    "evidence": [{"council_id": cid, "quote": "only with provenance"}]}],
         "status": "done", "stop_reason": "goal reached",
     }
     syn = services.record_synthesis("Diff view", "seed", [cid], payload, goal="value of a diff view", store=store)

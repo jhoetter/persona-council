@@ -287,10 +287,6 @@ def validate_event(d: dict) -> dict:
 # Pure transforms record-dict → primitives (persona lookup happens at render time). Each adapter PREFERS
 # a record's native primitive field when present (forward-compat for Phase 2), else derives from legacy.
 
-def _is_moderator(turn: dict) -> bool:
-    return not turn.get("persona_id") or bool(turn.get("is_moderator")) or turn.get("role") == "moderator"
-
-
 def council_prompts(c: dict) -> list[dict]:
     if c.get("prompts"):
         return list(c["prompts"])
@@ -305,58 +301,13 @@ def council_prompts(c: dict) -> list[dict]:
 
 
 def council_statements(c: dict) -> list[dict]:
-    if c.get("statements"):
-        return list(c["statements"])
-    votes = {v.get("persona_id"): v.get("vote") for v in (c.get("votes") or []) if v.get("persona_id")}
-    out = []
-    for tn in c.get("turns") or []:
-        if _is_moderator(tn):
-            continue
-        pid = tn.get("persona_id")
-        text = tn.get("content") or tn.get("text") or tn.get("message") or ""
-        qidx = tn.get("question_index", tn.get("question_idx"))
-        about = ref("prompt", id=f"q{qidx}") if isinstance(qidx, int) else None
-        st_term = tn.get("stance") or votes.get(pid)
-        refs = [ref("memory", text=str(m)) for m in (tn.get("memory_refs") or tn.get("memory_used") or [])]
-        meta = {}
-        if tn.get("input"):
-            meta["input"] = tn["input"]
-        if tn.get("questions_or_pushback"):
-            meta["pushback"] = tn["questions_or_pushback"]
-        out.append(statement(pid, text, stance=resolve_stance(st_term) if st_term else None,
-                             about=about, refs=refs, meta=meta or None))
-    return out
-
-
-_SYN_LIST_KINDS = [("key_problems", "key_problem"), ("pain_solvers", "pain_solver"),
-                   ("offene_fragen", "open_question"), ("shortlist", "shortlist")]
-
-
-def synthesis_prompts(s: dict) -> list[dict]:
-    if s.get("prompts"):
-        return list(s["prompts"])
-    out = []
-    if s.get("start_input"):
-        out.append(prompt(s["start_input"], kind="question", id="start"))
-    if s.get("goal"):
-        out.append(prompt(s["goal"], kind="goal", id="goal"))
-    return out
+    """The council's persona statements (the ONE voice representation — authored natively)."""
+    return list(c.get("statements") or [])
 
 
 def synthesis_statements(s: dict) -> list[dict]:
-    if s.get("statements"):
-        return list(s["statements"])
-    out = []
-    for v in s.get("voices") or []:
-        refs = [ref("council", id=e.get("council_id"), quote=e.get("quote"))
-                for e in (v.get("evidence") or []) if isinstance(e, dict)]
-        sh = v.get("shift") or None
-        meta = {"context": v["segment"]} if v.get("segment") else None   # → the card's ctx line
-        out.append(statement(v.get("persona_id", ""), v.get("key_argument", ""),
-                             stance=resolve_stance(v.get("sentiment")) if v.get("sentiment") else None,
-                             about=ref("prompt", id="studyq"),    # voices answer the study question (banner)
-                             refs=refs, relevance=v.get("relevance"), shift=sh, meta=meta))
-    return out
+    """The synthesis's voice statements (authored natively)."""
+    return list(s.get("statements") or [])
 
 
 # ---- read projections: readers (markdown export / briefs / graph node / sentiment strip) that think in
@@ -403,29 +354,9 @@ def synthesis_sentiment_counts(s: dict, store: Any = None) -> dict[str, int]:
 
 
 def synthesis_findings(s: dict) -> list[dict]:
-    """The synthesis LIST findings (key_problems/pain_solvers/open_questions/shortlist/recommendations).
-    Prose blocks (gesamtbild/positionierung/arc) and the 2-col clusters/segmente stay separate for now."""
-    if s.get("findings"):
-        return list(s["findings"])
-    out = []
-    for field_name, kind in _SYN_LIST_KINDS:
-        for x in s.get(field_name) or []:
-            out.append(finding(str(x), kind=kind))
-    for rec in s.get("handlungsempfehlungen") or []:
-        if isinstance(rec, dict):
-            score = {"effort": rec.get("aufwand"), "value": rec.get("nutzen")} if rec.get("aufwand") and rec.get("nutzen") else None
-            out.append(finding(rec.get("text", ""), kind="recommendation", score=score))
-        else:
-            out.append(finding(str(rec), kind="recommendation"))
-    for c in s.get("clusters") or []:
-        out.append(finding(c.get("label", ""), kind="cluster",
-                           meta={"detail": c.get("insight", ""), "members": c.get("member_node_ids") or c.get("members") or []}))
-    for sg in s.get("segmente") or []:
-        out.append(finding(sg.get("segment", ""), kind="segment",
-                           meta={"detail": sg.get("why", ""), "stance": resolve_stance(sg.get("stance")) if sg.get("stance") else None}))
-    for rk in s.get("ranking") or []:
-        out.append(finding(rk.get("prototype_id", ""), kind="ranking", meta={"detail": rk.get("score_rationale", "")}))
-    return out
+    """The synthesis's findings (key_problem/pain_solver/recommendation/cluster/segment/ranking/… —
+    authored natively as the ONE finding primitive)."""
+    return list(s.get("findings") or [])
 
 
 def session_statements(se: dict, persona_name: str | None = None) -> list[dict]:

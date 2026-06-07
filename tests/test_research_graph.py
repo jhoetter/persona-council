@@ -10,15 +10,17 @@ from persona_council import services
 
 def _seed_studies(store, n=3):
     store.insert_council_session({"id": "c1", "created_at": "2026-06-01T00:00:00+00:00",
-                                  "prompt": "P?", "persona_ids": ["p1"], "turns": [], "votes": [],
+                                  "prompt": "P?", "persona_ids": ["p1"], "statements": [], "votes": [],
                                   "proposal": "", "summary": "", "exec_summary": "exec", "selection_reason": "x"})
     titles = ["Pains", "UX", "Pricing"][:n]
     for i, ttl in enumerate(titles):
         store.upsert_synthesis({
             "id": f"syn{i}", "title": ttl, "created_at": f"2026-06-0{i+1}T00:00:00+00:00",
-            "council_ids": ["c1"], "voices": [{"persona_name": "A", "sentiment": "bedingt", "key_argument": "k"}],
-            "offene_fragen": [f"open from {ttl}"], "gesamtbild": f"{ttl} big picture",
-            "handlungsempfehlungen": [{"text": "do X", "aufwand": 3, "nutzen": 5}], "status": "done"})
+            "council_ids": ["c1"], "gesamtbild": f"{ttl} big picture",
+            "statements": [{"persona_id": "p1", "text": "k", "stance": {"value": 1}}],
+            "findings": [{"text": f"open from {ttl}", "kind": "open_question"},
+                         {"text": "do X", "kind": "recommendation", "score": {"effort": 3, "value": 5}}],
+            "status": "done"})
     return [f"syn{i}" for i in range(n)]
 
 
@@ -105,25 +107,23 @@ def test_synthesis_preserves_structured_blocks_and_warns_when_thin(store):
     clusters / key_problems / ranking / shortlist — must survive record_synthesis and render in the
     web view + export; a near-empty synthesis returns a SYNTHESIS_THIN soft-warning."""
     from persona_council import web
+    from persona_council import artifacts as A
+    # primitives-only authoring: the converge output is FINDINGS (kind = cluster/key_problem/ranking/shortlist)
     payload = {
         "gesamtbild": "Der Kern: nicht alle fuer LV begeistern.",
-        "clusters": [{"label": "Sprachbarriere", "member_node_ids": ["c1"], "insight": "Das Wort ist die Huerde."}],
-        "key_problems": ["LV ist fuer 4/6 ein struktureller Non-Fit"],
-        "ranking": [{"prototype_id": "proto_a", "score_rationale": "ehrlichster Pfad"}],
-        "shortlist": ["proto_a"],
+        "findings": [
+            {"text": "Sprachbarriere", "kind": "cluster", "meta": {"detail": "Das Wort ist die Huerde."}},
+            {"text": "LV ist fuer 4/6 ein struktureller Non-Fit", "kind": "key_problem"},
+            {"text": "proto_a", "kind": "ranking", "meta": {"detail": "ehrlichster Pfad"}},
+            {"text": "proto_a", "kind": "shortlist"},
+        ],
     }
-    from persona_council import artifacts as A
     rec = services.record_synthesis("Define POV", "hmw", ["c1"], payload, store=store)
     got = services.get_synthesis(rec["id"], store=store)
-    # storage is primitives-only: the legacy payload converts to findings at the record boundary
     by_kind = {f["kind"]: f for f in got["findings"]}
     assert by_kind["cluster"]["text"] == "Sprachbarriere"
     assert A.finding_texts(got, "key_problem") == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
     assert by_kind["ranking"]["text"] == "proto_a" and A.finding_texts(got, "shortlist") == ["proto_a"]
-    # re-recording the SAME id without re-supplying a block keeps it (additive-safe update)
-    rec2 = services.record_synthesis("Define POV", "hmw", ["c1"], {"gesamtbild": "更新", "synthesis_id": got["id"]},
-                                     synthesis_id=got["id"], store=store)
-    assert A.finding_texts(services.get_synthesis(rec2["id"], store=store), "key_problem") == ["LV ist fuer 4/6 ein struktureller Non-Fit"]
     # web + export surface the structured content
     html, toc = web._synthesis_html(store, got)
     assert "Sprachbarriere" in html and "Shortlist" in html and "proto_a" in html
@@ -186,14 +186,14 @@ def test_council_modes_discovery_evaluation_decision(store):
     """Q1/Q2: a council's shape is DERIVED — discovery (open `questions`, no proposal/votes),
     evaluation (a proposal reacted to), decision (proposal + votes). `questions` is stored first-class."""
     pid = services.start_project("M", "hmw?", None, persona_ids=[], store=store)["id"]
-    disc = services.record_council(pid, "Geldgewohnheiten", [], [{"content": "Ich spare per ETF"}],
+    disc = services.record_council(pid, "Geldgewohnheiten", [], [{"persona_id": "p1", "text": "Ich spare per ETF"}],
                                    questions=["Wie sparst du gerade?", "Welche Versicherungen hast du?"],
                                    store=store, key="d")
     assert disc["questions"] == ["Wie sparst du gerade?", "Welche Versicherungen hast du?"]
     assert services.council_mode(disc) == "discovery"
-    dec = services.record_council(pid, "Bauen?", [], [{"content": "ja"}], proposal="Wir bauen X",
+    dec = services.record_council(pid, "Bauen?", [], [{"persona_id": "p1", "text": "ja"}], proposal="Wir bauen X",
                                   votes=[{"vote": "SUPPORT"}], store=store, key="x")
     assert services.council_mode(dec) == "decision"
-    ev = services.record_council(pid, "Reaktion", [], [{"content": "gut"}], proposal="Das Konzept",
+    ev = services.record_council(pid, "Reaktion", [], [{"persona_id": "p1", "text": "gut"}], proposal="Das Konzept",
                                  store=store, key="e")
     assert services.council_mode(ev) == "evaluation"

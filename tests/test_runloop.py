@@ -27,7 +27,7 @@ def _register_tiny_methodology(store):
 
 def _council(store, cid):
     store.insert_council_session({"id": cid, "created_at": "2026-06-05T00:00:00+00:00", "prompt": "p",
-        "persona_ids": ["p1"], "turns": [], "votes": [], "proposal": "", "summary": "",
+        "persona_ids": ["p1"], "statements": [], "votes": [], "proposal": "", "summary": "",
         "exec_summary": "e", "selection_reason": "x"})
     return cid
 
@@ -41,7 +41,7 @@ def _stub_author(s, pid, store, ctr):
         return
     if step == "__conclusion__":
         syn = services.record_synthesis("Conclusion", "x", [], {"gesamtbild": "G" * 300,
-            "positionierung": "P" * 300, "pain_solvers": ["solver"]}, key=s["key"], store=store)
+            "positionierung": "P" * 300, "findings": [{"text": "solver", "kind": "pain_solver"}]}, key=s["key"], store=store)
         services.link_evidence(pid, s["terminal_verify"], {"kind": "synthesis", "id": syn["id"]}, store=store)
         return
     plan = services.get_plan(pid, store=store)
@@ -66,7 +66,7 @@ def _stub_author(s, pid, store, ctr):
            and set(t["consumes"]) & set(task["consumes"]) for r in t["produces"] if r["kind"] == "council"]
     services.record_judgment(pid, step, "divergence_complete", True, "enough", evidence_refs=fan or ["x"], store=store)
     syn = services.record_synthesis(f"{step} synthesis", "x", fan, {"gesamtbild": "G" * 300,
-        "positionierung": "P" * 300, "key_problems": ["kp"]}, key=s["key"], store=store)
+        "positionierung": "P" * 300, "findings": [{"text": "kp", "kind": "key_problem"}]}, key=s["key"], store=store)
     services.link_evidence(pid, step, {"kind": "synthesis", "id": syn["id"]}, store=store)
     services.complete_task(pid, step, store=store)
 

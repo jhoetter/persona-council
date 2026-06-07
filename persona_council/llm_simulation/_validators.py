@@ -406,96 +406,29 @@ def validate_meta_section_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate_synthesis_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate the host-authored synthesis PROSE + provenance. The structured content is the unified
+    primitives (findings/statements/prompts) validated separately at record time — no legacy list/voice
+    shapes (spec/unified-artifact-schema.md)."""
     if not isinstance(payload, dict):
         raise ValueError("Synthesis must be a JSON object.")
-    seg = []
-    for sgm in payload.get("segmente", []) or []:
-        if isinstance(sgm, dict) and str(sgm.get("segment", "")).strip():
-            seg.append({"segment": str(sgm["segment"]).strip()[:120],
-                        "stance": str(sgm.get("stance", "")).strip()[:60],
-                        "why": str(sgm.get("why", "")).strip()[:400]})
     refs = []
     for r in payload.get("references", []) or []:
         if isinstance(r, dict) and str(r.get("council_id", "")).strip():
-            refs.append({"council_id": str(r["council_id"]).strip()[:80],
-                         "role": str(r.get("role", "")).strip()[:300]})
-    sentiments = {"positiv", "bedingt", "neutral", "skeptisch", "ablehnend"}
-    relevances = {"stark", "teilweise", "kaum", "irrelevant"}
-    voices = []
-    for v in payload.get("voices", []) or []:
-        if not isinstance(v, dict):
-            continue
-        pid = str(v.get("persona_id", "")).strip()
-        if not pid:
-            continue
-        sent = str(v.get("sentiment", "")).strip().lower()
-        rel = str(v.get("relevance", "")).strip().lower()
-        shift = v.get("shift")
-        sh = None
-        if isinstance(shift, dict) and (str(shift.get("trigger", "")).strip() or str(shift.get("to", "")).strip()):
-            sh = {"from": str(shift.get("from", "")).strip()[:40], "to": str(shift.get("to", "")).strip()[:40],
-                  "trigger": str(shift.get("trigger", "")).strip()[:400], "council_id": str(shift.get("council_id", "")).strip()[:80]}
-        ev = []
-        for e in v.get("evidence", []) or []:
-            if isinstance(e, dict) and str(e.get("quote", "")).strip():
-                ev.append({"council_id": str(e.get("council_id", "")).strip()[:80], "quote": str(e["quote"]).strip()[:600]})
-        voices.append({
-            "persona_id": pid[:80],
-            "persona_name": str(v.get("persona_name", "")).strip()[:120],
-            "segment": str(v.get("segment", "")).strip()[:120],
-            "sentiment": sent if sent in sentiments else "neutral",
-            "relevance": rel if rel in relevances else "teilweise",
-            "key_argument": str(v.get("key_argument", "")).strip()[:400],
-            "shift": sh,
-            "evidence": ev[:3],
-        })
+            refs.append({"council_id": str(r["council_id"]).strip()[:80], "role": str(r.get("role", "")).strip()[:300]})
     cite_kinds = {"evidence", "recall", "council"}
     citations = []
     for c in payload.get("citations", []) or []:
         if not isinstance(c, dict) or not str(c.get("ref", "")).strip():
             continue
         kind = str(c.get("kind", "")).strip().lower()
-        citations.append({
-            "kind": kind if kind in cite_kinds else "council",
-            "ref": str(c["ref"]).strip()[:80],
-            "quote": str(c.get("quote", "")).strip()[:600],
-        })
-    # Structured convergence blocks (spec/exploration-depth-and-prototype-variety GAP-3): a
-    # methodology's converge output (affinity clusters / key problems / a down-select ranking +
-    # shortlist) MUST survive the write — these are generic structural containers with free-text
-    # content, NOT a closed methodology vocabulary, so they are preserved (capped) for ANY
-    # methodology. (Previously dropped here, hollowing the answer node.)
-    clusters = []
-    for cl in payload.get("clusters", []) or []:
-        if isinstance(cl, dict) and str(cl.get("label", "")).strip():
-            clusters.append({
-                "label": str(cl["label"]).strip()[:160],
-                "member_node_ids": [str(m).strip()[:80] for m in (cl.get("member_node_ids") or []) if str(m).strip()][:60],
-                "insight": str(cl.get("insight", "")).strip()[:1000],
-            })
-    ranking = []
-    for rk in payload.get("ranking", []) or []:
-        if not isinstance(rk, dict):
-            continue
-        ref = str(rk.get("prototype_id") or rk.get("ref") or rk.get("id") or "").strip()
-        rationale = str(rk.get("score_rationale") or rk.get("rationale") or "").strip()
-        if ref or rationale:
-            ranking.append({"prototype_id": ref[:80], "score_rationale": rationale[:800]})
+        citations.append({"kind": kind if kind in cite_kinds else "council",
+                          "ref": str(c["ref"]).strip()[:80], "quote": str(c.get("quote", "")).strip()[:600]})
     return {
         "arc_narrative": str(payload.get("arc_narrative", "")).strip()[:6000],
         "gesamtbild": str(payload.get("gesamtbild", "")).strip()[:4000],
-        "handlungsempfehlungen": _recs(payload.get("handlungsempfehlungen", []) or [], 20),
         "positionierung": str(payload.get("positionierung", "")).strip()[:2000],
-        "pain_solvers": _strings(payload.get("pain_solvers", []) or [], 20, 400),
-        "segmente": seg[:30],
-        "offene_fragen": _strings(payload.get("offene_fragen", []) or [], 20, 400),
         "references": refs[:50],
         "citations": citations[:50],
-        "voices": voices[:200],
-        "clusters": clusters[:40],
-        "key_problems": _strings(payload.get("key_problems", []) or [], 30, 600),
-        "ranking": ranking[:40],
-        "shortlist": _strings(payload.get("shortlist", []) or [], 40, 120),
         "status": ("in_progress" if str(payload.get("status", "")).strip().lower() == "in_progress" else "done"),
         "next_council_question": str(payload.get("next_council_question", "")).strip()[:2000],
         "stop_reason": str(payload.get("stop_reason", "")).strip()[:600],

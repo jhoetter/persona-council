@@ -33,24 +33,20 @@ def register_council(mcp):
         return _env("brief_ask", services.brief_ask(persona_id, question, context), t)
 
     @mcp.tool()
-    def record_council(project_id: str, prompt: str, persona_ids: list[str], turns: list[dict[str, Any]], votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "", questions: list[str] | None = None, key: str | None = None, statements: list[dict[str, Any]] | None = None, findings: list[dict[str, Any]] | None = None, prompts: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    def record_council(project_id: str, prompt: str, persona_ids: list[str], statements: list[dict[str, Any]] | None = None, votes: list[dict[str, Any]] | None = None, proposal: str = "", summary: str = "", exec_summary: str = "", selection_reason: str = "", questions: list[str] | None = None, key: str | None = None, findings: list[dict[str, Any]] | None = None, prompts: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         """Persist a host-authored council. Shape it by what you pass (the UI derives the mode):
-        DISCOVERY = `questions` (open user-research questions) + answer turns, NO proposal/votes;
-        EVALUATION = `proposal` (a concept reacted to) + stances; DECISION = `proposal` + `votes`.
-        DISCOVERY turns: author ONE turn per (persona, question) and set `question_index` (0-based
-        index into `questions`) on each, so the council page renders a moderated Q→A transcript —
-        the moderator's question, then each persona's answer to it. A turn that addresses no single
-        question may omit it. Turn fields: persona_id, content, question_index, stance, memory_refs,
-        input. A council MUST belong to a research project. Pass a stable `key` for a deterministic
-        id (idempotent upsert → resumable runs).
+        DISCOVERY = `questions` (open user-research questions), NO proposal/votes; EVALUATION =
+        `proposal` (a concept reacted to) + stances; DECISION = `proposal` + `votes`.
 
-        UNIFIED PRIMITIVES (spec/unified-artifact-schema.md, preferred going forward): instead of
-        turns/votes you MAY pass `statements` (one per persona utterance: {persona_id, text, stance:
-        {value -2..2,label}, about:{kind:'prompt',id}, refs:[{kind,id|text}], meta}) and `findings`
-        (the analysis: {text, kind: summary|key_problem|recommendation|…, score, refs}) and `prompts`
-        ({text, kind, id}). These render through the one renderer; legacy turns/votes still work."""
+        Author the voices as `statements` (the ONE voice primitive): one per persona utterance —
+        {persona_id, text, stance:{value -2..2}, about:{kind:'prompt', id:'q0'|'proposal'},
+        refs:[{kind,id,anchor,role}|{kind:'memory',text}]}. For a DISCOVERY council set each
+        statement's about.id to the question it answers ('q0','q1',…) so the page renders a moderated
+        Q→A transcript. `findings` is the optional analysis ({text, kind, score, refs}); `prompts` are
+        derived from questions/proposal when omitted. A council MUST belong to a research project.
+        Pass a stable `key` for a deterministic id (idempotent upsert → resumable runs)."""
         t = time.perf_counter()
-        return _env("record_council", services.record_council(project_id, prompt, persona_ids, turns, votes, proposal, summary, exec_summary, selection_reason, questions, key, statements, findings, prompts), t)
+        return _env("record_council", services.record_council(project_id, prompt, persona_ids, statements, votes, proposal, summary, exec_summary, selection_reason, questions, key, findings, prompts), t)
 
     @mcp.tool()
     def get_council(session_id: str) -> dict[str, Any]:

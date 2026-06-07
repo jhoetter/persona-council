@@ -161,13 +161,11 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
         synthesis_id = stable_id("synthesis", key)
     data = validate_synthesis_payload(payload or {})
     _pl = payload or {}
-    # Primitives-only storage (spec/unified-artifact-schema): findings/statements/prompts are the ONE
-    # representation. Author them natively if present, else convert the validated payload (key_problems/
-    # voices/clusters/… → findings/statements) at this boundary via the adapters. The legacy list/voice
-    # fields are NOT stored — they live on only as accepted INPUT shapes.
-    findings = [_A.validate_finding(f) for f in (_pl.get("findings") or [])] or _A.synthesis_findings(data)
-    statements = [_A.validate_statement(s) for s in (_pl.get("statements") or [])] or _A.synthesis_statements(data)
-    prompts = [_A.validate_prompt(p) for p in (_pl.get("prompts") or [])] or _A.synthesis_prompts(data)
+    # Primitives-only authoring (spec/unified-artifact-schema): the host authors findings/statements/
+    # prompts directly — the ONE representation. No legacy list/voice input shapes.
+    findings = [_A.validate_finding(f) for f in (_pl.get("findings") or [])]
+    statements = [_A.validate_statement(s) for s in (_pl.get("statements") or [])]
+    prompts = [_A.validate_prompt(p) for p in (_pl.get("prompts") or [])]
     # Stable part ids so findings/voices are addressable + deep-linkable (spec/artifact-cross-references).
     _A.assign_part_ids(findings, "f")
     _A.assign_part_ids(statements, "st")

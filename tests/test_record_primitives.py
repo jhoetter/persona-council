@@ -8,7 +8,7 @@ from persona_council.web import _render as R
 def test_council_native_primitives_roundtrip_and_render(store):
     proj = services.create_research_project("P", store=store)
     res = services.record_council(
-        proj["id"], "Q?", ["persona_x"], turns=[],
+        proj["id"], "Q?", ["persona_x"],
         statements=[{"persona_id": "persona_x", "text": "**hi**", "stance": {"value": 1},
                      "about": {"kind": "prompt", "id": "q0"}, "refs": [{"kind": "memory", "text": "m"}]}],
         findings=[{"text": "the **finding**", "kind": "summary"}],
@@ -38,13 +38,12 @@ def test_synthesis_native_primitives_via_payload(store):
     assert A.synthesis_findings(s) == s["findings"]
 
 
-def test_legacy_council_input_converts_to_statements(store):
-    """The convenient `turns` INPUT converts to statements at the record boundary — storage is
-    primitives-only; `turns` is not stored."""
+def test_council_primitives_only_no_turns(store):
+    """Authoring is primitives-only: statements are stored, there is no legacy `turns` field."""
     proj = services.create_research_project("L", store=store)
     res = services.record_council(proj["id"], "Q?", ["p1"],
-                                  turns=[{"persona_id": "p1", "content": "legacy answer"}], key="k2", store=store)
+                                  statements=[{"persona_id": "p1", "text": "an answer"}], key="k2", store=store)
     c = store.get_council_session(res["id"])
-    assert "turns" not in c                            # legacy field NOT stored
-    assert c["statements"][0]["text"] == "legacy answer"   # converted to a statement at the boundary
+    assert "turns" not in c                            # legacy field gone
+    assert c["statements"][0]["text"] == "an answer"
     assert A.council_statements(c) == c["statements"]
