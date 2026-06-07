@@ -246,6 +246,14 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
     }
 
 
+def _attach_meta_reports(g: dict, project_id: str, store: Store) -> dict:
+    """Meta-reports are first-class project artifacts — expose them on the graph so the outline lists them
+    inline (among the methodology rows), not just as a top-bar button."""
+    g["meta_reports"] = [{"id": r["id"], "title": r.get("title", ""), "created_at": r.get("created_at", ""),
+                          "n_sections": len(r.get("outline") or [])} for r in store.list_meta_reports(project_id)]
+    return g
+
+
 def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
     """The core navigation call: nodes (studies + tags/sentiment), typed edges,
     themes, build order, and open questions for one research project. When the project has a
@@ -254,7 +262,7 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
     store = store or Store()
     plan = _plan.get_plan(project_id, store=store)
     if plan is not None:                       # the plan engine is the single source of truth (HX3)
-        return plan_graph(project_id, store=store)
+        return _attach_meta_reports(plan_graph(project_id, store=store), project_id, store)
     # Plan-less fallback (start_project always seeds a plan, so this is only hit by hand-built data /
     # the study_ids-based meta-report path): nodes from the project's studies + notes — NO study-edge
     # layer (retired), so no edges.
@@ -269,7 +277,7 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
     nodes.extend(note_graph_nodes(project))
     nodes.sort(key=lambda n: n.get("created_at", ""))
     oqs = store.list_open_questions(project["id"])
-    return {
+    g = {
         "project": {"id": project["id"], "slug": project["slug"], "title": project["title"],
                     "goal": project.get("goal", ""), "status": project.get("status", "active"),
                     "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", []),
@@ -285,6 +293,7 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
                    "open_questions": sum(1 for o in oqs if o.get("status") == "open"),
                    "themes": len(project.get("themes", []))},
     }
+    return _attach_meta_reports(g, project_id, store)
 
 
 

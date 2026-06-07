@@ -676,6 +676,14 @@ def _outline_html(graph: dict) -> str:
                 p.get("created_at", ""), indent=1, last_child=(i == len(built) - 1))
             seq += 1
 
+    # Meta-reports — first-class project artifacts: listed inline at the end (po=99 → after the
+    # methodology rows, in the last round), each opening its own report page. Add as many as you like.
+    for mr in sorted(graph.get("meta_reports", []), key=lambda m: m.get("created_at", "")):
+        items.append({"oid": mr["id"], "color": "#6d5ef0", "title": mr.get("title", "") or t("meta_report"),
+                      "kind": t("meta_report"), "href": f'/meta-reports/{mr["id"]}', "plabel": "Report",
+                      "po": 99, "round": max(nrounds - 1, 0), "order": f'~{mr.get("created_at", "")}',
+                      "ts": mr.get("created_at", ""), "indent": 0, "last_child": False})
+
     # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
     # "Prototypen-Leiter", "Konzepte (Ideation)" … (phase/journal sections are skipped — phase already
     # shows as the per-row tag). Shown Linear-style: a filter bar + per-row dots; activating a theme

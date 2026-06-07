@@ -33,17 +33,13 @@ def register_projects(app) -> None:
                               for ty in used_types)) or h("span", {"class_": "muted small"}, "—")
         oqs = [o for o in graph["open_questions"] if o.get("status") == "open"]
         oq_html = fragment(*(h("li", {}, o["text"]) for o in oqs[:30])) or h("li", {"class_": "muted"}, "—")
-        reports = store.list_meta_reports(proj["id"])
-        # The Meta-Report button is ALWAYS shown (a fixed affordance) — opens the latest report when one
-        # exists (all of them are listed in the project panel), disabled with a hint when none.
-        meta_btn = (h("a", {"class_": "btn", "href": f'/meta-reports/{reports[0]["id"]}'}, raw(_icon("report")), " ", t("meta_report"))
-                    if reports else
-                    h("span", {"class_": "btn disabled", "title": t("meta_report_unavailable"), "aria-disabled": "true"},
-                      raw(_icon("report")), " ", t("meta_report")))
-        if services.get_plan(proj["id"], store=store):    # the analyze/act/verify plan — opens in a right drawer
+        # Plan opens in a right drawer. Meta-reports are NOT a top-bar button anymore — they're listed
+        # inline in the outline as first-class artifacts (add as many as you like; they flow into the project).
+        top_btn = ""
+        if services.get_plan(proj["id"], store=store):
             plan_url = f'/projects/{proj["id"]}/plan'
-            meta_btn = fragment(h("a", {"class_": "btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
-                                  raw(_icon("plan")), " Plan"), meta_btn)
+            top_btn = h("a", {"class_": "btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
+                        raw(_icon("plan")), " Plan")
         protos = graph.get("prototypes") or []
         # Q4: a TYPE filter row (also the LEGEND) — every node KIND present is a colored, glyph'd,
         # toggleable chip that filters the graph by type; capability/theme tags go to a 2nd muted row.
@@ -98,18 +94,6 @@ def register_projects(app) -> None:
                                 "ansehen ", raw(_icon("external"))), sl_html))
             proto_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("prototypes_h")} ({len(protos)})'),
                                   fragment(*rows))
-        # Meta-reports — first-class artifacts of this project (arbitrarily many), each its own page + PDF.
-        mr_html = ""
-        if reports:
-            rows = []
-            for r in reports:
-                rows.append(h("div", {"class_": "strow"},
-                              h("a", {"href": f'/meta-reports/{r["id"]}'}, raw(_icon("report")), h("b", {}, r.get("title", ""))), " ",
-                              h("span", {"class_": "muted small"}, t("n_sections", n=len(r.get("outline") or []))), " ",
-                              h("a", {"class_": "btn", "style": "padding:2px 8px", "href": f'/meta-reports/{r["id"]}.pdf'},
-                                "PDF ", raw(_icon("external")))))
-            mr_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("meta_reports")} ({len(reports)})'),
-                               fragment(*rows))
         # Sections outline (methodology-independent groupings) — a navigable list in the panel.
         from ... import presentation as _pres
         secs = sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0))
@@ -145,7 +129,7 @@ def register_projects(app) -> None:
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("build_order_h")} (edges)'),
                   h("div", {"class_": "pills", "style": "margin:6px 0 14px"}, edge_leg), sec_html,
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("open_questions_h")),
-                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html, mr_html)
+                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html)
         oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"
                  "p=document.getElementById('oqpanel');if(!b||!p)return;"
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
@@ -162,7 +146,7 @@ def register_projects(app) -> None:
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
                    h("p", {"class_": "lead"}, proj.get("goal", "")), head_tools),
                  main_view)
-        actions = fragment(meta_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
+        actions = fragment(top_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
 
