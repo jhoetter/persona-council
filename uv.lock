@@ -420,49 +420,6 @@ wheels = [
 ]
 
 [[package]]
-name = "sonaloop"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "fastapi" },
-    { name = "mcp" },
-    { name = "sonaloop-icons" },
-    { name = "python-dotenv" },
-    { name = "python-multipart" },
-    { name = "uvicorn" },
-]
-
-[package.optional-dependencies]
-prototyping = [
-    { name = "playwright" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "mcp", specifier = ">=1.2.0" },
-    { name = "sonaloop-icons", editable = "../sonaloop-icons/py" },
-    { name = "playwright", marker = "extra == 'prototyping'", specifier = ">=1.40.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "python-multipart", specifier = ">=0.0.9" },
-    { name = "uvicorn", specifier = ">=0.30.0" },
-]
-provides-extras = ["prototyping"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8.0" }]
-
-[[package]]
-name = "sonaloop-icons"
-version = "0.1.0"
-source = { editable = "../sonaloop-icons/py" }
-
-[[package]]
 name = "playwright"
 version = "1.60.0"
 source = { registry = "https://pypi.org/simple" }
@@ -868,6 +825,44 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/ff/0b3d604614ffc77522c6b288fdbce68957eb583da1002aa65ba38ac0ee40/rpds_py-2026.5.1-pp311-pypy311_pp73-musllinux_1_2_i686.whl", hash = "sha256:8213afbe8a3a906fb9acb2014423fe3359ee783d0bf90995f70623a3217bfa6c", size = 623541, upload-time = "2026-05-28T12:02:09.661Z" },
     { url = "https://files.pythonhosted.org/packages/ea/ea/e7b0251441da9adfeaebcf29601d10f2a1455fcf0772fae9e7e19032bd96/rpds_py-2026.5.1-pp311-pypy311_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:8c43a8a973270fd173bf48cdf80bbe66312421cba68d40845034f174f2389049", size = 586326, upload-time = "2026-05-28T12:02:11.47Z" },
 ]
+
+[[package]]
+name = "sonaloop"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "fastapi" },
+    { name = "mcp" },
+    { name = "playwright" },
+    { name = "python-dotenv" },
+    { name = "python-multipart" },
+    { name = "sonaloop-icons" },
+    { name = "uvicorn" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "mcp", specifier = ">=1.2.0" },
+    { name = "playwright", specifier = ">=1.40.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "python-multipart", specifier = ">=0.0.9" },
+    { name = "sonaloop-icons", editable = "../sonaloop-icons/py" },
+    { name = "uvicorn", specifier = ">=0.30.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.0" }]
+
+[[package]]
+name = "sonaloop-icons"
+version = "0.1.0"
+source = { editable = "../sonaloop-icons/py" }
 
 [[package]]
 name = "sse-starlette"

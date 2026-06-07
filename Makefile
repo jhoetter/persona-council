@@ -22,6 +22,7 @@ restore:
 
 install:
 	$(UV) sync
+	$(UV) run playwright install chromium   # headless browser for prototype screenshots + meta-report PDF
 	@echo "installed - run 'make dev' for :$(WEB_PORT) or 'make dev-forwarded' for :$(FORWARDED_WEB_PORT)"
 
 # --reload is scoped to the Python source: without --reload-dir the stat-poller
@@ -50,10 +51,9 @@ test-smoke:
 	$(UV) run sonaloop persona-list >/dev/null
 	$(UV) run python -c "from sonaloop.web import create_app; app=create_app(); print(app.title)"
 
-# Prototype harness (spec/methodology-engine-and-prototyping.md §7): install Playwright +
-# chromium so persona-agents can drive real apps. Optional — the harness degrades without it.
+# Re-fetch just the chromium binary (the playwright package is a hard dependency via `uv sync`).
+# Needed for prototype screenshots + the meta-report PDF export.
 playwright:
-	$(UV) pip install 'playwright>=1.40.0'
 	$(UV) run playwright install chromium
 
 kill-ports:

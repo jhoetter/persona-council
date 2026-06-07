@@ -31,7 +31,7 @@ def asset_url(asset_id: str) -> str:
 
 def capture_prototype_shot(prototype_id: str, store=None, width: int = 1120, height: int = 720) -> str:
     """Screenshot a STATIC prototype (its entry HTML via file://) into an asset; record the asset id on
-    the prototype (`shot`) so the report can embed it. Requires the Playwright harness (optional dep)."""
+    the prototype (`shot`) so the report can embed it. Uses the Playwright harness (a hard dependency)."""
     from .storage import Store
     store = store or Store()
     p = store.get_prototype(prototype_id)

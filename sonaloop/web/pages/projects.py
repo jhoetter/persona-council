@@ -177,7 +177,7 @@ def register_projects(app) -> None:
     def project_meta_pdf(project_id: str, request: Request):
         """Proper PDF via headless Chromium (spec/meta-report-presentation-and-pdf Phase 3): navigate to
         the live /meta page (so CSS + /data/assets resolve), emulate print media, page.pdf(). Reuses the
-        EXACT report HTML — one rendering path. Degrades to the printable HTML page if Playwright absent."""
+        EXACT report HTML — one rendering path. Playwright is a hard dependency (chromium via make install)."""
         store = Store()
         try:
             proj = services.get_research_project(project_id, store=store)
@@ -185,10 +185,7 @@ def register_projects(app) -> None:
             return Response(t("not_found"), status_code=404)
         if not store.list_meta_reports(project_id):
             return RedirectResponse(f"/projects/{project_id}/meta")
-        try:
-            from playwright.sync_api import sync_playwright
-        except Exception:
-            return RedirectResponse(f"/projects/{project_id}/meta")   # no harness → printable HTML page
+        from playwright.sync_api import sync_playwright   # a hard dependency now (no fallback)
         url = str(request.base_url).rstrip("/") + f"/projects/{project_id}/meta"
         _hf = "font-size:8px;color:#9aa0a6;width:100%;padding:0 16mm"
         header = h("div", {"style": _hf}, f'{proj["title"]} · {t("meta_report")}')

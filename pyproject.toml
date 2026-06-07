@@ -10,6 +10,10 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "uvicorn>=0.30.0",
     "sonaloop-icons",
+    # Headless-browser harness — REQUIRED, not optional: prototype screenshots + the meta-report PDF
+    # export depend on it. The chromium binary itself is fetched by `make install` (`playwright install
+    # chromium`), which a pip/uv dependency can't do.
+    "playwright>=1.40.0",
 ]
 
 # Shared icon library — single source of truth lives in ../sonaloop-icons
@@ -17,12 +21,6 @@ dependencies = [
 # TSX build; the council imports the generated Python module under py/.
 [tool.uv.sources]
 sonaloop-icons = { path = "../sonaloop-icons/py", editable = true }
-
-[project.optional-dependencies]
-# Prototype harness (spec/methodology-engine-and-prototyping.md §7): agents drive real
-# apps in a headless browser. Optional — the harness degrades gracefully without it.
-# Install: `make playwright` (pip install + chromium download).
-prototyping = ["playwright>=1.40.0"]
 
 [project.scripts]
 sonaloop = "sonaloop.cli:main"
