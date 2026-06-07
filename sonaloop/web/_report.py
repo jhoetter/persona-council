@@ -104,15 +104,15 @@ def _body(md_text: str, figs: list) -> str:
 
 
 def render_meta_report(report: dict, store) -> str:
+    """Report-grade render of a project-scope synthesis (the unified report — sections + figures)."""
     rtitle = _ref_titler(report, store)
-    authored = {s["section_id"]: s for s in report.get("sections", [])}
-    outline = report.get("outline", [])
-    n_studies = len({x for sec in outline for x in sec.get("source_study_ids", [])})
+    sections = report.get("sections", [])
+    n_studies = len({x for sec in sections for x in sec.get("source_study_ids", [])})
     _t = report.get("title", "")           # the default title ends in " — Meta-Report"; custom titles show as-is
     project_title = _t[:-len(" — Meta-Report")] if _t.endswith(" — Meta-Report") else _t
     de = content_language() == "de"
     meta_line = " · ".join([
-        f"{len(outline)} " + ("Abschnitte" if de else "sections"),
+        f"{len(sections)} " + ("Abschnitte" if de else "sections"),
         f"{n_studies} " + ("Studien" if de else "studies"),
         (report.get("created_at") or "")[:10],
     ])
@@ -121,24 +121,22 @@ def render_meta_report(report: dict, store) -> str:
               h("div", {"class_": "rp-eyebrow"}, t("meta_report")),
               h("h1", {"class_": "rp-title"}, project_title),
               h("div", {"class_": "rp-metaline"}, meta_line),
-              (h("p", {"class_": "rp-lead"}, raw(_md(report["build_order_narrative"])))
-               if report.get("build_order_narrative") else ""))
+              (h("p", {"class_": "rp-lead"}, raw(_md(report["lead"])))
+               if report.get("lead") else ""))
 
     toc = h("nav", {"class_": "rp-toc"}, h("div", {"class_": "rp-toc-h"}, t("toc")),
             h("ol", {}, *[h("li", {}, h("a", {"href": f"#rp-s{i}"}, sec["heading"]))
-                          for i, sec in enumerate(outline, 1)]))
+                          for i, sec in enumerate(sections, 1)]))
 
     secs = []
-    for i, sec in enumerate(outline, 1):
-        body = authored.get(sec["id"])
-        figs = [rf for rf in (_resolve_figure(f, store) for f in (body.get("figures") or []))
-                if rf] if body else []
-        body_html = (_body(body["markdown"], figs) if body and body.get("markdown")
+    for i, sec in enumerate(sections, 1):
+        figs = [rf for rf in (_resolve_figure(f, store) for f in (sec.get("figures") or [])) if rf]
+        body_html = (_body(sec["markdown"], figs) if sec.get("markdown")
                      else h("p", {"class_": "muted"}, f"_({'noch nicht verfasst' if de else 'not yet authored'})_"))
         cites = ""
-        if body and body.get("citations"):
+        if sec.get("citations"):
             rows = []
-            for n, c in enumerate(body["citations"], 1):
+            for n, c in enumerate(sec["citations"], 1):
                 council = h("span", {"class_": "rp-cite-src"}, f" · {rtitle(c['council_id'])}") if c.get("council_id") else ""
                 quote = h("span", {"class_": "rp-cite-q"}, f"„{c['quote']}“") if c.get("quote") else ""
                 rows.append(h("li", {}, h("span", {"class_": "rp-cite-n"}, str(n)),

@@ -18,6 +18,11 @@ class StoreBase:
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
         self._stamp_schema_version()
+        # one-time: legacy meta_reports → scope='project' syntheses (spec/unified-synthesis-report.md)
+        try:
+            self.migrate_meta_reports()
+        except Exception:
+            pass
 
     def _stamp_schema_version(self) -> None:
         from ..config import MEMORY_SCHEMA_VERSION

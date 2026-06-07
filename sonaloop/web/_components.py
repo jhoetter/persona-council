@@ -16,7 +16,7 @@ from ._html import h, raw, fragment, register_css, collect_css  # noqa: F401  (c
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
 from ._ext import (  # noqa: F401  (extension seams; public surface re-exported by web/__init__)
     register_nav_section, register_nav_item, resolve_label, nav_model,
-    render_slot, theme_override_css,
+    render_slot, theme_override_css, brand_name,
 )
 
 
@@ -401,13 +401,13 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
               .replace("__UNSTAR__", json.dumps(t("unstar"))))
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{_esc(title)} · Sonaloop</title>
+<title>{_esc(title)} · {_esc(brand_name())}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 {HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
 <body><div class="app" id="app">
   <aside class="sidebar">
-    <div class="brand"><span class="mark">{_icon("sonaloop")}</span><a href="/">Sonaloop</a></div>
+    <div class="brand"><span class="mark">{_icon("sonaloop")}</span><a href="/">{_esc(brand_name())}</a></div>
     <div class="sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
     {_user_menu()}
   </aside>

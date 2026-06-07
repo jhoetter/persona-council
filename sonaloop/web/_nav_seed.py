@@ -28,7 +28,6 @@ _CORE_NAV = {
         ("/councils", "councils", "councils", lambda: t("councils")),
         ("/prototypes", "prototype", "prototype", lambda: t("prototypes_h")),
         ("/syntheses", "syntheses", "syntheses", lambda: t("syntheses")),
-        ("/meta-reports", "meta", "report", lambda: t("meta_reports")),
     ],
 }
 

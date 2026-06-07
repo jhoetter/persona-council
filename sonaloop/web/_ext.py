@@ -133,6 +133,28 @@ def theme_override_css() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Brand / product identity
+# ---------------------------------------------------------------------------
+# A per-process wordmark shown in the page <title> suffix and the sidebar. Defaults to
+# "Sonaloop" (the public core); an extension calls set_brand() in setup() to distinguish
+# e.g. "Sonaloop Cloud" / "Sonaloop Research". Process-global, not per-request: each app
+# runs in its own process, so this is set once at startup.
+
+_BRAND = "Sonaloop"
+
+
+def set_brand(name: str) -> None:
+    """Override the product wordmark (page <title> suffix + sidebar). No-op on empty."""
+    global _BRAND
+    if name and name.strip():
+        _BRAND = name.strip()
+
+
+def brand_name() -> str:
+    return _BRAND
+
+
+# ---------------------------------------------------------------------------
 # Entry-point loader
 # ---------------------------------------------------------------------------
 

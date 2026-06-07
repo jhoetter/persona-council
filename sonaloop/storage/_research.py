@@ -6,6 +6,28 @@ from typing import Any
 from ..config import utc_now_iso
 
 
+def _meta_report_to_synthesis(mr: dict[str, Any]) -> dict[str, Any]:
+    """Legacy MetaReport dict → unified Synthesis dict (scope=project). Merges the meta-report's split
+    `outline` (structure) + `sections` (authored content) into one `sections` list."""
+    authored = {s.get("section_id"): s for s in (mr.get("sections") or [])}
+    sections = []
+    for o in (mr.get("outline") or []):
+        a = authored.get(o.get("id"), {})
+        sections.append({"id": o.get("id", ""), "heading": o.get("heading", ""),
+                         "intent": o.get("intent", ""), "theme_tags": o.get("theme_tags", []),
+                         "source_study_ids": o.get("source_study_ids", []),
+                         "markdown": a.get("markdown", ""), "citations": a.get("citations", []),
+                         "figures": a.get("figures", [])})
+    return {"id": mr["id"], "title": mr.get("title", ""), "scope": "project",
+            "project_id": mr.get("project_id", ""), "lead": mr.get("build_order_narrative", ""),
+            "sections": sections, "graph_snapshot": mr.get("graph_snapshot"),
+            "created_at": mr.get("created_at", ""), "start_input": "", "council_ids": [],
+            "arc_narrative": "", "gesamtbild": "", "positionierung": "", "references": [],
+            "citations": [], "goal": "", "status": "done", "next_council_question": "",
+            "stop_reason": "", "iterations": 0, "phase": "", "mode": "", "role": "", "methodology": "",
+            "statements": [], "findings": [], "prompts": []}
+
+
 class ResearchMixin:
     # ---- Research graph: projects / edges / open questions / meta-reports ----
     def upsert_research_project(self, project: dict[str, Any]) -> None:
@@ -41,24 +63,39 @@ class ResearchMixin:
             "SELECT data FROM research_open_questions WHERE project_id=? ORDER BY created_at", (project_id,)).fetchall()
         return [json.loads(r["data"]) for r in rows]
 
+    # Meta-reports are now project-scope SYNTHESES (spec/unified-synthesis-report.md). These methods are
+    # thin back-compat shims over the syntheses store so existing callers keep working.
     def upsert_meta_report(self, report: dict[str, Any]) -> None:
-        self.conn.execute(
-            "INSERT OR REPLACE INTO meta_reports (id, project_id, title, data, created_at) VALUES (?, ?, ?, ?, ?)",
-            (report["id"], report["project_id"], report["title"], json.dumps(report, ensure_ascii=False), report["created_at"]))
-        self.conn.commit()
+        report = dict(report)
+        report.setdefault("scope", "project")
+        self.upsert_synthesis(report)
 
     def get_meta_report(self, report_id: str) -> dict[str, Any] | None:
-        row = self.conn.execute("SELECT data FROM meta_reports WHERE id=?", (report_id,)).fetchone()
-        return json.loads(row["data"]) if row else None
+        syn = self.get_synthesis(report_id)
+        return syn if syn and syn.get("scope") == "project" else None
 
     def list_meta_reports(self, project_id: str) -> list[dict[str, Any]]:
-        rows = self.conn.execute(
-            "SELECT data FROM meta_reports WHERE project_id=? ORDER BY created_at DESC", (project_id,)).fetchall()
-        return [json.loads(r["data"]) for r in rows]
+        rep = [s for s in self.list_syntheses() if s.get("scope") == "project" and s.get("project_id") == project_id]
+        return sorted(rep, key=lambda s: s.get("created_at", ""), reverse=True)
 
     def list_all_meta_reports(self) -> list[dict[str, Any]]:
-        rows = self.conn.execute("SELECT data FROM meta_reports ORDER BY created_at DESC").fetchall()
-        return [json.loads(r["data"]) for r in rows]
+        rep = [s for s in self.list_syntheses() if s.get("scope") == "project"]
+        return sorted(rep, key=lambda s: s.get("created_at", ""), reverse=True)
+
+    def migrate_meta_reports(self) -> None:
+        """One-time, idempotent: move legacy `meta_reports` rows into the syntheses store as
+        scope='project' syntheses (same id), merging outline+sections into the unified section shape."""
+        try:
+            rows = self.conn.execute("SELECT id, data FROM meta_reports").fetchall()
+        except Exception:
+            return
+        for r in rows:
+            mr = json.loads(r["data"])
+            if not self.get_synthesis(mr["id"]):
+                self.upsert_synthesis(_meta_report_to_synthesis(mr))
+            self.conn.execute("DELETE FROM meta_reports WHERE id=?", (mr["id"],))
+        if rows:
+            self.conn.commit()
 
     # ---- ESV: the resumable run object ----
     def upsert_run(self, run: dict[str, Any]) -> None:

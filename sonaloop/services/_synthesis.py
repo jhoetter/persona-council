@@ -27,7 +27,6 @@ from ..models import (
     DailySummary,
     Evidence,
     ExperienceEvent,
-    MetaReport,
     OpenQuestion,
     PainPointObservation,
     Persona,
@@ -400,18 +399,21 @@ def brief_meta_report(project_id: str, store: Store | None = None) -> dict[str, 
 
 
 def record_meta_outline(project_id: str, outline: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
-    """Persist the host-authored outline as a new MetaReport (sections to be authored next)."""
+    """Persist the host-authored outline as a new project-scope SYNTHESIS (a report); its sections are
+    authored next via record_meta_section. (spec/unified-synthesis-report.md — meta-reports ARE syntheses.)"""
     store = store or Store()
     project = _require_research_project(store, project_id)
     data = validate_meta_outline_payload(outline, study_ids=project["study_ids"])
     now = utc_now_iso()
-    report = MetaReport(
-        id=stable_id("metareport", project["id"], now), project_id=project["id"],
-        title=data.get("title") or f"{project['title']} — Meta-Report", outline=data["sections"], sections=[],
-        build_order_narrative=data["build_order_narrative"],
-        graph_snapshot=get_project_graph(project["id"], store=store), created_at=now,
+    # merge the outline's structure into the unified section shape (content filled by record_meta_section).
+    sections = [{**sec, "markdown": "", "citations": [], "figures": []} for sec in data["sections"]]
+    report = Synthesis(
+        id=stable_id("metareport", project["id"], now), title=data.get("title") or f"{project['title']} — Meta-Report",
+        start_input="", council_ids=[], arc_narrative="", gesamtbild="", positionierung="", references=[],
+        created_at=now, scope="project", project_id=project["id"], lead=data["build_order_narrative"],
+        sections=sections, graph_snapshot=get_project_graph(project["id"], store=store),
     ).to_dict()
-    store.upsert_meta_report(report)
+    store.upsert_synthesis(report)
     return report
 
 
@@ -436,11 +438,11 @@ def brief_meta_section(project_id: str, section_id: str, report_id: str | None =
     store = store or Store()
     project = _require_research_project(store, project_id)
     report = _latest_meta_report(store, project["id"], report_id)
-    section = next((s for s in report["outline"] if s["id"] == section_id), None)
+    section = next((s for s in report.get("sections", []) if s["id"] == section_id), None)
     if not section:
         raise KeyError(f"Unknown section {section_id} in meta-report {report['id']}")
-    frame = {"heading": section["heading"], "intent": section["intent"], "theme_tags": section["theme_tags"],
-             "studies": [_study_full(store, sid) for sid in section["source_study_ids"]]}
+    frame = {"heading": section["heading"], "intent": section.get("intent", ""), "theme_tags": section.get("theme_tags", []),
+             "studies": [_study_full(store, sid) for sid in section.get("source_study_ids", [])]}
     return {"project_id": project["id"], "report_id": report["id"], "section_id": section_id,
             "schema": "meta_section", "instructions": build_meta_section_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
 
@@ -448,17 +450,18 @@ def brief_meta_section(project_id: str, section_id: str, report_id: str | None =
 
 def record_meta_section(project_id: str, section_id: str, content: dict[str, Any],
                         report_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
-    """Persist one authored section (markdown + citations) into the meta-report."""
+    """Author one section's body (markdown + citations + figures) into the project-scope synthesis."""
     store = store or Store()
     project = _require_research_project(store, project_id)
     report = _latest_meta_report(store, project["id"], report_id)
-    if not any(s["id"] == section_id for s in report["outline"]):
+    sec = next((s for s in report.get("sections", []) if s.get("id") == section_id), None)
+    if not sec:
         raise KeyError(f"Unknown section {section_id} in meta-report {report['id']}")
     data = validate_meta_section_payload(content)
-    entry = {"section_id": section_id, "markdown": data["markdown"], "citations": data["citations"],
-             "figures": data.get("figures", [])}
-    report["sections"] = [s for s in report.get("sections", []) if s.get("section_id") != section_id] + [entry]
-    store.upsert_meta_report(report)
+    sec["markdown"] = data["markdown"]
+    sec["citations"] = data["citations"]
+    sec["figures"] = data.get("figures", [])
+    store.upsert_synthesis(report)
     return report
 
 
@@ -472,7 +475,7 @@ def export_meta_report(project_id: str, report_id: str | None = None, format: st
     if format == "json":
         return json.dumps(report, indent=2, ensure_ascii=False)
     de = content_language() == "de"
-    authored = {s["section_id"]: s for s in report.get("sections", [])}
+    secs = report.get("sections", [])
     # readable titles for refs (study_ids are 'kind:id' graph refs; citations may be bare ids) — resolve
     # from the report's graph snapshot first, else look the id up in syntheses/councils.
     node_title = {n["study_id"]: (n.get("title") or "") for n in (report.get("graph_snapshot") or {}).get("nodes", [])}
@@ -489,22 +492,21 @@ def export_meta_report(project_id: str, report_id: str | None = None, format: st
             return (c.get("prompt") or rid)[:70]
         return rid
 
-    n_studies = len({x for sec in report["outline"] for x in sec.get("source_study_ids", [])})
+    n_studies = len({x for sec in secs for x in sec.get("source_study_ids", [])})
     lines = [f"# {report['title']}", "",
-             f"*{'Meta-Synthese' if de else 'Meta-synthesis'} · {len(report['outline'])} "
+             f"*{'Meta-Synthese' if de else 'Meta-synthesis'} · {len(secs)} "
              f"{'Abschnitte' if de else 'sections'} · {n_studies} "
              f"{'Studien' if de else 'studies'} · {report['created_at'][:10]}*", ""]
-    if report.get("build_order_narrative"):
+    if report.get("lead"):
         lines += [f"## {'Wie dieses Verständnis entstand' if de else 'How this understanding was built'}",
-                  report["build_order_narrative"], ""]
-    for sec in report["outline"]:
+                  report["lead"], ""]
+    for sec in secs:
         lines += [f"## {sec['heading']}"]
-        body = authored.get(sec["id"])
-        if body and body.get("markdown"):
-            lines += [body["markdown"]]
-            if body.get("citations"):
+        if sec.get("markdown"):
+            lines += [sec["markdown"]]
+            if sec.get("citations"):
                 lines += ["", f"*{'Belege' if de else 'Citations'}:*"]
-                for c in body["citations"]:
+                for c in sec["citations"]:
                     cc = f" · {_ref_title(c['council_id'])}" if c.get("council_id") else ""
                     q = f" — „{c['quote']}“" if c.get("quote") else ""
                     lines.append(f"- **{_ref_title(c['study_id'])}**{cc}{q}")

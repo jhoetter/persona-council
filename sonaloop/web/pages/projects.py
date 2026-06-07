@@ -1,13 +1,9 @@
 """Project pages: home/index, detail (outline/graph), meta-report, plan (spec/roadmap.md R2)."""
 from __future__ import annotations
 
-import re
-
-from fastapi import Request
-from fastapi.responses import Response, RedirectResponse
+from fastapi.responses import RedirectResponse
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
-from .._report import render_meta_report
 
 
 def register_projects(app) -> None:
@@ -150,57 +146,22 @@ def register_projects(app) -> None:
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
 
-    # ---- meta-reports are first-class artifacts: arbitrarily many per project, each its own page +
-    #      PDF (mirrors how prototypes are surfaced). The .pdf route is registered FIRST so it wins
-    #      the match over the generic {report_id} route. ----
+    # ---- meta-reports are project-scope SYNTHESES now (spec/unified-synthesis-report.md). The canonical
+    #      URL is /syntheses/{id} (+ .pdf); these old paths redirect for back-compat. ----
     @app.get("/meta-reports/{report_id}.pdf")
-    def meta_report_pdf(report_id: str, request: Request):
-        """Proper PDF via headless Chromium (spec/meta-report-presentation-and-pdf Phase 3): navigate to
-        the live report page (so CSS + /data/assets resolve), emulate print media, page.pdf(). Reuses the
-        EXACT report HTML — one rendering path. Playwright is a hard dependency (chromium via make install)."""
-        store = Store()
-        rep = store.get_meta_report(report_id)
-        if not rep:
-            return Response(t("not_found"), status_code=404)
-        from playwright.sync_api import sync_playwright
-        url = str(request.base_url).rstrip("/") + f"/meta-reports/{report_id}"
-        _hf = "font-size:8px;color:#9aa0a6;width:100%;padding:0 16mm"
-        header = h("div", {"style": _hf}, f'{rep["title"]}')
-        footer = h("div", {"style": _hf + ";text-align:center;padding:0"},
-                   h("span", {"class_": "pageNumber"}), " / ", h("span", {"class_": "totalPages"}))
-        with sync_playwright() as pw:
-            b = pw.chromium.launch()
-            pg = b.new_page()
-            pg.goto(url, wait_until="networkidle")
-            pg.emulate_media(media="print")
-            pg.wait_for_timeout(200)
-            pdf = pg.pdf(format="A4", print_background=True,
-                         margin={"top": "18mm", "bottom": "16mm", "left": "16mm", "right": "16mm"},
-                         display_header_footer=True, header_template=header, footer_template=footer)
-            b.close()
-        fn = (re.sub(r"[^\w\-]+", "-", rep["title"]).strip("-").lower() or "meta-report") + ".pdf"
-        return Response(pdf, media_type="application/pdf",
-                        headers={"Content-Disposition": f'inline; filename="{fn}"'})
+    def meta_report_pdf(report_id: str):
+        return RedirectResponse(f"/syntheses/{report_id}.pdf")
 
-    @app.get("/meta-reports/{report_id}", response_class=HTMLResponse)
-    def meta_report_view(report_id: str) -> str:
-        store = Store()
-        rep = store.get_meta_report(report_id)
-        if not rep:
-            return _layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared"), icon="overview"), store, active="meta")
-        proj = services.get_research_project(rep["project_id"], store=store) if rep.get("project_id") else None
-        body = h("div", {"class_": "page"}, raw(render_meta_report(rep, store)))
-        actions = h("a", {"class_": "btn", "href": f"/meta-reports/{report_id}.pdf"}, t("export_pdf"))
-        crumbs = ([(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (rep["title"], None)]
-                  if proj else [(t("meta_reports"), "/meta-reports"), (rep["title"], None)])
-        return _layout(rep["title"], body, store, crumbs=crumbs, active="meta", actions=actions)
+    @app.get("/meta-reports/{report_id}")
+    def meta_report_view(report_id: str):
+        return RedirectResponse(f"/syntheses/{report_id}")
 
     @app.get("/projects/{project_id}/meta")                     # back-compat → the project's latest report
     def project_meta(project_id: str):
         store = Store()
         reports = store.list_meta_reports(project_id)
         if reports:
-            return RedirectResponse(f'/meta-reports/{reports[0]["id"]}')
+            return RedirectResponse(f'/syntheses/{reports[0]["id"]}')
         try:
             proj = services.get_research_project(project_id, store=store)
         except KeyError:

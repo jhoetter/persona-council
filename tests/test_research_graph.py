@@ -46,7 +46,9 @@ def test_meta_report_round_trip(store):
                "sections": [{"heading": "Pains", "theme_tags": ["pains"], "source_study_ids": ["syn0"], "intent": "establish"},
                             {"heading": "Pricing", "theme_tags": ["pricing"], "source_study_ids": ["syn1"], "intent": "price"}]}
     report = services.record_meta_outline(pid, outline, store=store)
-    assert [s["id"] for s in report["outline"]] == ["sec1", "sec2"]
+    # meta-reports are now project-scope syntheses; outline+sections merged into one `sections` list
+    assert report["scope"] == "project"
+    assert [s["id"] for s in report["sections"]] == ["sec1", "sec2"]
 
     sb = services.brief_meta_section(pid, "sec1", store=store)
     assert [s["title"] for s in sb["frame"]["studies"]] == ["Pains"]

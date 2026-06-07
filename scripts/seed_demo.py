@@ -381,7 +381,7 @@ _mo = S.record_meta_outline(PID, {
          "source_study_ids": [f"council:{EVAL}"] + _notes[2:4], "intent": "Konzept + Evaluation"},
         {"heading": "Deliver — Empfehlung & dev-fertige Spec", "theme_tags": ["deliver"],
          "source_study_ids": [f"synthesis:{DELIVER}"], "intent": "Entscheidung + Spec"}]}, store=st)
-_secs = _mo["outline"]
+_secs = _mo["sections"]   # meta-reports are project-scope syntheses now (one merged sections list)
 try:                                            # best-effort prototype screenshot (needs Playwright)
     from sonaloop.assets import capture_prototype_shot
     capture_prototype_shot(PROTO2, st)
@@ -420,7 +420,7 @@ _mo2 = S.record_meta_outline(PID, {
     "sections": [{"heading": "Auf einen Blick", "theme_tags": ["summary"],
                   "source_study_ids": [f"synthesis:{DEFINE}", f"synthesis:{DELIVER}"], "intent": "Kurz & entscheidbar"}]},
     store=st)
-S.record_meta_section(PID, _mo2["outline"][0]["id"], {
+S.record_meta_section(PID, _mo2["sections"][0]["id"], {
     "markdown": (":::key\nGesund essen scheitert am **Abend**, nicht am Wissen — der Engpass ist Planung + Einkauf.\n:::\n\n"
         "**Lösung:** ein **Wochenplan-Starter** — 3 verlässliche Gerichte/Woche + automatische Einkaufsliste, "
         "in 10 Minuten, ohne Abo.\n\n:::recommendation\n**Bauen — schlank.** Mit 20-Minuten-Garantie, Portionen 1–4 "
