@@ -134,10 +134,10 @@ def scaffold_artifact(slug: str, name: str, concept: dict[str, Any], type: str =
 def register_artifact(slug: str, name: str, path: str, entry: str = "index.html", run: str = "static",
                       run_cmd: str | None = None, version: str = "v0.1", project_id: str | None = None,
                       notes: str = "", type: str = "prototype", tags: list[str] | None = None,
-                      store: Store | None = None) -> dict[str, Any]:
+                      created_at: str | None = None, store: Store | None = None) -> dict[str, Any]:
     store = store or Store()
     from .services import stable_id
-    now = utc_now_iso()
+    now = created_at or utc_now_iso()
     tags = list(tags or [])
     existing = store.get_prototype(slug)
     pid = (existing or {}).get("id") or stable_id("prototype", slug, now)
@@ -163,9 +163,10 @@ def scaffold_prototype(slug: str, name: str, concept: dict[str, Any], kind: str 
 
 def register_prototype(slug: str, name: str, path: str, entry: str = "index.html", run: str = "static",
                        run_cmd: str | None = None, version: str = "v0.1", project_id: str | None = None,
-                       notes: str = "", fidelity: str = "", store: Store | None = None) -> dict[str, Any]:
+                       notes: str = "", fidelity: str = "", created_at: str | None = None,
+                       store: Store | None = None) -> dict[str, Any]:
     return register_artifact(slug, name, path, entry, run, run_cmd, version, project_id, notes,
-                             type="prototype", tags=[fidelity] if fidelity else [], store=store)
+                             type="prototype", tags=[fidelity] if fidelity else [], created_at=created_at, store=store)
 
 
 def list_prototypes(project_id: str | None = None, store: Store | None = None) -> list[dict[str, Any]]:

@@ -172,18 +172,18 @@ def _notes(project: dict) -> list[dict]:
 
 
 def create_note(project_id: str, text: str, title: str = "", kind: str = "note",
-                data: dict[str, Any] | None = None, store=None) -> dict[str, Any]:
+                data: dict[str, Any] | None = None, created_at: str | None = None, store=None) -> dict[str, Any]:
     """Create a lightweight note node in the project graph (no methodology required) — the ONE note
     entity (the former 'concept' is merged in). A note that gets BUILT carries structured `data`
-    {lens, artifact_kind, prototype_id} so the layout pairs it with its prototype + the completeness
-    critic can reason over the solution space. `kind` is accepted for back-compat but normalized to
-    'note' ('concept' is no longer a separate kind). `data` is a small free dict (capped)."""
+    {lens, artifact_kind, prototype_ids:[...]} so the layout pairs it with its prototype(s) + the
+    completeness critic can reason over the solution space. `kind` is normalized to 'note'. `data` is a
+    small free dict (capped). `created_at` overrides the timestamp (e.g. seeding a real timeline)."""
     store = store or Store()  # noqa: F821
     project = _require_research_project(store, project_id)  # noqa: F821
     if not str(text).strip():
         raise ValueError("a note needs non-empty text")
     kind = "note" if (str(kind or "note").strip().lower() in ("note", "concept")) else str(kind).strip()[:40]
-    now = utc_now_iso()  # noqa: F821
+    now = created_at or utc_now_iso()  # noqa: F821
     note = {"id": stable_id("note", project["id"], text, now),  # noqa: F821
             "title": (str(title).strip() or str(text).strip()[:60])[:120],
             "text": str(text).strip()[:2000], "kind": kind,
@@ -286,10 +286,13 @@ def note_graph_nodes(project: dict) -> list[dict[str, Any]]:
     for n in _notes(project):
         title = n.get("title") or n.get("text", "")[:60]
         data = n.get("data") or {}
-        # ONE note entity (concepts merged in): a note that was BUILT carries data.prototype_id and links
-        # to its prototype in the graph — that is the only former "concept" behaviour that remains.
+        # ONE note entity (concepts merged in): a note that was BUILT links to its prototype(s) — a concept
+        # can become several fidelity versions, so this is a LIST (data.prototype_ids, or a single
+        # prototype_id). That note→prototype(s) pairing is the only former "concept" behaviour that remains.
+        proto_ids = list(data.get("prototype_ids") or ([data["prototype_id"]] if data.get("prototype_id") else []))
         out.append({"study_id": f"note:{n['id']}", "kind": "note", "note_kind": "note",
-                    "prototype_id": data.get("prototype_id"), "lens": data.get("lens", ""),
+                    "prototype_ids": proto_ids, "lens": data.get("lens", ""),
+                    "artifact_kind": data.get("artifact_kind", ""),
                     "title": title, "phase": "", "bucket": "", "created_at": n.get("created_at", ""),
                     "council_count": 0, "voices": 0, "sentiment": {}, "recommendations": 0, "role": "", "mode": "",
                     "theme_tags": ["note"], "color": pres["color"], "kind_label": pres["label"],

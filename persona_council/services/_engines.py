@@ -238,9 +238,10 @@ def scaffold_prototype(slug, name, concept, kind="web", template=None,
 
 
 def register_prototype(slug, name, path, entry="index.html", run="static", run_cmd=None,
-                       version="v0.1", project_id=None, notes="", fidelity="", store: Store | None = None):
+                       version="v0.1", project_id=None, notes="", fidelity="", created_at=None,
+                       store: Store | None = None):
     return _proto.register_prototype(slug, name, path, entry, run, run_cmd, version, project_id, notes,
-                                     fidelity=fidelity, store=store)
+                                     fidelity=fidelity, created_at=created_at, store=store)
 
 
 

@@ -508,7 +508,7 @@ def derive_sections(project_id: str, store: Store | None = None) -> dict[str, An
     if verify_syns:
         _upsert("Deliver — Conclusion", "deliver", [verify_syns[-1]], note="Lösungspräsentation / buildbare Antwort")
     # Built notes (data.prototype_id) — the ideas that became prototypes (former "concepts").
-    built_ids = [n["study_id"] for n in nodes if str(n["study_id"]).startswith("note:") and n.get("prototype_id")]
+    built_ids = [n["study_id"] for n in nodes if str(n["study_id"]).startswith("note:") and n.get("prototype_ids")]
     _upsert("Gebaute Ideen", "theme", built_ids, note="Notizen, die zu Prototypen wurden")
     journal_ids = [n["study_id"] for n in nodes if str(n["study_id"]).startswith("note:")]
     _upsert("Run-Journal", "invented", journal_ids, note="Plan-Rationale + Iterations-Journal")

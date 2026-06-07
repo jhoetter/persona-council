@@ -97,7 +97,7 @@ def register_library(app) -> None:
         if proj:                                              # the concept that realises this prototype
             try:
                 g = services.get_project_graph(p["project_id"], store=store)
-                concept_in = [n for n in g["nodes"] if n.get("prototype_id") == p["id"]]
+                concept_in = [n for n in g["nodes"] if p["id"] in (n.get("prototype_ids") or [])]
             except Exception:
                 concept_in = []
         n_grounded = sum(1 for s in sessions if s.get("grounded_verified"))

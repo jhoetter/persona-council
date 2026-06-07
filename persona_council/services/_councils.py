@@ -238,7 +238,8 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
                    proposal: str = "", summary: str = "", exec_summary: str = "",
                    selection_reason: str = "", questions: list[str] | None = None,
                    key: str | None = None, findings: list | None = None,
-                   prompts: list | None = None, store: Store | None = None) -> dict[str, Any]:
+                   prompts: list | None = None, created_at: str | None = None,
+                   store: Store | None = None) -> dict[str, Any]:
     """Persist a host-authored council. A council is a research artefact and MUST live inside a research
     project — `project_id` is required and validated. Author the voices as `statements` (the ONE voice
     primitive: {persona_id, text, stance, about:{kind:'prompt',id}, refs}); set `questions` (discovery) or
@@ -274,7 +275,7 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
         prompt=prompt, persona_ids=persona_ids, selection_reason=selection_reason or "host-authored",
         proposal=proposal, votes=votes, summary=summary,
         exec_summary=exec_summary, questions=qs,
-        created_at=(existing or {}).get("created_at") or utc_now_iso(),
+        created_at=(existing or {}).get("created_at") or created_at or utc_now_iso(),
         project_id=project["id"],
         statements=statements_out,
         findings=findings_out,

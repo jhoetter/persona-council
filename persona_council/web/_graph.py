@@ -210,7 +210,7 @@ def _methodology_layout(graph: dict) -> dict | None:
         nxt = outs[0] if outs else bk
         # prefer the CONCEPT NOTE that realizes this prototype as its upstream idea (ESV: concepts are
         # first-class; this gives the prototype an incoming edge so it doesn't float), else fuzzy-match.
-        cnote = next((n for n in graph["nodes"] if n.get("prototype_id") == pr["id"]), None)
+        cnote = next((n for n in graph["nodes"] if pr["id"] in (n.get("prototype_ids") or [])), None)
         src = cnote or _match(pr.get("name", ""), bk)
         cx = (col_x[bk] + _NW + col_x[nxt]) / 2 - PW / 2
         if cnote:                                                    # round-aware: place in the cnote's lane
@@ -244,7 +244,7 @@ def _methodology_layout(graph: dict) -> dict | None:
     ideate_x = col_x.get(build_steps[0]["key"], X0) if build_steps else X0
     st: dict[int, int] = {}
     for n in graph["nodes"]:
-        if str(n["study_id"]).startswith("note:") and not n.get("prototype_id"):
+        if str(n["study_id"]).startswith("note:") and not n.get("prototype_ids"):
             r = node_round.get(n["study_id"], 0)
             pos[n["study_id"]] = (ideate_x, AXIS + r * BAND - 150 - st.get(r, 0) * 72)
             st[r] = st.get(r, 0) + 1
@@ -628,43 +628,47 @@ def _outline_html(graph: dict) -> str:
     # ONE note entity: a BUILT note (data.prototype_id) pairs with its prototype, indented beneath it
     # (the former concept→prototype pairing); plain notes are standalone observation rows.
     note_nodes = [n for n in nodes if str(n["study_id"]).startswith("note:")]
-    pro_of = {n["study_id"]: [p for p in protos if p["id"] == n.get("prototype_id")]
-              for n in note_nodes if n.get("prototype_id")}
+    pro_of = {n["study_id"]: [p for p in protos if p["id"] in (n.get("prototype_ids") or [])]
+              for n in note_nodes if n.get("prototype_ids")}
     used = {p["id"] for ps in pro_of.values() for p in ps}
 
     items: list[dict] = []
 
-    def add(oid, color, title, kind, href, pk, r, order, indent=0):
+    def add(oid, color, title, kind, href, pk, r, order, ts, indent=0):
+        # `order` = the SORT key (a built note's prototype borrows the note's slot via a '#seq' suffix so it
+        # nests right under it); `ts` = the row's OWN created_at, shown to the reader.
         po, plabel = pmeta.get(pk, (99, ""))
         items.append({"oid": oid, "color": color or "#9aa0a6", "title": title, "kind": kind, "href": href,
-                      "plabel": plabel, "po": po, "round": r, "order": order, "indent": indent})
+                      "plabel": plabel, "po": po, "round": r, "order": order, "ts": ts, "indent": indent})
 
     for n in nodes:
         if n.get("phase", "") not in pmeta:        # councils/syntheses; notes (phase-free) added below
             continue
         add(n["study_id"], n.get("color", ""), n.get("title", ""), n.get("kind_label", n.get("kind", "")),
-            n.get("href", ""), n.get("phase", ""), node_round[n["study_id"]], n.get("created_at", ""))
+            n.get("href", ""), n.get("phase", ""), node_round[n["study_id"]], n.get("created_at", ""), n.get("created_at", ""))
     for p in protos:                               # prototypes NOT paired under a built note → standalone
         if p["id"] not in used:
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
-                f'/prototypes/{p["slug"]}', ideation, 0, p.get("created_at", ""))
-    # Notes (phase-free): a BUILT note (+ its prototype) sits at the ideation phase; a plain observation
-    # at the FIRST (discover) phase, so the phase column reads meaningfully instead of an empty gap.
+                f'/prototypes/{p["slug"]}', ideation, 0, p.get("created_at", ""), p.get("created_at", ""))
+    # Notes (phase-free): a CONCEPT (built, or carrying an artifact_kind) sits at the ideation/develop phase;
+    # a plain observation at the FIRST (discover) phase, so the phase column reads meaningfully.
     notes_phase = ordered[0]["key"] if ordered else ""
-    # Sequence the note→prototype pairs so each prototype sorts IMMEDIATELY after ITS note even when all
-    # notes share a created_at (batch-authored) — a per-pair index, not the (tying) timestamp, keeps the
-    # prototype indented under the right concept instead of all prototypes collecting under the last one.
+    # Sequence the note→prototype pairs so each prototype sorts IMMEDIATELY after ITS note. The prototype
+    # keeps its OWN created_at for DISPLAY (ts) but borrows the note's slot for SORT (order) — versions are
+    # ordered by their own created_at (v0.1 before v0.2), nested under the concept they realise.
     seq = 0
     for nt in sorted(note_nodes, key=lambda n: n.get("created_at", "")):
         cr = node_round.get(nt["study_id"], 0)
-        built = pro_of.get(nt["study_id"]) or []
+        built = sorted(pro_of.get(nt["study_id"]) or [], key=lambda p: p.get("created_at", ""))
+        is_concept = bool(built) or nt.get("artifact_kind")
         add(nt["study_id"], nt.get("color", "#f29900"), nt.get("title", "") or "—",
-            nt.get("kind_label", ""), nt.get("href", ""), ideation if built else notes_phase, cr,
-            f'{nt.get("created_at", "")}#{seq:04d}')
+            nt.get("kind_label", ""), nt.get("href", ""), ideation if is_concept else notes_phase, cr,
+            f'{nt.get("created_at", "")}#{seq:04d}', nt.get("created_at", ""))
         seq += 1
         for p in built:
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
-                f'/prototypes/{p["slug"]}', ideation, cr, f'{nt.get("created_at", "")}#{seq:04d}', indent=1)
+                f'/prototypes/{p["slug"]}', ideation, cr, f'{nt.get("created_at", "")}#{seq:04d}',
+                p.get("created_at", ""), indent=1)
             seq += 1
 
     # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
@@ -685,6 +689,16 @@ def _outline_html(graph: dict) -> str:
         for m in s.get("member_ids", []):
             node_themes.setdefault(m, []).append(ti)
 
+    def _fmt_ts(order: str) -> tuple[str, str]:
+        """(short, full) from the row's created_at (order may carry a '#seq' pairing suffix)."""
+        iso = str(order).split("#")[0]
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(iso)
+            return f"{dt.day} {dt:%b} · {dt:%H:%M}", dt.strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            return iso[:16].replace("T", " "), iso
+
     def row(it: dict) -> str:
         tw = "ol-tw" if it["indent"] else ""                  # folder-style tree connector for nested rows
         tis = node_themes.get(it["oid"], [])
@@ -696,11 +710,13 @@ def _outline_html(graph: dict) -> str:
                  "style": f'padding-left:{10 + it["indent"] * 26}px'}
         if it["href"]:
             attrs["href"] = it["href"]
+        ts_short, ts_full = _fmt_ts(it["ts"])
         return h("a", attrs,
                  h("span", {"class_": "ol-dot", "style": f'background:{it["color"]}'}),
                  h("span", {"class_": "ol-ptag"}, it["plabel"]),
                  h("span", {"class_": "ol-title"}, it["title"]),
                  h("span", {"class_": "olth-pills"}, fragment(*pills)),
+                 h("span", {"class_": "ol-ts", "title": ts_full}, ts_short),
                  h("span", {"class_": "ol-kind"}, it["kind"]))
 
     # ROUND CAPTION (Linear: a group header should carry MEANING) — the essence of each round's most

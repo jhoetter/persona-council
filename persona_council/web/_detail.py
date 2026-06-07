@@ -31,8 +31,8 @@ def _relations_html(store, study_id: str, proj_id: str | None,
                 elif e.get("from_study") == study_id and e.get("to_study") in nmap:
                     outgoing.append(nmap[e["to_study"]])
             cur = nmap.get(study_id)
-            if cur and cur.get("prototype_id"):               # concept → its prototype (not a graph edge)
-                pr = next((p for p in g.get("prototypes", []) if p["id"] == cur["prototype_id"]), None)
+            for pid in (cur or {}).get("prototype_ids", []):  # a built note → its prototype(s) (not a graph edge)
+                pr = next((p for p in g.get("prototypes", []) if p["id"] == pid), None)
                 if pr:
                     outgoing.append({"href": f'/prototypes/{pr["slug"]}', "title": pr["name"],
                                      "color": "#00897b", "kind_label": t("prototypes_h")})

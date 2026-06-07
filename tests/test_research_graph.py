@@ -168,18 +168,22 @@ def test_derive_sections_and_scaffold_meta_report_finish_by_construction(store):
 
 def test_notes_are_one_entity_built_notes_carry_prototype(store):
     """ONE note entity (concepts merged in): every note is note_kind='note' (no 'concept' kind), and a
-    note that was BUILT carries data.prototype_id so the graph/outline can pair it with its prototype."""
+    note that was BUILT carries data.prototype_ids so the graph/outline pairs it with its prototype(s) —
+    a concept can become several fidelity versions, so the node exposes a LIST (single input is lifted)."""
     proj = services.start_project("CN", "hmw?", "double_diamond_deep", persona_ids=["p1"], store=store)
     pid = proj["id"]
-    services.create_note(pid, "a bold idea that got built", "Dark-horse",
-                         data={"lens": "reversal", "prototype_id": "proto_x"}, store=store)
+    services.create_note(pid, "a bold idea built twice", "Dark-horse",
+                         data={"lens": "reversal", "prototype_ids": ["proto_x", "proto_y"]}, store=store)
+    services.create_note(pid, "a single-build idea", "Single",
+                         data={"prototype_id": "proto_z"}, store=store)              # single input still works
     services.create_note(pid, "a raw observation", "Obs", store=store)
     g = services.get_project_graph(pid, store=store)
     note_nodes = [n for n in g["nodes"] if str(n["study_id"]).startswith("note:")]
-    assert len(note_nodes) == 2 and all(n.get("note_kind") == "note" for n in note_nodes)  # no concept kind
+    assert len(note_nodes) == 3 and all(n.get("note_kind") == "note" for n in note_nodes)  # no concept kind
     assert all(n["href"].startswith("/notes/") for n in note_nodes)                          # one list/route
-    built = next(n for n in note_nodes if n.get("prototype_id"))
-    assert built["prototype_id"] == "proto_x"                                                # pairs with prototype
+    multi = next(n for n in note_nodes if len(n.get("prototype_ids") or []) == 2)
+    assert multi["prototype_ids"] == ["proto_x", "proto_y"]                                   # concept → versions
+    assert any(n.get("prototype_ids") == ["proto_z"] for n in note_nodes)                     # single lifted to list
 
 
 def test_council_modes_discovery_evaluation_decision(store):

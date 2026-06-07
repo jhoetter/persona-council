@@ -130,6 +130,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ol-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .olrow .ol-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .olrow .ol-kind{color:var(--faint);font-size:var(--t-sm);flex-shrink:0;white-space:nowrap}
+.olrow .ol-ts{color:var(--faint);font-size:var(--t-xs);flex-shrink:0;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
 .ol-gl.ol-round{color:var(--muted)}
 .ol-cnt{font-size:var(--t-xs);color:var(--faint);font-weight:600;background:var(--panel-2);border-radius:10px;padding:1px 7px;margin-left:2px}
 .ol-rcap{font-size:var(--t-body);font-weight:400;color:var(--muted);margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
