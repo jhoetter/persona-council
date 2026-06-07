@@ -314,6 +314,12 @@ Four seams:
    carry its own design-system colors. Pure SSR — nothing leaks into JS or `data-*`.
    Keys must match `--[a-z0-9-]+`, values a safe color/token subset; off-shape
    declarations are dropped.
+5. **Brand** — `set_brand(name)`: a per-process wordmark (default `"Sonaloop"`) shown in
+   the page `<title>` suffix and the sidebar. An extension calls it in `setup()` to
+   distinguish e.g. `"Sonaloop Cloud"` / `"Sonaloop Research"`.
+
+Plus `render_page(title, body, store, ...)` — the stable public shell renderer
+extensions use instead of reaching into `web._components`.
 
 Design decision (locked): NO Jinja2 migration. The single `_layout()` string-builder
 already is the one shell-assembly point Jinja would provide; the seams above give
