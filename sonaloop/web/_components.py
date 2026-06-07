@@ -5,7 +5,7 @@ import json
 import re
 from collections import Counter, defaultdict
 
-from sonaloop_icons import icon as _persona_icon, HIFI_ANIM_CSS as _ICON_ANIM_CSS
+from sonaloop_icons import icon as _persona_icon, hifi as _persona_hifi, HIFI_ANIM_CSS as _ICON_ANIM_CSS
 
 from .. import services
 from .. import presentation as _pres
@@ -40,6 +40,15 @@ def _icon(name: str, animate: bool = False) -> str:
     # "" for unknown names, same as the old inline ICONS lookup. animate=True adds
     # .pi-animate (opt-in hover micro-interaction; needs _ICON_ANIM_CSS, registered below).
     return _persona_icon(name, animate=animate)
+
+
+def _hifi(name: str, size: int = 44) -> str:
+    """A standalone hi-fi display icon (the richer variant) — used as the small 'illustration' in
+    empty states. Falls back to the regular icon if no hi-fi variant exists."""
+    try:
+        return _persona_hifi(name, size) or _persona_icon(name)
+    except Exception:
+        return _persona_icon(name)
 
 
 # Icon hover micro-interactions (sonaloop-icons HIFI_ANIM_CSS — covers regular .pi-animate icons too).
@@ -466,10 +475,15 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
     return _layout(title, body, store, crumbs=[(title, None)], active=active)
 
 
-def _empty_state(title: str, message: str) -> str:
-    return h("div", {"class_": "page"}, h("div", {"class_": "card"},
-             h("h2", {}, title), h("p", {"class_": "muted"}, message),
-             h("p", {}, h("a", {"class_": "btn", "href": "/projects"}, raw(_icon("back")), " ", t("projects")))))
+def _empty_state(title: str, message: str, *, icon: str = "overview", action: tuple | None = None) -> str:
+    """A calm, centered empty/not-found state (Linear-style): a hi-fi product glyph as the small
+    'illustration', a title, one explanatory line, and a single CTA. `action` = (label, href, icon)."""
+    label, href, ic = action or (t("projects"), "/projects", "back")
+    return h("div", {"class_": "page"}, h("div", {"class_": "empty"},
+             h("div", {"class_": "empty-ic"}, raw(_hifi(icon, 44))),
+             h("h2", {"class_": "empty-h"}, title),
+             h("p", {"class_": "empty-msg"}, message),
+             h("a", {"class_": "btn", "href": href}, raw(_icon(ic)), " ", label)))
 
 
 # Edge-type → color is DATA (suggestions/edge_types.json via presentation.edge_colors); no edge color
@@ -741,6 +755,16 @@ register_css(r"""
 .turn-who{display:inline-flex;align-items:center;gap:7px;color:var(--ink);text-decoration:none}
 .turn-who:hover b{color:var(--accent)}
 .turn-ctx{flex-basis:100%;margin:2px 0 0;font-style:italic}
+/* bare card (persona's own page): no avatar/name; lead with the council it was said in */
+.turn-bare{padding:11px 13px}
+.turn-src{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:var(--t-sm);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.turn-src:hover{color:var(--accent)}.turn-src svg{width:13px;height:13px;flex:none;opacity:.8}
+/* empty / not-found state — a calm centered card with a hi-fi product glyph (Linear-style) */
+.empty{max-width:404px;margin:8vh auto 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:9px;border:1px solid var(--line);border-radius:12px;padding:34px 30px;background:var(--panel)}
+.empty-ic{color:var(--muted);line-height:0;margin-bottom:3px}.empty-ic svg{width:44px;height:44px;opacity:.92}
+.empty-h{font-size:var(--t-md);font-weight:600;margin:0;color:var(--ink)}
+.empty-msg{color:var(--muted);font-size:var(--t-body);margin:0;line-height:1.55;max-width:312px}
+.empty .btn{margin-top:9px}
 /* a persona's multiple answers stack in one card, separated by a hairline */
 .turn-ans+.turn-ans{margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)}
 .turn-ans>p{margin:0}

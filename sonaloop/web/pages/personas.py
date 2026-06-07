@@ -116,8 +116,12 @@ def register_personas(app) -> None:
             _hero(p["display_name"], sub=f'{p["role"]["title"]} · {p["company_context"]["industry"]}'),
             h("div", {"class_": "identity"}, h("div", {}, avatar), h("div", {},
               h("div", {"class_": "card"}, h("h3", {}, t("current_state")),
-                h("p", {}, h("strong", {}, state["current_activity"])), h("p", {"class_": "muted"}, state["collaboration_mode"]),
-                h("p", {"class_": "thought"}, state["current_thought"])))),
+                h("p", {}, h("strong", {}, state["current_activity"])),
+                h("p", {"class_": "muted small"}, " · ".join(x for x in [
+                    state.get("current_tool"), state.get("collaboration_mode"),
+                    (state["mood"] if state.get("mood") not in (None, "unknown") else None)] if x) or "—"),
+                (h("p", {"class_": "thought"}, state["current_thought"])
+                 if state.get("current_thought") not in (None, "", "unknown") else "")))),
             # the simulated LIFE (calendar + activity rhythm) is this persona's signature — surface it
             # right after the snapshot, before the analysis voices.
             cal_section, activity,

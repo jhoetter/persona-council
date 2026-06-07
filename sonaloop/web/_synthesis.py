@@ -300,10 +300,11 @@ def _persona_voices_html(store: Store, pid: str) -> str:
         for st in (c.get("statements") or []):
             if st.get("persona_id") != pid:
                 continue
-            st = dict(st)
-            st["refs"] = list(st.get("refs") or []) + [
-                _A.ref("council", id=c["id"], anchor=st.get("id"), role="said_in", quote=c.get("prompt", ""))]
-            cards.append(render_statement(st, store))
+            # On the persona's OWN page the identity is implied — drop the repeated avatar/name/context
+            # and lead each card with the VARYING info instead: which council it was said in.
+            src = h("a", {"class_": "turn-src", "href": f'/councils/{c["id"]}'},
+                    raw(_icon("councils")), " ", (c.get("prompt", "") or "—")[:72])
+            cards.append(render_statement(st, store, head_extra=src, show_persona=False))
     if not cards:
         return ""
     return h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices_in_analyses")),

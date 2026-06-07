@@ -96,19 +96,24 @@ def _statement_body(st: dict, store=None, backlinks=None) -> str:
              raw(_backlinks_line(st, backlinks)))
 
 
-def _persona_card(sts: list, store, *, head_extra=None, backlinks=None) -> str:
+def _persona_card(sts: list, store, *, head_extra=None, backlinks=None, show_persona=True) -> str:
     """The ONE .turn statement card — a persona's avatar + name + stance + life-context, then one or more
-    utterance bodies (a persona answering several questions merges into a single card, not repeated heads)."""
+    utterance bodies (a persona answering several questions merges into a single card, not repeated heads).
+    `show_persona=False` drops the avatar/name/life-context — used on the persona's OWN page where the
+    identity is implied and repeating it on every card is pure noise."""
     head_st = sts[0]
     pid = head_st.get("persona_id", "")
-    p = store.get_persona(pid) if pid else None
-    name = (p or {}).get("display_name") or pid or "—"
-    seg = (p or {}).get("segment") or {}
-    ctx = (head_st.get("meta") or {}).get("context") \
-        or " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
-        or ((p or {}).get("source_description") or "")[:130]
-    who = (h("a", {"href": f'/personas/{p["id"]}', "class_": "turn-who"}, _avatar(p, 26), h("b", {}, name))
-           if p else h("span", {"class_": "turn-who"}, h("b", {}, name)))
+    p = store.get_persona(pid) if (pid and show_persona) else None
+    who = ctx_html = None
+    if show_persona:
+        name = (p or {}).get("display_name") or pid or "—"
+        seg = (p or {}).get("segment") or {}
+        ctx = (head_st.get("meta") or {}).get("context") \
+            or " · ".join(x for x in [seg.get("lebensphase"), seg.get("einstellung")] if x)[:130] \
+            or ((p or {}).get("source_description") or "")[:130]
+        who = (h("a", {"href": f'/personas/{p["id"]}', "class_": "turn-who"}, _avatar(p, 26), h("b", {}, name))
+               if p else h("span", {"class_": "turn-who"}, h("b", {}, name)))
+        ctx_html = h("div", {"class_": "muted small turn-ctx"}, ctx) if ctx else None
     st_with_stance = next((s for s in sts if s.get("stance")), None)
     stance_chip = raw(render_stance(st_with_stance["stance"])) if st_with_stance else None
     gmeta = head_st.get("meta") or {}
@@ -118,16 +123,15 @@ def _persona_card(sts: list, store, *, head_extra=None, backlinks=None) -> str:
         grounded_chip = raw(_label(t("grounded_yes") if g else t("grounded_no"), "var(--green)" if g else "var(--muted)"))
     rel = head_st.get("relevance")
     rel_html = h("span", {"class_": "muted small"}, f" · {rel}") if rel else None
-    return h("div", {"class_": "turn"},
-             h("div", {"class_": "hd"}, who, " ", stance_chip, grounded_chip, head_extra, rel_html,
-               h("div", {"class_": "muted small turn-ctx"}, ctx) if ctx else None),
-             fragment(*(_statement_body(s, store, backlinks) for s in sts)))
+    head = h("div", {"class_": "hd"}, who, (" " if who else ""), stance_chip, grounded_chip, head_extra, rel_html, ctx_html)
+    return h("div", {"class_": "turn" + ("" if show_persona else " turn-bare")},
+             head, fragment(*(_statement_body(s, store, backlinks) for s in sts)))
 
 
-def render_statement(st: dict, store, *, head_extra=None) -> str:
+def render_statement(st: dict, store, *, head_extra=None, show_persona=True) -> str:
     """A single persona statement → the .turn card (used by prototype sessions). `head_extra` is an extra
-    header chip (e.g. a session's grounded badge)."""
-    return _persona_card([st], store, head_extra=head_extra)
+    header chip (e.g. a session's grounded badge); `show_persona=False` drops the persona header."""
+    return _persona_card([st], store, head_extra=head_extra, show_persona=show_persona)
 
 
 def _by_persona(items: list) -> list:

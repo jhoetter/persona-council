@@ -8,8 +8,13 @@ from __future__ import annotations
 
 import json
 
+from sonaloop_icons import icon as _picon       # direct import avoids a cycle (_components imports _palette)
 from ._i18n import t
 from ._html import h, raw
+
+# command type → the entity's icon (matches the nav + list-row icons; coloured per type via CSS)
+_PAL_ICON = {"go": "arrowRight", "project": "projects", "persona": "personas", "council": "councils",
+             "synthesis": "syntheses", "prototype": "prototype", "section": "squareGrid", "note": "panel"}
 
 
 PALETTE_CSS = r"""
@@ -25,11 +30,12 @@ PALETTE_CSS = r"""
 .cmdk-sec{font-size:var(--t-xs);color:var(--faint);font-weight:600;letter-spacing:.04em;padding:10px 10px 4px}
 .cmdk-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;text-decoration:none;color:var(--ink);cursor:pointer}
 .cmdk-item.sel{background:var(--hover)}
-.cmdk-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--muted)}
-.cmdk-dot[data-t=project]{background:#7a5ed1}.cmdk-dot[data-t=persona]{background:#3d7fc4}
-.cmdk-dot[data-t=council]{background:var(--accent)}.cmdk-dot[data-t=synthesis]{background:#9a8cff}
-.cmdk-dot[data-t=prototype]{background:#00897b}.cmdk-dot[data-t=section]{background:#3d9b6b}
-.cmdk-dot[data-t=note]{background:#b87a25}
+.cmdk-ic{flex:none;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
+.cmdk-ic svg{width:16px;height:16px}
+.cmdk-ic[data-t=project]{color:#7a5ed1}.cmdk-ic[data-t=persona]{color:#3d7fc4}
+.cmdk-ic[data-t=council]{color:var(--accent)}.cmdk-ic[data-t=synthesis]{color:#9a8cff}
+.cmdk-ic[data-t=prototype]{color:#00897b}.cmdk-ic[data-t=section]{color:#3d9b6b}
+.cmdk-ic[data-t=note]{color:#b87a25}.cmdk-ic[data-t=go]{color:var(--muted)}
 .cmdk-t{flex:1;min-width:0;font-size:var(--t-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-sub{flex:none;max-width:40%;color:var(--muted);font-size:var(--t-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-foot{display:flex;gap:18px;padding:8px 16px;border-top:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:var(--t-sm)}
@@ -47,6 +53,7 @@ def palette_markup() -> str:
         "labels": {"go": t("cmdk_jump"), "project": t("projects"), "persona": t("personas"),
                    "council": t("councils"), "synthesis": t("syntheses"),
                    "prototype": t("prototypes_h"), "section": t("sections"), "note": t("notes_h")},
+        "icons": {tp: _picon(name) for tp, name in _PAL_ICON.items()},
     })
     foot = h("div", {"class_": "cmdk-foot"},
              h("span", {}, h("kbd", {}, "↑↓"), t("cmdk_nav")),
@@ -79,7 +86,7 @@ function render(rows){
     html+='<div class="cmdk-sec">'+esc(CFG.labels[tp]||tp)+'</div>';
     g.forEach(function(r){ var i=ordered.length; ordered.push(r);
       html+='<a class="cmdk-item'+(i===0?' sel':'')+'" href="'+esc(r.url)+'" data-i="'+i+'">'
-        +'<span class="cmdk-dot" data-t="'+esc(r.type)+'"></span>'
+        +'<span class="cmdk-ic" data-t="'+esc(r.type)+'">'+(CFG.icons[r.type]||'')+'</span>'
         +'<span class="cmdk-t">'+esc(r.title)+'</span>'
         +(r.subtitle?'<span class="cmdk-sub">'+esc(r.subtitle)+'</span>':'')+'</a>'; }); });
   items=ordered; sel=0; list.scrollTop=0; list.innerHTML=html;
