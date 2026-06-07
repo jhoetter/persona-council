@@ -401,13 +401,15 @@ _mbodies = {
     _secs[2]["id"]: ("**Empfehlung: bauen — schlank.** Der Hi-fi-Test bestätigt, dass die 20-Minuten-Garantie "
         "Einsteigern die Hürde nimmt.\n\n![[fig:1]]\n\n**Kern-Spec**\n\n- **3 Gerichte + automatische "
         "Einkaufsliste** als Kern.\n- **20-Minuten-Garantie** je Gericht, sichtbar.\n- **Portionen 1–4** + "
-        "Budget-Hinweis.\n- **Kein Abo, keine App-Pflicht**.\n\n:::risk\n**Offen:** Welche drei Startgerichte "
+        "Budget-Hinweis.\n- **Kein Abo, keine App-Pflicht**.\n\n![[fig:2]]\n\n:::risk\n**Offen:** Welche drei Startgerichte "
         "treffen Budget _und_ Familie _und_ Einsteiger zugleich?\n:::"),
 }
 _mcites = {_secs[0]["id"]: [{"study_id": DEFINE, "council_id": DISC, "quote": "Gesund essen ist ein Abend-Problem, kein Wissens-Problem."}],
            _secs[1]["id"]: [{"study_id": EVAL, "council_id": EVAL, "quote": "Breit getragen, kein Gegenwind."}],
            _secs[2]["id"]: [{"study_id": DELIVER, "council_id": EVAL, "quote": "Bauen — schlank, mit den drei Council-Auflagen als Pflicht."}]}
-_mfigs = {_secs[2]["id"]: [{"kind": "prototype", "id": PROTO2, "caption": "Wochenplan-Starter v0.2 — Hi-fi mit sichtbarer 20-Minuten-Garantie"}]}
+_mfigs = {_secs[2]["id"]: [
+    {"kind": "prototype", "id": PROTO2, "caption": "Wochenplan-Starter v0.2 — Hi-fi mit sichtbarer 20-Minuten-Garantie"},
+    {"kind": "chart", "of": "effort_impact", "source_id": DELIVER, "caption": "Empfehlungen nach Aufwand · Nutzen (aus der Deliver-Synthese)"}]}
 for _s in _secs:
     S.record_meta_section(PID, _s["id"], {"markdown": _mbodies[_s["id"]], "citations": _mcites.get(_s["id"], []),
                                           "figures": _mfigs.get(_s["id"], [])}, store=st)

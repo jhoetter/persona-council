@@ -57,12 +57,24 @@ def _resolve_figure(f: dict, store) -> dict | None:
         p = store.get_persona(f["id"])
         if p and p.get("avatar", {}).get("path"):
             return {"url": "/" + p["avatar"]["path"], "caption": cap or p.get("display_name", "")}
+    if kind == "chart":
+        # the analytical 2×2 of a (convergence) synthesis, embedded inline — the payoff of unifying
+        # synthesis + report: a report shows a synthesis's structured findings (spec/unified-synthesis-report).
+        sid = f.get("source_id") or f.get("id")
+        syn = store.get_synthesis(sid) if sid else None
+        if syn and f.get("of", "effort_impact") == "effort_impact":
+            from ._components import _effort_impact
+            from .. import artifacts as _A
+            recs = _A.synthesis_recommendations(syn)
+            chart = _effort_impact(recs) if recs else ""
+            if chart:
+                return {"html": chart, "caption": cap or syn.get("title", "")}
     return None
 
 
 def _figure_html(fig: dict) -> str:
-    return h("figure", {"class_": "rp-fig"},
-             h("img", {"src": fig["url"], "alt": fig.get("caption", ""), "loading": "lazy"}),
+    inner = raw(fig["html"]) if fig.get("html") else h("img", {"src": fig["url"], "alt": fig.get("caption", ""), "loading": "lazy"})
+    return h("figure", {"class_": "rp-fig"}, inner,
              h("figcaption", {}, fig["caption"]) if fig.get("caption") else "")
 
 
