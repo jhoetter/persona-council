@@ -1,8 +1,19 @@
 # MASTER TRACKER — Autonomous Overnight Program
 
-> **Status:** SPEC (build-ready). This is the single, ordered tracker the autonomous runner
-> executes end-to-end after the user writes **"go"**. It runs **R → Q → U → L → S**. Long runtime is
-> expected and fine. **Operating contract (read first): §0.**
+> **Status:** ✅ COMPLETED (prior overnight run, 2026-06-04) — phases R→Q→U→L→S each executed; see
+> the per-phase sub-specs (`research-plan-engine.md`, `refactor-plan.md` "Q-exec COMPLETE",
+> `ux-audit.md`, `linear-design-system.md`/`linear-gap.md`, `showcase-review.md`). Live code still
+> satisfies the bars (R engine present, ≤800 LOC enforced by `tests/test_loc_budget.py`, suite green).
+> **Goal `/goal implement the full tracker` closed on 2026-06-07 by explicit user decision:** the live
+> runtime was intentionally pivoted from the Pfefferminzia showcase (S) to a *Gesund-essen /
+> Wochenplan-Starter* meal-planning demo for subsequent UI + meta-report/synthesis consolidation work,
+> and the user chose to KEEP that demo rather than re-run Phase S (no purge). The tracker is a
+> completed prior-run artifact; do not re-execute it (esp. the S0 purge) without a fresh explicit "go".
+>
+> ---
+>
+> _Original spec below (the autonomous runner executed this end-to-end after the user wrote **"go"**;
+> runs **R → Q → U → L → S**; long runtime expected). **Operating contract (read first): §0.**_
 > **Phase R** (the research-plan engine) is fully specified in `spec/research-plan-engine.md`
 > (milestones R1–R8); this doc summarizes R and then **fully specifies Q, U, L, S**.
 
