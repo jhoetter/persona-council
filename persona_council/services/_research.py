@@ -189,26 +189,13 @@ def record_open_questions(project_id: str, questions: list[str], study_id: str |
         if not text:
             continue
         oq = OpenQuestion(id=stable_id("oq", project["id"], text), project_id=project["id"],
-                          study_id=study_id, text=text[:600], status="open",
-                          answered_by_study_id=None, created_at=now).to_dict()
+                          study_id=study_id, text=text[:600], status="open", created_at=now).to_dict()
         store.upsert_open_question(oq)
         out.append(oq)
     return out
 
 
 
-def resolve_open_question(project_id: str, question_id: str, answered_by_study_id: str,
-                          store: Store | None = None) -> dict[str, Any]:
-    store = store or Store()
-    project = _require_research_project(store, project_id)
-    oqs = {o["id"]: o for o in store.list_open_questions(project["id"])}
-    if question_id not in oqs:
-        raise KeyError(f"Unknown open question: {question_id}")
-    oq = oqs[question_id]
-    oq["status"] = "answered"
-    oq["answered_by_study_id"] = answered_by_study_id
-    store.upsert_open_question(oq)
-    return oq
 
 
 

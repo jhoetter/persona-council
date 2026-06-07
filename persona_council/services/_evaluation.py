@@ -453,6 +453,3 @@ def record_completeness_critic(project_id: str, verdict: dict[str, Any], store: 
     return rec
 
 
-def list_completeness_critics(project_id: str, store: Store | None = None) -> list[dict[str, Any]]:
-    store = store or Store()
-    return list(_require_research_project(store, project_id).get("critic_reports", []))  # noqa: F821

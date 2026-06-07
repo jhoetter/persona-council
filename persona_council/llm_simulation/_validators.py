@@ -5,11 +5,7 @@ from typing import Any
 
 from ._schemas import (
     ACTIVITY_SCHEMA_KEYS,
-    COUNCIL_SELECTION_SCHEMA_KEYS,
-    COUNCIL_SYNTHESIS_SCHEMA_KEYS,
-    COUNCIL_TURN_SCHEMA_KEYS,
     DAY_PLAN_SCHEMA_KEYS,
-    PERSONA_ANSWER_SCHEMA_KEYS,
     PROFILE_SCHEMA_KEYS,
     _CRITIC_DIMENSIONS,
     _KINDS,
@@ -93,12 +89,6 @@ def validate_profile_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if not str(out["personality"].get(key, "")).strip():
             raise ValueError(f"Profile personality missing `{key}`.")
     return out
-
-
-def generate_profile_with_llm(description: str, segment_hint: str | None = None, evidence: str | None = None, language: str | None = None) -> dict[str, Any]:
-    """Legacy one-shot path. Server-side generation is disabled, so this raises;
-    use brief_persona -> (host authors) -> record_persona instead."""
-    return validate_profile_payload(_call_llm_json(build_profile_prompt(description, segment_hint, evidence, language)))
 
 
 def validate_day_plan_payload(payload: dict[str, Any], frame: dict[str, Any]) -> dict[str, Any]:
@@ -202,138 +192,6 @@ def generate_activity(frame: dict[str, Any]) -> dict[str, Any]:
     out = generate_activity_with_llm(frame)
     out["generation_mode"] = "llm"
     out["llm_error"] = None
-    return out
-
-
-def generate_persona_answer_with_llm(frame: dict[str, Any]) -> dict[str, Any]:
-    prompt = f"""Answer one question from the perspective of a synthetic customer persona.
-
-Return ONLY one JSON object with exactly these keys:
-answer: string
-referenced_moments: array of strings
-uncertainties: array of strings
-
-Rules:
-- The supplied persona_agent_context contains SOUL.md and recent lived events. Treat it as authoritative.
-- Answer as the persona, not as an analyst or vendor.
-- Do not force support, resistance, BIM, AI, automation, or any product direction unless the context supports it.
-- Ground claims in calendar moments, tools, handoffs, relationships, and open loops when available.
-- If the simulated record is thin, say what is uncertain instead of inventing confidence.
-- Avoid templates, catchphrases, and generic market-research wording.
-
-Frame:
-{json.dumps(frame, indent=2, ensure_ascii=False)}
-"""
-    out = _require_keys(_call_llm_json(prompt, timeout=180), PERSONA_ANSWER_SCHEMA_KEYS, "Persona answer")
-    out["answer"] = str(out["answer"]).strip()[:2500]
-    out["referenced_moments"] = _strings(out["referenced_moments"], 8, 220)
-    out["uncertainties"] = _strings(out["uncertainties"], 6, 220)
-    return out
-
-
-def generate_council_turn_with_llm(frame: dict[str, Any]) -> dict[str, Any]:
-    prompt = f"""Write one council debate turn from a synthetic customer persona.
-
-Return ONLY one JSON object with exactly these keys:
-content: string
-stance: string
-memory_refs: array of strings
-questions_or_pushback: array of strings
-
-Rules:
-- Use the persona_agent_context, including SOUL.md, current state, and recent events.
-- Speak as that persona in a concrete work context, not as a generic consultant.
-- React to the council prompt and previous turns without defaulting to support.
-- Disagreement, indifference, uncertainty, or changing the subject to actual work constraints are valid.
-- Do not steer toward BIM, AI, automation, or any product direction unless the prompt/context/persona supports it.
-- Avoid repeated debate boilerplate; make the turn specific to this persona's lived calendar.
-
-Frame:
-{json.dumps(frame, indent=2, ensure_ascii=False)}
-"""
-    out = _require_keys(_call_llm_json(prompt, timeout=180), COUNCIL_TURN_SCHEMA_KEYS, "Council turn")
-    out["content"] = str(out["content"]).strip()[:2500]
-    out["stance"] = str(out["stance"]).strip()[:120]
-    out["memory_refs"] = _strings(out["memory_refs"], 8, 160)
-    out["questions_or_pushback"] = _strings(out["questions_or_pushback"], 6, 220)
-    return out
-
-
-def generate_council_selection_with_llm(frame: dict[str, Any]) -> dict[str, Any]:
-    prompt = f"""Select personas for a synthetic customer council.
-
-Return ONLY one JSON object with exactly these keys:
-persona_ids: array of strings
-reasoning: string
-
-Rules:
-- Select from candidate_personas only. Never invent IDs.
-- Choose personas whose lived contexts can produce useful, honest disagreement or contrast.
-- Do not select personas because the app/repository name suggests a topic.
-- Do not bias toward BIM, AI, automation, or product-friendly views unless the prompt and persona evidence support that.
-- If the candidate set is small, return fewer personas rather than inventing diversity.
-- Reasoning should explain why this set is useful without claiming guaranteed support.
-
-Frame:
-{json.dumps(frame, indent=2, ensure_ascii=False)}
-"""
-    out = _require_keys(_call_llm_json(prompt, timeout=180), COUNCIL_SELECTION_SCHEMA_KEYS, "Council selection")
-    valid_ids = {str(item["persona_id"]) for item in frame["candidate_personas"]}
-    selected: list[str] = []
-    for persona_id in _strings(out["persona_ids"], int(frame["count"]), 120):
-        if persona_id in valid_ids and persona_id not in selected:
-            selected.append(persona_id)
-    if not selected and frame["candidate_personas"]:
-        raise ValueError("Council selection did not return any valid candidate persona IDs.")
-    out["persona_ids"] = selected
-    out["reasoning"] = str(out["reasoning"]).strip()[:1000]
-    return out
-
-
-def generate_council_synthesis_with_llm(frame: dict[str, Any]) -> dict[str, Any]:
-    prompt = f"""Synthesize a council session among synthetic customer personas.
-
-Return ONLY one JSON object with exactly these keys:
-proposal: string
-votes: array of objects with keys persona_id, speaker, vote, reason
-summary: string
-exec_summary: string (rich Markdown — the readable debrief shown in the UI)
-
-Rules:
-- Use only the supplied prompt, turns, persona contexts, and optional external context.
-- Valid votes are SUPPORT, MAYBE, ABSTAIN, OPPOSE.
-- Do not invent consensus. Preserve disagreement and uncertainty.
-- Do not create vendor-friendly conclusions unless the personas' lived context supports them.
-- Keep reasons grounded in concrete work constraints and simulated calendar evidence.
-- `exec_summary` is the value the reader keeps: Markdown with a short verdict, the
-  spectrum (who is for/skeptical/against and WHY), the cross-cutting conditions
-  almost everyone shares, the sharpest tensions, and a one-line bottom line. Use
-  ## headings, bullet lists, **bold**, and short verbatim quotes from the turns.
-
-Frame:
-{json.dumps(frame, indent=2, ensure_ascii=False)}
-"""
-    out = _require_keys(_call_llm_json(prompt, timeout=180), COUNCIL_SYNTHESIS_SCHEMA_KEYS, "Council synthesis")
-    out["proposal"] = str(out["proposal"]).strip()[:1800]
-    out["summary"] = str(out["summary"]).strip()[:1800]
-    out["exec_summary"] = str(out.get("exec_summary", "")).strip()[:8000]
-    votes = []
-    valid_votes = {"SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"}
-    for item in out["votes"]:
-        if not isinstance(item, dict):
-            continue
-        vote = str(item.get("vote", "")).strip().upper()
-        if vote not in valid_votes:
-            vote = "ABSTAIN"
-        votes.append(
-            {
-                "persona_id": str(item.get("persona_id", "")).strip()[:120],
-                "speaker": str(item.get("speaker", "")).strip()[:120],
-                "vote": vote,
-                "reason": str(item.get("reason", "")).strip()[:600],
-            }
-        )
-    out["votes"] = votes
     return out
 
 

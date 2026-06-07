@@ -40,30 +40,6 @@ DAY_PLAN_SCHEMA_KEYS = {
     "blocks": list,
 }
 
-PERSONA_ANSWER_SCHEMA_KEYS = {
-    "answer": str,
-    "referenced_moments": list,
-    "uncertainties": list,
-}
-
-COUNCIL_TURN_SCHEMA_KEYS = {
-    "content": str,
-    "stance": str,
-    "memory_refs": list,
-    "questions_or_pushback": list,
-}
-
-COUNCIL_SYNTHESIS_SCHEMA_KEYS = {
-    "proposal": str,
-    "votes": list,
-    "summary": str,
-}
-
-COUNCIL_SELECTION_SCHEMA_KEYS = {
-    "persona_ids": list,
-    "reasoning": str,
-}
-
 
 def _json_from_text(text: str) -> dict[str, Any]:
     stripped = text.strip()

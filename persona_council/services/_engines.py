@@ -164,8 +164,6 @@ def assess_progress(project_id, task_id, rationale, evidence_refs, delta="",
 
 
 
-def plan_coverage(project_id, store: Store | None = None) -> dict[str, Any]:
-    return _plan.coverage_hint(project_id, store=store)
 
 
 def assess_project(project_id, store: Store | None = None) -> dict[str, Any]:

@@ -152,11 +152,6 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
 
 
 
-def select_council(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
-    raise NotImplementedError(
-        "Council selection is host-authored: brief_council(prompt) returns candidates; "
-        "you pick. See the run-council skill."
-    )
 
 
 

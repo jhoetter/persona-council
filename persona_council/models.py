@@ -272,7 +272,6 @@ class OpenQuestion:
     study_id: str | None
     text: str
     status: str                 # open|being_studied|answered|dropped
-    answered_by_study_id: str | None
     created_at: str
 
     def to_dict(self) -> Json:

@@ -217,9 +217,6 @@ def record_memory_deltas(persona_id: str, date_value: str, deltas: dict[str, Any
 
 
 
-def consolidate_day(persona_id: str, date_value: str, deltas: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
-    """Convenience: record host-authored deltas for a day (alias of record_memory_deltas)."""
-    return record_memory_deltas(persona_id, date_value, deltas, store)
 
 
 # ---- Planning (Phase A, multi-resolution §4A) ----------------------------
