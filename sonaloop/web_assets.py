@@ -163,12 +163,13 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ol-ptag{flex-shrink:0;width:74px;font-size:var(--t-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
 .ol-flat{padding-top:4px}
 .olrow.ol-tw{position:relative}
-/* ::before = the elbow into this child (vertical from above, curving into the node). */
-.olrow.ol-tw::before{content:"";position:absolute;left:26px;top:-3px;bottom:50%;width:9px;border-left:1.6px solid var(--line-2);border-bottom:1.6px solid var(--line-2);border-bottom-left-radius:6px}
-/* ::after = spine continuation: a non-last child carries the vertical line down to the next sibling,
-   so two prototypes under one concept read as one connected branch (not detached elbows). */
-.olrow.ol-tw:not(.ol-last)::after{content:"";position:absolute;left:26px;top:50%;bottom:-3px;border-left:1.6px solid var(--line-2)}
-.olrow.ol-tw:hover::before,.olrow.ol-tw:not(.ol-last):hover::after{border-color:var(--accent)}
+/* Continuous tree spine: ::before is ONE straight vertical (full height for a middle child so it joins
+   the next sibling; stops at center for the last child). ::after is the rounded elbow into the node.
+   Splitting spine (straight) from elbow (curved) avoids the notch where a curved segment meets a
+   straight one. Uniform colour (no hover recolour) so the spine never reads as two-tone. */
+.olrow.ol-tw::before{content:"";position:absolute;left:26px;top:-3px;bottom:-3px;border-left:1.6px solid var(--line-2)}
+.olrow.ol-tw.ol-last::before{bottom:auto;height:calc(50% + 3px)}
+.olrow.ol-tw::after{content:"";position:absolute;left:26px;top:calc(50% - 6px);width:9px;height:6px;border-left:1.6px solid var(--line-2);border-bottom:1.6px solid var(--line-2);border-bottom-left-radius:6px}
 /* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
 .outline .olrow.rel{background:var(--accent-weak)}
