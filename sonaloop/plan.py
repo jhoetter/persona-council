@@ -720,15 +720,20 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
         }
     else:  # verify
         fan = _fan_evidence(plan, t)
+        short = len(fan) < _eff_min(t)        # gate not yet satisfiable → ACT first, don't try to converge
         out["verify"] = {
             "fan_evidence": fan, "gate_tag": t["requires"].get("gate_tag"),
             "needs": b.get("unmet", []),
-            "guidance": ("Consolidate the fan into a synthesis (record_synthesis — councils are "
-                         "OPTIONAL/decoupled), record the gate judgment, assess_progress, complete_task."),
+            "guidance": (
+                f"Gate not yet satisfiable ({len(fan)}/{_eff_min(t)} inputs) — do the ACT work in `act` "
+                f"first (consolidate only once the fan is complete)."
+                if short else
+                "Consolidate the fan into a synthesis (record_synthesis — councils are OPTIONAL/decoupled), "
+                "record the gate judgment, assess_progress, complete_task."),
         }
         # If the fan is still short of min_inputs, the real next move is ACT work for this diamond:
         # surface the consuming frames' questions + diverse participants so the host adds act tasks.
-        if len(fan) < _eff_min(t):
+        if short:
             questions: list[str] = []
             for c in t["consumes"]:
                 f = task(plan, c)
