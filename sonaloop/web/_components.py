@@ -14,6 +14,10 @@ from ..web_assets import CSS, HEAD_JS, _RGRAPH_JS  # noqa: F401  (extracted asse
 from ._i18n import t, _lang
 from ._html import h, raw, fragment, register_css, collect_css  # noqa: F401  (component-SSR foundation)
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
+from ._ext import (  # noqa: F401  (extension seams; public surface re-exported by web/__init__)
+    register_nav_section, register_nav_item, resolve_label, nav_model,
+    render_slot, theme_override_css,
+)
 
 
 def _esc(value: object) -> str:
@@ -326,30 +330,27 @@ DRAWER_JS = """
 """
 
 
+from . import _nav_seed  # noqa: F401,E402  (seeds the core sidebar via the public nav registry)
+
+
 def _nav(active: str, store: Store) -> str:
-    # Workspace = the inputs/containers; Research = the methodology-agnostic primitives any
-    # methodology produces (council/concept/prototype/synthesis). (href, active-key, icon, label).
-    work = [("/projects", "projects", "projects", t("projects")),
-            ("/personas", "personas", "personas", t("personas")),
-            ("/documentation", "docs", "overview", t("documentation"))]
-    research = [("/notes", "note", "panel", t("notes")),
-                ("/councils", "councils", "councils", t("councils")),
-                ("/prototypes", "prototype", "prototype", t("prototypes_h")),
-                ("/syntheses", "syntheses", "syntheses", t("syntheses")),
-                ("/meta-reports", "meta", "report", t("meta_reports"))]
     # .pi-hover makes the row the animation trigger — the icon plays its micro-interaction on row hover.
     render = lambda items: fragment(*(
-        h("a", {"href": href, "class_": "pi-hover active" if k == active else "pi-hover"},
-          raw(_icon(ic, animate=True)), h("span", {}, lbl))
-        for href, k, ic, lbl in items))
+        h("a", {"href": it["href"], "class_": "pi-hover active" if it["key"] == active else "pi-hover"},
+          raw(_icon(it["icon"], animate=True)), h("span", {}, resolve_label(it["label"])))
+        for it in items))
+    blocks: list = []
+    for sec, items in nav_model():
+        head = resolve_label(sec["label"])
+        if head:
+            blocks.append(h("div", {"class_": "navhead"}, head))
+        blocks.append(h("nav", {"class_": "nav"}, render(items)))
     # Favorites are stored client-side (localStorage); the section is filled AND shown/hidden by JS
     # (renderStars) — it only appears once something is starred, so an empty sidebar stays clean.
-    favs = h("div", {"id": "favsec", "hidden": True},
-             h("div", {"class_": "navhead"}, t("favorites")),
-             h("div", {"class_": "sb-quick", "id": "favs"}))
-    return fragment(h("nav", {"class_": "nav"}, render(work)),
-                    h("div", {"class_": "navhead"}, t("library_h")),
-                    h("nav", {"class_": "nav"}, render(research)), favs)
+    blocks.append(h("div", {"id": "favsec", "hidden": True},
+                    h("div", {"class_": "navhead"}, t("favorites")),
+                    h("div", {"class_": "sb-quick", "id": "favs"})))
+    return fragment(*blocks)
 
 
 def _user_menu() -> str:
@@ -403,11 +404,11 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 <title>{_esc(title)} · Sonaloop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-{HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style></head>
+{HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
 <body><div class="app" id="app">
   <aside class="sidebar">
     <div class="brand"><span class="mark">{_icon("sonaloop")}</span><a href="/">Sonaloop</a></div>
-    <div class="sb-scroll">{_nav(active, store)}</div>
+    <div class="sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
     {_user_menu()}
   </aside>
   <div class="resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
@@ -416,7 +417,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
       {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{app_js}{SPA_JS}{DRAWER_JS}</body></html>"""
+</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
 
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.

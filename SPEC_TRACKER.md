@@ -287,6 +287,38 @@ Initial views:
 Frontend should stay utilitarian: dense, readable, and built for scanning. Avoid
 marketing-style layout; this is an operating tool.
 
+## Extension Seams (downstream packages)
+
+The public core is consumed by two PRIVATE packages — `sonaloop-cloud` (SaaS
+control-plane: auth/billing/multi-tenancy + pro pages) and `sonaloop-research`
+(done-for-you study service). They build on the core WITHOUT it ever importing
+them. The seams live in `sonaloop/web/_ext.py` and are re-exported from
+`sonaloop.web`. With zero extensions installed the core renders bit-identically —
+every seam is a no-op when unused (guarded by tests).
+
+Four seams:
+
+1. **Routes** — `entry_points(group="sonaloop.web.extensions")`; each entry resolves
+   to a callable run as `setup(app)` in `create_app()` after the core routes
+   (`load_extensions(app)`). A failing extension is logged and skipped, never
+   breaking core boot.
+2. **Nav** — `register_nav_section()` / `register_nav_item()`; the sidebar iterates
+   the registry. The core seeds its OWN sidebar through the same API
+   (`web/_nav_seed.py`) — no privileged path. Labels are `str | Callable[[], str]`
+   (use a lambda for per-request i18n). Sections/items ordered by `order`.
+3. **Slots** — `register_slot(name, fn)`; `_layout()` renders named insertion points
+   (`head_extra`, `sidebar_extra`, `body_end`). `fn(store) -> HTML`.
+4. **Theme** — `set_theme_overrides(mapping)` / `reset_theme_overrides(token)`: a
+   per-request contextvar (mirrors the i18n `_UI_LANG` pattern). `_layout()` injects
+   a SANITIZED `:root` override of CSS custom properties, so a tenant/project can
+   carry its own design-system colors. Pure SSR — nothing leaks into JS or `data-*`.
+   Keys must match `--[a-z0-9-]+`, values a safe color/token subset; off-shape
+   declarations are dropped.
+
+Design decision (locked): NO Jinja2 migration. The single `_layout()` string-builder
+already is the one shell-assembly point Jinja would provide; the seams above give
+downstream packages everything they need without rewriting the render layer.
+
 ## Terminal and Cron UX
 
 Target commands:

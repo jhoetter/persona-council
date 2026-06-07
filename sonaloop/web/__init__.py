@@ -27,6 +27,10 @@ from .pages import (  # noqa: F401  (public surface preserved; routes split into
     _event_chip, _period_calendar_html, _memory_html,
 )
 from ._routes_api import register_api  # noqa: F401
+from ._ext import (  # noqa: F401  (public extension surface for sonaloop-cloud / sonaloop-research)
+    register_nav_section, register_nav_item, register_slot,
+    set_theme_overrides, reset_theme_overrides, load_extensions,
+)
 from ._routes_lists import register_lists  # noqa: F401
 
 
@@ -41,7 +45,9 @@ def create_app():
 
     DATA_DIR.mkdir(exist_ok=True)
     app = FastAPI(title="Sonaloop")
-    app.mount("/data", StaticFiles(directory="data"), name="data")
+    # Absolute path (not cwd-relative "data"): downstream apps (sonaloop-cloud/-research)
+    # call create_app() from their own working directory, so the mount must not depend on cwd.
+    app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")
     # Serve prototype apps so they can be viewed directly in the inspector (read-only).
     from ..config import prototypes_dir as _proto_dir
     _pd = _proto_dir()
@@ -67,6 +73,9 @@ def create_app():
     register_pages(app)
     register_lists(app)
     register_api(app)
+    # Discover installed web extensions (sonaloop-cloud / sonaloop-research). No-op when
+    # none are installed, so the public core stays fully runnable on its own.
+    load_extensions(app)
     return app
 
 
