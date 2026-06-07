@@ -267,4 +267,29 @@ for task, ref in [("act__discover", {"kind": "council", "id": DISC}),
                   ("act__build", {"kind": "artifact", "id": PROTO2}),
                   ("verify__deliver", {"kind": "synthesis", "id": DELIVER})]:
     S.link_evidence(PID, task, ref, store=st)
+
+# ---- complete the plan: this project ran end-to-end (Discover → Deliver), so the plan view
+#      reflects that (frames discharged, act tasks done, verify gates judged) ----
+def _try(label, fn, *a, **k):
+    try:
+        fn(*a, **k); print("  ✓", label)
+    except Exception as e:
+        print("  skip", label, "→", e)
+
+_try("frame discover", S.record_frame, PID, "frame__discover",
+     ["Wie essen Menschen im stressigen Alltag — und was haelt sie ab?"], memory_refs=["discovery-interviews"], store=st)
+_try("act discover", S.complete_task, PID, "act__discover", store=st)
+_try("judge define", S.record_judgment, PID, "verify__define", "divergence_complete", True,
+     "Ein klares Muster ueber alle vier: der Abend ist der Engpass.", evidence_refs=[DISC, DEFINE], store=st)
+_try("verify define", S.complete_task, PID, "verify__define", store=st)
+_try("frame develop", S.record_frame, PID, "frame__develop",
+     ["Traegt der Wochenplan-Starter den echten Engpass — bleibt er alltagstauglich?"], memory_refs=["define-pov"], store=st)
+_try("act eval", S.complete_task, PID, "act__eval", store=st)
+_try("act build", S.complete_task, PID, "act__build", store=st)
+_try("judge deliver", S.record_judgment, PID, "verify__deliver", "divergence_complete", True,
+     "Hi-fi bestaetigt: die 20-Minuten-Garantie nimmt die Huerde; die Spec steht.", evidence_refs=[EVAL, DELIVER], store=st)
+_try("verify deliver", S.complete_task, PID, "verify__deliver", store=st)
+
+_pl = S.get_plan(PID, store=st)
+print("plan:", sum(1 for t in _pl["tasks"] if t["status"] == "done"), "/", len(_pl["tasks"]), "done")
 print("DONE — demo project:", PID)

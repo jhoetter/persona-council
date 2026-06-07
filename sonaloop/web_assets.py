@@ -133,6 +133,32 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .olrow .ol-ts{color:var(--faint);font-size:var(--t-xs);flex-shrink:0;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
 .ol-gl.ol-round{color:var(--muted)}
 .ol-cnt{font-size:var(--t-xs);color:var(--faint);font-weight:600;background:var(--panel-2);border-radius:10px;padding:1px 7px;margin-left:2px}
+/* Plan drawer (project plan view) — a tight, progress-led checklist */
+.plan-hd{margin-bottom:6px}
+.plan-goal{font-weight:600;font-size:var(--t-prose);line-height:1.5;color:var(--ink)}
+.plan-prog-row{display:flex;align-items:center;gap:12px;margin-top:14px}
+.plan-prog{flex:1;max-width:240px;height:6px;border-radius:99px;background:var(--hover);overflow:hidden}
+.plan-prog>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .4s var(--ease)}
+.plan-prog.full>i{background:var(--green)}
+.plan-prog-txt{font-size:var(--t-sm);color:var(--muted);font-variant-numeric:tabular-nums}
+.plan-sub{display:flex;align-items:center;gap:8px;margin-top:12px}
+.plan-sub>span:last-child{font-size:var(--t-sm);color:var(--faint)}
+.psec{margin-top:26px}
+.psec-h{display:flex;align-items:center;justify-content:space-between;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:0 2px 2px}
+.psec-n{color:var(--faint);font-weight:550;font-variant-numeric:tabular-nums}
+.psec-list{border-top:1px solid var(--line)}
+.ptask{display:flex;gap:11px;padding:11px 6px;border-bottom:1px solid var(--line);margin:0 -6px;border-radius:var(--radius-sm)}
+.ptask.is-last{border-bottom:0}.ptask:hover{background:var(--hover)}
+.pt-mark{flex:none;width:18px;line-height:1.35;text-align:center}
+.pt-body{flex:1;min-width:0}
+.pt-row1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pt-title{font-weight:550;font-size:var(--t-md);color:var(--ink)}
+.ptask.is-done .pt-title{color:var(--muted)}
+.pt-cap{font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);padding:1px 7px;border-radius:99px;font-weight:500;line-height:1.5}
+.pt-sub{font-size:var(--t-xs);color:var(--faint);margin-top:3px;line-height:1.5}
+.pt-evs{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.pt-evs .ev{font-size:var(--t-xs);color:var(--muted);background:var(--panel-2);border:1px solid var(--line);padding:1px 8px;border-radius:99px;text-decoration:none;white-space:nowrap}
+.pt-evs a.ev:hover{color:var(--accent);border-color:var(--accent)}
 .ol-rcap{font-size:var(--t-body);font-weight:400;color:var(--muted);margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ol-ptag{flex-shrink:0;width:74px;font-size:var(--t-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
 .ol-flat{padding-top:4px}

@@ -521,10 +521,10 @@ def _plan_html(plan: dict, store) -> str:
             return h("a", {"class_": "ev", "href": href}, label, " ↗")
         return h("span", {"class_": "ev"}, label)
 
-    def row(tk: dict) -> str:
-        mark, clr = STATUS.get(tk["status"], ("circle", "var(--muted)"))
+    def row(tk: dict, last: bool) -> str:
+        st = tk["status"]
+        mark, clr = STATUS.get(st, ("circle", "var(--faint)"))
         cons = " · ".join(by_title.get(c, c) for c in tk.get("consumes", []))
-        cons_html = h("div", {"class_": "small muted", "style": "margin-top:4px"}, f"⊂ {cons}") if cons else ""
         req = tk.get("requires", {}) or {}
         gates = []
         if req.get("min_inputs") is not None:
@@ -535,11 +535,12 @@ def _plan_html(plan: dict, store) -> str:
             gates.append(f"Session: {_pres.present(tg)['short']}")
         for tg in (req.get("artifact_tags") or []):
             gates.append(f"Artefakt: {_pres.present(tg)['short']}")
-        gates_html = [h("span", {"class_": "gate"}, x) for x in gates]
+        # one quiet sub-line: what it builds on (↳) + the gates it must clear, dot-separated
+        sub_bits = ([f"↳ {cons}"] if cons else []) + gates
+        sub_html = h("div", {"class_": "pt-sub"}, " · ".join(sub_bits)) if sub_bits else ""
         cap = tk.get("capability", "")
-        cap_html = h("span", {"class_": "pcap"}, cap) if cap else ""
-        # skip the frame self-reference (a frame task produces a ref to itself); link the rest,
-        # numbering same-kind sessions so 5 identical "session" chips become Session 1…5
+        cap_html = h("span", {"class_": "pt-cap"}, cap) if cap else ""
+        # skip the frame self-reference; link the rest, numbering same-kind sessions (Session 1…5)
         evs, _sn = [], 0
         for r in tk.get("produces", []):
             if r.get("id") == tk["id"]:
@@ -549,36 +550,38 @@ def _plan_html(plan: dict, store) -> str:
                 evs.append(ev_chip(r, _sn))
             else:
                 evs.append(ev_chip(r))
-        ev_html = h("div", {"class_": "evs"}, fragment(*evs)) if evs else ""
-        return h("div", {"class_": "ptask"}, h("div", {"class_": "pmark", "style": f"color:{clr}"}, raw(_icon(mark))),
-                 h("div", {"class_": "pbody"},
-                   h("div", {"class_": "prow1"}, h("span", {"class_": "ptitle"}, tk.get("title", tk["id"])),
-                     cap_html, fragment(*gates_html)), cons_html, ev_html))
+        ev_html = h("div", {"class_": "pt-evs"}, fragment(*evs)) if evs else ""
+        cls = "ptask" + (" is-done" if st == "done" else "") + (" is-last" if last else "")
+        return h("div", {"class_": cls},
+                 h("div", {"class_": "pt-mark", "style": f"color:{clr}"}, raw(_icon(mark))),
+                 h("div", {"class_": "pt-body"},
+                   h("div", {"class_": "pt-row1"}, h("span", {"class_": "pt-title"}, tk.get("title", tk["id"])), cap_html),
+                   sub_html, ev_html))
 
     secs = []
-    for b, label in [("analyze", "Analyze · verstehen"), ("act", "Act · Councils, Prototypen, Tests"),
-                     ("verify", "Verify · verdichten & entscheiden")]:
-        rrows = [row(tk) for tk in tasks if tk["bucket"] == b]
-        if rrows:
-            secs.append(h("div", {"class_": "psec"}, h("div", {"class_": "psec-h"}, label), fragment(*rrows)))
-    pill = (h("span", {"class_": "pill", "style": "color:var(--green)"}, raw(_icon("dot")), " Plan komplett") if complete
-            else h("span", {"class_": "pill"}, f"{len(tasks) - done} offen"))
-    head = h("div", {"class_": "card plan-head"}, h("div", {"class_": "ph-goal"}, plan.get("goal", "")),
-             h("div", {"class_": "small muted", "style": "margin-top:6px"}, "Methodik: ",
-               h("b", {}, plan.get("methodology") or "freiform"),
-               f" · {len(tasks)} Tasks · {done} erledigt ", raw("&nbsp;"), pill))
-    css = ("<style>.plan-head{margin-bottom:20px}.ph-goal{font-weight:650;font-size:var(--t-prose);line-height:1.4}"
-           ".psec{margin:0 0 24px}.psec-h{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.05em;"
-           "color:var(--muted);font-weight:600;margin:0 0 10px}"
-           ".ptask{display:flex;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius);"
-           "background:var(--panel);margin-bottom:8px}.pmark{font-weight:700;width:16px;text-align:center;flex:none}"
-           ".pbody{flex:1;min-width:0}.prow1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ptitle{font-weight:550}"
-           ".pcap{font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);padding:1px 8px;border-radius:var(--radius-sm)}"
-           ".gate{font-size:var(--t-xs);color:var(--muted);background:var(--hover);padding:1px 8px;border-radius:var(--radius-sm)}"
-           ".evs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ev{font-size:var(--t-xs);color:var(--muted);"
-           "background:var(--panel-2);border:1px solid var(--line);padding:2px 8px;border-radius:6px;text-decoration:none}"
-           "a.ev:hover{color:var(--accent);border-color:var(--accent)}</style>")
-    return raw(css) + h("div", {"class_": "page"}, head, fragment(*secs))
+    for b, label in [("analyze", "Analyze"), ("act", "Act"), ("verify", "Verify")]:
+        bt = [tk for tk in tasks if tk["bucket"] == b]
+        if not bt:
+            continue
+        bdone = sum(1 for tk in bt if tk["status"] == "done")
+        rrows = [row(tk, i == len(bt) - 1) for i, tk in enumerate(bt)]
+        secs.append(h("div", {"class_": "psec"},
+                      h("div", {"class_": "psec-h"}, h("span", {}, label),
+                        h("span", {"class_": "psec-n"}, f"{bdone}/{len(bt)}")),
+                      h("div", {"class_": "psec-list"}, fragment(*rrows))))
+
+    pct = round(100 * done / len(tasks)) if tasks else 0
+    status_txt = ("Plan komplett" if complete else f"{done} von {len(tasks)} erledigt")
+    head = h("div", {"class_": "plan-hd"},
+             h("div", {"class_": "plan-goal"}, plan.get("goal", "")),
+             h("div", {"class_": "plan-prog-row"},
+               h("div", {"class_": "plan-prog" + (" full" if complete else "")},
+                 h("i", {"style": f"width:{pct}%"})),
+               h("span", {"class_": "plan-prog-txt"}, status_txt)),
+             h("div", {"class_": "plan-sub"}, h("span", {"class_": "pt-cap"}, plan.get("methodology") or "freiform"),
+               h("span", {}, f"{len(tasks)} Tasks")))
+    # styles live in web_assets.py (.plan-*/.psec*/.ptask/.pt-*) — applied in the layout + the drawer
+    return h("div", {"class_": "page"}, head, fragment(*secs))
 
 
 def _outline_html(graph: dict) -> str:
