@@ -34,8 +34,11 @@ sonaloop setup                # optional: headless browser for prototype screens
 sonaloop info                 # show data dir, DB path, browser availability
 ```
 
-Then point your host agent at the operating rules in [AGENTS.md](AGENTS.md) and let
-it create personas, simulate, run councils, and synthesize.
+Works in **any MCP host** (Claude, Cursor, ChatGPT, …): the server ships its operating
+contract as MCP `instructions` and the workflows as MCP **prompts** (`run_council`,
+`synthesize`, `design_thinking`, `compose_research_plan`) — provider-agnostic, no per-host
+setup. Claude Code additionally gets the `claude-skills/` adapter (auto-trigger + sub-agent
+fan-out). Full operating rules: [AGENTS.md](AGENTS.md).
 
 ## The model in one minute
 

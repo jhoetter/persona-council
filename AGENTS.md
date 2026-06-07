@@ -182,11 +182,22 @@ Every tool returns an envelope `{ok, data, next_recommended_tool, _meta}`; the
 `next_recommended_tool` hints the decision DAG (simulate → consolidate → digest;
 council → synthesis). Full surface + conventions: `spec/mcp-tool-contract.md`.
 
-## Skills (Claude Code)
+## Playbooks — two layers
 
-Run `make skills` once (symlinks `claude-skills/*` into gitignored
-`.claude/skills/`). Skills are thin orchestration playbooks; the methodology
-lives in `spec/`.
+The workflows ship in two forms, so Sonaloop works across every MCP host:
+
+1. **Provider-agnostic (the MCP server itself).** Any host (Claude, Cursor, ChatGPT, …) gets:
+   - **Server `instructions`** in the `initialize` response — the operating contract above, auto-injected.
+   - **MCP prompts** — `run_council`, `synthesize`, `design_thinking`, `compose_research_plan`,
+     `simulate_persona_day` — ready playbooks any client can list + run. They describe a SEQUENTIAL
+     single-agent core; parallel sub-agent fan-out is an optional acceleration. Defined in
+     `sonaloop/mcp_server/_prompts.py`.
+   - The `sonaloop://guide/catalogue` resource — a by-domain index of every tool.
+
+2. **Claude Code skills (an adapter on top).** Run `make skills` once (symlinks `claude-skills/*` into
+   gitignored `.claude/skills/`). These add Claude-specific auto-triggering + sub-agent fan-out over the
+   same workflows. Thin orchestration playbooks; the methodology lives in `spec/`. A non-Claude host
+   simply follows the MCP prompts + instructions instead.
 
 - `methodology-run` — drive a plan-based methodology constellation (Double Diamond, d.school
   micro-cycle, Lean/JTBD, … or any you author) over the graph via the analyze→act→verify plan loop:

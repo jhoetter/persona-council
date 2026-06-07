@@ -20,8 +20,11 @@ from ._tools_sections import register_sections
 
 def build_server():
     from mcp.server.fastmcp import FastMCP
+    from ._prompts import SERVER_INSTRUCTIONS, register_prompts
 
-    mcp = FastMCP("sonaloop")
+    # `instructions` rides the initialize response so EVERY host (Claude, Cursor, ChatGPT, …) gets the
+    # operating contract — the provider-agnostic counterpart to the Claude-only claude-skills/.
+    mcp = FastMCP("sonaloop", instructions=SERVER_INSTRUCTIONS)
 
     register_personas(mcp)
     register_simulation(mcp)
@@ -32,6 +35,7 @@ def build_server():
     register_prototypes(mcp)
     register_council(mcp)
     register_sections(mcp)
+    register_prompts(mcp)
 
     from ._catalogue import catalogue_md
 
