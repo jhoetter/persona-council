@@ -145,7 +145,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "calendar": "Kalender", "no_days_yet": "Noch keine Tage.",
         "properties": "Eigenschaften", "role": "Rolle", "industry": "Branche",
         "size": "Größe", "tools": "Tools", "memory": "Memory", "open": "öffnen",
-        "n_projects": "{n} Projekte", "n_projects_one": "{n} Projekt", "n_nodes_one": "{n} Knoten", "n_open": "{n} offen",
+        "n_projects": "{n} Projekte", "n_projects_one": "{n} Projekt", "n_nodes_one": "{n} Knoten", "n_sections_one": "{n} Abschnitt", "n_open": "{n} offen",
         # activity detail
         "what_happened": "Was geschah", "thought": "Gedanke",
         "conversation": "Konversation", "none_f": "Keine.",
@@ -289,7 +289,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "calendar": "Calendar", "no_days_yet": "No days yet.",
         "properties": "Properties", "role": "Role", "industry": "Industry",
         "size": "Size", "tools": "Tools", "memory": "Memory", "open": "open",
-        "n_projects": "{n} projects", "n_projects_one": "{n} project", "n_nodes_one": "{n} node", "n_open": "{n} open",
+        "n_projects": "{n} projects", "n_projects_one": "{n} project", "n_nodes_one": "{n} node", "n_sections_one": "{n} section", "n_open": "{n} open",
         # activity detail
         "what_happened": "What happened", "thought": "Thought",
         "conversation": "Conversation", "none_f": "None.",
