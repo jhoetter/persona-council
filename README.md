@@ -102,7 +102,7 @@ Sonaloop publishes a normal Python package — use it as an MCP server without c
 
 ```bash
 # one-off, no install (recommended for MCP clients):
-uvx sonaloop-mcp
+uvx --from sonaloop sonaloop-mcp
 
 # or install the CLI + MCP + web entrypoints:
 pip install sonaloop      # or: uv tool install sonaloop
@@ -244,7 +244,7 @@ Installed from PyPI (no checkout needed):
   "mcpServers": {
     "sonaloop": {
       "command": "uvx",
-      "args": ["sonaloop-mcp"]
+      "args": ["--from", "sonaloop", "sonaloop-mcp"]
     }
   }
 }
