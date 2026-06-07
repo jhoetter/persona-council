@@ -142,8 +142,9 @@ def render_meta_report(report: dict, store) -> str:
     sections = report.get("sections", [])
     n_studies = len({x for sec in sections for x in sec.get("source_study_ids", [])})
     meta_line = " · ".join([
-        f"{len(sections)} " + ("Abschnitte" if de else "sections"),
-        f"{n_studies} " + ("Studien" if de else "studies"),
+        t("n_sections", n=len(sections)),
+        f"{n_studies} " + (("Studie" if n_studies == 1 else "Studien") if de
+                           else ("study" if n_studies == 1 else "studies")),
         (report.get("created_at") or "")[:10],
     ])
 
