@@ -33,7 +33,10 @@ def database_path() -> Path:
 def utc_now_iso() -> str:
     from datetime import datetime, timezone
 
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    # Microsecond precision: rapid back-to-back creates (e.g. seeding a whole project in one process)
+    # get DISTINCT, monotonically increasing timestamps, so created_at ordering is correct without
+    # relying on tie-breaks. fromisoformat / [:10] / [:19] slices still parse it.
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 # --- Memory & simulation settings (spec/memory-and-simulation-architecture.md) ---
