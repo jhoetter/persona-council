@@ -637,12 +637,14 @@ def _outline_html(graph: dict) -> str:
 
     items: list[dict] = []
 
-    def add(oid, color, title, kind, href, pk, r, order, ts, indent=0):
+    def add(oid, color, title, kind, href, pk, r, order, ts, indent=0, last_child=False):
         # `order` = the SORT key (a built note's prototype borrows the note's slot via a '#seq' suffix so it
-        # nests right under it); `ts` = the row's OWN created_at, shown to the reader.
+        # nests right under it); `ts` = the row's OWN created_at, shown to the reader. `last_child` ends the
+        # tree spine (the connector continues down through earlier siblings, stops at the last).
         po, plabel = pmeta.get(pk, (99, ""))
         items.append({"oid": oid, "color": color or "#9aa0a6", "title": title, "kind": kind, "href": href,
-                      "plabel": plabel, "po": po, "round": r, "order": order, "ts": ts, "indent": indent})
+                      "plabel": plabel, "po": po, "round": r, "order": order, "ts": ts, "indent": indent,
+                      "last_child": last_child})
 
     for n in nodes:
         if n.get("phase", "") not in pmeta:        # councils/syntheses; notes (phase-free) added below
@@ -668,10 +670,10 @@ def _outline_html(graph: dict) -> str:
             nt.get("kind_label", ""), nt.get("href", ""), ideation if is_concept else notes_phase, cr,
             f'{nt.get("created_at", "")}#{seq:04d}', nt.get("created_at", ""))
         seq += 1
-        for p in built:
+        for i, p in enumerate(built):
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
                 f'/prototypes/{p["slug"]}', ideation, cr, f'{nt.get("created_at", "")}#{seq:04d}',
-                p.get("created_at", ""), indent=1)
+                p.get("created_at", ""), indent=1, last_child=(i == len(built) - 1))
             seq += 1
 
     # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
@@ -703,7 +705,7 @@ def _outline_html(graph: dict) -> str:
             return iso[:16].replace("T", " "), iso
 
     def row(it: dict) -> str:
-        tw = "ol-tw" if it["indent"] else ""                  # folder-style tree connector for nested rows
+        tw = ("ol-tw" + (" ol-last" if it.get("last_child") else "")) if it["indent"] else ""  # tree connector
         tis = node_themes.get(it["oid"], [])
         pills = [                                             # labelled pills (colour + name), not cryptic dots
             h("span", {"class_": "olth-pill", "title": themes[i]["title"]},

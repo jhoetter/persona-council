@@ -163,8 +163,12 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ol-ptag{flex-shrink:0;width:74px;font-size:var(--t-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
 .ol-flat{padding-top:4px}
 .olrow.ol-tw{position:relative}
+/* ::before = the elbow into this child (vertical from above, curving into the node). */
 .olrow.ol-tw::before{content:"";position:absolute;left:26px;top:-3px;bottom:50%;width:9px;border-left:1.6px solid var(--line-2);border-bottom:1.6px solid var(--line-2);border-bottom-left-radius:6px}
-.olrow.ol-tw:hover::before{border-color:var(--accent)}
+/* ::after = spine continuation: a non-last child carries the vertical line down to the next sibling,
+   so two prototypes under one concept read as one connected branch (not detached elbows). */
+.olrow.ol-tw:not(.ol-last)::after{content:"";position:absolute;left:26px;top:50%;bottom:-3px;border-left:1.6px solid var(--line-2)}
+.olrow.ol-tw:hover::before,.olrow.ol-tw:not(.ol-last):hover::after{border-color:var(--accent)}
 /* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
 .outline .olrow.rel{background:var(--accent-weak)}
