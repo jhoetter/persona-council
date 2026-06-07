@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from persona_council import presentation as P
-from persona_council import services as S
-from persona_council import web
+from sonaloop import presentation as P
+from sonaloop import services as S
+from sonaloop import web
 
 
 def test_note_nodes_are_first_class_in_the_graph(store):

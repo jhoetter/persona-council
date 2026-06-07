@@ -15,7 +15,7 @@
 - **Lean loop**: as orchestrator it loaded the loop tools, called `assess_project` (→ `frame`), then
   `next_action` (→ `frame__discover` fully loaded), then dispatched **one subagent** to author the
   Discover frame returning ids only. ✓ Lean context per step is happening.
-- **MCP path**: after adding `.mcp.json`, the `mcp__persona-council__*` tools are connected and used. ✓
+- **MCP path**: after adding `.mcp.json`, the `mcp__sonaloop__*` tools are connected and used. ✓
 
 ## Issues found → fixes
 

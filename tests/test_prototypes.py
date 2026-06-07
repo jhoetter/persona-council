@@ -4,7 +4,7 @@ from __future__ import annotations
 import time
 import urllib.request
 
-from persona_council import prototypes
+from sonaloop import prototypes
 
 
 _CONCEPT = {

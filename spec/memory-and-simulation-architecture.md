@@ -1,4 +1,4 @@
-# Persona Council — Memory & Simulation Architecture
+# Sonaloop — Memory & Simulation Architecture
 
 > **Status:** Proposal / living tracker. Started 2026-06-02.
 > **Scope:** Wie Personas ein über Zeit wachsendes, abrufbares Gedächtnis
@@ -43,7 +43,7 @@ vier harte Grenzen:
    für SQLite vs. Graph; er ruft `recall_memory(...)`. Die Technik dahinter darf
    sich ändern, ohne dass Prompts brechen.
 2. **Context-Gatherer + Author-Split** (bim-agents Kernmuster — und schon heute
-   das Modell von Persona Council): Ein MCP-Tool **sammelt Kontext** und
+   das Modell von Sonaloop): Ein MCP-Tool **sammelt Kontext** und
    **schreibt strukturiertes Ergebnis zurück**; das **Verfassen/Urteilen macht
    der Harness-LLM** (Claude Code / Codex), kein serverseitiger Text-API-Call.
 3. **Erst grob, dann Detail** (bim-database): Kompaktheits-Hierarchie
@@ -278,7 +278,7 @@ nur „letzte Events" zu sehen.
 `attach_evidence`, `export_persona`, `export_logs`, `export_council_session`.
 
 ### 5.9 MCP Resources / Prompts  ← NEU (wie bim-database)
-- Resource `persona-council://schema/memory` — Schema der Memory-Objekte.
+- Resource `sonaloop://schema/memory` — Schema der Memory-Objekte.
 - Prompt `simulate-persona-day(persona, date)` — Adapter-Playbook, das den Loop
   A→D als Anleitung an den Harness gibt.
 

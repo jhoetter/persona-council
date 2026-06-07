@@ -26,7 +26,7 @@ require Markdown body prose and forbid ALL-CAPS-for-emphasis / literal headers. 
 
 ## 2. The authoring contract (one shared rule)
 
-A single constant — `persona_council/services/_authoring.MARKDOWN_CONTRACT` — appended to the
+A single constant — `sonaloop/services/_authoring.MARKDOWN_CONTRACT` — appended to the
 `instructions` of every prose-authoring brief, and stated in the skills:
 
 > **Author body prose as GitHub-flavored Markdown.** Use `**bold**` / `_italic_` for emphasis, `-` or

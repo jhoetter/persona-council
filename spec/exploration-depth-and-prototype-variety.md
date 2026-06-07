@@ -18,7 +18,7 @@
   gewinnen, sich für eine Lebensversicherung zu begeistern?*
 - Methodology: `double_diamond_deep` (8 tasks: discover→define→ideate(lofi)→lofi_select→refine(midfi)
   →deliver→build(hifi)→decide(hifi)). Cohort: the 18 retained personas.
-- Worker transcript: `~/.claude/projects/-home-jhoetter-repos-persona-council/464fe359-…jsonl`.
+- Worker transcript: `~/.claude/projects/-home-jhoetter-repos-sonaloop/464fe359-…jsonl`.
 
 ## Quality rubric (what "good" vs "disappointing" looks like)
 1. **Exploration depth, not premature convergence.** Discover genuinely diverges across segments &

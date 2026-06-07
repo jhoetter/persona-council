@@ -1,6 +1,6 @@
 ---
 name: simulate-cohort
-description: Drive Persona Council's full simulation loop for one or more personas over a span of months, with memory, sampling, and quality gates. Use when asked to simulate/continue a cohort over time (e.g. "simulate Q4 for all personas", "run 3 more months for Carla").
+description: Drive Sonaloop's full simulation loop for one or more personas over a span of months, with memory, sampling, and quality gates. Use when asked to simulate/continue a cohort over time (e.g. "simulate Q4 for all personas", "run 3 more months for Carla").
 ---
 
 # simulate-cohort
@@ -9,8 +9,8 @@ Model-neutral driver for the agentic loop in
 `spec/memory-and-simulation-architecture.md`.
 The life-simulation is HOST-AUTHORED: there is NO in-process simulation engine —
 YOU (the MCP host) author every day/month; the server only gathers context,
-persists, and gates. Tools are MCP (`mcp__persona-council__*`) or the equivalent
-CLI (`.venv/bin/persona-council …`).
+persists, and gates. Tools are MCP (`mcp__sonaloop__*`) or the equivalent
+CLI (`.venv/bin/sonaloop …`).
 
 ## Inputs
 - personas: one slug, a list, or "all" (→ `list_personas`).

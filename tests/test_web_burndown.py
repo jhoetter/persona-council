@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from persona_council import web
+from sonaloop import web
 
 # Remaining legacy-HTML units per file (esc + inline). LOWER as modules convert; never raise.
 #

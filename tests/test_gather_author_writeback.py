@@ -4,7 +4,7 @@ provenance + citations) → evidence check → cohort critic. No network; the ho
 authoring steps are supplied inline as JSON, exactly as an MCP host would."""
 from __future__ import annotations
 
-from persona_council import services
+from sonaloop import services
 from conftest import create_persona
 
 

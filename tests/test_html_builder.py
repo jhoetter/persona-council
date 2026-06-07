@@ -1,5 +1,5 @@
 """C1 — the auto-escaping element builder (spec/component-ssr-architecture.md)."""
-from persona_council.web._html import h, esc, raw, fragment, Safe
+from sonaloop.web._html import h, esc, raw, fragment, Safe
 
 
 def test_text_children_are_escaped():

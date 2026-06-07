@@ -2,7 +2,7 @@
 sample size. Deterministic, no network."""
 from __future__ import annotations
 
-from persona_council import services
+from sonaloop import services
 from conftest import create_persona
 
 _CLONE_KW = dict(customer_type="Solo architect", title="Owner",

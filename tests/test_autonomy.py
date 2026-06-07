@@ -4,7 +4,7 @@ lean-loop steering tools a long autonomous run calls each iteration.
 """
 from __future__ import annotations
 
-from persona_council import services as S
+from sonaloop import services as S
 
 
 def _proj(store):

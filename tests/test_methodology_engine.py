@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 
-from persona_council import methodology as M
-from persona_council import plan as PL
-from persona_council import services
+from sonaloop import methodology as M
+from sonaloop import plan as PL
+from sonaloop import services
 
 
 # --------------------------------------------------------------------------- C1: tags

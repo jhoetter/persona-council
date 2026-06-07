@@ -21,7 +21,7 @@ Methodology details: `spec/design-thinking-methodology.md`.
 research-create  "<title> · Double Diamond"  --goal "<HMW>"   # set methodology="double_diamond"
 ```
 Pick participants per phase by **relevance** (LLM-authored from candidate summaries — never
-keyword scoring). Load each via `persona-council persona-context <slug> --task "…" --text`
+keyword scoring). Load each via `sonaloop persona-context <slug> --task "…" --text`
 BEFORE authoring any turn (AGENTS.md). Anti-steering throughout.
 
 ## The loop (each phase = one Synthesis, built from council(s), then linked)

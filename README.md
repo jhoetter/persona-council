@@ -1,8 +1,8 @@
-# Persona Council
+# Sonaloop
 
 Terminal-first, MCP-accessible persona simulation and council system.
 
-Persona Council models customer profiles as persistent agents with durable
+Sonaloop models customer profiles as persistent agents with durable
 `SOUL.md` files, timestamped calendars, activity logs, inner thoughts, evidence,
 and council-style debates. The web UI is only for inspecting the current state;
 all creation, simulation, and council execution happens through CLI or MCP.
@@ -33,7 +33,7 @@ can be anything (SaaS onboarding, a hiring panel, a city council, game NPCs, …
 >
 > 1. Check whether `git` and `uv` (the Python tool from Astral) are installed; if
 >    not, install them for my operating system.
-> 2. Clone `https://github.com/jhoetter/persona-council` and `cd` into it.
+> 2. Clone `https://github.com/jhoetter/sonaloop` and `cd` into it.
 > 3. Run `uv sync`, then `cp .env.example .env`.
 > 4. Read `AGENTS.md` and `CLAUDE.md` and follow them as your operating rules.
 > 5. Run `make skills` so the persona skills are discoverable.
@@ -88,7 +88,7 @@ The gather→author→persist contract every generative step follows:
 ```mermaid
 sequenceDiagram
   participant H as Host agent
-  participant PC as Persona Council
+  participant PC as Sonaloop
   H->>PC: brief_* gather context
   PC-->>H: SOUL + memory + recall + instructions + schema
   H->>H: author JSON - text generation happens HERE
@@ -114,13 +114,13 @@ cp .env.example .env
 ```
 
 Text generation is performed by the MCP host agent, such as Claude Code or
-Codex. Persona Council does not call text LLM APIs and does not use text API
+Codex. Sonaloop does not call text LLM APIs and does not use text API
 keys; there is no deterministic simulation fallback. `OPENAI_API_KEY` is used
 only for non-text helpers: avatar image generation and embeddings for semantic
 memory recall (both optional — without the key, avatars are skipped and recall
 falls back to keyword/recency/importance only).
 
-Use `persona-council purge-runtime-data` or the MCP `purge_runtime_data` tool
+Use `sonaloop purge-runtime-data` or the MCP `purge_runtime_data` tool
 for a clean slate.
 
 ## Data layout & privacy
@@ -132,7 +132,7 @@ state, and the rest is rebuildable runtime:
 
 ```
 data/
-  persona-council.db(-wal/-shm)   runtime SQLite — source of truth at runtime   [gitignored]
+  sonaloop.db(-wal/-shm)   runtime SQLite — source of truth at runtime   [gitignored]
   personas/<slug>/SOUL.md,MEMORY.md   rendered projections (cache)               [gitignored]
   avatars/<slug>-<hash>.png           generated avatar images (cache)            [gitignored]
   export/                             portable snapshot of YOUR state             [gitignored · private]
@@ -174,7 +174,7 @@ make restore        # rebuild runtime DB from data/export/
 The inspector and all generated text are bilingual (German/English). The
 **content** language is auto-detected from the language you write in and then
 persisted; the **UI** language has its own toggle in the top bar (`?lang=de|en`,
-or `persona-council set-language`). Default is English until you write German.
+or `sonaloop set-language`). Default is English until you write German.
 
 The web UI is a Linear/Notion-grade inspector (`Overview · Personas · Councils ·
 Synthesen` in a navigation-only sidebar; a personas card-grid home; Linear-style
@@ -212,15 +212,15 @@ Skills live in [`claude-skills/`](claude-skills/) (`simulate-cohort`,
 
 ## Claude MCP
 
-Add Persona Council as an MCP server in Claude Desktop or any Claude MCP client:
+Add Sonaloop as an MCP server in Claude Desktop or any Claude MCP client:
 
 ```json
 {
   "mcpServers": {
-    "persona-council": {
+    "sonaloop": {
       "command": "uv",
-      "args": ["run", "persona-council-mcp"],
-      "cwd": "/absolute/path/to/persona-council"
+      "args": ["run", "sonaloop-mcp"],
+      "cwd": "/absolute/path/to/sonaloop"
     }
   }
 }
@@ -251,7 +251,7 @@ source prompts live in `spec/persona-source-prompts.md` (git-ignored, local-only
 The council format was inspired by Leo Püttmann's
 [`ai-council`](https://github.com/LeonardPuettmann/ai-council) — its
 markdown-defined agents and select → debate → propose → vote → persist flow
-seeded this project. Persona Council takes it further with durable persona state,
+seeded this project. Sonaloop takes it further with durable persona state,
 persistent memory, longitudinal simulation, and MCP-host-authored text. See
 [SPEC_TRACKER.md](SPEC_TRACKER.md#inspiration-leonardpuettmannai-council) for the
 full reference analysis.

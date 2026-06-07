@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from persona_council import artifacts as A
+from sonaloop import artifacts as A
 
 
 def test_constructors_drop_empties_and_serialize():
@@ -51,7 +51,7 @@ def test_finding_kind_lookup_and_fallback():
 
 
 def test_finding_kind_label_keys_exist_in_i18n():
-    from persona_council.web._i18n import STRINGS
+    from sonaloop.web._i18n import STRINGS
     de = STRINGS["de"]
     for kind in ("summary", "key_problem", "pain_solver", "open_question", "recommendation",
                  "cluster", "segment", "shortlist", "ranking"):
@@ -59,7 +59,7 @@ def test_finding_kind_label_keys_exist_in_i18n():
 
 
 def test_stance_label_keys_exist_in_i18n():
-    from persona_council.web._i18n import STRINGS
+    from sonaloop.web._i18n import STRINGS
     de = STRINGS["de"]
     for v in (-2, -1, 0, 1, 2):
         assert A.stance_meta(v)["label_key"] in de

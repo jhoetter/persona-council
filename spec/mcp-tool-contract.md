@@ -1,6 +1,6 @@
 # MCP Tool Contract
 
-Exact tool surface for Persona Council (implemented in `persona_council/mcp_server.py`).
+Exact tool surface for Sonaloop (implemented in `sonaloop/mcp_server.py`).
 Model-neutral: the same tools work for any MCP host (Claude Code, Codex, …).
 
 ## Envelope (every tool)
@@ -53,5 +53,5 @@ This follows a context-gatherer + reader/judge split.
 - Evidence/export: attach_evidence, export_persona, export_logs, export_council_session
 
 ## Resources & prompts
-- Resource `persona-council://schema/memory` — memory model + loop overview.
+- Resource `sonaloop://schema/memory` — memory model + loop overview.
 - Prompt `simulate_persona_day(persona_id, date)` — drive one day through the loop.

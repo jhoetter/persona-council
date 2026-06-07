@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import sys
 
-from persona_council import artifacts as A
-from persona_council import services as S
-from persona_council.storage import Store
+from sonaloop import artifacts as A
+from sonaloop import services as S
+from sonaloop.storage import Store
 
 
 def main() -> None:

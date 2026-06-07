@@ -105,7 +105,7 @@ the `divergence_complete` judgment (host or autonomous backend), always with evi
 ---
 
 ## 4. Methodology spec — normative schema (data-driven registry)
-Built-ins ship as `persona_council/methodologies/<key>.json`, loaded into an in-memory registry at
+Built-ins ship as `sonaloop/methodologies/<key>.json`, loaded into an in-memory registry at
 import; user-defined specs persist in the `methodologies` table. Validation = `validate_methodology_spec()`.
 
 **Schema (all keys lowercase; `?` = optional):**
@@ -209,7 +209,7 @@ Concept (template "spa-min"):
                              id, label, options?:[..], goto?: screenId } ] } ]
   start    screenId
 ```
-The `spa-min` template (`persona_council/prototype_templates/spa-min/`) renders a **real,
+The `spa-min` template (`sonaloop/prototype_templates/spa-min/`) renders a **real,
 clickable, single-file SPA**: a nav of screens, each with the declared elements as actual DOM
 (`<button>`, `<input>`, `<select>`…); `goto` wires navigation; inputs hold state. Result: a genuine
 app a persona can drive via Playwright (real refs, real state changes) — not a mockup. Output is
@@ -351,7 +351,7 @@ Node: { role, name, ref?, value?, checked?, disabled?, children:Node[] }
 
 ## 11. Module layout (new/changed)
 ```
-persona_council/
+sonaloop/
   methodology.py          # registry load+validate, engine: brief_phase/record_*/advance_phase, invariants, judgments
   methodologies/*.json    # built-in specs (double_diamond, dschool_micro, lean_jtbd)
   prototypes.py           # scaffold (concept→app via templates), registry, runner (run/stop), process table

@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "persona-council": {
+    "sonaloop": {
       "command": "uv",
-      "args": ["run", "persona-council-mcp"]
+      "args": ["run", "sonaloop-mcp"]
     }
   }
 }

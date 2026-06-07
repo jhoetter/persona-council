@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import pytest
 
-from persona_council import services
-from persona_council.storage import Store
+from sonaloop import services
+from sonaloop.storage import Store
 
 
 @pytest.fixture(autouse=True)

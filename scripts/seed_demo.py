@@ -1,6 +1,6 @@
-from persona_council import services as S
-from persona_council.services import _plan as PL
-from persona_council.storage import Store
+from sonaloop import services as S
+from sonaloop.services import _plan as PL
+from sonaloop.storage import Store
 st = Store()
 
 def profile(name, age, beruf, lebensphase, einstellung, goals, constraints, pains, success, tools, rels,

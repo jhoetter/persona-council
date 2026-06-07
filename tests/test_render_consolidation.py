@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from persona_council import web
+from sonaloop import web
 
 # h()-attribute class values that ONLY the one renderer may emit (the statement card + prompt banner).
 _RENDER_ONLY = ('"turn"', '"qround"', '"qround-q"', '"qround-a"', '"fitem"')

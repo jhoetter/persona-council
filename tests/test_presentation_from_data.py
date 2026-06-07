@@ -10,18 +10,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from persona_council import presentation as P
-from persona_council import prototypes, services, web
+from sonaloop import presentation as P
+from sonaloop import prototypes, services, web
 
 
 # --------------------------------------------------------------------------- P4: grep gate
 
 FORBIDDEN = {
-    "persona_council/web": [
+    "sonaloop/web": [
         '"lofi"', '"midfi"', '"lo-fi"', '"mid-fi"', '"Prototyp"', '"▢"',
         '== "lofi"', '== "midfi"', '{"lofi"', '{"midfi"',
     ],
-    "persona_council/prototypes.py": [
+    "sonaloop/prototypes.py": [
         "TEMPLATES = {", '{"lofi"', '{"midfi"', '== "lofi"', '== "midfi"',
         '"lo-fi"', '"mid-fi"', 'in ("lofi"', 'in ("midfi"',
     ],

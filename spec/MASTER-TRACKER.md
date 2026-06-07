@@ -62,8 +62,8 @@ behavior change. This is where the post-engine state is cleaned before the big U
   **Accept Q1:** `refactor-plan.md` exists with ranked targets + measurable bars + per-target checklists.
 - **Q2…Qn — Execute the refactor plan.** Implement each ranked target as an isolated change:
   - Split god-files into packages preserving import paths via re-export shims (e.g.
-    `persona_council/web/` → `components.py`/`routes_*.py`/`graph.py`/`styles.py`;
-    `persona_council/services/` split by domain: personas, councils, syntheses, plan, prototypes,
+    `sonaloop/web/` → `components.py`/`routes_*.py`/`graph.py`/`styles.py`;
+    `sonaloop/services/` split by domain: personas, councils, syntheses, plan, prototypes,
     research-graph, simulation). Centralize presentation (already `presentation.py`), validation, and
     shared DB helpers; remove duplication; improve reuse.
   - After EACH target: full suite green + characterization unchanged → commit + push.

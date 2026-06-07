@@ -420,13 +420,13 @@ wheels = [
 ]
 
 [[package]]
-name = "persona-council"
+name = "sonaloop"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "mcp" },
-    { name = "persona-icons" },
+    { name = "sonaloop-icons" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "uvicorn" },
@@ -446,7 +446,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "mcp", specifier = ">=1.2.0" },
-    { name = "persona-icons", editable = "../persona-icons/py" },
+    { name = "sonaloop-icons", editable = "../sonaloop-icons/py" },
     { name = "playwright", marker = "extra == 'prototyping'", specifier = ">=1.40.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-multipart", specifier = ">=0.0.9" },
@@ -458,9 +458,9 @@ provides-extras = ["prototyping"]
 dev = [{ name = "pytest", specifier = ">=8.0" }]
 
 [[package]]
-name = "persona-icons"
+name = "sonaloop-icons"
 version = "0.1.0"
-source = { editable = "../persona-icons/py" }
+source = { editable = "../sonaloop-icons/py" }
 
 [[package]]
 name = "playwright"

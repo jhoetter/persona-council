@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from persona_council import plan as P
-from persona_council import services, web
+from sonaloop import plan as P
+from sonaloop import services, web
 
 
 def _plan(pid="proj1"):
@@ -284,7 +284,7 @@ def test_grep_gate_no_hardcoded_bucket_kind_vocabulary():
 def test_browser_log_retained_past_close_for_grounding():
     """GAP-5: a session's observed-state log survives close() so a proband reaction recorded AFTER
     closing the browser still verifies (the clean drive→close→record order no longer loses evidence)."""
-    from persona_council import browser
+    from sonaloop import browser
     browser._RETAINED_LOGS.clear()
     sid = "psession_test_retain"
     browser._retain_log(sid, [{"kind": "snapshot", "refs": ["r1"], "text": "Du hast die Hand drauf"}])
@@ -295,9 +295,9 @@ def test_browser_log_retained_past_close_for_grounding():
 def test_ungrounded_proband_session_warns_and_blocks_gate(store, tmp_path, monkeypatch):
     """GAP-5: an unverified proband session (no observed-state log) is flagged on write AND does not
     satisfy a session_of_tags gate when the harness can verify; a grounded session clears it."""
-    import persona_council.prototypes as P
+    import sonaloop.prototypes as P
     monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "protos")
-    from persona_council import plan as PL, services, browser
+    from sonaloop import plan as PL, services, browser
     monkeypatch.setattr(browser, "available", lambda: True)
     proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
     pid = proj["id"]
@@ -357,7 +357,7 @@ def test_next_action_act_surfaces_ideation_lenses_for_innovation(store):
 def test_assess_project_surfaces_novelty_signal(store, tmp_path, monkeypatch):
     """Innovation reliability: assess_project reports concept-KIND diversity + whether an interactive
     model exists, and flags a narrow (forms-only) space so a run can push for a bolder concept."""
-    import persona_council.prototypes as PP
+    import sonaloop.prototypes as PP
     monkeypatch.setattr(PP, "prototypes_dir", lambda: tmp_path / "p")
     proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
     pid = proj["id"]
@@ -374,7 +374,7 @@ def test_assess_project_surfaces_novelty_signal(store, tmp_path, monkeypatch):
 def test_assess_project_finish_readiness_gate(store, tmp_path, monkeypatch):
     """A run must not stop at 'gates passed'. assess_project reports FINISH readiness (organized +
     concluded + handed-off); when the plan is complete but unfinished, the recommendation is 'finish'."""
-    import persona_council.prototypes as PP
+    import sonaloop.prototypes as PP
     monkeypatch.setattr(PP, "prototypes_dir", lambda: tmp_path / "p")
     proj = services.start_project("G", "hmw?", None, persona_ids=["p1"], store=store)
     pid = proj["id"]
@@ -420,7 +420,7 @@ def test_completeness_critic_surfaces_gaps_and_refuses_dishonest_pass(store):
 def test_resumable_run_object_and_keyed_session(store, tmp_path, monkeypatch):
     """ESV3: keyed prototype sessions upsert idempotently (same id); the run object journals steps +
     resumes (start_run with the same run_id returns the existing journal, not a fresh run)."""
-    import persona_council.prototypes as PP
+    import sonaloop.prototypes as PP
     monkeypatch.setattr(PP, "prototypes_dir", lambda: tmp_path / "p")
     proj = services.start_project("ESV3", "hmw?", None, persona_ids=["p1"], store=store)
     pid = proj["id"]

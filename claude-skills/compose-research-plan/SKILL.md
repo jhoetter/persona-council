@@ -9,10 +9,10 @@ description: THE FRONT DOOR for any research/design-thinking request — the use
 question (an HMW or any goal over the personas). You recognize it, design the approach, and run it
 all the way to a documented answer. (Steps 1–3 design the plan; step 4 executes it.)
 
-**Tools:** use the **persona-council MCP tools** (`mcp__persona-council__*`) — this repo ships a
-`.mcp.json`, so approve the `persona-council` server when prompted (or run `/mcp`). If MCP is
-unavailable, the equivalent CLI is **`uv run persona-council <cmd>`** (or `.venv/bin/persona-council`)
-— never a bare `persona-council` (it isn't on PATH).
+**Tools:** use the **sonaloop MCP tools** (`mcp__sonaloop__*`) — this repo ships a
+`.mcp.json`, so approve the `sonaloop` server when prompted (or run `/mcp`). If MCP is
+unavailable, the equivalent CLI is **`uv run sonaloop <cmd>`** (or `.venv/bin/sonaloop`)
+— never a bare `sonaloop` (it isn't on PATH).
 
 The user gives you a question; **you decide the methodology and the moves**. The plan engine is
 fully composable — `capability` / `artifact_type` / `gate_tag` are FREE tags and you `add_task`

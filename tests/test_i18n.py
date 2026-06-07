@@ -1,6 +1,6 @@
 """i18n contract tests — keep the bilingual UI chrome honest.
 
-These guard the invariants documented in persona_council/web/_i18n.py:
+These guard the invariants documented in sonaloop/web/_i18n.py:
   - STRINGS covers exactly SUPPORTED_LANGUAGES.
   - every language defines the SAME key set with the SAME {placeholders}.
   - every t("literal") in the codebase resolves to a defined key.
@@ -13,10 +13,10 @@ from __future__ import annotations
 import re
 import pathlib
 
-from persona_council.config import SUPPORTED_LANGUAGES
-from persona_council.web._i18n import STRINGS, FALLBACK_LANGUAGE, t, _UI_LANG
+from sonaloop.config import SUPPORTED_LANGUAGES
+from sonaloop.web._i18n import STRINGS, FALLBACK_LANGUAGE, t, _UI_LANG
 
-_PKG = pathlib.Path(__file__).resolve().parent.parent / "persona_council"
+_PKG = pathlib.Path(__file__).resolve().parent.parent / "sonaloop"
 _PLACEHOLDER = re.compile(r"\{([a-z0-9_]+)\}")
 
 # A real t("key") call: `t` not preceded by an identifier char (so `.get(`,

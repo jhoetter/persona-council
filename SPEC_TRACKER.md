@@ -1,4 +1,4 @@
-# Persona Council Specification Tracker
+# Sonaloop Specification Tracker
 
 Last updated: 2026-06-03
 
@@ -32,7 +32,7 @@ What it seeded conceptually:
 - Terminal ergonomics matter. The REPL, slash commands, streaming output, and
   saved Markdown/JSON transcripts are the right spirit for a tool that should be
   pleasant from the shell.
-- MCP host-agent authorship is the right model for text. Persona Council does
+- MCP host-agent authorship is the right model for text. Sonaloop does
   not call text LLM APIs or store text-provider keys; Claude Code, Codex, or a
   similar MCP host authors structured JSON and submits it through tools.
 
@@ -292,18 +292,18 @@ marketing-style layout; this is an operating tool.
 Target commands:
 
 ```bash
-persona-council persona create "Restaurantleiterin in Deutschland, mittelgroßes Team, plant Schichten, Lieferanten, Reklamationen und Tagesabschluss, nutzt Kassensystem, Dienstplan, E-Mail und Telefon."
-persona-council persona bulk personas.md
-persona-council simulate day anna-schmidt --date 2026-06-02
-persona-council simulate continue --all --days 1
-persona-council persona state anna-schmidt
-persona-council council run "Should we price this as seat-based SaaS?" --segment architects
+sonaloop persona create "Restaurantleiterin in Deutschland, mittelgroßes Team, plant Schichten, Lieferanten, Reklamationen und Tagesabschluss, nutzt Kassensystem, Dienstplan, E-Mail und Telefon."
+sonaloop persona bulk personas.md
+sonaloop simulate day anna-schmidt --date 2026-06-02
+sonaloop simulate continue --all --days 1
+sonaloop persona state anna-schmidt
+sonaloop council run "Should we price this as seat-based SaaS?" --segment architects
 ```
 
 Cron example:
 
 ```cron
-15 6 * * 1-5 cd /path/to/persona-council && uv run persona-council simulate continue --all --days 1
+15 6 * * 1-5 cd /path/to/sonaloop && uv run sonaloop simulate continue --all --days 1
 ```
 
 ## Avatar Generation
@@ -336,13 +336,13 @@ Text generation config:
 
 ## Implemented Files
 
-- `persona_council/models.py`: structured data objects.
-- `persona_council/storage.py`: SQLite persistence.
-- `persona_council/services.py`: tracker functions and LLM-authored simulation orchestration.
-- `persona_council/avatar.py`: OpenAI Image API avatar generation.
-- `persona_council/cli.py`: terminal entrypoint.
-- `persona_council/mcp_server.py`: MCP tool server.
-- `persona_council/web.py`: FastAPI dashboard and JSON API.
+- `sonaloop/models.py`: structured data objects.
+- `sonaloop/storage.py`: SQLite persistence.
+- `sonaloop/services.py`: tracker functions and LLM-authored simulation orchestration.
+- `sonaloop/avatar.py`: OpenAI Image API avatar generation.
+- `sonaloop/cli.py`: terminal entrypoint.
+- `sonaloop/mcp_server.py`: MCP tool server.
+- `sonaloop/web.py`: FastAPI dashboard and JSON API.
 - `tests/`: pytest suite — MCP contract/envelope, gather→author→write-back
   round-trip, seeded-scaffolding regression, cohort diversity + critic tunables.
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from persona_council import web
+from sonaloop import web
 
 FORBIDDEN = {"h", "raw", "fragment", "esc", "Safe", "t"}
 # _html.py defines the builder; _i18n.py defines t — they own the names, so they're exempt.

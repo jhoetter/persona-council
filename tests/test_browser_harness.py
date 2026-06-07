@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from persona_council import browser, prototypes, services
+from sonaloop import browser, prototypes, services
 
 
 _CONCEPT = {

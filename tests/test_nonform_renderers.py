@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-from persona_council import presentation, prototypes
+from sonaloop import presentation, prototypes
 
 
 def _two_screens(home_extra: dict | None = None) -> dict:
@@ -99,9 +99,9 @@ def test_dead_string_nav_rejected_and_action_alias_normalized(store, tmp_path, m
     """GAP-4: a card/element whose STRING nav target resolves to no screen is rejected at scaffold
     (no silently-dead, yet proband-tested, prototype); a valid `action` string is normalized to
     `goto` so goto-only templates navigate."""
-    import persona_council.prototypes as P
+    import sonaloop.prototypes as P
     monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "p")
-    from persona_council import services
+    from sonaloop import services
     dead = {"title": "T", "start": "home", "screens": [
         {"id": "home", "title": "H", "cards": [{"id": "c", "title": "Go", "action": "ghost"}]},
         {"id": "real", "title": "R", "elements": [{"kind": "text", "id": "t", "label": "ok"}]}]}
@@ -121,9 +121,9 @@ def test_interactive_model_prototype_scaffolds_with_live_formula(store, tmp_path
     """GAP-1: a `model` artifact type renders an INTERACTIVE prototype — range/number inputs feeding
     `computed`/`bar` elements whose `formula` is evaluated live (a steerable model, e.g. a pension
     gap / compounding), not a static screen. Data-driven: the type resolves from artifact_types.json."""
-    import persona_council.prototypes as P
+    import sonaloop.prototypes as P
     monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "p")
-    from persona_council import services, presentation
+    from sonaloop import services, presentation
     assert presentation.resolve_template("model", ["midfi"]) == "spa-model"   # from DATA
     concept = {"title": "Rentenluecke", "summary": "Steuere deine Sparrate", "start": "m",
                "fidelity": "midfi", "screens": [{"id": "m", "title": "Modell", "elements": [
@@ -154,9 +154,9 @@ def _journey_concept(rate, title="J"):
 def test_journey_type_validates_resolves_and_rejects_malformed(store, tmp_path, monkeypatch):
     """ESV5: the `journey` artifact type resolves to spa-journey (data); a journey with chart + verdict
     scaffolds; a verdict without cases or a chart without x/series is rejected at scaffold."""
-    import persona_council.prototypes as P
+    import sonaloop.prototypes as P
     monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "p")
-    from persona_council import services, presentation
+    from sonaloop import services, presentation
     presentation.reload_hints()
     assert presentation.resolve_template("journey", ["hifi"]) == "spa-journey"
     services.scaffold_artifact("ok", "Ok", _journey_concept(50), type="journey", tags=["hifi"], store=store)
@@ -173,9 +173,9 @@ def test_journey_type_validates_resolves_and_rejects_malformed(store, tmp_path, 
 def test_journey_verdict_evaluates_live_in_browser(store, tmp_path, monkeypatch):
     """ESV5: the no-eval evaluator's comparison ops drive a `verdict` live — a journey with rate=0
     shows the bad-case verdict; one with rate=250 shows the good-case (proven via the real browser)."""
-    import persona_council.prototypes as P
+    import sonaloop.prototypes as P
     monkeypatch.setattr(P, "prototypes_dir", lambda: tmp_path / "p")
-    from persona_council import services, browser
+    from sonaloop import services, browser
     if not browser.available():
         pytest.skip("Playwright unavailable")
     import time

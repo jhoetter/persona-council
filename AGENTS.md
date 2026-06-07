@@ -1,6 +1,6 @@
-# Persona Council Agent Guide
+# Sonaloop Agent Guide
 
-Persona Council is terminal-first and MCP-first. The web UI is an inspection
+Sonaloop is terminal-first and MCP-first. The web UI is an inspection
 surface only.
 
 ## Principles
@@ -13,12 +13,12 @@ surface only.
 - Treat synthetic details as hypotheses. Prefer ordinary work, skepticism,
   indifference, satisfaction, and rejection when those are plausible.
 - Before speaking from a profile perspective, load `SOUL.md` through
-  `prepare_persona_agent_context` or `persona-council persona-context`.
+  `prepare_persona_agent_context` or `sonaloop persona-context`.
 - Use CLI/MCP for all mutations: create profiles, generate avatars, simulate
   days, attach evidence, run councils, clear simulations, and export logs.
 - Point the user to the web inspector as soon as there is something to see. Once
   personas/councils/syntheses exist, tell them to open **http://127.0.0.1:8787**
-  (start it with `make dev`, or `persona-council-web`, which prints the URL). The
+  (start it with `make dev`, or `sonaloop-web`, which prints the URL). The
   web UI is read-only; all authoring still happens through CLI/MCP.
 - Language: generated CONTENT follows the language the user writes in, auto-
   detected on first input and persisted (de|en). Do not switch languages
@@ -30,41 +30,41 @@ surface only.
 ```bash
 # Persona creation is host-authored (no server-side text generation):
 # gather -> you author the profile JSON -> persist.
-persona-council brief-persona "Restaurantleiterin in Deutschland, mittelgroßes Team, plant Schichten, Lieferanten, Reklamationen und Tagesabschluss, nutzt Kassensystem, Dienstplan, E-Mail und Telefon."
-persona-council record-persona profile.json   # JSON: {description, profile, segment_hint?, evidence?, generate_avatar?}
-persona-council persona-list
-persona-council persona-get <persona-id-or-slug>
-persona-council persona-soul <persona-id-or-slug>
-persona-council persona-context <persona-id-or-slug> --task "Evaluate this idea neutrally" --text
-persona-council avatar-generate <persona-id-or-slug>
+sonaloop brief-persona "Restaurantleiterin in Deutschland, mittelgroßes Team, plant Schichten, Lieferanten, Reklamationen und Tagesabschluss, nutzt Kassensystem, Dienstplan, E-Mail und Telefon."
+sonaloop record-persona profile.json   # JSON: {description, profile, segment_hint?, evidence?, generate_avatar?}
+sonaloop persona-list
+sonaloop persona-get <persona-id-or-slug>
+sonaloop persona-soul <persona-id-or-slug>
+sonaloop persona-context <persona-id-or-slug> --task "Evaluate this idea neutrally" --text
+sonaloop avatar-generate <persona-id-or-slug>
 
 # Single day, host-authored: brief-day -> author {day_plan, plan, activities} -> record-day.
-persona-council brief-day <persona-id-or-slug> --date 2026-06-02
-persona-council record-day <persona-id-or-slug> 2026-06-02 day.json
-persona-council simulate-continue --all --days 1
-persona-council simulate-clear
-persona-council purge-runtime-data
+sonaloop brief-day <persona-id-or-slug> --date 2026-06-02
+sonaloop record-day <persona-id-or-slug> 2026-06-02 day.json
+sonaloop simulate-continue --all --days 1
+sonaloop simulate-clear
+sonaloop purge-runtime-data
 
-persona-council calendar <persona-id-or-slug> --date 2026-06-02 --view day
-persona-council calendar <persona-id-or-slug> --date 2026-06-02 --view week
-persona-council activity <activity-id>
-persona-council state <persona-id-or-slug>
-persona-council summary <persona-id-or-slug> --start 2026-06-01 --end 2026-06-30
+sonaloop calendar <persona-id-or-slug> --date 2026-06-02 --view day
+sonaloop calendar <persona-id-or-slug> --date 2026-06-02 --view week
+sonaloop activity <activity-id>
+sonaloop state <persona-id-or-slug>
+sonaloop summary <persona-id-or-slug> --start 2026-06-01 --end 2026-06-30
 
 # Councils & interviews are host-authored (see the run-council skill):
 #   brief-council <prompt>                 -> candidate personas to choose from
 #   brief-council <prompt> --persona <id>… -> each participant's loaded context
 #   (author turns + synthesis) -> record-council council.json
-persona-council brief-council "Should we change the approval workflow?" --persona <id> --persona <id>
-persona-council brief-ask <persona-id-or-slug> "What would make this unacceptable in your week?"
+sonaloop brief-council "Should we change the approval workflow?" --persona <id> --persona <id>
+sonaloop brief-ask <persona-id-or-slug> "What would make this unacceptable in your week?"
 
 # Language: content is auto-detected from what you write, then persisted (de|en).
-persona-council language
-persona-council set-language --content de --ui en
+sonaloop language
+sonaloop set-language --content de --ui en
 
-persona-council evidence-attach <persona-id-or-slug> interview notes/interview-01.md --notes "Customer interview"
-persona-council export-logs <persona-id-or-slug> --format md --out exports/logs.md
-persona-council export-council <session-id> --format md --out exports/council.md
+sonaloop evidence-attach <persona-id-or-slug> interview notes/interview-01.md --notes "Customer interview"
+sonaloop export-logs <persona-id-or-slug> --format md --out exports/logs.md
+sonaloop export-council <session-id> --format md --out exports/council.md
 ```
 
 ## MCP
@@ -72,7 +72,7 @@ persona-council export-council <session-id> --format md --out exports/council.md
 Run:
 
 ```bash
-persona-council-mcp
+sonaloop-mcp
 ```
 
 Core MCP tools:

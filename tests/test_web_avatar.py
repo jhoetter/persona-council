@@ -3,7 +3,7 @@ generated) must still render. Previously `_avatar` did `p.get("avatar", {}).get(
 which raised AttributeError on an explicit None, 500-ing the overview page."""
 from __future__ import annotations
 
-from persona_council.web import _avatar
+from sonaloop.web import _avatar
 
 
 def test_avatar_handles_missing_none_and_dict():

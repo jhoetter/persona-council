@@ -65,7 +65,7 @@ each authoring one reaction, which the host folds into councils + exploration no
 
 ## 4. The deep methodology (data-driven, new built-in `double_diamond_deep`)
 Six phases, strict diverge/converge alternation = **three linked diamonds** (problem · solution-explore ·
-solution-refine). Shipped as `persona_council/methodologies/double_diamond_deep.json`.
+solution-refine). Shipped as `sonaloop/methodologies/double_diamond_deep.json`.
 
 | # | key | mode | strategy | produces_role | fidelity | requires_artifacts | notes |
 |---|---|---|---|---|---|---|---|

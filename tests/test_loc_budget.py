@@ -14,7 +14,7 @@ EXCEPTIONS: dict[str, str] = {}
 
 
 def test_no_source_file_exceeds_loc_bar():
-    pkg = Path(__file__).resolve().parent.parent / "persona_council"
+    pkg = Path(__file__).resolve().parent.parent / "sonaloop"
     offenders = []
     for f in sorted(pkg.rglob("*.py")):
         rel = str(f.relative_to(pkg.parent))

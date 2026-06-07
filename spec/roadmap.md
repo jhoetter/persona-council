@@ -27,7 +27,7 @@ scan today finds **7 live offenders** (benign now, but footguns): `_components.p
 **Scope.** (a) a test that fails on any such shadow; (b) rename the 7 existing offenders.
 
 **Approach.**
-1. Add `tests/test_no_render_name_shadowing.py`: walk each `persona_council/web/*.py` AST (skip
+1. Add `tests/test_no_render_name_shadowing.py`: walk each `sonaloop/web/*.py` AST (skip
    `_html.py`, `_i18n.py`), collect local binding targets (`For.target`, `Assign.targets`,
    `comprehension.target`, function args, `with`/`except` as-names, walrus) whose `Name.id` ∈
    `{h, raw, fragment, esc, Safe, t}`. Fail listing `file:line name`. Absolute rule — these names are

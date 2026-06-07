@@ -75,13 +75,13 @@ web_modules/
 __pycache__/
 *.py[cod]
 
-# Persona Council state & private content. ALL of this is local-only and is
+# Sonaloop state & private content. ALL of this is local-only and is
 # NEVER committed — it can contain your real personas, councils and syntheses.
 # Everything here is either volatile runtime or fully rebuildable, so excluding
 # it keeps the public repo a clean, reusable engine with no private data.
-data/persona-council.db
-data/persona-council.db-shm
-data/persona-council.db-wal
+data/sonaloop.db
+data/sonaloop.db-shm
+data/sonaloop.db-wal
 # Local UI/content language choice (auto-detected per user) — local-only.
 data/settings.json
 data/avatars/

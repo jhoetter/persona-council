@@ -4,7 +4,7 @@ Status: **Phase 0–4 DONE · Phase 3 field-removal DONE** (2026-06-06) — stor
 Companion to `spec/unified-artifact-schema.md` (the design). Step-by-step execution plan for all phases.
 
 Progress:
-- ✅ **Phase 0** — `persona_council/artifacts.py` primitives + `suggestions/stance_scale.json` &
+- ✅ **Phase 0** — `sonaloop/artifacts.py` primitives + `suggestions/stance_scale.json` &
   `finding_kinds.json` + tests.
 - ✅ **Phase 1** — read adapters + `web/_render.py` (one renderer per primitive); councils (transcript &
   voices), synthesis finding-lists and prototype sessions all route through it. Burndown down.
@@ -54,7 +54,7 @@ Guiding rules for every phase:
 normalize. No rendering or reading wired yet — pure additions + unit tests.
 
 **Files**
-- NEW `persona_council/artifacts.py` — domain-level primitive constructors (no web import; reusable by
+- NEW `sonaloop/artifacts.py` — domain-level primitive constructors (no web import; reusable by
   web, export, meta-report, search):
   ```python
   def ref(kind, *, id=None, text=None, quote=None) -> dict
@@ -95,7 +95,7 @@ normalize. No rendering or reading wired yet — pure additions + unit tests.
 the data view — the four "looks different" surfaces collapse to one code path.
 
 ### 1A — Adapters (legacy record → primitives)
-NEW `persona_council/artifacts.py` (same module), pure read, `(record, store=None)`:
+NEW `sonaloop/artifacts.py` (same module), pure read, `(record, store=None)`:
 ```python
 def council_prompts(c)        -> list[prompt]      # prompt(kind=question|proposal) + questions[]
 def council_statements(c,store)-> list[statement]  # turns[] → statement(about=prompt-id via question_index,
@@ -119,7 +119,7 @@ Rule: adapters PREFER a record's native primitive fields if present (forward-com
 derive from legacy fields. Stance terms resolved through `stance_scale.json`.
 
 ### 1B — Renderers
-NEW `persona_council/web/_render.py` (web HTML via `h()`/`_prose`):
+NEW `sonaloop/web/_render.py` (web HTML via `h()`/`_prose`):
 ```python
 def render_stance(st)  -> str   # the colored chip (_label) from the scale — replaces _stance_color/_label maps
 def render_ref(r)      -> str   # a chip: memory icon / internal link / quote tooltip

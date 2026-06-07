@@ -13,7 +13,7 @@ Spawn one subagent per participating persona (parallel). Each subagent:
 
 ## 1. Load self + topic
 - Read the topic/briefing.
-- `persona-council persona-context <slug> --task "<the council question>" --text`
+- `sonaloop persona-context <slug> --task "<the council question>" --text`
   → SOUL + active projects + open threads + an initial task-keyed recall.
 
 ## 2. Reflect, then research ONLY if it pays off (the judicious step)
@@ -21,8 +21,8 @@ Look at the council question against the already-loaded active projects / open
 threads / SOUL and ask: *"Does this genuinely connect to something concrete in my
 work or memory?"*
 - **If yes** → formulate 1–2 of your OWN sharp queries and look them up:
-  `persona-council recall <slug> "<your specific question>"` (semantic+keyword),
-  and `persona-council project <slug> <entity_id>` for an arc if relevant.
+  `sonaloop recall <slug> "<your specific question>"` (semantic+keyword),
+  and `sonaloop project <slug> <entity_id>` for an arc if relevant.
   Examples: a structural receiver looks up past IFC-import failures; a heritage
   architect looks up how long a Bestandsaufnahme actually took.
 - **If no / only a generic link** → do NOT keep digging. Answer from the loaded

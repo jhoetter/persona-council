@@ -4,7 +4,7 @@ deterministic for a given seed so long-horizon runs are reproducible and
 regressions are caught. Content generation is stubbed (no network)."""
 from __future__ import annotations
 
-from persona_council import services
+from sonaloop import services
 from conftest import create_persona
 
 

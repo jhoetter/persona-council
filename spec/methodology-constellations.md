@@ -72,7 +72,7 @@ capability is just one of the step's `tags`; the engine does not switch on it.
   all just DAG shapes. (Kills #1 — no alternation concept exists.)
 
 ### 2.3 Suggestions registry (MCP-served **data**, never enforced)
-The common building blocks live as **editable data** under `persona_council/suggestions/`
+The common building blocks live as **editable data** under `sonaloop/suggestions/`
 (`capabilities.json`, `roles.json`, `artifact_types.json`, plus methodology templates), and the MCP
 *offers* them so the host has good defaults and reuse — **as suggestions, not constraints**:
 - `suggest_capabilities()` → e.g. `[{tag:"explore", hint:"fan councils per persona/idea", typical_requires:{}}, {tag:"decide", hint:"consolidate a fan", typical_requires:{min_inputs:2, gate_tag:"divergence_complete"}}, …]`

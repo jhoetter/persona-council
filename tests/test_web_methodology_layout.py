@@ -16,9 +16,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from persona_council import methodology as M
-from persona_council import plan as PL
-from persona_council import services, web
+from sonaloop import methodology as M
+from sonaloop import plan as PL
+from sonaloop import services, web
 
 
 def _council(store, cid: str) -> None:
@@ -30,7 +30,7 @@ def _council(store, cid: str) -> None:
 def _drive_plan(store, tmp_path, key):
     """Seed a plan from `key`, then deterministically fill its act lane + build artifacts so the
     plan-derived methodology_state renders a full constellation (offline, no LLM)."""
-    import persona_council.prototypes as P
+    import sonaloop.prototypes as P
     P.prototypes_dir = lambda: tmp_path / "protos"
     spec = M.get_methodology(key)
     proj = services.start_project(key, "How might we test the layout?", key,

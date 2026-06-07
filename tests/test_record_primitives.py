@@ -1,8 +1,8 @@
 """Phase 2 — native primitive authoring round-trips + dual-read (spec/unified-…-rollout.md §2)."""
 from __future__ import annotations
 
-from persona_council import services, artifacts as A
-from persona_council.web import _render as R
+from sonaloop import services, artifacts as A
+from sonaloop.web import _render as R
 
 
 def test_council_native_primitives_roundtrip_and_render(store):

@@ -1,6 +1,6 @@
 """Q characterization: the app builds and key render helpers produce non-empty output after the
 web-asset extraction (web_assets.py). Locks behaviour against refactor regressions."""
-from persona_council import web
+from sonaloop import web
 
 
 def test_assets_present_and_app_builds():
@@ -17,7 +17,7 @@ def test_assets_present_and_app_builds():
 def test_vote_tally_is_case_robust():
     """A council's votes display regardless of token case ('support' counts as SUPPORT) — so
     host/subagent-authored votes aren't silently dropped to 0/0/0/0."""
-    from persona_council.web._synthesis import _vote_parts
+    from sonaloop.web._synthesis import _vote_parts
     sessions = [{"votes": [{"vote": "support"}, {"vote": "SUPPORT"}, {"vote": "maybe"}, {"vote": "oppose"}]}]
     tot, _ = _vote_parts(sessions)
     assert tot["SUPPORT"] == 2 and tot["MAYBE"] == 1 and tot["OPPOSE"] == 1

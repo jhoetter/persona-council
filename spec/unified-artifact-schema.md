@@ -177,7 +177,7 @@ only one with real, fixable duplication in the artifacts; Layer 2 is mostly unif
 separate cleanup with the same pattern.
 
 ## 6. Next step (not yet done)
-Implement Phase 1: `persona_council/web/_adapt.py` (the read adapters) + `render_statement/finding/prompt`
+Implement Phase 1: `sonaloop/web/_adapt.py` (the read adapters) + `render_statement/finding/prompt`
 in `_components`, and route the council/synthesis/session renderers through them. Then the four "looks
 different" surfaces collapse to one code path. Estimated: contained, behind the existing golden-diff
 harness.

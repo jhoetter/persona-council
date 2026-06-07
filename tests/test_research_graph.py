@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from persona_council import services
+from sonaloop import services
 
 
 def _seed_studies(store, n=3):
@@ -106,8 +106,8 @@ def test_synthesis_preserves_structured_blocks_and_warns_when_thin(store):
     """GAP-3 (spec/exploration-depth-and-prototype-variety): a methodology's converge output —
     clusters / key_problems / ranking / shortlist — must survive record_synthesis and render in the
     web view + export; a near-empty synthesis returns a SYNTHESIS_THIN soft-warning."""
-    from persona_council import web
-    from persona_council import artifacts as A
+    from sonaloop import web
+    from sonaloop import artifacts as A
     # primitives-only authoring: the converge output is FINDINGS (kind = cluster/key_problem/ranking/shortlist)
     payload = {
         "gesamtbild": "Der Kern: nicht alle fuer LV begeistern.",

@@ -1,7 +1,7 @@
 """Phase 1 — record→primitive adapters (spec/unified-artifact-schema-rollout.md §1A)."""
 from __future__ import annotations
 
-from persona_council import artifacts as A
+from sonaloop import artifacts as A
 
 
 def test_council_prompts_built_from_canonical_fields():

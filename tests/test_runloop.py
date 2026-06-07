@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from persona_council import services
-from persona_council.storage import Store
+from sonaloop import services
+from sonaloop.storage import Store
 
 _DIMS = ["exploration_depth", "segment_breadth", "concept_novelty", "evidence_groundedness",
          "honesty_anti_steering", "iteration", "finish"]
@@ -139,7 +139,7 @@ def test_pipeline_regression_score_and_memory_depth(store):
     # the finished project is organized + concluded + handed-off, with a structured terminal synthesis
     g = services.get_project_graph(pid, store=store)
     assert len(g["sections"]) >= 1 and store.list_meta_reports(pid)
-    from persona_council import artifacts as A
+    from sonaloop import artifacts as A
     syns = store.list_syntheses()
     assert any((s.get("gesamtbild") or "").strip()
                and (A.finding_texts(s, "key_problem") or A.finding_texts(s, "pain_solver")) for s in syns)

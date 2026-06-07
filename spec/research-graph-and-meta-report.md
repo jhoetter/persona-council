@@ -10,7 +10,7 @@
 > `export_meta_report`; CLI `research-*` + `meta-*`; MCP tools (same names); a read-only
 > **graph view** at `/projects` + `/projects/{id}` (SVG, build-order nodes, typed edges) and a
 > meta-report view at `/projects/{id}/meta`. Tests in `tests/test_research_graph.py`.
-> **Scope:** Generalize Persona Council from *single study arcs* into a **persistent,
+> **Scope:** Generalize Sonaloop from *single study arcs* into a **persistent,
 > themed research graph per project**, navigable and extendable entirely via MCP, with
 > a **second-order Meta-Report** that synthesizes the whole graph into one document.
 > **Leitsatz (unchanged):** nothing hardcoded; MCP exposes capabilities; the host agent

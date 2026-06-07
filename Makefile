@@ -13,12 +13,12 @@ skills:
 
 # Write the portable, local-only snapshot of all generated state to data/export/.
 snapshot:
-	$(UV) run persona-council export-snapshot
+	$(UV) run sonaloop export-snapshot
 
 # Rebuild the runtime DB from data/export/ (use after `git clone` to reproduce
 # the exact local state without regenerating).
 restore:
-	$(UV) run persona-council import-snapshot
+	$(UV) run sonaloop import-snapshot
 
 install:
 	$(UV) sync
@@ -29,8 +29,8 @@ install:
 # SQLite WAL, prototypes/) and pegs a CPU, which can wedge the server over time.
 dev: kill-ports
 	@echo "→ Web   http://127.0.0.1:$(WEB_PORT)"
-	$(UV) run python -m uvicorn 'persona_council.web:create_app' --factory --reload \
-	  --reload-dir persona_council --reload-exclude '*/data/*' \
+	$(UV) run python -m uvicorn 'sonaloop.web:create_app' --factory --reload \
+	  --reload-dir sonaloop --reload-exclude '*/data/*' \
 	  --host 127.0.0.1 --port $(WEB_PORT)
 
 # Forwarded dev profile for viewing this machine through an SSH tunnel.
@@ -39,16 +39,16 @@ dev-forwarded:
 	$(MAKE) dev WEB_PORT=$(FORWARDED_WEB_PORT)
 
 mcp:
-	$(UV) run persona-council-mcp
+	$(UV) run sonaloop-mcp
 
 # Full test suite (pytest, dev dependency-group). Hermetic: temp DB, no network.
 test:
 	$(UV) run --group dev pytest -q
 
 test-smoke:
-	$(UV) run python -m compileall persona_council
-	$(UV) run persona-council persona-list >/dev/null
-	$(UV) run python -c "from persona_council.web import create_app; app=create_app(); print(app.title)"
+	$(UV) run python -m compileall sonaloop
+	$(UV) run sonaloop persona-list >/dev/null
+	$(UV) run python -c "from sonaloop.web import create_app; app=create_app(); print(app.title)"
 
 # Prototype harness (spec/methodology-engine-and-prototyping.md §7): install Playwright +
 # chromium so persona-agents can drive real apps. Optional — the harness degrades without it.

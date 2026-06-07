@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import asyncio
 
-from persona_council.mcp_server import build_server, _env
+from sonaloop.mcp_server import build_server, _env
 
 
 def test_envelope_shape():
@@ -76,8 +76,8 @@ def test_catalogue_covers_every_tool_grouped_by_domain():
     """The auto-generated catalogue resource indexes EVERY registered tool, grouped by domain, so it
     can't drift from the live registry (spec/mcp-surface-cleanup.md M5)."""
     import asyncio, re
-    from persona_council.mcp_server import build_server
-    from persona_council.mcp_server._catalogue import catalogue_md
+    from sonaloop.mcp_server import build_server
+    from sonaloop.mcp_server._catalogue import catalogue_md
     srv = build_server()
     live = {t.name for t in asyncio.run(srv.list_tools())}
     md = catalogue_md()
@@ -87,4 +87,4 @@ def test_catalogue_covers_every_tool_grouped_by_domain():
     assert "## Plan engine & run loop" in md and "- **run_step**" in md
     assert "## Councils & syntheses" in md and "- **record_council**" in md
     uris = {str(r.uri) for r in asyncio.run(srv.list_resources())}
-    assert "persona-council://guide/catalogue" in uris
+    assert "sonaloop://guide/catalogue" in uris
