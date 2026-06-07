@@ -472,14 +472,30 @@ def export_meta_report(project_id: str, report_id: str | None = None, format: st
         return json.dumps(report, indent=2, ensure_ascii=False)
     de = content_language() == "de"
     authored = {s["section_id"]: s for s in report.get("sections", [])}
+    # readable titles for refs (study_ids are 'kind:id' graph refs; citations may be bare ids) — resolve
+    # from the report's graph snapshot first, else look the id up in syntheses/councils.
+    node_title = {n["study_id"]: (n.get("title") or "") for n in (report.get("graph_snapshot") or {}).get("nodes", [])}
+
+    def _ref_title(ref: str) -> str:
+        if node_title.get(ref):
+            return node_title[ref]
+        rid = ref.split(":", 1)[-1]
+        s = store.get_synthesis(rid)
+        if s:
+            return s.get("title", rid)
+        c = store.get_council_session(rid)
+        if c:
+            return (c.get("prompt") or rid)[:70]
+        return rid
+
+    n_studies = len({x for sec in report["outline"] for x in sec.get("source_study_ids", [])})
     lines = [f"# {report['title']}", "",
              f"*{'Meta-Synthese' if de else 'Meta-synthesis'} · {len(report['outline'])} "
-             f"{'Abschnitte' if de else 'sections'} · {len(project['study_ids'])} "
-             f"{'Studien' if de else 'studies'} · {report['created_at']}*", ""]
+             f"{'Abschnitte' if de else 'sections'} · {n_studies} "
+             f"{'Studien' if de else 'studies'} · {report['created_at'][:10]}*", ""]
     if report.get("build_order_narrative"):
         lines += [f"## {'Wie dieses Verständnis entstand' if de else 'How this understanding was built'}",
                   report["build_order_narrative"], ""]
-    titles = {sid: (store.get_synthesis(sid) or {}).get("title", sid) for sid in project["study_ids"]}
     for sec in report["outline"]:
         lines += [f"## {sec['heading']}"]
         body = authored.get(sec["id"])
@@ -488,14 +504,13 @@ def export_meta_report(project_id: str, report_id: str | None = None, format: st
             if body.get("citations"):
                 lines += ["", f"*{'Belege' if de else 'Citations'}:*"]
                 for c in body["citations"]:
-                    src = titles.get(c["study_id"], c["study_id"])
-                    cc = f" / {c['council_id']}" if c.get("council_id") else ""
+                    cc = f" · {_ref_title(c['council_id'])}" if c.get("council_id") else ""
                     q = f" — „{c['quote']}“" if c.get("quote") else ""
-                    lines.append(f"- {src}{cc}{q}")
+                    lines.append(f"- **{_ref_title(c['study_id'])}**{cc}{q}")
         else:
             lines += [f"_({'Abschnitt noch nicht verfasst' if de else 'section not yet authored'})_"]
         if sec.get("source_study_ids"):
-            lines += ["", "_" + ("Quellen-Studien" if de else "Source studies") + ": " +
-                      ", ".join(titles.get(x, x) for x in sec["source_study_ids"]) + "_"]
+            lines += ["", "_" + ("Quellen" if de else "Sources") + ": " +
+                      ", ".join(_ref_title(x) for x in sec["source_study_ids"]) + "_"]
         lines += [""]
     return "\n".join(lines) + "\n"
