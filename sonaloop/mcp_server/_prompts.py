@@ -40,6 +40,27 @@ identical.
 """
 
 
+def getting_started() -> str:
+    """The agent-facing getting-started guide — printed by `sonaloop guide`.
+
+    The operating contract (same as the MCP instructions, so CLI-driven agents that never see the MCP
+    `instructions` get the identical rules) plus a concrete first-run recipe."""
+    return (
+        SERVER_INSTRUCTIONS
+        + "\n"
+        "First run (drive via the `sonaloop` CLI, or the MCP tools of the same name):\n"
+        "1. Start the inspector in the background: `sonaloop-web` -> open http://127.0.0.1:8787.\n"
+        "2. Create a persona (host-authored): `sonaloop brief-persona \"<who they are>\"` -> YOU write the\n"
+        "   profile JSON from that briefing -> `sonaloop record-persona profile.json`. Repeat for a few.\n"
+        "3. (Optional) simulate some life: `sonaloop brief-day <slug> --date <YYYY-MM-DD>` -> author the\n"
+        "   day JSON -> `sonaloop record-day <slug> <date> day.json`.\n"
+        "4. Run a council: pick personas, gather with `sonaloop brief-council \"<question>\" --personas …`,\n"
+        "   author each persona's statement in character, then `sonaloop record-council council.json`.\n"
+        "   (Or use the `run_council` / `synthesize` / `design_thinking` MCP prompts as ready playbooks.)\n"
+        "5. Tell the user to watch it all at http://127.0.0.1:8787 (read-only inspector).\n"
+    )
+
+
 def register_prompts(mcp) -> None:
     """Register the provider-agnostic workflow prompts on the FastMCP server."""
 

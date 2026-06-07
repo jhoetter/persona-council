@@ -11,34 +11,58 @@ Simulation is non-directional: profiles are never nudged toward a product thesis
 unless their own source description, evidence, calendar, or explicit task context
 supports it.
 
-## Quickstart (MCP)
+## Get started — paste this to your AI agent
 
-Add Sonaloop to Claude Desktop or any MCP client — no checkout needed:
+No setup knowledge needed. Paste the prompt below into **Claude Code, Cursor, ChatGPT, or
+any AI coding agent**. It detects your environment, installs Sonaloop the best way, starts
+the inspector, and walks you through a first project — you just talk.
+
+```text
+Set up Sonaloop for me and walk me through a first project. Do every step yourself and keep
+me posted; I just want to talk, not configure anything.
+
+1. Install the `sonaloop` CLI in whatever way fits this environment — try `uv tool install
+   sonaloop`, else `pipx install sonaloop`, else `pip install --user sonaloop`.
+2. Run `sonaloop setup` (it fetches a headless browser) and `sonaloop info` to confirm.
+3. Start the web inspector in the background by running `sonaloop-web`, then tell me the URL
+   it prints — http://localhost:8787 — so I can watch everything live.
+4. If this app supports MCP servers, also register Sonaloop as one (command: `sonaloop-mcp`)
+   so you can call its tools directly. Otherwise just drive it via the `sonaloop` CLI — both work.
+5. Run `sonaloop guide` and follow it exactly. The key rule: YOU author every piece of text
+   (personas, days, council answers, syntheses) — Sonaloop only gathers context and persists.
+6. Ask me what I want to research or simulate (any domain). Then create a few personas,
+   simulate a little of their lives, run a council on my question, and synthesize the result —
+   pointing me to the inspector to read each one.
+```
+
+That's the whole onboarding. Everything below is reference.
+
+<details>
+<summary>Prefer to wire it up yourself?</summary>
+
+Register the MCP server directly (works in any MCP client — no checkout needed):
 
 ```json
 {
   "mcpServers": {
-    "sonaloop": {
-      "command": "uvx",
-      "args": ["--from", "sonaloop", "sonaloop-mcp"]
-    }
+    "sonaloop": { "command": "uvx", "args": ["--from", "sonaloop", "sonaloop-mcp"] }
   }
 }
 ```
 
-Or install the CLI + MCP + web entrypoints directly:
+Or install the entrypoints (`sonaloop` CLI · `sonaloop-mcp` · `sonaloop-web`):
 
 ```bash
-uv tool install sonaloop      # or: pip install sonaloop
-sonaloop setup                # optional: headless browser for prototype screenshots + PDF export
-sonaloop info                 # show data dir, DB path, browser availability
+uv tool install sonaloop      # or: pipx install sonaloop / pip install --user sonaloop
+sonaloop setup                # headless browser for prototype screenshots + PDF export
+sonaloop guide                # the agent operating contract + first-run recipe
 ```
 
-Works in **any MCP host** (Claude, Cursor, ChatGPT, …): the server ships its operating
-contract as MCP `instructions` and the workflows as MCP **prompts** (`run_council`,
-`synthesize`, `design_thinking`, `compose_research_plan`) — provider-agnostic, no per-host
-setup. Claude Code additionally gets the `claude-skills/` adapter (auto-trigger + sub-agent
-fan-out). Full operating rules: [AGENTS.md](AGENTS.md).
+Works in **any MCP host**: the server ships its operating contract as MCP `instructions` and
+the workflows as MCP **prompts** (`run_council`, `synthesize`, `design_thinking`,
+`compose_research_plan`) — provider-agnostic. Claude Code additionally gets the
+`claude-skills/` adapter (auto-trigger + sub-agent fan-out). Full rules: [AGENTS.md](AGENTS.md).
+</details>
 
 ## The model in one minute
 

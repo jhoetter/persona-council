@@ -37,8 +37,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sonaloop")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    # Post-install setup + diagnostics (matter most for the pip/uvx-installed MCP).
+    # Onboarding: setup + the agent-facing guide + diagnostics (matter most for a fresh install).
     sub.add_parser("setup", help="Fetch the headless-browser binary (prototype screenshots + PDF export).")
+    sub.add_parser("guide", help="Print the agent operating contract + first-run recipe (read & follow it).")
     sub.add_parser("info", help="Show resolved data dir, DB path, and browser availability.")
 
     p = sub.add_parser("persona-create")
@@ -416,6 +417,10 @@ def main(argv: list[str] | None = None) -> int:
                 print("playwright install failed; you can retry with:\n  python -m playwright install chromium",
                       file=sys.stderr)
             return rc
+        elif args.command == "guide":
+            from .mcp_server._prompts import getting_started
+            _print(getting_started(), as_json=False)
+            return 0
         elif args.command == "info":
             from . import config as _cfg
             from . import browser as _browser
