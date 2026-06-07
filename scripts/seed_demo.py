@@ -365,4 +365,50 @@ for _ti, (_op, _txt) in enumerate([
                       "status": "open", "opened_on": _op, "closed_on": None, "created_at": _now, "updated_at": _now})
 st.commit()
 print("memory fixture: 4 entities + 3 open threads for Lena")
+
+# ---- meta-report: a report-grade hand-off (cover/callouts/figure/citations; see
+#      spec/meta-report-presentation-and-pdf.md). Authored here so the showcase reproduces it. ----
+_b = S.brief_meta_report(PID, store=st)
+_notes = [s for s in _b["study_ids"] if s.startswith("note:")]
+_mo = S.record_meta_outline(PID, {
+    "build_order_narrative": ("Von vier Discovery-Gesprächen über eine scharfe Problem-Definition und "
+        "einen im Council evaluierten **Wochenplan-Starter** zur dev-fertigen Spec."),
+    "sections": [
+        {"heading": "Discover & Define — der Abend ist der Engpass", "theme_tags": ["discover", "define"],
+         "source_study_ids": [f"council:{DISC}", f"synthesis:{DEFINE}"] + _notes[:2], "intent": "Problem scharf stellen"},
+        {"heading": "Develop — der Wochenplan-Starter", "theme_tags": ["develop"],
+         "source_study_ids": [f"council:{EVAL}"] + _notes[2:4], "intent": "Konzept + Evaluation"},
+        {"heading": "Deliver — Empfehlung & dev-fertige Spec", "theme_tags": ["deliver"],
+         "source_study_ids": [f"synthesis:{DELIVER}"], "intent": "Entscheidung + Spec"}]}, store=st)
+_secs = _mo["outline"]
+try:                                            # best-effort prototype screenshot (needs Playwright)
+    from sonaloop.assets import capture_prototype_shot
+    capture_prototype_shot(PROTO2, st)
+except Exception as _e:
+    print("  meta figure skip (no Playwright):", _e)
+_mbodies = {
+    _secs[0]["id"]: ("> Gesund essen scheitert nicht am Wissen, sondern am **Abend**.\n\n"
+        "Über vier Gespräche trägt **ein** Befund stabil: wer um 19:30 erschöpft heimkommt, trifft keine "
+        "guten Essens-Entscheidungen mehr.\n\n:::insight\nDer eigentliche Engpass ist **Planung + Einkauf**, "
+        "nicht das Kochen — Lösungen müssen _vor_ dem Abend greifen.\n:::\n\nDie Define-Synthese verdichtet "
+        "das zu einer scharfen Haltung: ein **Wochen-Starthelfer**, kein Ernährungs-Coach."),
+    _secs[1]["id"]: ("Aus dem Problem wurde ein Konzept: **3 verlässliche Gerichte/Woche + automatische "
+        "Einkaufsliste**, in zehn Minuten geplant, ohne Abo.\n\nIm Evaluations-Council: **breit getragen, "
+        "kein Gegenwind** — zwei klare Ja, zwei bedingte Ja.\n\n:::recommendation\nDrei **Pflicht-Auflagen**:\n\n"
+        "1. **Familientauglich** kennzeichnen.\n2. **20-Minuten-Garantie** je Gericht.\n3. **Portionen & "
+        "Budget** sichtbar.\n:::"),
+    _secs[2]["id"]: ("**Empfehlung: bauen — schlank.** Der Hi-fi-Test bestätigt, dass die 20-Minuten-Garantie "
+        "Einsteigern die Hürde nimmt.\n\n![[fig:1]]\n\n**Kern-Spec**\n\n- **3 Gerichte + automatische "
+        "Einkaufsliste** als Kern.\n- **20-Minuten-Garantie** je Gericht, sichtbar.\n- **Portionen 1–4** + "
+        "Budget-Hinweis.\n- **Kein Abo, keine App-Pflicht**.\n\n:::risk\n**Offen:** Welche drei Startgerichte "
+        "treffen Budget _und_ Familie _und_ Einsteiger zugleich?\n:::"),
+}
+_mcites = {_secs[0]["id"]: [{"study_id": DEFINE, "council_id": DISC, "quote": "Gesund essen ist ein Abend-Problem, kein Wissens-Problem."}],
+           _secs[1]["id"]: [{"study_id": EVAL, "council_id": EVAL, "quote": "Breit getragen, kein Gegenwind."}],
+           _secs[2]["id"]: [{"study_id": DELIVER, "council_id": EVAL, "quote": "Bauen — schlank, mit den drei Council-Auflagen als Pflicht."}]}
+_mfigs = {_secs[2]["id"]: [{"kind": "prototype", "id": PROTO2, "caption": "Wochenplan-Starter v0.2 — Hi-fi mit sichtbarer 20-Minuten-Garantie"}]}
+for _s in _secs:
+    S.record_meta_section(PID, _s["id"], {"markdown": _mbodies[_s["id"]], "citations": _mcites.get(_s["id"], []),
+                                          "figures": _mfigs.get(_s["id"], [])}, store=st)
+print("meta-report: 3 sections authored")
 print("DONE — demo project:", PID)
