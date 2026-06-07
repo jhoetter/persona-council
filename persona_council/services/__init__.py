@@ -8,10 +8,9 @@ needed cross-module names into each submodule's globals after all submodules are
 imported, so those LOAD_GLOBAL lookups resolve exactly as before — without
 introducing import cycles.
 
-The host-authored simulation globals cluster (simulate_day / record_day /
-record_month_bundle + the generate_day_plan_with_llm / generate_activity
-monkeypatch targets) all live together in ._simulation, so the
-globals()[...] = ... swap-and-restore keeps working unchanged.
+The host-authored simulation cluster (the simulate_day builder + record_day /
+record_month_bundle) lives together in ._simulation; the day's text is authored
+by the MCP host and passed in as day_plan/activities (no in-process generation).
 """
 
 from __future__ import annotations
@@ -56,8 +55,6 @@ from ..llm_simulation import (
     build_plan_prompt,
     build_profile_prompt,
     build_synthesis_prompt,
-    generate_activity,
-    generate_day_plan_with_llm,
     validate_activity_payload,
     validate_cohort_critic_payload,
     validate_digest_payload,

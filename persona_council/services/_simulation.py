@@ -53,8 +53,6 @@ from ..llm_simulation import (
     build_plan_prompt,
     build_profile_prompt,
     build_synthesis_prompt,
-    generate_activity,
-    generate_day_plan_with_llm,
     validate_activity_payload,
     validate_cohort_critic_payload,
     validate_digest_payload,
@@ -124,8 +122,14 @@ def simulate_day(
     timezone: str | None = None,
     seed: str | None = None,
     constraints: dict[str, Any] | None = None,
+    day_plan: dict[str, Any] | None = None,
+    activities: dict[str, Any] | None = None,
     store: Store | None = None,
 ) -> dict[str, Any]:
+    """Build one simulated day from HOST-AUTHORED content: `day_plan` (the blocks) + `activities`
+    (one per block title). No in-process generation — text is authored by the MCP host and validated
+    here. Internal builder driven by record_day/record_month_bundle (spec memory: host authors all text)."""
+    from .. import llm_simulation as _llm
     store = store or Store()
     persona = store.get_persona(persona_id)
     if not persona:
@@ -167,7 +171,7 @@ def simulate_day(
     # Plan/memory-aware: surface the covering plan, active projects, open threads,
     # relevant recalled memory and the world backdrop so the day knits into the arc.
     plan_frame["memory"] = _day_memory_context(store, persona, day.isoformat())
-    day_plan = generate_day_plan_with_llm(plan_frame)
+    day_plan = _llm.validate_day_plan_payload(day_plan or {}, plan_frame)
 
     calendar: list[dict[str, Any]] = []
     experience: list[dict[str, Any]] = []
@@ -222,7 +226,9 @@ def simulate_day(
                 for e in prior_events
             ],
         }
-        generated = generate_activity(frame)
+        if frame["title"] not in (activities or {}):
+            raise ValueError(f"simulate_day: no authored activity for block '{frame['title']}'.")
+        generated = _llm.validate_activity_payload((activities or {})[frame["title"]], frame)
         generated_pains = generated.get("pain_points", []) or [pain]
         day_pains.extend(generated_pains)
         outcome = "left an open follow-up" if generated.get("open_loops") else "resolved enough to move forward"
@@ -328,40 +334,8 @@ def simulate_day(
 
 
 
-def simulate_range(persona_id: str, start_date: str, end_date: str, cadence: str | None = None, seed: str | None = None, store: Store | None = None) -> list[dict[str, Any]]:
-    store = store or Store()
-    start = date.fromisoformat(start_date)
-    end = date.fromisoformat(end_date)
-    results = []
-    day = start
-    while day <= end:
-        if cadence != "all-days" and day.weekday() >= 5:
-            day += timedelta(days=1)
-            continue
-        results.append(simulate_day(persona_id, day.isoformat(), seed=seed, store=store))
-        day += timedelta(days=1)
-    return results
-
-
-
-def continue_simulation(persona_id: str | None = None, days: int = 1, store: Store | None = None) -> list[dict[str, Any]]:
-    store = store or Store()
-    personas = [store.get_persona(persona_id)] if persona_id else store.list_personas()
-    out = []
-    for persona in [p for p in personas if p]:
-        summaries = store.list_daily_summaries(persona["id"])
-        if summaries:
-            start = date.fromisoformat(summaries[-1]["date"]) + timedelta(days=1)
-        else:
-            start = date.today()
-        added = 0
-        day = start
-        while added < days:
-            if day.weekday() < 5:
-                out.append(simulate_day(persona["id"], day.isoformat(), store=store))
-                added += 1
-            day += timedelta(days=1)
-    return out
+# simulate_range / continue_simulation RETIRED: the life-simulation is host-authored per day
+# (brief_day → record_day / record_month_bundle); there is no in-process multi-day generator.
 
 
 
@@ -538,28 +512,10 @@ def record_day(persona_id: str, date_value: str, day_plan: dict[str, Any], plan:
     persona = _require_persona(store, persona_id)
     pid = persona["id"]
     day = _parse_date(date_value).isoformat()
-    from .. import llm_simulation as _llm
 
     put_day_plan(pid, day, plan, store=store)
-    saved_plan = globals()["generate_day_plan_with_llm"]
-    saved_act = globals()["generate_activity"]
-    globals()["generate_day_plan_with_llm"] = lambda frame, _p=day_plan: _llm.validate_day_plan_payload(_p, frame)
-
-    def _act(frame, _a=activities):
-        if frame["title"] not in _a:
-            raise ValueError(f"record_day: no authored activity for block '{frame['title']}'.")
-        out = _llm.validate_activity_payload(_a[frame["title"]], frame)
-        out["generation_mode"] = "host_authored"
-        out["llm_error"] = None
-        return out
-
-    globals()["generate_activity"] = _act
-    try:
-        cons = {"workday_start": int(workday_start_hour)} if workday_start_hour is not None else None
-        sim = simulate_day(pid, day, seed=seed, constraints=cons, store=store)
-    finally:
-        globals()["generate_day_plan_with_llm"] = saved_plan
-        globals()["generate_activity"] = saved_act
+    cons = {"workday_start": int(workday_start_hour)} if workday_start_hour is not None else None
+    sim = simulate_day(pid, day, seed=seed, constraints=cons, day_plan=day_plan, activities=activities, store=store)
     result = {"persona_id": pid, "date": day, "activities": len(sim["experience_events"])}
     if deltas:
         rec = record_memory_deltas(pid, day, deltas, store=store)
@@ -692,34 +648,18 @@ def record_month_bundle(persona_id: str, month: str, bundle: dict[str, Any], sto
     persona = _require_persona(store, persona_id)
     pid = persona["id"]
     first = f"{month}-01"
-    from .. import llm_simulation as _llm
 
     put_period_plan(pid, "month", first, bundle["period_plan"], store=store)
-    saved_plan = globals()["generate_day_plan_with_llm"]
-    saved_act = globals()["generate_activity"]
     days_done = []
-    try:
-        for day in bundle["days"]:
-            d = day["date"]
-            put_day_plan(pid, d, day["day_plan"], store=store)
-            plan, acts = day["plan"], day["activities"]
-            globals()["generate_day_plan_with_llm"] = lambda frame, _p=plan: _llm.validate_day_plan_payload(_p, frame)
-
-            def _act(frame, _a=acts):
-                out = _llm.validate_activity_payload(_a[frame["title"]], frame)
-                out["generation_mode"] = "host_authored"
-                out["llm_error"] = None
-                return out
-
-            globals()["generate_activity"] = _act
-            cons = {"workday_start": int(day["workday_start_hour"])} if day.get("workday_start_hour") is not None else None
-            sim = simulate_day(pid, d, seed=day.get("seed"), constraints=cons, store=store)
-            rec = record_memory_deltas(pid, d, day["deltas"], store=store)
-            days_done.append({"date": d, "activities": len(sim["experience_events"]),
-                              "entities": rec["entities_created"], "facts": rec["facts"]})
-    finally:
-        globals()["generate_day_plan_with_llm"] = saved_plan
-        globals()["generate_activity"] = saved_act
+    for day in bundle["days"]:
+        d = day["date"]
+        put_day_plan(pid, d, day["day_plan"], store=store)
+        cons = {"workday_start": int(day["workday_start_hour"])} if day.get("workday_start_hour") is not None else None
+        sim = simulate_day(pid, d, seed=day.get("seed"), constraints=cons,
+                           day_plan=day["plan"], activities=day["activities"], store=store)
+        rec = record_memory_deltas(pid, d, day["deltas"], store=store)
+        days_done.append({"date": d, "activities": len(sim["experience_events"]),
+                          "entities": rec["entities_created"], "facts": rec["facts"]})
 
     put_digest(pid, "month", first, bundle["digest"], store=store)
     backfill_embeddings(pid, store=store)

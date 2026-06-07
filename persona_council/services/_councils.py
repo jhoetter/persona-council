@@ -55,8 +55,6 @@ from ..llm_simulation import (
     build_plan_prompt,
     build_profile_prompt,
     build_synthesis_prompt,
-    generate_activity,
-    generate_day_plan_with_llm,
     validate_activity_payload,
     validate_cohort_critic_payload,
     validate_digest_payload,

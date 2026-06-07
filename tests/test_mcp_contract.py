@@ -33,7 +33,7 @@ def test_expected_tools_registered():
     expected = {
         "brief_persona", "record_persona", "get_persona", "list_personas",
         "prepare_persona_agent_context",
-        "brief_day", "put_day_plan", "record_day", "simulate_day",
+        "brief_day", "put_day_plan", "record_day",
         "brief_consolidation", "record_memory_deltas",
         "brief_synthesis", "record_synthesis", "export_synthesis",
         "record_council",

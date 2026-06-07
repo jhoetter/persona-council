@@ -62,21 +62,9 @@ def register_simulation(mcp):
         return _env("list_period_plans", services.list_period_plans(persona_id, scope), t)
 
     # ================= Simulation (Phase B) =================
-    @mcp.tool()
-    def simulate_day(persona_id: str, date: str | None = None, timezone: str | None = None, seed: str | None = None, constraints: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Simulate one workday (plan/memory-aware). Day text is host-authored. Then consolidate."""
-        t = time.perf_counter()
-        return _env("simulate_day", services.simulate_day(persona_id, date, timezone, seed, constraints), t)
-
-    @mcp.tool()
-    def simulate_range(persona_id: str, start_date: str, end_date: str, cadence: str | None = None, seed: str | None = None) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("simulate_range", services.simulate_range(persona_id, start_date, end_date, cadence, seed), t)
-
-    @mcp.tool()
-    def continue_simulation(persona_id: str | None = None, days: int = 1) -> dict[str, Any]:
-        t = time.perf_counter()
-        return _env("continue_simulation", services.continue_simulation(persona_id, days), t)
+    # The life-simulation is HOST-AUTHORED per day: brief_day → (host authors the day_plan + activities) →
+    # record_day, and brief_month/record_month_bundle for a sampled month. There is no in-process
+    # simulate_day/simulate_range/continue_simulation generator (retired — host authors all text).
 
     # M2 — clear_simulations / purge_runtime_data are DESTRUCTIVE operator actions, removed from the
     # agent surface (CLI-only: `persona-council clear-simulations` / `purge`). spec/mcp-surface-cleanup M2.

@@ -76,23 +76,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("persona_id")
     p.add_argument("--style")
 
-    p = sub.add_parser("simulate-day")
-    p.add_argument("persona_id")
-    p.add_argument("--date")
-    p.add_argument("--seed")
-
-    p = sub.add_parser("simulate-range")
-    p.add_argument("persona_id")
-    p.add_argument("start_date")
-    p.add_argument("end_date")
-    p.add_argument("--seed")
-    p.add_argument("--all-days", action="store_true")
-
-    p = sub.add_parser("simulate-continue")
-    p.add_argument("--persona")
-    p.add_argument("--all", action="store_true")
-    p.add_argument("--days", type=int, default=1)
-
     sub.add_parser("simulate-clear")
 
     p = sub.add_parser("purge-runtime-data")
@@ -435,12 +418,6 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.refresh_persona_from_source(args.persona_id))
         elif args.command == "avatar-generate":
             _print(generate_persona_avatar(args.persona_id, args.style))
-        elif args.command == "simulate-day":
-            _print(services.simulate_day(args.persona_id, args.date, seed=args.seed))
-        elif args.command == "simulate-range":
-            _print(services.simulate_range(args.persona_id, args.start_date, args.end_date, "all-days" if args.all_days else None, args.seed))
-        elif args.command == "simulate-continue":
-            _print(services.continue_simulation(None if args.all else args.persona, args.days))
         elif args.command == "simulate-clear":
             _print(services.clear_simulations())
         elif args.command == "purge-runtime-data":

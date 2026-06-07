@@ -20,34 +20,27 @@ def test_make_rng_is_deterministic_and_seed_sensitive():
     assert round(other.random(), 6) != 0.457066
 
 
-def _stub_generation(monkeypatch):
-    def fake_plan(frame):
-        tool = (frame.get("allowed_tools") or ["CAD"])[0]
-        return {"mood_forecast": "steady", "blocks": [
-            {"title": "Focus block", "duration_minutes": 60, "event_type": "focus",
-             "tool": tool, "participants": [], "why_it_happens": "deep work"},
-            {"title": "Sync", "duration_minutes": 30, "event_type": "meeting",
-             "tool": tool, "participants": ["Client"], "why_it_happens": "coordinate"},
-        ]}
-
-    def fake_activity(frame):
-        return {
-            "what_happened": "did the work", "conversation": [], "key_quotes": ["quote"],
-            "actions_done": ["acted"], "artifacts_touched": ["doc"], "persona_thought": "fine",
-            "decision": None, "open_loops": [], "mood": "steady", "energy_delta": -1,
-            "pain_points": [], "generation_mode": "host_authored", "llm_error": None,
-        }
-
-    monkeypatch.setattr(services, "generate_day_plan_with_llm", fake_plan)
-    monkeypatch.setattr(services, "generate_activity", fake_activity)
+def _host_content(store, pid):
+    """Host-authored day_plan + per-block activities (what an MCP host submits to record_day)."""
+    tool = (store.get_persona(pid)["tools"] or ["CAD"])[0]
+    et = ["focus", "meeting", "focus", "admin", "interruption"]
+    blocks = [{"title": f"Block {i}", "duration_minutes": 30 + 10 * i, "event_type": et[i],
+               "tool": tool, "participants": (["Client"] if et[i] == "meeting" else []),
+               "why_it_happens": "work"} for i in range(5)]
+    day_plan = {"mood_forecast": "steady", "blocks": blocks}
+    act = {
+        "what_happened": "did the work", "conversation": [], "key_quotes": ["quote"],
+        "actions_done": ["acted"], "artifacts_touched": ["doc"], "persona_thought": "fine",
+        "decision": None, "open_loops": [], "mood": "steady", "energy_delta": -1, "pain_points": [],
+    }
+    return day_plan, {b["title"]: act for b in blocks}
 
 
-def test_simulate_day_scaffolding_is_reproducible(store, monkeypatch):
-    _stub_generation(monkeypatch)
+def test_simulate_day_scaffolding_is_reproducible(store):
     pid = create_persona(store, "Sim")
-
-    run1 = services.simulate_day(pid, "2026-06-02", seed="regression-seed", store=store)
-    run2 = services.simulate_day(pid, "2026-06-02", seed="regression-seed", store=store)
+    dp, acts = _host_content(store, pid)
+    run1 = services.simulate_day(pid, "2026-06-02", seed="regression-seed", day_plan=dp, activities=acts, store=store)
+    run2 = services.simulate_day(pid, "2026-06-02", seed="regression-seed", day_plan=dp, activities=acts, store=store)
 
     sched1 = [(c["start"], c["end"], c["title"]) for c in run1["calendar_events"]]
     sched2 = [(c["start"], c["end"], c["title"]) for c in run2["calendar_events"]]
@@ -62,10 +55,10 @@ def test_simulate_day_scaffolding_is_reproducible(store, monkeypatch):
     assert starts == sorted(starts)
 
 
-def test_simulate_day_seed_changes_schedule(store, monkeypatch):
-    _stub_generation(monkeypatch)
+def test_simulate_day_seed_changes_schedule(store):
     pid = create_persona(store, "Sim2")
-    a = services.simulate_day(pid, "2026-06-02", seed="seed-A", store=store)
-    b = services.simulate_day(pid, "2026-06-02", seed="seed-B", store=store)
+    dp, acts = _host_content(store, pid)
+    a = services.simulate_day(pid, "2026-06-02", seed="seed-A", day_plan=dp, activities=acts, store=store)
+    b = services.simulate_day(pid, "2026-06-02", seed="seed-B", day_plan=dp, activities=acts, store=store)
     # Two unrelated seeds should not produce an identical schedule.
     assert [c["start"] for c in a["calendar_events"]] != [c["start"] for c in b["calendar_events"]]

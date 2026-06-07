@@ -9,7 +9,6 @@ from ._schemas import (
     PROFILE_SCHEMA_KEYS,
     _CRITIC_DIMENSIONS,
     _KINDS,
-    _call_llm_json,
     _json_from_text,
     _recs,
     _require_keys,
@@ -119,79 +118,6 @@ def validate_day_plan_payload(payload: dict[str, Any], frame: dict[str, Any]) ->
         raise ValueError("Day plan must contain at least five usable blocks.")
     out["blocks"] = blocks[:8]
     out["mood_forecast"] = str(out["mood_forecast"]).strip()[:160]
-    return out
-
-
-def generate_day_plan_with_llm(frame: dict[str, Any]) -> dict[str, Any]:
-    prompt = f"""Plan one authentic workday for a synthetic customer profile.
-
-Return ONLY one JSON object with exactly these keys:
-mood_forecast: string
-blocks: array of objects with keys:
-  title: string
-  event_type: one of meeting, focus, interruption, admin, decision, site_visit
-  duration_minutes: integer
-  collaboration_mode: string
-  participants: array of strings
-  tool: string chosen only from allowed_tools
-  why_it_happens: string
-
-Rules:
-- Use SOUL.md, recent events, and open loops as the source of truth.
-- Do not use a fixed template. The day rhythm should fit this specific person.
-- Avoid repeated titles across days unless the recent calendar genuinely implies repetition.
-- Participants must be realistic named roles for this person's world, not generic placeholders.
-- Do not force meetings; mix solitude, interruptions, admin, travel/site/customer moments as appropriate.
-- Do not infer product interest or vendor-friendly pain. Simulate ordinary work.
-- Avoid catchphrases and repeated internal monologue.
-
-Frame:
-{json.dumps(frame, indent=2, ensure_ascii=False)}
-"""
-    return validate_day_plan_payload(_call_llm_json(prompt), frame)
-
-
-def generate_activity_with_llm(frame: dict[str, Any]) -> dict[str, Any]:
-    prompt = f"""You simulate one activity in a synthetic professional workday.
-
-Return ONLY one JSON object with exactly these keys:
-what_happened: string
-conversation: array of objects {{speaker:string,text:string}}
-key_quotes: array of strings
-actions_done: array of strings
-artifacts_touched: array of strings
-persona_thought: string
-decision: string or null
-open_loops: array of strings
-mood: string
-energy_delta: integer from -3 to 2
-pain_points: array of strings chosen only from allowed_pain_points
-
-Rules:
-- Use the loaded SOUL.md as the persona's authoritative identity.
-- Do not infer that the persona likes, needs, or is moving toward BIM, AI, automation, or any product direction unless the SOUL.md/frame explicitly supports it.
-- Treat the repository/app name as irrelevant context; simulate the person's actual workday, not a vendor narrative.
-- Make the activity feel like a real work moment, not a generic summary.
-- If event_type is meeting, include realistic concise dialogue between participants.
-- If working alone, include internal thinking and concrete artifacts/actions.
-- Do not use tools outside allowed_tools.
-- Keep timestamps and participants consistent with the frame.
-- Prefer mundane repeated work friction over drama.
-- Include disagreement, uncertainty, boredom, skepticism, or satisfaction when that is realistic for the persona and activity.
-- Do not start persona_thought with a repeated slogan or catchphrase from recent thoughts.
-- If recent thoughts repeat a phrase, vary the wording and add new concrete context instead of echoing it.
-- Language may be German or English, but should fit the persona context.
-
-Frame:
-{json.dumps(frame, indent=2, ensure_ascii=False)}
-"""
-    return validate_activity_payload(_call_llm_json(prompt, timeout=180), frame)
-
-
-def generate_activity(frame: dict[str, Any]) -> dict[str, Any]:
-    out = generate_activity_with_llm(frame)
-    out["generation_mode"] = "llm"
-    out["llm_error"] = None
     return out
 
 
