@@ -283,9 +283,10 @@ def validate_event(d: dict) -> dict:
                  meta=d.get("meta") or None)
 
 
-# --------------------------------------------------------------------------- read adapters (legacy → primitives)
-# Pure transforms record-dict → primitives (persona lookup happens at render time). Each adapter PREFERS
-# a record's native primitive field when present (forward-compat for Phase 2), else derives from legacy.
+# --------------------------------------------------------------------------- primitive accessors
+# Storage is primitives-only: councils/syntheses carry their statements/findings natively (these return
+# them). council_prompts BUILDS the prompt primitives from the council's canonical question/proposal
+# fields; session_statements maps a prototype session's reaction → a statement.
 
 def council_prompts(c: dict) -> list[dict]:
     if c.get("prompts"):
