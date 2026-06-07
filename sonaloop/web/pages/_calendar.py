@@ -121,7 +121,7 @@ def _year_html(persona_id: str, period: dict, anchor: date) -> str:
     legend = h("div", {"class_": "cy-legend"}, t("less"),
                *[h("span", {"class_": f"cy-cell l{l}"}) for l in range(5)], t("more"))
     main = h("div", {"class_": "cy-main"},
-             h("div", {"class_": "cy-mons", "style": f"grid-template-columns:repeat({n_weeks},1fr)"}, *mlabels),
+             h("div", {"class_": "cy-mons", "style": f"grid-template-columns:repeat({n_weeks},11px)"}, *mlabels),
              h("div", {"class_": "cy-grid"}, *cells), legend)
     return h("div", {"class_": "cal-year"}, wdcol, main)
 
@@ -173,12 +173,12 @@ register_css(r"""
 .cm-mood.pos{background:var(--green)}.cm-mood.neg{background:var(--amber)}.cm-mood.neu{background:var(--line-2)}
 /* ---- YEAR: activity heatmap ---- */
 .cal-year{display:flex;gap:9px;align-items:flex-start;overflow-x:auto;padding:6px 2px 2px}
-.cy-wd{display:grid;grid-template-rows:repeat(7,1fr);gap:3px;padding-top:18px}
+.cy-wd{display:grid;grid-template-rows:repeat(7,11px);gap:3px;padding-top:18px}
 .cy-wd span{font-size:9px;line-height:11px;height:11px;color:var(--muted)}
 .cy-main{min-width:0}
-.cy-mons{display:grid;height:14px;margin-bottom:4px}
-.cy-mon{font-size:var(--t-xs);color:var(--muted);font-weight:500}
-.cy-grid{display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;grid-auto-columns:1fr;gap:3px}
+.cy-mons{display:grid;gap:3px;height:14px;margin-bottom:4px}
+.cy-mon{font-size:var(--t-xs);color:var(--muted);font-weight:500;white-space:nowrap}
+.cy-grid{display:grid;grid-template-rows:repeat(7,11px);grid-auto-flow:column;grid-auto-columns:11px;gap:3px}
 .cy-cell{width:11px;height:11px;border-radius:3px;background:var(--cal-h0);display:block}
 a.cy-cell:hover{outline:1.5px solid var(--accent);outline-offset:1px}
 .cy-cell.empty{background:transparent}
