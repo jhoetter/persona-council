@@ -97,7 +97,7 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
     toolbar = h("div", {"class_": "mem-bar"},
         h("form", {"method": "get", "class_": "mem-tool"}, raw(_icon("search")),
           h("input", {"type": "text", "name": "q", "value": q or "", "placeholder": t("recall_placeholder")})),
-        h("form", {"method": "get", "class_": "mem-tool"}, raw(_icon("half")),
+        h("form", {"method": "get", "class_": "mem-tool"}, raw(_icon("clock")),
           h("input", {"type": "date", "name": "as_of", "value": as_of or ""}),
           h("button", {"class_": "btn btn-sm"}, t("show_state"))))
     panes = []
@@ -166,9 +166,10 @@ def register_personas(app) -> None:
             if len(ts) >= 10:
                 daycount[ts[:10]] += 1
         act_pts = [(d[5:], daycount[d]) for d in sorted(daycount)]
+        # the year heatmap already IS "activity over time", so skip the redundant area chart there
         activity = (h("div", {"class_": "sec", "id": "aktivitaet"}, h("h2", {}, t("activity_over_time")),
                       h("p", {"class_": "ihint"}, t("activities_per_day", n=sum(daycount.values()))), _area(act_pts))
-                    if act_pts else "")
+                    if (act_pts and view != "year") else "")
         voices = _persona_voices_html(store, p["id"])
         rel_rows = fragment(*(h("p", {}, h("strong", {}, r["name"]), " ",
                               h("span", {"class_": "muted"}, f'— {r["type"]}: {r["friction"]}')) for r in p["relationships"]))

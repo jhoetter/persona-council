@@ -153,12 +153,13 @@ def _year_html(persona_id: str, period: dict, anchor: date) -> str:
         col = (date(year, m, 1) - grid_start).days // 7
         mlabels.append(h("span", {"class_": "cy-mon", "style": f"grid-column:{col+1}"}, _MON[m - 1]))
     wdcol = h("div", {"class_": "cy-wd"}, *[h("span", {}, _WD[i] if i in (0, 2, 4, 6) else "") for i in range(7)])
-    legend = h("div", {"class_": "cy-legend"}, t("less"),
-               *[h("span", {"class_": f"cy-cell l{l}"}) for l in range(5)], t("more"))
+    legend = h("div", {"class_": "cy-legend"}, h("span", {}, t("less")),
+               *[h("span", {"class_": f"cy-swatch l{l}"}) for l in range(5)], h("span", {}, t("more")))
     main = h("div", {"class_": "cy-main"},
              h("div", {"class_": "cy-mons", "style": f"grid-template-columns:repeat({n_weeks},11px)"}, *mlabels),
-             h("div", {"class_": "cy-grid"}, *cells), legend)
-    return h("div", {"class_": "cal-year"}, wdcol, main)
+             h("div", {"class_": "cy-grid"}, *cells))
+    # legend lives OUTSIDE the horizontally-scrolling grid so it never clips/overlaps the weekday rail
+    return fragment(h("div", {"class_": "cal-year"}, wdcol, main), legend)
 
 
 def _period_calendar_html(persona_id: str, selected_date: str, view: str, period: dict) -> str:
@@ -226,8 +227,9 @@ a.cy-cell:hover{outline:1.5px solid var(--accent);outline-offset:1px}
 .cy-cell.empty{background:transparent}
 .cy-cell.l0{background:var(--cal-h0)}.cy-cell.l1{background:var(--cal-h1)}.cy-cell.l2{background:var(--cal-h2)}.cy-cell.l3{background:var(--cal-h3)}.cy-cell.l4{background:var(--cal-h4)}
 .cy-cell.today{box-shadow:0 0 0 1.5px var(--accent)}
-.cy-legend{display:flex;align-items:center;gap:4px;margin-top:12px;font-size:var(--t-xs);color:var(--muted)}
-.cy-legend .cy-cell{margin:0 1px}
+.cy-legend{display:flex;justify-content:flex-end;align-items:center;gap:5px;margin:12px 2px 0;font-size:var(--t-xs);color:var(--muted)}
+.cy-swatch{width:11px;height:11px;border-radius:3px;display:inline-block}
+.cy-swatch.l0{background:var(--cal-h0)}.cy-swatch.l1{background:var(--cal-h1)}.cy-swatch.l2{background:var(--cal-h2)}.cy-swatch.l3{background:var(--cal-h3)}.cy-swatch.l4{background:var(--cal-h4)}
 /* activity intensity ramp — indigo (brand accent), not green */
 :root{--cal-h0:#edeef2;--cal-h1:#d8dcf7;--cal-h2:#b2bbef;--cal-h3:#838ee0;--cal-h4:#5b67d1}
 """)
