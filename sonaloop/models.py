@@ -289,22 +289,6 @@ class OpenQuestion:
 
 
 @dataclass
-class MetaReport:
-    """Second-order synthesis over a whole project graph (the Gesamtreport)."""
-    id: str
-    project_id: str
-    title: str
-    outline: list[Json]         # [{id, heading, theme_tags, source_study_ids, intent}]
-    sections: list[Json]        # [{section_id, markdown, citations:[{study_id, council_id, quote}]}]
-    build_order_narrative: str
-    graph_snapshot: Json
-    created_at: str
-
-    def to_dict(self) -> Json:
-        return asdict(self)
-
-
-@dataclass
 class MethodologyJudgment:
     """An LLM-made, evidence-backed decision at a methodology gate. The engine
     requires its PRESENCE (you can't converge without a divergence_complete) but
