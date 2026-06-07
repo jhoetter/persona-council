@@ -1,6 +1,6 @@
 # Unified synthesis & report — one artifact, scoped
 
-Status: **SPEC (in progress)** (2026-06-07). Author: "ist Synthese das gleiche wie Report? … ich denke,
+Status: **DONE (A+B)** (2026-06-07). Author: "ist Synthese das gleiche wie Report? … ich denke,
 dass es letztlich eins sein sollte, nur sehr sauber und gut strukturiert." → migrate **A + B** fully.
 
 Builds on `spec/unified-artifact-schema.md` (the 5 primitives — synthesis findings already use them),
