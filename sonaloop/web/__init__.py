@@ -31,6 +31,17 @@ from ._ext import (  # noqa: F401  (public extension surface for sonaloop-cloud 
     register_nav_section, register_nav_item, register_slot,
     set_theme_overrides, reset_theme_overrides, load_extensions,
 )
+from ._components import _layout as _layout  # noqa: F401  (wrapped publicly as render_page)
+
+
+def render_page(title: str, body: str, store, *, crumbs=None, active: str = "",
+                actions: str = "") -> str:
+    """Render `body` inside the full core shell (sidebar, topbar, theme, command
+    palette). The STABLE public entry point for downstream extension pages — use this
+    instead of reaching into web._components. `body` is emitted as-is (extensions are
+    trusted code); build it with the exported h()/raw()/fragment() helpers to get the
+    same auto-escaping and component CSS as core pages."""
+    return _layout(title, body, store, crumbs=crumbs, active=active, actions=actions)
 from ._routes_lists import register_lists  # noqa: F401
 
 
