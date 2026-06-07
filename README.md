@@ -1,243 +1,19 @@
 # Sonaloop
 
-Terminal-first, MCP-accessible persona simulation and council system.
+**An MCP server for customer-persona simulation, councils, and design-research synthesis.**
 
-Sonaloop models customer profiles as persistent agents with durable
-`SOUL.md` files, timestamped calendars, activity logs, inner thoughts, evidence,
-and council-style debates. The web UI is only for inspecting the current state;
-all creation, simulation, and council execution happens through CLI or MCP.
+Sonaloop models customer profiles as persistent agents — durable `SOUL.md` files,
+timestamped calendars, activity logs, inner thoughts, evidence, and council-style
+debates. The **host agent authors all text**; Sonaloop gathers context, validates,
+and persists. There are no server-side text-LLM calls.
 
-Simulation must be non-directional. Profiles are not nudged toward any product
-thesis unless their own source description, evidence, recent calendar, or
-explicit task context supports it.
+Simulation is non-directional: profiles are never nudged toward a product thesis
+unless their own source description, evidence, calendar, or explicit task context
+supports it.
 
----
+## Quickstart (MCP)
 
-## Quickstart — no coding needed
-
-You do **not** need to be a programmer to run this. The whole system is driven by
-an AI coding agent — **[Claude Code](https://claude.com/claude-code)** (recommended)
-or **OpenAI Codex** — that does the setup and operation for you. You just talk to it.
-
-**Step 1 — Install an AI coding agent.**
-Install Claude Code (`https://claude.com/claude-code`) or Codex and open it in a
-terminal or your editor. (Both have plain installers; the agent itself will help
-if you get stuck.)
-
-**Step 2 — Paste this prompt to the agent.** Replace the one line in brackets with
-what *you* want to use personas for — it does not have to be architecture/BIM; it
-can be anything (SaaS onboarding, a hiring panel, a city council, game NPCs, …):
-
-> I am not a programmer — please do every step yourself and explain in plain
-> language; ask me before anything destructive.
->
-> 1. Check whether `git` and `uv` (the Python tool from Astral) are installed; if
->    not, install them for my operating system.
-> 2. Clone `https://github.com/jhoetter/sonaloop` and `cd` into it.
-> 3. Run `uv sync`, then `cp .env.example .env`.
-> 4. Read `AGENTS.md` and `CLAUDE.md` and follow them as your operating rules.
-> 5. Run `make skills` so the persona skills are discoverable.
-> 6. My use case is: **[describe who you want to simulate and what question you
->    want answered]**. Help me write a few persona source prompts for that, create
->    those personas, simulate a bit of their life, then run a council and a
->    synthesis on my question. Walk me through reading the result.
-
-That is the entire onboarding. The agent will create the personas, run the
-councils, and produce the synthesis report; you read it and decide what to ask next.
-
-**Step 3 (optional) — an OpenAI API key.** Everything works **without** any API
-key. A key only adds two niceties: generated **avatar images** for personas and
-**semantic memory recall** (without it, recall still works on keyword/recency). To
-add one:
-
-1. Go to `https://platform.openai.com/`, sign up / log in.
-2. Open **Billing** and add a small amount of credit (a few dollars is plenty).
-3. Open **API keys → Create new secret key**, copy the value (starts with `sk-…`).
-4. Open the `.env` file in the project and set `OPENAI_API_KEY=sk-…`. Save. Done —
-   never share this key or commit it (the repo already ignores `.env`).
-
-> **Privacy note for sharing this repo:** your own personas, councils and
-> syntheses live under `data/export/`, `spec/persona-source-prompts.md` and
-> `exports/`, and are all git-ignored — they stay on your machine and are never
-> pushed. See *Data layout & privacy* below.
-
----
-
-## How it works
-
-Four layers build on each other: **persona → simulation/memory → council →
-synthesis**. The server gathers context and persists; the **host agent authors
-all text** (gather → author → write-back). No server-side text LLM calls.
-
-```mermaid
-flowchart TD
-  SRC["Source prompts - spec/persona-source-prompts.md"] -->|brief_persona then record_persona| P["Persona + SOUL.md"]
-  P -->|brief_day then record_day| D["Workday: calendar, activities, inner thoughts"]
-  D -->|brief_consolidation then record_memory_deltas| M[("Memory graph: entities, bi-temporal facts, threads")]
-  M -->|brief_digest then put_digest| DG["Digests: week / month / quarter / year"]
-  M -.->|recall_memory and get_state_at time-travel| P
-  P -->|run-council then record_council| C["Council: turns, votes, exec_summary"]
-  M -.->|grounds| C
-  C -->|brief_synthesis then record_synthesis| S["Synthesis report: arc, recommendations, positioning"]
-  C -.->|synthesize loop suggests next council| C
-  EVAL["evaluate_simulation + LLM critic"] -.->|gates| D
-```
-
-The gather→author→persist contract every generative step follows:
-
-```mermaid
-sequenceDiagram
-  participant H as Host agent
-  participant PC as Sonaloop
-  H->>PC: brief_* gather context
-  PC-->>H: SOUL + memory + recall + instructions + schema
-  H->>H: author JSON - text generation happens HERE
-  H->>PC: put_* / record_* validate and persist
-  Note over H,PC: day to consolidate to digest, then councils to synthesis
-```
-
-## Install (PyPI)
-
-Sonaloop publishes a normal Python package — use it as an MCP server without cloning:
-
-```bash
-# one-off, no install (recommended for MCP clients):
-uvx --from sonaloop sonaloop-mcp
-
-# or install the CLI + MCP + web entrypoints:
-pip install sonaloop      # or: uv tool install sonaloop
-sonaloop setup            # fetch the headless browser (prototype screenshots + PDF export)
-sonaloop info             # show resolved data dir, DB path, browser availability
-```
-
-When installed (not a source checkout), all writable state lives in a per-user data
-directory (`platformdirs` — e.g. `~/.local/share/sonaloop` on Linux). Override with
-`SONALOOP_DATA_DIR=/path`. Read-only package data (methodology specs, MCP suggestions,
-prototype templates) ships inside the wheel. `sonaloop setup` is optional — screenshots
-and PDF export degrade gracefully if the browser is absent.
-
-## Setup (from source / development)
-
-```mermaid
-flowchart LR
-  A["git clone"] --> B["uv sync"]
-  B --> C["cp .env.example .env - OPENAI_API_KEY optional"]
-  C --> D{"data/export present?"}
-  D -->|yes| E["make restore - rebuild exact state, no regen"]
-  D -->|no| F["create personas, simulate, council"]
-```
-
-
-```bash
-uv sync
-cp .env.example .env
-```
-
-In a source checkout, writable state stays under `./data` (as before) so the dev
-workflow is unchanged.
-
-Text generation is performed by the MCP host agent, such as Claude Code or
-Codex. Sonaloop does not call text LLM APIs and does not use text API
-keys; there is no deterministic simulation fallback. `OPENAI_API_KEY` is used
-only for non-text helpers: avatar image generation and embeddings for semantic
-memory recall (both optional — without the key, avatars are skipped and recall
-falls back to keyword/recency/importance only).
-
-Use `sonaloop purge-runtime-data` or the MCP `purge_runtime_data` tool
-for a clean slate.
-
-## Data layout & privacy
-
-All generated state lives under `data/`, and **all of it is git-ignored and
-local-only** — nothing here is ever pushed to the public repo. There is exactly
-one **portable snapshot artifact** (`data/export/`) that round-trips your full
-state, and the rest is rebuildable runtime:
-
-```
-data/
-  sonaloop.db(-wal/-shm)   runtime SQLite — source of truth at runtime   [gitignored]
-  personas/<slug>/SOUL.md,MEMORY.md   rendered projections (cache)               [gitignored]
-  avatars/<slug>-<hash>.png           generated avatar images (cache)            [gitignored]
-  export/                             portable snapshot of YOUR state             [gitignored · private]
-    manifest.json, world_context.json
-    personas/<slug>/  profile.json · SOUL.md · MEMORY.md · avatar.png
-                      calendar.json · experiences.json · daily_summaries.json
-                      memory.json (entities/facts/threads/plans/digests/links) · eval.json
-```
-
-Your **persona source prompts** (`spec/persona-source-prompts.md`) and **rendered
-synthesis reports** (`exports/`) are git-ignored for the same reason — they are
-your content, not the engine.
-
-Move your exact state to another machine **without regenerating** — privately,
-not through the public repo (e.g. copy the folder, a private archive, or your own
-private fork):
-
-```bash
-make snapshot     # writes data/export/ — your private, portable state
-# ...on the other machine, inside a clone of the repo:
-make restore      # rebuilds the runtime DB + avatars + SOULs from data/export/
-```
-
-`make restore` round-trips the full graph deterministically. Embeddings are
-re-derived on restore (not stored, to keep snapshots lean); recall stays
-keyword-only until that backfill completes.
-
-## Running
-
-```bash
-make dev            # web inspector on :8787 (prints → http://127.0.0.1:8787 when ready)
-make dev-forwarded  # web inspector on :18787 (SSH tunnel friendly)
-make mcp            # MCP server (stdio)
-make skills         # symlink claude-skills/* into .claude/skills/ (Claude Code skill discovery)
-make snapshot       # write private, local-only data/export/
-make restore        # rebuild runtime DB from data/export/
-```
-
-The inspector and all generated text are bilingual (German/English). The
-**content** language is auto-detected from the language you write in and then
-persisted; the **UI** language has its own toggle in the top bar (`?lang=de|en`,
-or `sonaloop set-language`). Default is English until you write German.
-
-The web UI is a Linear/Notion-grade inspector (`Overview · Personas · Councils ·
-Synthesen` in a navigation-only sidebar; a personas card-grid home; Linear-style
-list views; the **Synthese** report as a Notion-style document with table of
-contents, properties rail, callouts, toggles and **PDF export**; each persona's
-**🧠 Memory** page with project timelines, time-travel and recall). It supports
-dark mode, a resizable/collapsible sidebar, breadcrumbs and keyboard navigation
-(`g o/p/c/s`, `[`). It is read-only — all creation happens via CLI/MCP.
-
-### Councils, strategies & synthesis
-
-- **Council** = personas react to a prompt, grounded in their own memory (each can
-  `recall` on demand). Run via the `run-council` skill; it supports a **moderated
-  back-and-forth** (a host mediator reads the round and directs who replies next)
-  and pluggable mediator **strategies** (`positive-deepdive`, `pain-discovery`,
-  `tension`, `goal`) with a **hand-raising** convergence loop + upper bound.
-- **Analysis → council loop → synthesis.** An **analysis** is a study with a
-  question/goal; the `synthesize` skill is its **iterative driver**: from one
-  statement it runs a council, reads the result and decides whether a follow-up
-  council is worth it — authoring the next **self-contained** question itself
-  (personas are council-stateless) — until the goal is reached or `max_councils`
-  (default 10). The **councils are the log**; the **synthesis is the answer/report**.
-- **Synthesis = the report.** Besides the cross-council prose (arc, recommendations,
-  positioning, pain-solvers, segments) it carries a structured **per-persona `voices`**
-  layer: each persona's `sentiment`, `relevance` (how much the topic touches their
-  work), the one-line **key argument** (why), a **shift** (e.g. neutral→positiv with
-  the triggering argument), and grounded **evidence** quotes. The web report
-  (`/syntheses/{id}`) is answer-first with an interactive **Stimmen** panel
-  (filter/sort by sentiment & relevance, expand for shift + evidence); councils sit
-  underneath as the log. `export_synthesis` (md/json) is self-contained for handing to
-  a downstream agent.
-
-Skills live in [`claude-skills/`](claude-skills/) (`simulate-cohort`,
-`run-council`, `synthesize`); run `make skills` once so Claude Code discovers them.
-
-## Claude MCP
-
-Add Sonaloop as an MCP server in Claude Desktop or any Claude MCP client.
-
-Installed from PyPI (no checkout needed):
+Add Sonaloop to Claude Desktop or any MCP client — no checkout needed:
 
 ```json
 {
@@ -250,46 +26,105 @@ Installed from PyPI (no checkout needed):
 }
 ```
 
-Or, from a source checkout (development):
+Or install the CLI + MCP + web entrypoints directly:
 
-```json
-{
-  "mcpServers": {
-    "sonaloop": {
-      "command": "uv",
-      "args": ["run", "sonaloop-mcp"],
-      "cwd": "/absolute/path/to/sonaloop"
-    }
-  }
-}
+```bash
+uv tool install sonaloop      # or: pip install sonaloop
+sonaloop setup                # optional: headless browser for prototype screenshots + PDF export
+sonaloop info                 # show data dir, DB path, browser availability
 ```
 
-Claude should use MCP tools such as `prepare_persona_agent_context`,
-`brief_persona`/`record_persona`, `brief_day`/`record_day`, and
-`brief_council`/`record_council`; persona-facing work must load
-`SOUL.md` through `prepare_persona_agent_context`. The host agent authors text
-content directly and submits structured JSON through MCP. `OPENAI_API_KEY` is
-only needed for non-text helpers: `generate_avatar` and embeddings for semantic
-`recall_memory` (recall still works without it, keyword/recency-only).
+Then point your host agent at the operating rules in [AGENTS.md](AGENTS.md) and let
+it create personas, simulate, run councils, and synthesize.
 
-Agent and MCP operating instructions live in [AGENTS.md](AGENTS.md). Claude
-should follow [CLAUDE.md](CLAUDE.md), which delegates to the same instructions.
+## How it works
 
-The single project tracker — spec, reference, and the **Outstanding Work** list —
-is [SPEC_TRACKER.md](SPEC_TRACKER.md). The supporting architecture and contracts
-live under [`spec/`](spec/):
+Four layers build on each other — **persona → simulation/memory → council →
+synthesis** — and every generative step follows one contract: `brief_*` (gather
+context) → the host authors JSON → `record_*`/`put_*` (validate + persist).
+
+```mermaid
+flowchart TD
+  SRC["Source prompts"] -->|brief_persona / record_persona| P["Persona + SOUL.md"]
+  P -->|brief_day / record_day| D["Workday: calendar, activities, inner thoughts"]
+  D -->|brief_consolidation / record_memory_deltas| M[("Memory graph: entities, bi-temporal facts, threads")]
+  M -.->|recall_memory / get_state_at time-travel| P
+  P -->|run-council / record_council| C["Council: turns, votes, exec summary"]
+  M -.->|grounds| C
+  C -->|brief_synthesis / record_synthesis| S["Synthesis report: arc, recommendations, positioning"]
+```
+
+## Configuration
+
+`OPENAI_API_KEY` is **optional** — Sonaloop never uses it for text. It only enables
+two niceties: persona **avatar images** and **semantic memory recall** (without it,
+recall falls back to keyword/recency/importance). Set it in `.env` or the
+environment.
+
+When installed, writable state lives in a per-user data dir (`platformdirs`, e.g.
+`~/.local/share/sonaloop`); override with `SONALOOP_DATA_DIR`. In a source checkout
+it stays under `./data`. Read-only package data (methodology specs, MCP suggestions,
+prototype templates) ships inside the wheel. Run `sonaloop purge-runtime-data` for a
+clean slate.
+
+## The inspector (web UI)
+
+A read-only, Linear/Notion-grade inspector (`Overview · Personas · Councils ·
+Synthesen`): a personas card-grid home, list views, each persona's **🧠 Memory**
+page (project timelines, time-travel, recall), and the **Synthese** report as a
+Notion-style document with table of contents, callouts, and **PDF export**. Dark
+mode, keyboard nav (`g o/p/c/s`, `[`), bilingual (de/en, auto-detected; toggle via
+`?lang=de|en` or `sonaloop set-language`). All creation happens via CLI/MCP.
+
+## Councils & synthesis
+
+- **Council** — personas react to a prompt, grounded in their own memory (each can
+  `recall` on demand). The `run-council` skill supports a moderated back-and-forth
+  with pluggable strategies (`positive-deepdive`, `pain-discovery`, `tension`,
+  `goal`) and a hand-raising convergence loop.
+- **Analysis → council loop → synthesis** — the `synthesize` skill is an iterative
+  driver: from one statement it runs a council, reads the result, and authors the
+  next self-contained question until the goal is met (or `max_councils`, default 10).
+  The councils are the log; the **synthesis is the answer/report**.
+- **Synthesis = the report** — cross-council prose (arc, recommendations,
+  positioning, pain-solvers, segments) plus a structured per-persona **`voices`**
+  layer (sentiment, relevance, key argument, shift, evidence quotes). The web report
+  is answer-first with an interactive **Stimmen** panel; `export_synthesis` (md/json)
+  is self-contained for handing to a downstream agent.
+
+## From source (development)
+
+```bash
+git clone https://github.com/jhoetter/sonaloop && cd sonaloop
+uv sync
+cp .env.example .env          # OPENAI_API_KEY optional
+make skills                   # symlink claude-skills/* for Claude Code discovery
+make dev                      # web inspector on :8787 (dev-forwarded for :18787)
+make mcp                      # MCP server (stdio)
+```
+
+Move your exact state between machines **without regenerating** (privately, not via
+the public repo): `make snapshot` writes `data/export/` (your portable state), and
+`make restore` rebuilds the runtime DB + avatars + SOULs from it. All of `data/`
+(and your `spec/persona-source-prompts.md` + `exports/`) is git-ignored and
+local-only — your content never leaves your machine.
+
+For releases: bump `version` in `pyproject.toml` (a published version is immutable),
+then `uv build && uv publish`. Refresh the vendored icons with `make icons`.
+
+## Operating rules & docs
+
+The host agent follows [AGENTS.md](AGENTS.md) (and [CLAUDE.md](CLAUDE.md), which
+delegates to it). The single project tracker is [SPEC_TRACKER.md](SPEC_TRACKER.md);
+architecture and contracts live under [`spec/`](spec/) — notably
 [memory-and-simulation-architecture.md](spec/memory-and-simulation-architecture.md),
-[mcp-tool-contract.md](spec/mcp-tool-contract.md),
-[simulation-loop-contract.md](spec/simulation-loop-contract.md). Your own persona
-source prompts live in `spec/persona-source-prompts.md` (git-ignored, local-only)
-— it is the canonical source from which personas are (re)built; write yours there.
+[mcp-tool-contract.md](spec/mcp-tool-contract.md), and
+[simulation-loop-contract.md](spec/simulation-loop-contract.md).
 
 ## Credits
 
 The council format was inspired by Leo Püttmann's
-[`ai-council`](https://github.com/LeonardPuettmann/ai-council) — its
-markdown-defined agents and select → debate → propose → vote → persist flow
-seeded this project. Sonaloop takes it further with durable persona state,
-persistent memory, longitudinal simulation, and MCP-host-authored text. See
-[SPEC_TRACKER.md](SPEC_TRACKER.md#inspiration-leonardpuettmannai-council) for the
-full reference analysis.
+[`ai-council`](https://github.com/LeonardPuettmann/ai-council) — its markdown-defined
+agents and select → debate → propose → vote → persist flow seeded this project.
+Sonaloop takes it further with durable persona state, persistent memory, longitudinal
+simulation, and MCP-host-authored text.
