@@ -1,6 +1,6 @@
 # Meta-report presentation & PDF — report-grade output with figures, export-ready
 
-Status: **SPEC (not yet implemented)** (2026-06-07). Author: design brainstorm triggered by "make the
+Status: **Phase 1 DONE; Phase 2–3 SPEC** (2026-06-07). Author: design brainstorm triggered by "make the
 meta-report almost presentation-like (Notion-quality), able to embed prototype screenshots/images, and
 later export to a proper PDF."
 

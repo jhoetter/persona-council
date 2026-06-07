@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .._report import render_meta_report
 
 
 def register_projects(app) -> None:
@@ -152,11 +153,16 @@ def register_projects(app) -> None:
     def project_meta(project_id: str) -> str:
         store = Store()
         try:
-            md = services.export_meta_report(project_id, format="md", store=store)
             proj = services.get_research_project(project_id, store=store)
         except KeyError:
             return _layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared"), icon="overview"), store, active="projects")
-        body = h("div", {"class_": "page"}, h("div", {"class_": "doc"}, raw(_md(md))))
+        reports = store.list_meta_reports(project_id)
+        if not reports:
+            return _layout(proj["title"] + " — " + t("meta_report"),
+                           _empty_state(t("meta_report"), t("meta_report_unavailable"), icon="overview"),
+                           store, active="projects",
+                           crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)])
+        body = h("div", {"class_": "page"}, raw(render_meta_report(reports[0], store)))
         actions = h("button", {"class_": "btn", "onclick": "window.print()"}, t("export_pdf"))
         return _layout(proj["title"] + " — " + t("meta_report"), body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)],

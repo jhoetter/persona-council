@@ -1,0 +1,164 @@
+"""Meta-report — report-grade renderer (spec/meta-report-presentation-and-pdf.md, Phase 1).
+
+Turns a stored MetaReport (outline + authored markdown sections + citations) into a presentation-
+quality document: a cover, a table of contents, numbered sections, callout boxes (:::insight /
+:::recommendation / :::risk), pull-quotes, and footnote-style citations. Built as clean semantic HTML
++ a print-first stylesheet so the eventual headless-Chromium PDF (Phase 3) reuses the exact same
+markup. The host authors all text; this only typesets.
+"""
+from __future__ import annotations
+
+import re
+
+from ._html import h, raw, fragment, register_css
+from ._components import _md, _icon
+from ._i18n import t
+from ..config import content_language
+
+# callout directive kind → (icon, css-suffix). A small fixed PRESENTATION set (not methodology vocab).
+_CALLOUT = {"insight": ("bulb", "insight"), "recommendation": ("check", "rec"),
+            "risk": ("alert", "risk"), "key": ("target", "key"), "keytakeaway": ("target", "key")}
+_DIRECTIVE = re.compile(r":::(\w+)[ \t]*\n(.*?)\n:::", re.DOTALL)
+
+
+def _ref_titler(report, store):
+    node_title = {n["study_id"]: (n.get("title") or "") for n in (report.get("graph_snapshot") or {}).get("nodes", [])}
+
+    def title(ref: str) -> str:
+        if node_title.get(ref):
+            return node_title[ref]
+        rid = ref.split(":", 1)[-1]
+        s = store.get_synthesis(rid)
+        if s:
+            return s.get("title", rid)
+        c = store.get_council_session(rid)
+        if c:
+            return (c.get("prompt") or rid)[:70]
+        return rid
+    return title
+
+
+def _body(md_text: str) -> str:
+    """Render a section body — plain markdown, with :::callout::: blocks lifted into styled boxes."""
+    out, pos = [], 0
+    for m in _DIRECTIVE.finditer(md_text):
+        pre = md_text[pos:m.start()].strip()
+        if pre:
+            out.append(raw(_md(pre)))
+        icon, cls = _CALLOUT.get(m.group(1).lower(), ("dot", "insight"))
+        out.append(h("div", {"class_": f"rp-call rp-{cls}"},
+                     h("div", {"class_": "rp-call-ic"}, raw(_icon(icon))),
+                     h("div", {"class_": "rp-call-body"}, raw(_md(m.group(2).strip())))))
+        pos = m.end()
+    rest = md_text[pos:].strip()
+    if rest:
+        out.append(raw(_md(rest)))
+    return fragment(*out)
+
+
+def render_meta_report(report: dict, store) -> str:
+    rtitle = _ref_titler(report, store)
+    authored = {s["section_id"]: s for s in report.get("sections", [])}
+    outline = report.get("outline", [])
+    n_studies = len({x for sec in outline for x in sec.get("source_study_ids", [])})
+    project_title = report.get("title", "").rsplit(" — ", 1)[0]
+    de = content_language() == "de"
+    meta_line = " · ".join([
+        f"{len(outline)} " + ("Abschnitte" if de else "sections"),
+        f"{n_studies} " + ("Studien" if de else "studies"),
+        (report.get("created_at") or "")[:10],
+    ])
+
+    cover = h("header", {"class_": "rp-cover"},
+              h("div", {"class_": "rp-eyebrow"}, t("meta_report")),
+              h("h1", {"class_": "rp-title"}, project_title),
+              h("div", {"class_": "rp-metaline"}, meta_line),
+              (h("p", {"class_": "rp-lead"}, raw(_md(report["build_order_narrative"])))
+               if report.get("build_order_narrative") else ""))
+
+    toc = h("nav", {"class_": "rp-toc"}, h("div", {"class_": "rp-toc-h"}, t("toc")),
+            h("ol", {}, *[h("li", {}, h("a", {"href": f"#rp-s{i}"}, sec["heading"]))
+                          for i, sec in enumerate(outline, 1)]))
+
+    secs = []
+    for i, sec in enumerate(outline, 1):
+        body = authored.get(sec["id"])
+        body_html = (_body(body["markdown"]) if body and body.get("markdown")
+                     else h("p", {"class_": "muted"}, f"_({'noch nicht verfasst' if de else 'not yet authored'})_"))
+        cites = ""
+        if body and body.get("citations"):
+            rows = []
+            for n, c in enumerate(body["citations"], 1):
+                council = h("span", {"class_": "rp-cite-src"}, f" · {rtitle(c['council_id'])}") if c.get("council_id") else ""
+                quote = h("span", {"class_": "rp-cite-q"}, f"„{c['quote']}“") if c.get("quote") else ""
+                rows.append(h("li", {}, h("span", {"class_": "rp-cite-n"}, str(n)),
+                              h("span", {}, h("b", {}, rtitle(c["study_id"])), council, " ", quote)))
+            cites = h("div", {"class_": "rp-cites"}, h("div", {"class_": "rp-cites-h"}, t("citations")),
+                      h("ol", {}, *rows))
+        src = ""
+        if sec.get("source_study_ids"):
+            src = h("div", {"class_": "rp-src"}, ("Quellen: " if de else "Sources: ")
+                    + ", ".join(rtitle(x) for x in sec["source_study_ids"]))
+        secs.append(h("section", {"class_": "rp-sec", "id": f"rp-s{i}"},
+                      h("h2", {}, h("span", {"class_": "rp-num"}, f"{i:02d}"), sec["heading"]),
+                      body_html, cites, src))
+    return h("article", {"class_": "report"}, cover, toc, *secs)
+
+
+register_css(r"""
+/* Meta-report — report-grade document (spec/meta-report-presentation-and-pdf.md Phase 1) */
+.report{max-width:780px;margin:0 auto;color:var(--ink);font-size:15px;line-height:1.7}
+.report h2,.report h3,.report p,.report ul,.report ol{max-width:none}
+/* cover */
+.rp-cover{padding:8px 0 26px;margin-bottom:30px;border-bottom:1px solid var(--line)}
+.rp-eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:600}
+.rp-title{font-size:34px;line-height:1.12;font-weight:700;margin:10px 0 0;letter-spacing:-.01em}
+.rp-metaline{margin-top:12px;color:var(--muted);font-size:var(--t-sm);font-variant-numeric:tabular-nums}
+.rp-lead{margin:22px 0 0;font-size:19px;line-height:1.6;color:var(--ink);font-weight:450;
+  border-left:3px solid var(--accent);padding-left:18px}
+.rp-lead p{margin:0}
+/* table of contents */
+.rp-toc{margin:0 0 34px;padding:16px 18px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+.rp-toc-h{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:8px}
+.rp-toc ol{margin:0;padding:0;list-style:none;counter-reset:toc}
+.rp-toc li{counter-increment:toc;padding:3px 0}
+.rp-toc li::before{content:counter(toc,decimal-leading-zero);color:var(--faint);font-variant-numeric:tabular-nums;margin-right:10px;font-size:var(--t-sm)}
+.rp-toc a{color:var(--ink);text-decoration:none}.rp-toc a:hover{color:var(--accent)}
+/* sections */
+.rp-sec{margin:0 0 40px;scroll-margin-top:70px}
+.rp-sec h2{display:flex;align-items:baseline;gap:12px;font-size:23px;font-weight:650;line-height:1.25;margin:0 0 14px;letter-spacing:-.01em}
+.rp-num{color:var(--faint);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.report p{margin:0 0 14px}.report ul,.report ol{margin:0 0 14px;padding-left:22px}.report li{margin:3px 0}
+.report h3{font-size:16px;font-weight:600;margin:22px 0 8px}
+/* pull-quote (blockquote) */
+.report blockquote{margin:22px 0;padding:4px 0 4px 20px;border-left:3px solid var(--line-2);
+  font-size:18px;line-height:1.55;color:var(--muted);font-style:italic}
+.report blockquote p{margin:0}
+/* callouts */
+.rp-call{display:flex;gap:12px;margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-left-width:3px;border-radius:10px;background:var(--panel-2)}
+.rp-call-ic{flex:none;line-height:0;margin-top:2px}.rp-call-ic svg{width:18px;height:18px}
+.rp-call-body{min-width:0}.rp-call-body>:first-child{margin-top:0}.rp-call-body>:last-child{margin-bottom:0}
+.rp-insight{border-left-color:var(--accent)}.rp-insight .rp-call-ic{color:var(--accent)}
+.rp-rec{border-left-color:var(--green)}.rp-rec .rp-call-ic{color:var(--green)}
+.rp-risk{border-left-color:var(--amber)}.rp-risk .rp-call-ic{color:var(--amber)}
+.rp-key{border-left-color:var(--accent);background:var(--accent-weak)}.rp-key .rp-call-ic{color:var(--accent)}
+/* citations + sources */
+.rp-cites{margin:18px 0 0;padding-top:12px;border-top:1px solid var(--line)}
+.rp-cites-h{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:6px}
+.rp-cites ol{list-style:none;margin:0;padding:0}
+.rp-cites li{display:flex;gap:9px;font-size:var(--t-sm);color:var(--muted);padding:3px 0;line-height:1.5}
+.rp-cite-n{flex:none;width:18px;height:18px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);
+  font-size:var(--t-xs);display:inline-flex;align-items:center;justify-content:center;color:var(--faint)}
+.rp-cites b{color:var(--ink);font-weight:550}.rp-cite-q{color:var(--muted)}
+.rp-src{margin-top:10px;font-size:var(--t-xs);color:var(--faint)}
+/* print: drop the app chrome, give the report the page (foundation for the Chromium PDF, Phase 3) */
+@media print{
+  .sidebar,.topbar,.cmdk,.drawer-wrap,.toc,.rail,.actions,.crumbs{display:none!important}
+  .shell,.content,.page,main{margin:0!important;padding:0!important;max-width:none!important}
+  body{background:#fff}
+  .report{max-width:none}
+  .rp-sec{break-inside:avoid}
+  .rp-call,.report blockquote,.rp-cites{break-inside:avoid}
+  .rp-cover{break-after:avoid}
+}
+""")
