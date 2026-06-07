@@ -1,6 +1,11 @@
 """Project pages: home/index, detail (outline/graph), meta-report, plan (spec/roadmap.md R2)."""
 from __future__ import annotations
 
+import re
+
+from fastapi import Request
+from fastapi.responses import Response, RedirectResponse
+
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._report import render_meta_report
 
@@ -163,10 +168,45 @@ def register_projects(app) -> None:
                            store, active="projects",
                            crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)])
         body = h("div", {"class_": "page"}, raw(render_meta_report(reports[0], store)))
-        actions = h("button", {"class_": "btn", "onclick": "window.print()"}, t("export_pdf"))
+        actions = h("a", {"class_": "btn", "href": f"/projects/{project_id}/meta.pdf"}, t("export_pdf"))
         return _layout(proj["title"] + " — " + t("meta_report"), body, store,
                        crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)],
                        active="projects", actions=actions)
+
+    @app.get("/projects/{project_id}/meta.pdf")
+    def project_meta_pdf(project_id: str, request: Request):
+        """Proper PDF via headless Chromium (spec/meta-report-presentation-and-pdf Phase 3): navigate to
+        the live /meta page (so CSS + /data/assets resolve), emulate print media, page.pdf(). Reuses the
+        EXACT report HTML — one rendering path. Degrades to the printable HTML page if Playwright absent."""
+        store = Store()
+        try:
+            proj = services.get_research_project(project_id, store=store)
+        except KeyError:
+            return Response(t("not_found"), status_code=404)
+        if not store.list_meta_reports(project_id):
+            return RedirectResponse(f"/projects/{project_id}/meta")
+        try:
+            from playwright.sync_api import sync_playwright
+        except Exception:
+            return RedirectResponse(f"/projects/{project_id}/meta")   # no harness → printable HTML page
+        url = str(request.base_url).rstrip("/") + f"/projects/{project_id}/meta"
+        _hf = "font-size:8px;color:#9aa0a6;width:100%;padding:0 16mm"
+        header = h("div", {"style": _hf}, f'{proj["title"]} · {t("meta_report")}')
+        footer = h("div", {"style": _hf + ";text-align:center;padding:0"},
+                   h("span", {"class_": "pageNumber"}), " / ", h("span", {"class_": "totalPages"}))
+        with sync_playwright() as pw:
+            b = pw.chromium.launch()
+            pg = b.new_page()
+            pg.goto(url, wait_until="networkidle")
+            pg.emulate_media(media="print")
+            pg.wait_for_timeout(200)
+            pdf = pg.pdf(format="A4", print_background=True,
+                         margin={"top": "18mm", "bottom": "16mm", "left": "16mm", "right": "16mm"},
+                         display_header_footer=True, header_template=header, footer_template=footer)
+            b.close()
+        fn = (re.sub(r"[^\w\-]+", "-", proj["title"]).strip("-").lower() or "report") + "-meta-report.pdf"
+        return Response(pdf, media_type="application/pdf",
+                        headers={"Content-Disposition": f'inline; filename="{fn}"'})
 
     @app.get("/projects/{project_id}/plan", response_class=HTMLResponse)
     def project_plan(project_id: str) -> str:
