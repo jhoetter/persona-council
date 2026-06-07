@@ -108,13 +108,20 @@ def register_personas(app) -> None:
         voices = _persona_voices_html(store, p["id"])
         rel_rows = fragment(*(h("p", {}, h("strong", {}, r["name"]), " ",
                               h("span", {"class_": "muted"}, f'— {r["type"]}: {r["friction"]}')) for r in p["relationships"]))
+        cal_section = h("div", {"class_": "sec", "id": "cal"}, h("h2", {}, t("calendar")),
+            (fragment(raw(_calendar_tabs(p["id"], selected_date, view)),
+                      raw(_period_calendar_html(p["id"], selected_date, view, period)))
+             if has_sim else h("p", {"class_": "muted"}, t("no_days_yet"))))
         main = fragment(
             _hero(p["display_name"], sub=f'{p["role"]["title"]} · {p["company_context"]["industry"]}'),
             h("div", {"class_": "identity"}, h("div", {}, avatar), h("div", {},
               h("div", {"class_": "card"}, h("h3", {}, t("current_state")),
                 h("p", {}, h("strong", {}, state["current_activity"])), h("p", {"class_": "muted"}, state["collaboration_mode"]),
                 h("p", {"class_": "thought"}, state["current_thought"])))),
-            raw(voices), activity,
+            # the simulated LIFE (calendar + activity rhythm) is this persona's signature — surface it
+            # right after the snapshot, before the analysis voices.
+            cal_section, activity,
+            raw(voices),
             h("div", {"class_": "sec", "id": "ziele"}, h("h2", {}, t("goals")), raw(_pills(p["goals"]))),
             h("div", {"class_": "sec", "id": "pains"}, h("h2", {}, t("pain_points")),
               # structured observations (issue + opportunity + severity/evidence) → the SAME finding row
@@ -122,20 +129,17 @@ def register_personas(app) -> None:
               (raw(render_findings([_artifacts.pain_point_finding(x) for x in data["pain_points"]]))
                if data["pain_points"] else raw(_pills(p["pain_points"])))),
             h("div", {"class_": "sec", "id": "tools"}, h("h2", {}, t("tools")), raw(_pills(p["tools"]))),
-            h("div", {"class_": "sec", "id": "bez"}, h("h2", {}, t("relationships")), rel_rows),
-            h("div", {"class_": "sec", "id": "cal"}, h("h2", {}, t("calendar")),
-              (fragment(raw(_calendar_tabs(p["id"], selected_date, view)),
-                        raw(_period_calendar_html(p["id"], selected_date, view, period)))
-               if has_sim else h("p", {"class_": "muted"}, t("no_days_yet")))))
+            h("div", {"class_": "sec", "id": "bez"}, h("h2", {}, t("relationships")), rel_rows))
         props = _properties_html([
             ("personas", t("role"), p["role"]["title"]),
             ("projects", t("industry"), p["company_context"]["industry"]),
             ("dot", t("size"), p["company_context"].get("size", "")),
             ("memory", t("memory"), h("a", {"class_": "bc-link", "href": f'/personas/{p["id"]}/memory'}, raw(_icon("memory")), " ", t("open"))),
         ], aside=True)
-        prail = [("aktivitaet", t("activity_over_time"))] if activity else []
+        prail = [("cal", t("calendar"))]
+        prail += [("aktivitaet", t("activity_over_time"))] if activity else []
         prail += [("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
-                  ("bez", t("relationships")), ("cal", t("calendar")), ("sec-properties", t("properties"))]
+                  ("bez", t("relationships")), ("sec-properties", t("properties"))]
         return _layout(p["display_name"], _doc(main, rail=props) + _page_rail(prail), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
                        actions=_star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}'))

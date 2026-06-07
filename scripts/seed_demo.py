@@ -292,4 +292,42 @@ _try("verify deliver", S.complete_task, PID, "verify__deliver", store=st)
 
 _pl = S.get_plan(PID, store=st)
 print("plan:", sum(1 for t in _pl["tasks"] if t["status"] == "done"), "/", len(_pl["tasks"]), "done")
+
+# ---- demo fixture: 6 months of simulated daily activity for ONE persona (Lena), so the calendar
+#      (week / month / year heatmap) is populated in the showcase. Synthetic demo data — the real
+#      product authors days via brief_day -> record_day (host-authored). ----
+import datetime as _dt
+_LENA = P["lena"]
+_CTASKS = {
+    "meeting": [("Team-Standup", "Slack"), ("Kampagnen-Review", "Figma"), ("1:1 mit Lead", "Meet"), ("Agentur-Call", "Zoom")],
+    "focus":   [("Fokus: Q3-Kampagnenplan", "Notion"), ("Content-Briefing", "Google Docs"), ("Landingpage-Copy", "Notion"), ("Funnel-Analyse", "GA4")],
+    "admin":   [("Reporting Wochenzahlen", "Sheets"), ("Budget-Freigaben", "Excel"), ("Inbox", "Mail")],
+    "interruption": [("Spontane Abstimmung", "Slack"), ("Vertriebs-Nachfrage", "Slack")],
+}
+_MOODS = ["fokussiert", "gehetzt", "zufrieden", "müde", "produktiv", "angespannt"]
+_now = utc_now_iso() if "utc_now_iso" in dir() else __import__("sonaloop.config", fromlist=["utc_now_iso"]).utc_now_iso()
+_d, _end, _i = _dt.date(2026, 1, 1), _dt.date(2026, 6, 30), 0
+while _d <= _end:
+    _wd = _d.weekday()
+    _kinds = (["admin"] if _i % 5 == 0 else []) if _wd >= 5 else \
+             (["meeting", "focus", "admin", "focus", "interruption", "meeting"])[: 2 + (_i * 7 + _wd) % 4]
+    _hour = 8
+    for _j, _k in enumerate(_kinds):
+        _task, _tool = _CTASKS[_k][(_i + _j) % len(_CTASKS[_k])]
+        st.insert_experience_event({
+            "id": f"ev_{_LENA[:6]}_{_d.isoformat()}_{_j}", "persona_id": _LENA,
+            "timestamp": f"{_d.isoformat()}T{_hour:02d}:{((_i*13+_j*7)%6)*10:02d}", "event_type": _k,
+            "summary": _task, "task": _task, "tool": _tool, "participants": [],
+            "collaboration_mode": ("meeting" if _k == "meeting" else "solo"), "what_happened": f"{_task} — {_tool}.",
+            "conversation": [], "key_quotes": [], "actions_done": [_task], "artifacts_touched": [_tool],
+            "persona_thought": "", "decision": None, "open_loops": [], "impact": {"mood": _MOODS[_i % len(_MOODS)]},
+            "pain_points": [], "goal_refs": [], "calendar_event_id": None, "created_at": _now})
+        _hour += 1 + (_j % 3)
+    if _kinds:
+        st.upsert_daily_summary({"id": f"ds_{_LENA[:6]}_{_d.isoformat()}", "persona_id": _LENA, "date": _d.isoformat(),
+                                 "mood": _MOODS[_i % len(_MOODS)], "completed": _kinds, "blockers": [], "open_loops": [],
+                                 "pain_points": [], "notable_memories": [], "created_at": _now})
+    _i += 1; _d += _dt.timedelta(days=1)
+st.commit()                       # raw store writes (unlike services) need an explicit commit
+print("calendar fixture: 6 months of activity for Lena")
 print("DONE — demo project:", PID)
