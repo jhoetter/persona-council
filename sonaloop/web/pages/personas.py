@@ -4,71 +4,135 @@ from __future__ import annotations
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from ._calendar import _calendar_tabs, _period_calendar_html
 from .._render import render_findings
+from .._html import register_css
 from ... import artifacts as _artifacts
+
+# Memory panel — a temporal knowledge graph (entities + fact timelines, superseded facts struck).
+register_css(r"""
+.mem-bar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 22px}
+.mem-tool{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--panel)}
+.mem-tool svg{width:15px;height:15px;color:var(--muted);flex:none}
+.mem-tool input{border:0;background:transparent;padding:2px 0;font-size:var(--t-body);color:var(--ink)}
+.mem-tool input:focus{outline:none}.mem-tool input[type=text]{min-width:236px}
+.mem-group{margin:0 0 22px}
+.mem-group-h{display:flex;align-items:center;gap:7px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin:0 0 10px}
+.mem-n{color:var(--faint);font-weight:550}
+.mem-ents{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.mem-ent{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:13px 15px}
+.mem-ent-h{display:flex;align-items:center;gap:8px;margin:0 0 11px}
+.mem-ent-h svg{width:15px;height:15px;color:var(--muted);flex:none}.mem-ent-h b{font-size:var(--t-body)}
+.mem-status{margin-left:auto;font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);border-radius:99px;padding:1px 9px;font-weight:500;white-space:nowrap}
+.mem-tl{display:flex;flex-direction:column;gap:8px;position:relative;padding-left:15px}
+.mem-tl::before{content:"";position:absolute;left:3px;top:5px;bottom:5px;border-left:1.5px solid var(--line-2)}
+.mem-fact{display:flex;gap:9px;font-size:var(--t-sm);position:relative}
+.mem-fact::before{content:"";position:absolute;left:-15px;top:5px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel)}
+.mem-fact.sup::before{background:var(--line-2)}
+.mem-date{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;min-width:74px}
+.mem-fx{color:var(--ink)}
+.mem-fact.sup .mem-fx{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--line-2)}
+.mem-loops{border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.mem-loop{display:flex;align-items:center;gap:9px;padding:9px 13px;font-size:var(--t-body)}
+.mem-loop+.mem-loop{border-top:1px solid var(--line)}
+.mem-loop-dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--amber)}
+.mem-pane{border:1px solid var(--line);border-radius:10px;background:var(--panel-2);padding:12px 15px;margin:0 0 16px}
+.mem-pane-h{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin:0 0 8px}
+.mem-hit{padding:7px 0;font-size:var(--t-sm)}.mem-hit+.mem-hit{border-top:1px solid var(--line-2)}
+.mem-quality{margin-top:26px;border-top:1px solid var(--line);padding-top:13px}
+.mem-quality summary{cursor:pointer;color:var(--muted);font-size:var(--t-sm);font-weight:600;list-style:none}
+.mem-quality summary::-webkit-details-marker{display:none}
+.mem-quality p{margin:9px 0;font-size:var(--t-sm)}
+""")
+
+
+_MEM_KINDS = [("project", "projects"), ("person", "personas"), ("topic", "bulb"), ("tool", "settings")]
+
+
+def _mem_kind_label(kind: str) -> str:                      # explicit t() calls so the i18n usage scan sees them
+    return {"project": t("active_projects"), "person": t("mem_people"),
+            "topic": t("mem_topics"), "tool": t("mem_tools")}.get(kind, kind)
 
 
 def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None) -> str:
     p = store.get_persona(persona_id)
     if not p:
-        return _empty_state(t("profile_not_found"), t("runtime_maybe_cleared"))
+        return _empty_state(t("profile_not_found"), t("runtime_maybe_cleared"), icon="memory")
     pid = p["id"]
-    outdated_label = _label(t("outdated"), "var(--muted)", "outline", False)
-    since_label = t("since")
-    none_html = h("p", {"class_": "muted"}, t("none"))
-    proj_cards = []
-    for proj in services.list_active_projects(pid, store=store):
-        tl = services.get_project(pid, proj["entity_id"], store=store)["facts"]
-        rows = [h("p", {"class_": "muted" if not f["valid"] else ""},
-                  f["t_valid"][:10], " · ", h("strong", {}, f.get("status") or "—"), " · ", f["fact"],
-                  (fragment(" ", outdated_label) if not f["valid"] else None)) for f in tl[-8:]]
-        proj_cards.append(h("div", {"class_": "card"},
-                            h("h3", {}, proj["name"], " · ", h("span", {"class_": "muted"}, proj.get("status") or "?")),
-                            fragment(*rows)))
-    loops = [h("p", {}, "• ", th["text"], " ",
-               h("span", {"class_": "muted small"}, f'{since_label} {(th.get("opened_on") or "")[:10]}'))
+    sup_label = _label(t("outdated"), "var(--muted)", "outline", False)        # superseded fact tag
+
+    # --- the knowledge graph: entities grouped by kind, each a timeline of facts (newest first;
+    #     superseded facts dimmed + struck so the persona's belief CHANGES read at a glance) ---
+    by_kind: dict[str, list] = {}
+    for e in store.list_entities(pid):
+        by_kind.setdefault(e.get("kind", ""), []).append(e)
+
+    def _ent_card(e: dict, icon: str) -> str:
+        facts = sorted(store.list_entity_facts(e["id"]), key=lambda f: f.get("t_valid", ""), reverse=True)
+        rows = []
+        for f in facts:
+            sup = bool(f.get("t_invalid"))
+            rows.append(h("div", {"class_": "mem-fact" + (" sup" if sup else "")},
+                          h("span", {"class_": "mem-date"}, (f.get("t_valid") or "")[:10]),
+                          h("span", {"class_": "mem-fx"}, f.get("fact", ""),
+                            (fragment(" ", sup_label) if sup else None))))
+        status = h("span", {"class_": "mem-status"}, e["status"]) if e.get("status") else None
+        return h("div", {"class_": "mem-ent"},
+                 h("div", {"class_": "mem-ent-h"}, raw(_icon(icon)), h("b", {}, e.get("name", "—")), status),
+                 h("div", {"class_": "mem-tl"}, fragment(*rows)) if rows else h("p", {"class_": "muted small"}, "—"))
+
+    know_secs = []
+    for kind, icon in _MEM_KINDS:
+        ents = by_kind.get(kind) or []
+        if ents:
+            know_secs.append(h("div", {"class_": "mem-group"},
+                               h("div", {"class_": "mem-group-h"}, _mem_kind_label(kind), h("span", {"class_": "mem-n"}, str(len(ents)))),
+                               h("div", {"class_": "mem-ents"}, fragment(*(_ent_card(e, icon) for e in ents)))))
+    knowledge = fragment(*know_secs) if know_secs else h("p", {"class_": "muted"}, t("none"))
+
+    # --- open threads (loops) ---
+    loops = [h("div", {"class_": "mem-loop"}, h("span", {"class_": "mem-loop-dot"}), th["text"],
+               h("span", {"class_": "muted small"}, f' · {t("since")} {(th.get("opened_on") or "")[:10]}'))
              for th in store.list_threads(pid, "open")[:20]]
-    digests = [h("div", {"class_": "card"},
-                 h("h3", {}, d["scope"], " · ", f'{d["period_start"][:10]}–{d["period_end"][:10]}'),
-                 h("p", {}, d.get("text", ""))) for d in store.list_digests(pid)[-6:]]
+
+    # --- compact toolbar: recall search + time-travel (one row, not two big cards) ---
+    toolbar = h("div", {"class_": "mem-bar"},
+        h("form", {"method": "get", "class_": "mem-tool"}, raw(_icon("search")),
+          h("input", {"type": "text", "name": "q", "value": q or "", "placeholder": t("recall_placeholder")})),
+        h("form", {"method": "get", "class_": "mem-tool"}, raw(_icon("half")),
+          h("input", {"type": "date", "name": "as_of", "value": as_of or ""}),
+          h("button", {"class_": "btn btn-sm"}, t("show_state"))))
+    panes = []
+    if as_of:
+        sa = services.get_state_at(pid, as_of, store=store)
+        rows = [h("div", {"class_": "mem-fact"}, h("span", {"class_": "mem-date"}, e["kind"]),
+                  h("span", {"class_": "mem-fx"}, h("b", {}, e["name"]), " → ", e.get("status_at") or "—"))
+                for e in sa["entities"] if e.get("status_at")]
+        panes.append(h("div", {"class_": "mem-pane"}, h("div", {"class_": "mem-pane-h"}, t("state_at", date=as_of)),
+                       fragment(*rows) if rows else h("p", {"class_": "muted small"}, t("nothing_valid")),
+                       h("p", {"class_": "muted small"}, t("open_threads_count", n=len(sa.get("open_threads", []))))))
+    if q:
+        hits = services.recall_memory(pid, q, store=store, k=8)["hits"]
+        rows = [h("div", {"class_": "mem-hit"}, h("span", {"class_": "muted small"}, f'{hit["obj_type"]} · {hit.get("when") or ""}'),
+                  h("div", {}, hit["text"])) for hit in hits]
+        panes.append(h("div", {"class_": "mem-pane"}, h("div", {"class_": "mem-pane-h"}, t("recall")),
+                       fragment(*rows) if rows else h("p", {"class_": "muted small"}, t("nothing"))))
+
+    # --- quality (eval metadata) demoted to a collapsible footer ---
     struct = services.evaluate_simulation(pid, store=store, persist=False)
     crit = services.latest_critic_report(pid, store=store)
     struct_rows = fragment(*(_label(f'{c["name"]}: {c["status"]}', _stance_color(c["status"])) for c in struct["checks"]))
     crit_rows = (fragment(*(_label(f"{k}: {v}/5", "var(--green)" if v >= 4 else "var(--amber)") for k, v in crit["dimensions"].items()))
                  if crit else h("span", {"class_": "muted"}, t("no_critic_run")))
-    tt = ""
-    if as_of:
-        st = services.get_state_at(pid, as_of, store=store)
-        ent_rows = [h("p", {}, h("strong", {}, e["name"]), " ", h("span", {"class_": "muted"}, f'({e["kind"]})'),
-                      " → ", e.get("status_at") or "—") for e in st["entities"] if e.get("status_at")]
-        tt = h("div", {"class_": "card"}, h("h3", {}, t("state_at", date=as_of)),
-               fragment(*ent_rows) if ent_rows else h("p", {"class_": "muted"}, t("nothing_valid")),
-               h("p", {"class_": "muted small"}, t("open_threads_count", n=len(st.get("open_threads", [])))))
-    rc = ""
-    if q:
-        hits = services.recall_memory(pid, q, store=store, k=8)["hits"]
-        hit_rows = [h("p", {"class_": "quote"}, f'[{hit["obj_type"]}] {hit.get("when") or ""} · score {hit["score"]}',
-                      h("br"), hit["text"]) for hit in hits]
-        rc = h("div", {"class_": "card"}, h("h3", {}, t("recall")),
-               fragment(*hit_rows) if hit_rows else h("p", {"class_": "muted"}, t("nothing")))
-    mem_title = t("memory_title", name=p["display_name"])
-    date_in = h("input", {"type": "date", "name": "as_of", "value": as_of or ""})
-    q_in = h("input", {"type": "text", "name": "q", "value": q or "", "placeholder": t("recall_placeholder"), "style": "width:58%"})
+    quality = h("details", {"class_": "mem-quality"}, h("summary", {}, t("quality")),
+                h("p", {}, h("strong", {}, f'{t("structure")}:'), " ", struct["verdict"], " ", struct_rows),
+                h("p", {}, h("strong", {}, f'{t("critic")}:'), " ", crit_rows))
+
     main = fragment(
-        _hero(mem_title, sub=t("memory_sub"), icon="memory"),
-        h("div", {"class_": "card"}, h("h3", {}, t("quality")),
-          h("p", {}, h("strong", {}, f'{t("structure")}:'), " ", struct["verdict"], " · ", struct_rows),
-          h("p", {}, h("strong", {}, f'{t("critic")}:'), " ", crit_rows)),
-        h("div", {"class_": "grid two"},
-          h("form", {"method": "get", "class_": "card"}, h("h3", {}, t("time_travel")), date_in, " ",
-            h("button", {"class_": "btn"}, t("show_state"))),
-          h("form", {"method": "get", "class_": "card"}, h("h3", {}, t("recall")), q_in, " ",
-            h("button", {"class_": "btn"}, t("search")))),
-        tt, rc,
-        h("div", {"class_": "sec"}, h("h2", {}, t("active_projects")),
-          h("div", {"class_": "grid two"}, fragment(*proj_cards) if proj_cards else none_html)),
+        _hero(t("memory_title", name=p["display_name"]), sub=t("memory_sub"), icon="memory"),
+        toolbar, fragment(*panes),
+        h("div", {"class_": "sec"}, h("h2", {}, t("knowledge")), knowledge),
         h("div", {"class_": "sec"}, h("h2", {}, t("open_threads")),
-          h("div", {"class_": "card"}, fragment(*loops) if loops else none_html)),
-        h("div", {"class_": "sec"}, h("h2", {}, t("digests")), fragment(*digests) if digests else none_html))
+          h("div", {"class_": "mem-loops"}, fragment(*loops)) if loops else h("p", {"class_": "muted"}, t("none"))),
+        quality)
     return _doc(main)
 
 
@@ -87,7 +151,7 @@ def register_personas(app) -> None:
         try:
             data = services.get_persona(persona_id, store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state(t("profile_not_found"), t("persona_runtime_cleared")), store, active="personas")
+            return _layout(t("not_found"), _empty_state(t("profile_not_found"), t("persona_runtime_cleared"), icon="personas"), store, active="personas")
         p = data["persona"]
         state = services.get_current_state(p["id"], store=store)
         selected_date = date_value or (data["daily_summaries"][-1]["date"] if data["daily_summaries"] else date.today().isoformat())
@@ -161,7 +225,7 @@ def register_personas(app) -> None:
         try:
             data = services.get_activity(activity_id, store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state(t("activity_not_found"), t("runtime_maybe_cleared")), store, active="personas")
+            return _layout(t("not_found"), _empty_state(t("activity_not_found"), t("runtime_maybe_cleared"), icon="overview"), store, active="personas")
         p = data["persona"]; a = data["activity"]
         alone_label = t("alone")
         conv = [h("div", {"class_": "quote"}, h("strong", {}, c.get("speaker", "")), h("br"), c.get("text", ""))

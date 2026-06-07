@@ -19,7 +19,7 @@ def register_projects(app) -> None:
         try:
             graph = services.get_project_graph(project_id, store=store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared")), store, active="projects")
+            return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared"), icon="projects"), store, active="projects")
         proj = graph["project"]
         # edge legend (shown in the floating open-questions panel)
         used_types = sorted({e["type"] for e in graph["edges"]})
@@ -155,7 +155,7 @@ def register_projects(app) -> None:
             md = services.export_meta_report(project_id, format="md", store=store)
             proj = services.get_research_project(project_id, store=store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared")), store, active="projects")
+            return _layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared"), icon="overview"), store, active="projects")
         body = h("div", {"class_": "page"}, h("div", {"class_": "doc"}, raw(_md(md))))
         actions = h("button", {"class_": "btn", "onclick": "window.print()"}, t("export_pdf"))
         return _layout(proj["title"] + " — " + t("meta_report"), body, store,
@@ -168,10 +168,10 @@ def register_projects(app) -> None:
         try:
             proj = services.get_research_project(project_id, store=store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state("Plan", t("runtime_maybe_cleared")), store, active="projects")
+            return _layout(t("not_found"), _empty_state("Plan", t("runtime_maybe_cleared"), icon="plan"), store, active="projects")
         plan = services.get_plan(project_id, store=store)
         if not plan:
-            body = h("div", {"class_": "page"}, raw(_empty_state("Plan", "Dieses Projekt hat noch keinen Plan (Freiform/Legacy).")))
+            body = h("div", {"class_": "page"}, raw(_empty_state("Plan", "Dieses Projekt hat noch keinen Plan (Freiform/Legacy).", icon="plan")))
         else:
             body = _plan_html(plan, store)
         return _layout(proj["title"] + " — Plan", body, store,

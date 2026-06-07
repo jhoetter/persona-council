@@ -330,4 +330,39 @@ while _d <= _end:
     _i += 1; _d += _dt.timedelta(days=1)
 st.commit()                       # raw store writes (unlike services) need an explicit commit
 print("calendar fixture: 6 months of activity for Lena")
+
+# ---- demo fixture: a small temporal knowledge graph for Lena (entities + facts over time, some
+#      superseded; open threads) so the Memory panel is populated. Mirrors record_memory_deltas output. ----
+_ENTS = [
+    ("project", "Q3-Kampagne", "in Arbeit", [
+        ("2026-03-02", "freigegeben", "Briefing freigegeben — Fokus Performance-Kanäle", None),
+        ("2026-03-20", "Budget 30k", "Budget: 30.000 EUR", "2026-05-04"),
+        ("2026-05-04", "Budget 42k", "Budget auf 42.000 EUR erhöht (CEO-Push)", None),
+        ("2026-05-18", "Termin steht", "Launch-Termin fixiert: 13. Juli", None)]),
+    ("person", "Daniel Roth", "Team-Lead", [
+        ("2026-05-01", "neuer Lead", "Wird neuer Team-Lead (Wechsel aus dem Vertrieb)", None),
+        ("2026-05-12", None, "Erwartet wöchentliche Performance-Reports (Montag früh)", None)]),
+    ("topic", "Meal-Prep", "aktiv", [
+        ("2026-04-08", None, "Probiert Wochenplanung gegen den Abend-Stress", None),
+        ("2026-05-22", None, "Lieferdienst-Nutzung deutlich reduziert", None)]),
+    ("tool", "Notion", "im Einsatz", [
+        ("2026-02-15", None, "Team-Wiki + Kampagnenplanung auf Notion umgestellt", None)]),
+]
+for _kind, _name, _status, _facts in _ENTS:
+    _eid = f"ent_{_LENA[:6]}_{_name.lower().replace(' ', '-')}"
+    st.upsert_entity({"id": _eid, "persona_id": _LENA, "kind": _kind, "name": _name, "status": _status,
+                      "aliases": [], "first_seen": _facts[0][0], "last_seen": _facts[-1][0],
+                      "created_at": _now, "updated_at": _now})
+    for _fi, (_tv, _fst, _ftxt, _tinv) in enumerate(_facts):
+        st.insert_entity_fact({"id": f"{_eid}_f{_fi}", "persona_id": _LENA, "entity_id": _eid, "fact": _ftxt,
+                               "status": _fst, "t_valid": _tv, "t_invalid": _tinv, "importance": 3,
+                               "source_event_id": None, "created_at": _now})
+for _ti, (_op, _txt) in enumerate([
+        ("2026-05-19", "Landingpage-Copy finalisieren (Freigabe Daniel steht aus)"),
+        ("2026-05-21", "Q4-Budget rechtzeitig nachfassen"),
+        ("2026-05-23", "3 schnelle 20-Minuten-Rezepte testen")]):
+    st.upsert_thread({"id": f"th_{_LENA[:6]}_{_ti}", "persona_id": _LENA, "entity_id": None, "text": _txt,
+                      "status": "open", "opened_on": _op, "closed_on": None, "created_at": _now, "updated_at": _now})
+st.commit()
+print("memory fixture: 4 entities + 3 open threads for Lena")
 print("DONE — demo project:", PID)

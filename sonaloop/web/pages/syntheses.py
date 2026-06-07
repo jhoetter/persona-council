@@ -27,7 +27,7 @@ def register_syntheses(app) -> None:
         store = Store()
         syn = store.get_synthesis(synthesis_id)
         if not syn:
-            return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared")), store, active="syntheses")
+            return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared"), icon="syntheses"), store, active="syntheses")
         short_title = _display_title(syn["title"])             # short form for breadcrumb / tab / favourite only
         crumbs = [(t("projects"), "/projects")]
         proj = services.parent_project_of_synthesis(synthesis_id, store)

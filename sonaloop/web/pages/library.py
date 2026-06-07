@@ -14,7 +14,7 @@ def register_library(app) -> None:
         try:
             data = services.section_members(section_id, store=store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state("Section", t("runtime_maybe_cleared")), store, active="projects")
+            return _layout(t("not_found"), _empty_state("Section", t("runtime_maybe_cleared"), icon="squareGrid"), store, active="projects")
         sec, proj, members = data["section"], data["project"], data["members"]
         pr = _pres.present(sec.get("kind", "theme"), sec.get("presentation"))
         chip = h("span", {"class_": "pill", "style": f'border-color:{pr["color"]};color:{pr["color"]}'},
@@ -27,7 +27,7 @@ def register_library(app) -> None:
         note_sub = h("p", {"class_": "sub"}, sec.get("note", "")) if sec.get("note") else ""
         sec_sub = fragment(chip, " ", h("span", {"class_": "muted small"}, t("n_nodes", n=len(members))))
         body = fragment(note_sub, h("div", {"style": "margin-top:8px"},
-                        fragment(*rows) if rows else raw(_empty_state(t("section"), t("no_members")))))
+                        fragment(*rows) if rows else raw(_empty_state(t("section"), t("no_members"), icon="squareGrid"))))
         return detail_page(
             store, title=sec["title"], active="projects",
             crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (sec["title"], None)],
@@ -42,7 +42,7 @@ def register_library(app) -> None:
         try:
             data = services.get_note(note_id, store=store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared")), store, active="projects")
+            return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared"), icon="panel"), store, active="projects")
         note, proj = data["note"], data["project"]
         klabel = t("notes_h")                                          # ONE note entity (concepts merged in)
         ntitle = note.get("title") or klabel
@@ -63,7 +63,7 @@ def register_library(app) -> None:
         try:
             p = services.get_prototype_artifact(slug, store=store)
         except Exception:
-            return _layout(t("not_found"), _empty_state(t("prototypes_h"), t("runtime_maybe_cleared")), store, active="projects")
+            return _layout(t("not_found"), _empty_state(t("prototypes_h"), t("runtime_maybe_cleared"), icon="prototype"), store, active="projects")
         crumbs = [(t("projects"), "/projects")]
         proj = store.get_research_project(p["project_id"]) if p.get("project_id") else None
         if proj:

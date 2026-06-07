@@ -31,7 +31,7 @@ def register_councils(app) -> None:
         store = Store()
         session = store.get_council_session(session_id)
         if not session:
-            return _layout(t("not_found"), _empty_state(t("council_not_found"), t("runtime_maybe_cleared")), store, active="councils")
+            return _layout(t("not_found"), _empty_state(t("council_not_found"), t("runtime_maybe_cleared"), icon="councils"), store, active="councils")
         proposal_short_h = t("proposal_short_summary")
         proposal_h = t("proposal"); summary_h = t("summary")
         sentiment_title = t("sentiment_this_council")

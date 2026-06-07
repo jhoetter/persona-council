@@ -468,7 +468,9 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
                empty_icon: str, empty_msg: str, active: str) -> str:
     """One index-page shell — title + count + lead + rows (or an empty state). Every list page
     (projects, personas, councils, syntheses, prototypes, concepts) renders identically through this."""
-    rows_html = raw("".join(str(r) for r in rows)) if rows else h("div", {"class_": "list-empty"}, raw(_icon(empty_icon)), h("span", {}, empty_msg))
+    rows_html = (raw("".join(str(r) for r in rows)) if rows else
+                 h("div", {"class_": "empty"}, h("div", {"class_": "empty-ic"}, raw(_hifi(empty_icon, 44))),
+                   h("p", {"class_": "empty-msg"}, empty_msg)))
     cnt = h("span", {"class_": "h1cnt"}, str(len(rows))) if rows else ""
     body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, title, cnt),
              h("p", {"class_": "lead"}, lead), h("div", {"class_": "rows"}, rows_html))
@@ -765,6 +767,7 @@ register_css(r"""
 .empty-h{font-size:var(--t-md);font-weight:600;margin:0;color:var(--ink)}
 .empty-msg{color:var(--muted);font-size:var(--t-body);margin:0;line-height:1.55;max-width:312px}
 .empty .btn{margin-top:9px}
+.btn-sm{padding:3px 10px;font-size:var(--t-sm)}
 /* a persona's multiple answers stack in one card, separated by a hairline */
 .turn-ans+.turn-ans{margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)}
 .turn-ans>p{margin:0}
