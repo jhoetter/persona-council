@@ -21,53 +21,119 @@ DOCS_INTRO = {
           "distinct role — from a raw signal to a decision-ready spec. All content is host-**authored** "
           "via MCP (no in-process LLM generation).",
 }
-# Entry = (kind, icon, name_i18n_key_or_None, desc_de, desc_en, caps_de, caps_en).
-# NAME + COLOR come from data: t(name_key) when a chrome label exists, else present(kind)["label"];
-# colour is always present(kind)["color"] — so no methodology/artifact label is hardcoded here
-# (the zero-hardcoded-values gate). Only the descriptive prose is authored, in Markdown.
+# Each entry documents ONE artefact in depth, with three authored facets so the page answers the same
+# questions for every node: WAS es ist (desc), WELCHE Datenpunkte es hält (data), WORIN der große Vorteil
+# liegt (advantage). NAME + COLOR still come from data — t(name_key) when a chrome label exists, else
+# present(kind)["label"]; colour is always present(kind)["color"] — so no methodology/artifact label is
+# hardcoded here (the zero-hardcoded-values gate). Only the descriptive prose is authored, in Markdown.
+# Entry shape: {kind, icon, name (i18n key or None), desc, data (bullets), adv} — each prose field a
+# (de, en) tuple, each `data` a ([de…], [en…]) pair.
 DOCS = [
-    ("project", "projects", "projects",
-     "Der Forschungs-**Container**: ein Double-Diamond-Graph einer Studie (Discover → Define → Develop → Deliver).",
-     "The research **container**: a Double-Diamond graph of one study (Discover → Define → Develop → Deliver).",
-     ["Bündelt Councils, Synthesen, Notizen & Prototypen", "Trackt Phasen, offene Fragen und einen Meta-Report"],
-     ["Bundles councils, syntheses, notes & prototypes", "Tracks phases, open questions and a meta-report"]),
-    ("persona", "personas", "personas",
-     "Ein synthetisches Kundenprofil (**SOUL** + Erinnerung) — der „Proband“.",
-     "A synthetic customer profile (**SOUL** + memory) — the research subject.",
-     ["Antwortet _in character_ in Councils", "Reagiert auf Prototypen aus gelebter Erfahrung"],
-     ["Answers _in character_ in councils", "Reacts to prototypes from lived experience"]),
-    ("council", "councils", "councils",
-     "Eine memory-geerdete **Persona-Debatte**. Drei Modi: _Discovery_ (offene Fragen), _Evaluation_ "
-     "(Reaktion auf ein Konzept), _Decision_ (Abstimmung).",
-     "A memory-grounded **persona debate**. Three modes: _Discovery_ (open questions), _Evaluation_ "
-     "(reacting to a concept), _Decision_ (a vote).",
-     ["Sammelt echte Reaktionen statt Meinungen", "Liefert eine Executive Summary + Erkenntnis"],
-     ["Gathers real reactions, not opinions", "Produces an executive summary + finding"]),
-    ("synthesis", "syntheses", "syntheses",
-     "Der **Report-Knoten**: faltet Councils zu einem Gesamtbild, Kernproblemen und Empfehlungen zusammen.",
-     "The **report node**: folds councils into a big picture, key problems and recommendations.",
-     ["Empfehlungen mit Aufwand·Nutzen", "Verkettet zu einem wachsenden Studien-Bogen"],
-     ["Recommendations scored by effort·impact", "Chains into one growing study arc"]),
-    ("prototype", "prototype", "prototypes_h",
-     "Ein **lauffähiges Artefakt** (von grob bis hochauflösend), das Personas testen.",
-     "A **runnable artefact** (low to high fidelity) that personas test.",
-     ["Sessions erfassen geerdete Reaktionen", "Zeigt die Fidelity-Iteration im Develop-Diamanten"],
-     ["Sessions capture grounded reactions", "Shows the fidelity iteration in the Develop diamond"]),
-    ("note", "panel", None,
-     "Die **leichtgewichtige Node** im Projekt-Graph — von der rohen Beobachtung bis zur ausgearbeiteten "
-     "Lösungs-Idee. Wird sie gebaut, verlinkt sie auf ihren Prototyp.",
-     "The **lightweight node** in the project graph — from a raw observation to a worked-out solution "
-     "idea. Once built, it links to its prototype.",
-     ["Methodologie-frei, jederzeit erfassbar", "Kann von einem Council geprüft / als Artefakt gebaut werden"],
-     ["Methodology-free, capture anytime", "Can be evaluated by a council / built as an artefact"]),
-    ("section", "squareGrid", "section",
-     "Eine **methodologie-unabhängige Gruppierung** von Graph-Knoten (ein Frame/Cluster).",
-     "A **methodology-independent grouping** of graph nodes (a frame/cluster).",
-     ["Strukturiert den Graphen ohne feste Methode"], ["Structures the graph without a fixed method"]),
-    ("meta", "overview", "meta_report",
-     "Ein **studienübergreifender** Projekt-Report, der den ganzen Graphen verdichtet.",
-     "A **cross-study** project report that distills the whole graph.",
-     ["Die Vogelperspektive über alle Synthesen"], ["The bird's-eye view across all syntheses"]),
+    {"art": "project", "icon": "projects", "name": "projects",
+     "desc": ("Der Forschungs-**Container**: ein Double-Diamond-Graph *einer* Studie "
+              "(Discover → Define → Develop → Deliver). Alles, was zu einer Frage gehört, hängt hier.",
+              "The research **container**: a Double-Diamond graph of *one* study "
+              "(Discover → Define → Develop → Deliver). Everything belonging to a question lives here."),
+     "data": (["Methodologie + Phasen-Fortschritt (Discover→Deliver)",
+               "Offene Fragen & die *Build-Order*-Narrative",
+               "Verknüpfte Councils, Synthesen/Reports, Notizen, Prototypen, Sections",
+               "Ein Graph-Snapshot (Knoten + Kanten) für die Outline"],
+              ["Methodology + phase progress (Discover→Deliver)",
+               "Open questions & the *build-order* narrative",
+               "Linked councils, syntheses/reports, notes, prototypes, sections",
+               "A graph snapshot (nodes + edges) driving the outline"]),
+     "adv": ("Eine Studie an *einem* Ort: du siehst jederzeit, was erledigt und was offen ist — und "
+             "wie jedes Artefakt zum Ergebnis beiträgt, statt verstreuter Dokumente.",
+             "One study in *one* place: you always see what's done and what's open — and how every "
+             "artefact feeds the outcome, instead of scattered documents.")},
+    {"art": "persona", "icon": "personas", "name": "personas",
+     "desc": ("Ein synthetisches Kundenprofil (**SOUL** + Erinnerung) — der „Proband“. Kein statisches "
+              "Profil: die Persona *erinnert sich* an alles, woran sie teilgenommen hat.",
+              "A synthetic customer profile (**SOUL** + memory) — the research subject. Not a static "
+              "profile: the persona *remembers* everything it has taken part in."),
+     "data": (["SOUL: Identität, Rolle, Firmen-Kontext, Werte & Eigenheiten",
+               "Episodische **Memories** aus Councils & Prototyp-Sessions",
+               "Offene Loops/Threads und Revisionen (die Persona entwickelt sich)",
+               "Generierter Avatar"],
+              ["SOUL: identity, role, company context, values & quirks",
+               "Episodic **memories** from councils & prototype sessions",
+               "Open loops/threads and revisions (the persona evolves)",
+               "A generated avatar"]),
+     "adv": ("**Personas mit Memories**: Antworten kommen aus angesammelter, gelebter Erfahrung — die "
+             "Reaktionen verändern sich, je mehr die Persona erlebt, statt jedes Mal dasselbe zu sagen.",
+             "**Personas with memories**: answers come from accumulated, lived experience — reactions "
+             "shift the more the persona has been through, instead of repeating the same line.")},
+    {"art": "council", "icon": "councils", "name": "councils",
+     "desc": ("Eine memory-geerdete **Persona-Debatte**. Drei Modi: _Discovery_ (offene Fragen), "
+              "_Evaluation_ (Reaktion auf ein Konzept), _Decision_ (Abstimmung).",
+              "A memory-grounded **persona debate**. Three modes: _Discovery_ (open questions), "
+              "_Evaluation_ (reacting to a concept), _Decision_ (a vote)."),
+     "data": (["Teilnehmende Personas + Modus + die gestellte Frage",
+               "Turn-für-Turn-Statements mit *Stance* (−2…+2) und Memory-Belegen",
+               "Eine Executive Summary + eine verdichtete Erkenntnis (Finding)"],
+              ["Participating personas + mode + the question posed",
+               "Turn-by-turn statements with *stance* (−2…+2) and memory refs",
+               "An executive summary + one distilled finding"]),
+     "adv": ("Echte, *nachvollziehbare* Reaktionen statt Meinungen: jedes Statement lässt sich auf die "
+             "Erinnerung einer Persona zurückführen.",
+             "Real, *traceable* reactions instead of opinions: every statement can be traced back to a "
+             "persona's memory.")},
+    {"art": "synthesis", "icon": "syntheses", "name": "syntheses",
+     "desc": ("Der **Report-Knoten** — *eine* Entität für zwei Tiefen: eine **Convergence**-Synthese "
+              "faltet Councils zu Kernproblemen + Empfehlungen (Aufwand·Nutzen-2×2); ein **Projekt**-"
+              "Report ist die erzählerische, präsentationsreife Sicht über die ganze Studie.",
+              "The **report node** — *one* entity at two depths: a **convergence** synthesis folds "
+              "councils into key problems + recommendations (effort·impact 2×2); a **project** report "
+              "is the narrative, presentation-grade view across the whole study."),
+     "data": (["`scope`-Tag: `convergence` (strukturiert) oder `project` (Report)",
+               "Findings: Kernprobleme & Empfehlungen mit Aufwand·Nutzen-Score",
+               "Voices (Persona-Stimmen) + Quell-Councils + Graph-Snapshot",
+               "Report: Markdown-Sections, Lead, Figuren (Prototyp-Shots, Avatare, 2×2-Charts, Assets)"],
+              ["A `scope` tag: `convergence` (structured) or `project` (report)",
+               "Findings: key problems & recommendations scored by effort·impact",
+               "Voices (persona quotes) + source councils + graph snapshot",
+               "Report: markdown sections, lead, figures (prototype shots, avatars, 2×2 charts, assets)"]),
+     "adv": ("**Ein** Renderer, *ein* Export: beide Tiefen sind report-grade und als **PDF** abrufbar. "
+             "Synthesen verketten sich zu einem wachsenden Studien-Bogen statt loser Einzelreports.",
+             "**One** renderer, *one* export: both depths are report-grade and **PDF**-exportable. "
+             "Syntheses chain into one growing study arc instead of loose one-off reports.")},
+    {"art": "prototype", "icon": "prototype", "name": "prototypes_h",
+     "desc": ("Ein **lauffähiges Artefakt** (von grob bis hochauflösend), das Personas tatsächlich testen.",
+              "A **runnable artefact** (low to high fidelity) that personas actually test."),
+     "data": (["Fidelity/Version + der lauffähige Build",
+               "Sessions: Persona-Reaktionen auf konkrete States (mit Belegen)",
+               "Verknüpfung zur Notiz/Idee, aus der er gebaut wurde"],
+              ["Fidelity/version + the runnable build",
+               "Sessions: persona reactions to concrete states (with refs)",
+               "A link back to the note/idea it was built from"]),
+     "adv": ("Geerdete Reaktionen auf etwas *Echtes* — und die Fidelity-Iteration im Develop-Diamanten "
+             "wird über die Sessions sichtbar.",
+             "Grounded reactions to something *real* — and the fidelity iteration in the Develop diamond "
+             "becomes visible across sessions.")},
+    {"art": "note", "icon": "panel", "name": None,
+     "desc": ("Die **leichtgewichtige Node** im Projekt-Graph — von der rohen Beobachtung bis zur "
+              "ausgearbeiteten Lösungs-Idee. Wird sie gebaut, verlinkt sie auf ihren Prototyp.",
+              "The **lightweight node** in the project graph — from a raw observation to a worked-out "
+              "solution idea. Once built, it links to its prototype."),
+     "data": (["Titel/Text + Kind (Beobachtung … Lösungs-Idee)",
+               "Evidence-Links in den Graphen",
+               "Optionaler Verweis auf einen gebauten Prototyp"],
+              ["Title/text + kind (observation … solution idea)",
+               "Evidence links into the graph",
+               "An optional pointer to a built prototype"]),
+     "adv": ("Methodologie-frei und jederzeit erfassbar — die niedrigste Hürde, ein Signal festzuhalten, "
+             "das später ein Council prüft oder ein Prototyp wird.",
+             "Methodology-free and capturable anytime — the lowest-friction way to keep a signal that a "
+             "council later evaluates or a prototype turns into.")},
+    {"art": "section", "icon": "squareGrid", "name": "section",
+     "desc": ("Eine **methodologie-unabhängige Gruppierung** von Graph-Knoten (ein Frame/Cluster).",
+              "A **methodology-independent grouping** of graph nodes (a frame/cluster)."),
+     "data": (["Mitglieder (beliebige Graph-Knoten) + Kind + Reihenfolge"],
+              ["Members (any graph nodes) + kind + ordering"]),
+     "adv": ("Struktur über den Graphen, ohne sich auf eine feste Methode festzulegen — gruppiere, wie "
+             "die Erkenntnisse es verlangen.",
+             "Structure over the graph without committing to a fixed method — group however the findings "
+             "demand.")},
 ]
 
 
@@ -75,17 +141,25 @@ def _docs_page() -> str:
     from .. import presentation as _pres
     store = Store()
     de = _lang() == "de"
+    lbl_data = "Datenpunkte" if de else "Data points"
+    lbl_adv = "Großer Vorteil" if de else "Big advantage"
     cards = []
-    for kind, icon, name_key, dde, den, cde, cen in DOCS:
-        pres = _pres.present(kind)
-        name = t(name_key) if name_key else (pres["label"] if not pres["label"].islower() else pres["label"].capitalize())
-        desc, caps = (dde, cde) if de else (den, cen)
+    for d in DOCS:
+        pres = _pres.present(d["art"])
+        name = (t(d["name"]) if d["name"]
+                else (pres["label"] if not pres["label"].islower() else pres["label"].capitalize()))
+        i = 0 if de else 1
+        desc, adv = d["desc"][i], d["adv"][i]
+        data = d["data"][i]
         cards.append(h("div", {"class_": "doccard"},
             h("div", {"class_": "doc-h"},
-              h("span", {"class_": "rico", "style": f"color:{pres['color']}"}, raw(_icon(icon))),
+              h("span", {"class_": "rico", "style": f"color:{pres['color']}"}, raw(_icon(d["icon"]))),
               h("span", {"class_": "doc-name"}, name)),
             h("div", {"class_": "es-prose sm doc-desc"}, raw(_md(desc))),
-            h("ul", {"class_": "doc-caps"}, fragment(*(h("li", {}, raw(_md_inline(c))) for c in caps)))))
+            h("div", {"class_": "doc-sec"}, h("div", {"class_": "doc-lbl"}, lbl_data),
+              h("ul", {"class_": "doc-caps"}, fragment(*(h("li", {}, raw(_md_inline(c))) for c in data)))),
+            h("div", {"class_": "doc-sec"}, h("div", {"class_": "doc-lbl"}, lbl_adv),
+              h("div", {"class_": "es-prose sm doc-adv"}, raw(_md(adv))))))
     prim_rows = []
     for nm, dde, den in PRIMITIVES:
         prim_rows.append(h("div", {"class_": "psolve"},
@@ -231,7 +305,10 @@ register_css(r"""
 .doc-h .rico{width:30px;height:30px}.doc-h .rico svg{width:18px;height:18px}
 .doc-name{font-size:var(--t-md);font-weight:650;letter-spacing:-.01em}
 .doc-desc{color:var(--ink)}.doc-desc p{margin:0;max-width:none}
-.doc-caps{list-style:none;margin:12px 0 0;padding:10px 0 0;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:6px}
-.doc-caps li{position:relative;padding-left:18px;font-size:var(--t-sm);color:var(--muted);line-height:1.5}
-.doc-caps li::before{content:"";position:absolute;left:3px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.doc-sec{margin-top:13px;padding-top:11px;border-top:1px solid var(--line-2)}
+.doc-lbl{font-size:var(--t-xs,11px);font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+.doc-caps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.doc-caps li{position:relative;padding-left:16px;font-size:var(--t-sm);color:var(--muted);line-height:1.5}
+.doc-caps li::before{content:"";position:absolute;left:2px;top:8px;width:4px;height:4px;border-radius:50%;background:var(--accent)}
+.doc-adv{color:var(--ink)}.doc-adv p{margin:0;max-width:none}
 """)
