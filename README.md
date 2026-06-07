@@ -13,9 +13,14 @@ supports it.
 
 ## Get started — paste this to your AI agent
 
-No setup knowledge needed. Paste the prompt below into **Claude Code, Cursor, ChatGPT, or
-any AI coding agent**. It detects your environment, installs Sonaloop the best way, starts
-the inspector, and walks you through a first project — you just talk.
+No setup knowledge needed. Paste the prompt below into an **AI agent that can run commands
+on your machine** — e.g. **Claude Code, Cursor, or Codex** (and other local/desktop agents
+with terminal access, like the Claude or ChatGPT desktop apps). It detects your environment,
+installs Sonaloop the best way, starts the inspector, and walks you through a first project —
+you just talk.
+
+> **Chat-only assistant (no local execution)?** It can't install a CLI or start the server —
+> use the manual MCP setup in the **Prefer to wire it up yourself?** section below instead.
 
 ```text
 Set up Sonaloop for me and walk me through a first project. Do every step yourself and keep
