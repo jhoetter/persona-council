@@ -17,7 +17,7 @@ register_css(r"""
 .mem-group{margin:0 0 22px}
 .mem-group-h{display:flex;align-items:center;gap:7px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin:0 0 10px}
 .mem-n{color:var(--faint);font-weight:550}
-.mem-ents{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.mem-ents{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
 .mem-ent{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:13px 15px}
 .mem-ent-h{display:flex;align-items:center;gap:8px;margin:0 0 11px}
 .mem-ent-h svg{width:15px;height:15px;color:var(--muted);flex:none}.mem-ent-h b{font-size:var(--t-body)}
@@ -44,7 +44,7 @@ register_css(r"""
 """)
 
 
-_MEM_KINDS = [("project", "projects"), ("person", "personas"), ("topic", "bulb"), ("tool", "settings")]
+_MEM_KINDS = [("project", "briefcase"), ("person", "contact"), ("topic", "tag"), ("tool", "settings")]
 
 
 def _mem_kind_label(kind: str) -> str:                      # explicit t() calls so the i18n usage scan sees them
@@ -173,7 +173,7 @@ def register_personas(app) -> None:
         rel_rows = fragment(*(h("p", {}, h("strong", {}, r["name"]), " ",
                               h("span", {"class_": "muted"}, f'— {r["type"]}: {r["friction"]}')) for r in p["relationships"]))
         cal_section = h("div", {"class_": "sec", "id": "cal"}, h("h2", {}, t("calendar")),
-            (fragment(raw(_calendar_tabs(p["id"], selected_date, view)),
+            (fragment(raw(_calendar_tabs(p["id"], selected_date, view, period)),
                       raw(_period_calendar_html(p["id"], selected_date, view, period)))
              if has_sim else h("p", {"class_": "muted"}, t("no_days_yet"))))
         main = fragment(

@@ -37,12 +37,47 @@ def _today() -> str:
         return ""
 
 
-def _calendar_tabs(persona_id: str, selected_date: str, view: str) -> str:
+_MONF = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August",
+         "September", "Oktober", "November", "Dezember"]
+
+
+def _shift(a: date, view: str, delta: int) -> date:
+    if view == "week":
+        return a + timedelta(days=7 * delta)
+    if view == "year":
+        return a.replace(year=a.year + delta)
+    m = a.month - 1 + delta                                  # month: jump whole months, land on the 1st
+    return date(a.year + m // 12, m % 12 + 1, 1)
+
+
+def _period_title(view: str, period: dict) -> str:
+    s = date.fromisoformat(period["period_start"]); e = date.fromisoformat(period["period_end"])
+    if view == "year":
+        return str(s.year)
+    if view == "week":
+        if s.month == e.month:
+            return f"{s.day}.–{e.day}. {_MONF[s.month-1]} {s.year}"
+        return f"{s.day}. {_MONF[s.month-1]} – {e.day}. {_MONF[e.month-1]} {e.year}"
+    return f"{_MONF[s.month-1]} {s.year}"
+
+
+def _calendar_tabs(persona_id: str, selected_date: str, view: str, period: dict) -> str:
+    """Calendar header: ‹ / today / › date navigation + the current-period title + the view switcher."""
+    a = date.fromisoformat(period.get("anchor_date", selected_date))
+    prev, nxt = _shift(a, view, -1).isoformat(), _shift(a, view, 1).isoformat()
+    def go(d: str) -> str:
+        return f"/personas/{persona_id}?date={d}&view={view}"
     labels = {"week": t("tab_week"), "month": t("tab_month"), "year": t("tab_year")}
-    return h("div", {"class_": "cal-tabs"}, [
-        h("a", {"class_": "active" if view == tab else "",
-                "href": f"/personas/{persona_id}?date={selected_date}&view={tab}"}, labels[tab])
-        for tab in ["week", "month", "year"]])
+    tabs = [h("a", {"class_": "active" if view == tab else "",
+                    "href": f"/personas/{persona_id}?date={selected_date}&view={tab}"}, labels[tab])
+            for tab in ["week", "month", "year"]]
+    return h("div", {"class_": "cal-nav"},
+             h("div", {"class_": "cal-nav-l"},
+               h("a", {"class_": "cal-arrow", "href": go(prev), "aria-label": "prev"}, "‹"),
+               h("a", {"class_": "cal-arrow", "href": go(nxt), "aria-label": "next"}, "›"),
+               h("a", {"class_": "cal-today", "href": go(_today())}, t("today")),
+               h("span", {"class_": "cal-title"}, _period_title(view, period))),
+             h("div", {"class_": "cal-tabs"}, *tabs))
 
 
 def _event_chip(event: dict) -> str:                          # used in week + month cells
@@ -139,7 +174,14 @@ def _period_calendar_html(persona_id: str, selected_date: str, view: str, period
 # Co-located CSS (spec/roadmap.md R3). One color language across views: activity-type accent, a mood
 # tick (pos/neg/neutral), hairline grids via 1px gap on a line-coloured container.
 register_css(r"""
-.cal-tabs{display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:2px;margin:14px 0}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0}
+.cal-nav-l{display:flex;align-items:center;gap:7px}
+.cal-arrow{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:7px;color:var(--muted);font-size:17px;line-height:1;background:var(--panel)}
+.cal-arrow:hover{background:var(--hover);color:var(--ink)}
+.cal-today{border:1px solid var(--line);border-radius:7px;padding:5px 12px;font-size:var(--t-sm);color:var(--ink);background:var(--panel)}
+.cal-today:hover{background:var(--hover)}
+.cal-title{font-size:var(--t-md);font-weight:600;color:var(--ink);margin-left:8px}
+.cal-tabs{display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:2px}
 .cal-tabs a{border-radius:6px;padding:4px 13px;font-size:var(--t-sm);color:var(--muted);font-weight:500}
 .cal-tabs a:hover{color:var(--ink)}
 .cal-tabs a.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
@@ -172,7 +214,7 @@ register_css(r"""
 .cm-mood{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--line-2)}
 .cm-mood.pos{background:var(--green)}.cm-mood.neg{background:var(--amber)}.cm-mood.neu{background:var(--line-2)}
 /* ---- YEAR: activity heatmap ---- */
-.cal-year{display:flex;gap:9px;align-items:flex-start;overflow-x:auto;padding:6px 2px 2px}
+.cal-year{display:flex;gap:9px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;padding:6px 2px 2px}
 .cy-wd{display:grid;grid-template-rows:repeat(7,11px);gap:3px;padding-top:18px}
 .cy-wd span{font-size:9px;line-height:11px;height:11px;color:var(--muted)}
 .cy-main{min-width:0}
@@ -186,5 +228,6 @@ a.cy-cell:hover{outline:1.5px solid var(--accent);outline-offset:1px}
 .cy-cell.today{box-shadow:0 0 0 1.5px var(--accent)}
 .cy-legend{display:flex;align-items:center;gap:4px;margin-top:12px;font-size:var(--t-xs);color:var(--muted)}
 .cy-legend .cy-cell{margin:0 1px}
-:root{--cal-h0:#eceef1;--cal-h1:#bfe3cf;--cal-h2:#86cda6;--cal-h3:#46ad77;--cal-h4:#1f7d4d}
+/* activity intensity ramp — indigo (brand accent), not green */
+:root{--cal-h0:#edeef2;--cal-h1:#d8dcf7;--cal-h2:#b2bbef;--cal-h3:#838ee0;--cal-h4:#5b67d1}
 """)
