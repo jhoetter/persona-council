@@ -47,12 +47,14 @@ For each ready task, `next_action`; then by bucket:
 - Stop fanning out by your own judgment (evidence-backed) — never a fixed count.
 
 **verify — cluster / decide behind an evidence gate (one synthesis per waist):**
-- `verify__define`: **affinity-cluster** the discover fan; author a synthesis payload with
-  `clusters:[{label, member_node_ids, insight}]` + `key_problems:[…]` → `record_synthesis` +
-  `link_evidence(kind="synthesis")` + `record_judgment("divergence_complete", …)` + `complete_task`.
+- `verify__define`: **affinity-cluster** the discover fan; author a synthesis payload whose `findings`
+  carry `kind="cluster"` items (`{text=<label+insight>, refs to the clustered council statements}`) +
+  `kind="key_problem"` items → `record_synthesis` + `link_evidence(kind="synthesis")` +
+  `record_judgment("divergence_complete", …)` + `complete_task`.
 - `verify__lofi_select`: personas **USE each lo-fi prototype** via Playwright (`run_prototype` →
   `brief_prototype_session` → `proto_open`/`proto_act` → `record_prototype_session`); then a synthesis
-  with `ranking:[{prototype_id, score_rationale}]` + `shortlist:[…]`; judge + complete. (Its
+  whose `findings` carry `kind="ranking"` items (one per prototype, score_rationale in `text`) +
+  `kind="shortlist"` items; judge + complete. (Its
   `requires.session_of_tags:["lofi"]` is matched by tag-equality to the lo-fi prototypes' sessions.)
 - `verify__deliver`: personas **USE the mid-fi** prototype (`session_of_tags:["midfi"]`); synthesize
   the **solution presentation** (winning concept, who-wins + non-targets, validated pain-solvers,
@@ -97,13 +99,25 @@ Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis
 `>` quotes, blank lines between paragraphs. **Never** use ALL-CAPS for emphasis or write a literal
 section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
 the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
-notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).
+notes, etc. A persona/proband statement `text` stays in that persona’s natural voice (it is a quote).
 
-## Unified primitives (preferred shape)
+## Unified primitives (the ONLY shape)
 
-Author content as the shared primitives (spec/unified-artifact-schema.md) so it renders through the one
-consistent renderer: **`statements`** (one per persona utterance: `{persona_id, text, stance:{value -2..2,
-label}, about:{kind:"prompt",id}, refs}`), **`findings`** (analysis items: `{text, kind:
-summary|key_problem|recommendation|open_question|…, score, refs}`), **`prompts`** (`{text, kind, id}`).
-One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment. Legacy fields
-(turns/votes/voices/key_problems/…) still work in parallel.
+Author content as the shared primitives (spec/unified-artifact-schema.md) — these are the only inputs
+the code accepts (legacy `turns`/`votes`/`voices`/`key_problems`/`clusters`/`ranking`/`shortlist`/… were removed):
+
+- **`record_council(..., statements=[…], votes=None, proposal="", questions=[…], findings=[…])`** —
+  `statements`: one per persona utterance `{persona_id, text (Markdown), stance:{value -2..2, label},
+  about:{kind:"prompt", id:"q0"|"proposal"}, refs}`. A discover council carries `questions` + statements
+  with `about.id="q0"/"q1"…`; an evaluation council carries a `proposal` + stances; a decision council
+  adds `votes` for the tally.
+- **`record_synthesis(..., payload={gesamtbild, positionierung, arc_narrative, references, citations,
+  status, findings:[…], statements:[…], prompts:[…]})`** — all analysis lives in `findings`
+  `{text, kind: key_problem|pain_solver|open_question|recommendation|cluster|segment|ranking|shortlist|summary,
+  score:{effort,value}, refs}`. A synthesis **cross-references, never copies**: it re-interprets council
+  statements via finding `refs {kind:"council", id, anchor:"<statement-id>", role:"derived_from"}` — it
+  does not re-host voices.
+- A concept/idea is just a **note** (`create_note`; `kind` normalizes to `note`) — set
+  `data.prototype_id` once it's built; there is no separate concept entity.
+
+One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment.

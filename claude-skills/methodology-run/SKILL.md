@@ -38,7 +38,8 @@ elif b.bucket == "act":           # DO THE WORK (breadth = angles × persona div
     link_evidence(project_id, t.id, "council", cid);  complete_task(project_id, t.id)
 
 else:                             # VERIFY — consolidate + gate
-    # optionally synthesize the fan into key-problems / shortlist / solution-presentation:
+    # optionally synthesize the fan into findings (kind=key_problem/shortlist/…) — cross-referencing
+    # council statements, never copying them:
     syn = record_synthesis(title, council_ids=[the fan], payload)   # the synthesize skill
     link_evidence(project_id, b.task, "synthesis", syn.id)
     record_judgment(project_id, b.task, "divergence_complete", true, rationale, evidence_refs=[…])
@@ -76,13 +77,25 @@ Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis
 `>` quotes, blank lines between paragraphs. **Never** use ALL-CAPS for emphasis or write a literal
 section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
 the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
-notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).
+notes, etc. A persona/proband statement `text` stays in that persona’s natural voice (it is a quote).
 
-## Unified primitives (preferred shape)
+## Unified primitives (the ONLY shape)
 
-Author content as the shared primitives (spec/unified-artifact-schema.md) so it renders through the one
-consistent renderer: **`statements`** (one per persona utterance: `{persona_id, text, stance:{value -2..2,
-label}, about:{kind:"prompt",id}, refs}`), **`findings`** (analysis items: `{text, kind:
-summary|key_problem|recommendation|open_question|…, score, refs}`), **`prompts`** (`{text, kind, id}`).
-One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment. Legacy fields
-(turns/votes/voices/key_problems/…) still work in parallel.
+Author content as the shared primitives (spec/unified-artifact-schema.md) — these are the only inputs
+the code accepts (legacy `turns`/`votes`/`voices`/`key_problems`/… were removed):
+
+- **`record_council(..., statements=[…], votes=None, proposal="", questions=[…], findings=[…])`** —
+  `statements`: one per persona utterance `{persona_id, text (Markdown), stance:{value -2..2, label},
+  about:{kind:"prompt", id:"q0"|"proposal"}, refs}`. A discover council carries `questions` + statements
+  with `about.id="q0"/"q1"…`; an evaluation council carries a `proposal` + stances; a decision council
+  adds `votes` for the tally.
+- **`record_synthesis(..., payload={gesamtbild, positionierung, arc_narrative, references, citations,
+  status, findings:[…], statements:[…], prompts:[…]})`** — all analysis lives in `findings`
+  `{text, kind: key_problem|pain_solver|open_question|recommendation|cluster|segment|ranking|shortlist|summary,
+  score:{effort,value}, refs}`. A synthesis **cross-references, never copies**: it re-interprets council
+  statements via finding `refs {kind:"council", id, anchor:"<statement-id>", role:"derived_from"}` — it
+  does not re-host voices.
+- A concept/idea is just a **note** (`create_note`; `kind` normalizes to `note`) — set
+  `data.prototype_id` once it's built; there is no separate concept entity.
+
+One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment.

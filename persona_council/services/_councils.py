@@ -123,28 +123,23 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
         "schema": "council", "language": language, "project_id": project["id"], "prompt": prompt,
         "external_context": context, "participants": participants,
         "instructions": (
-            "Run this council in the shape the task calls for (the UI derives it):\n"
+            "Run this council in the shape the task calls for (the UI derives the mode):\n"
             "• DISCOVERY (default for early research): pass `questions` = the OPEN, conversational "
-            "user-research questions you ask (e.g. 'Welche Versicherungen hast du? Wie legst du gerade "
-            "Geld zur Seite? Wann hast du zuletzt an Absicherung gedacht?'). Author ONE turn per "
-            "(persona, question) — that persona's honest ANSWER to that one question — and set "
-            "`question_index` (0-based, into `questions`) on each turn. This makes the council a "
-            "readable moderated transcript (the question, then each persona's answer). Do NOT merge "
-            "several questions into one turn; do NOT invent a hypothesis and do NOT collect votes — "
-            "you are LISTENING. Leave proposal/votes empty.\n"
-            "• EVALUATION (reacting to a concept/prototype): set `proposal` to the thing reacted to and "
-            "ask conversationally ('Was löst das bei dir aus? Was fehlt?'); set each turn's `stance`; no "
-            "hard votes.\n"
+            "user-research questions you ask. Author ONE `statement` per (persona, question) — that "
+            "persona's honest answer — with about={kind:'prompt', id:'q0'|'q1'|…} pointing at the "
+            "question it answers, so the page renders a moderated Q→A transcript. Do NOT invent a "
+            "hypothesis and do NOT collect votes — you are LISTENING. Leave proposal/votes empty.\n"
+            "• EVALUATION (reacting to a concept/prototype): set `proposal`; each statement reacts with "
+            "about={kind:'prompt', id:'proposal'} + a `stance` ({value -2..2}); no hard votes.\n"
             "• DECISION (rare — an explicit choice): set `proposal` + `votes` (SUPPORT/MAYBE/ABSTAIN/"
-            "OPPOSE).\n"
-            "On EACH turn set: persona_id, content, question_index (for DISCOVERY — which question it "
-            "answers), stance (where applicable), questions_or_pushback, "
-            "memory_refs (the memories drawn on), and `input` — a SHORT snapshot of what this persona was "
-            "given (the question(s)/prompt + the key SOUL/memory lines from agent_context) so the council "
-            "is AUDITABLE (the UI shows it per voice). Ground every turn in agent_context, honest + "
-            "anti-steering. Then a short summary + a rich Markdown exec_summary. Persist via "
-            "record_council(project_id, prompt, persona_ids, turns, votes=[], proposal='', questions=[...], "
-            f"summary, exec_summary). {language_instruction(language)}" + MARKDOWN_CONTRACT + PRIMITIVES_CONTRACT
+            "OPPOSE) for the tally.\n"
+            "On each statement set persona_id, text (the persona's words, in voice), stance where "
+            "applicable, about (the prompt it answers), and refs (the memories/sources drawn on, incl. "
+            "{kind:'memory', text}). Ground every statement in agent_context, honest + anti-steering. "
+            "Add `findings` for any council-level analysis + a rich Markdown exec_summary. Persist via "
+            "record_council(project_id, prompt, persona_ids, statements=[...], questions=[...] | "
+            f"proposal=…, votes=…, summary, exec_summary, findings=[...]). {language_instruction(language)}"
+            + MARKDOWN_CONTRACT + PRIMITIVES_CONTRACT
         ),
     }
 

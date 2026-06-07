@@ -173,9 +173,8 @@ del _REGISTRY, _collect_public_symbols
 
 # --- Single-module patch semantics --------------------------------------------
 # The original services.py was ONE module: setattr(services, "X", v) (e.g. tests
-# monkeypatching generate_day_plan_with_llm / generate_activity / ROOT, or the
-# record_day/record_month_bundle globals() swap reading those names) all hit the
-# same namespace that every function read its globals from. After the package
+# monkeypatching ROOT or other module-level names) all hit the same namespace that
+# every function read its globals from. After the package
 # split a name like ROOT lives in each submodule's own __dict__, so a plain
 # setattr on the package would not reach the functions. We restore the original
 # behavior with a forwarding module: assigning services.X also writes X into every

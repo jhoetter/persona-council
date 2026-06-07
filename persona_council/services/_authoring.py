@@ -6,18 +6,22 @@ real Markdown renderer (web/_components._md), so authoring Markdown 'just works'
 from __future__ import annotations
 
 PRIMITIVES_CONTRACT = (
-    "\n\nUNIFIED PRIMITIVES (spec/unified-artifact-schema.md, preferred): author content as the shared "
-    "primitives so it renders through the one consistent renderer.\n"
+    "\n\nUNIFIED PRIMITIVES (spec/unified-artifact-schema.md) — the ONLY accepted content shape:\n"
     "• `statements`: one per persona utterance — {persona_id, text (Markdown), stance:{value -2..2, label}, "
-    "about:{kind:'prompt', id}, refs:[{kind:'memory'|'council'|'prototype_state', id|text}], meta}. "
-    "Use instead of council turns / synthesis voices / prototype reactions.\n"
+    "about:{kind:'prompt', id}, refs:[{kind:'memory'|'council'|'synthesis'|'prototype_state', id, anchor, "
+    "role} | {kind:'memory', text}], meta}. The ONE voice shape (council voices, synthesis voices, "
+    "prototype reactions).\n"
     "• `findings`: the analysis items — {text (Markdown), kind: summary|key_problem|pain_solver|"
-    "open_question|recommendation|cluster|segment, score:{effort,value}, refs}. Use instead of "
-    "exec_summary/key_problems/pain_solvers/handlungsempfehlungen/offene_fragen.\n"
+    "open_question|recommendation|cluster|segment|ranking|shortlist, score:{effort,value}, refs}. The ONE "
+    "analysis shape.\n"
     "• `prompts`: {text, kind: question|proposal|goal|focus, id} — the questions/proposal posed; statements "
     "reference them via `about.id`.\n"
+    "CROSS-REFERENCE, never copy (spec/artifact-cross-references.md): when a synthesis reflects a council "
+    "statement, author your OWN finding text + a ref {kind:'council', id, anchor:'<statement-id>', "
+    "role:'derived_from'} — the source words are resolved live, not duplicated.\n"
     "One positivity scale only (oppose -2 / skeptical -1 / neutral 0 / conditional +1 / support +2) for "
-    "every stance/vote/sentiment. Legacy fields (turns/votes/voices/key_problems/…) still work in parallel."
+    "every stance. A DECISION council may also pass `votes` (the formal tally). There are NO legacy "
+    "turns/voices/key_problems inputs."
 )
 
 MARKDOWN_CONTRACT = (

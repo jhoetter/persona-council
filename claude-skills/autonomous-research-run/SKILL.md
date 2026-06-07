@@ -48,20 +48,26 @@ Authoring per dispatch (always a SUBAGENT, grounded in `s.next_action`):
   (`n.act.suggested_participants` — segment-diverse, NOT keyword) via the run-council flow, or
   `scaffold_artifact` + a grounded Playwright proband session; then `add_task`+`link_evidence`+
   `complete_task`. Breadth = angles × persona diversity, **never one council per persona**.
-  **Council shape (Q1/Q2):** EARLY discovery is OPEN USER RESEARCH — pass `questions=[…]` (conversational:
-  "Welche Versicherungen hast du? Wie sparst du gerade?"), turns are honest ANSWERS, NO proposal/votes
+  **Council shape (Q1/Q2):** councils are PRIMITIVES-ONLY — `record_council(project_id, prompt,
+  persona_ids, statements=[…], votes=…, proposal=…, questions=…, findings=…)` (no `turns` param).
+  Each statement is `{persona_id, text, stance:{value -2..2}, about:{kind:'prompt', id}, refs}` — the
+  honest answer/utterance, its position on the one −2..2 scale, what prompt it responds to, and its
+  grounding. EARLY discovery is OPEN USER RESEARCH — pass `questions=[…]` (conversational: "Welche
+  Versicherungen hast du? Wie sparst du gerade?"), statements are honest ANSWERS, NO proposal/votes
   (you are LISTENING; hypotheses are an OUTPUT of Define, never the input). Use a `proposal` only to
   react to a concept/prototype (evaluation), and `votes` only for an explicit decision (rare). State
   motions as questions, not hypotheses, until you have understood.
 - **verify** → subagent consolidates the fan (`n.verify.fan_evidence`) into a synthesis
   (`record_synthesis` — councils OPTIONAL/decoupled; for affinity, synthesize over notes/other
   syntheses with `council_ids=[]`), records the gate judgment, `assess_progress`, `complete_task`.
-  **The synthesis IS the answer artifact — author it RICH**: fill `gesamtbild` (the answer),
-  `positionierung` (the POV), `voices` (per-persona sentiment/relevance/key_argument grounded in the
-  council turns), `segmente`, `handlungsempfehlungen`. Notes are observation ATOMS, never a
+  **The synthesis IS the answer artifact — author it RICH** (primitives-only payload): fill
+  `gesamtbild` (the answer), `positionierung` (the POV), and a set of `findings` —
+  `{text, kind:'key_problem'|'recommendation'|'open_question'|'cluster'|…, score, refs}` — that carry
+  the analysis. Don't re-host voices: cross-reference the council statements that ground each finding
+  via a finding `ref` `{kind:'council', id:<council_id>, anchor:<statement part id>, role:'derived_from'}`.
+  Optional `statements` carry any synthesis-level voices. Notes are observation ATOMS, never a
   substitute for the synthesis. `assess_project` flags a thin/empty synthesis as a gap — fix it
-  before moving on. (Council turn body goes in `content`; votes use the SUPPORT/MAYBE/ABSTAIN/OPPOSE
-  scheme so the UI tallies + voices render.)
+  before moving on. (Council votes use the −2..2 stance scale so the UI tallies render.)
 
 ## Stay organized & documented (every few iterations — HX5)
 - **Sections**: maintain methodology-independent groupings as the run grows — `create_section` /

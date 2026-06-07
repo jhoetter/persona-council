@@ -45,34 +45,41 @@ the council discussion does not.)
 - A follow-up would only **repeat** prior insight (diminishing returns).
 - `max_councils` hit → one final synthesis, status="done", stop_reason="cap".
 
-## Author the per-persona `voices` (required)
-`brief_synthesis` returns, per council, the **per-persona turns and votes**. Use them
-to author the `voices` array — **one entry per distinct persona across the chain** —
-the structured layer the UI filters/sorts and the export carries:
+## Cross-reference councils, NEVER copy their voices (required)
+`brief_synthesis` returns, per council, the **per-persona statements and votes**. A
+synthesis must **not** re-host those voices — it does not carry its own copy of the
+personas' words. Instead, to reflect what a council said, author your OWN `finding`
+text (your re-interpretation) and attach a **ref** that points at the source
+statement; the persona's actual words resolve live, in the council, from that link.
+
 ```
-voices: [{
-  persona_id, persona_name,
-  segment,                                   # which `segmente` entry they belong to
-  sentiment: positiv|bedingt|neutral|skeptisch|ablehnend,
-  relevance: stark|teilweise|kaum|irrelevant,# how much the topic TOUCHES their work (independent of liking it)
-  key_argument,                              # the ONE-LINE reason WHY, in their voice (grounded, not a label)
-  shift: {from, to, trigger, council_id} | null,  # ONLY if their stance actually moved across councils
-  evidence: [{council_id, quote}]            # 1–3 grounded quotes from their turns/votes
+findings: [{
+  text,                                      # YOUR interpretation, in Markdown — not a paste of the quote
+  kind: summary|key_problem|pain_solver|open_question|recommendation|cluster|segment|ranking|shortlist,
+  score: {effort, value},
+  refs: [{ kind: "council", id: "<council-id>", anchor: "<statement-id>", role: "derived_from" }]
 }]
 ```
-Rules: `key_argument` must be their real point, grounded in the turns/votes. Set
-`shift` only when the evidence shows a genuine change (e.g. neutral→positiv) and name
-the concrete trigger + the council where it happened. `sentiment` and `relevance` are
-**independent axes** — a skeptic can be `relevance: stark`. This is what powers
-"warum positiv?" and "was bewegte jemanden von neutral zu positiv?" in the report.
+Rules (spec/artifact-cross-references.md): the finding `text` must be your real
+synthesis point — grounded in the statements/votes but written by you, never a copied
+quote. Use a finding per persona-segment / pain / recommendation / open question and
+cross-ref the 1–3 source statements it derives from. To express a stance shift, write
+it into the finding text and ref the before/after statements (the live link shows the
+words). This is what powers "warum positiv?" and "was bewegte jemanden von neutral zu
+positiv?" — the reader follows the ref chip into the council, the single source of truth.
 
 ## Output
-One `Synthesis` (status done) = the report: arc/trajectory, gesamtbild,
-handlungsempfehlungen, positionierung, validated pain-solvers, segmente (incl.
-deliberate non-targets), offene_fragen, and the structured **voices** — every claim
-traceable to a council. Read it top-down (answer first, then the Stimmen panel:
-filter/sort by sentiment & relevance, expand for the shift + evidence); the councils
-sit underneath as the log. Hand `export_synthesis` (md or json) to a downstream agent.
+One `Synthesis` (status done) = the report. Its `payload` is **primitives + prose
+only**: `gesamtbild` / `positionierung` / `arc_narrative` (Markdown prose),
+`references`, `citations`, `status`, plus `findings`, `statements` and `prompts`. The
+analysis layers that used to be their own keys are now **findings with the matching
+`kind`**: pain-solvers (`pain_solver`), recommendations (`recommendation`), segments
+incl. deliberate non-targets (`segment`), open questions (`open_question`), key
+problems (`key_problem`), clusters/rankings/shortlists. Every finding cross-refs its
+source council statements (role `derived_from`), so every claim stays traceable and the
+persona's words live once, in the council. Read it top-down (gesamtbild first, then the
+findings, each chip deep-linking into the council it derives from); the councils sit
+underneath as the log. Hand `export_synthesis` (md or json) to a downstream agent.
 
 ## Note
 Each council is itself host-authored (run-council skill) and may be moderated with
@@ -85,13 +92,26 @@ Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis
 `>` quotes, blank lines between paragraphs. **Never** use ALL-CAPS for emphasis or write a literal
 section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
 the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
-notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).
+notes, etc. A persona/proband statement `text` stays in that persona’s natural voice (it is a quote, in a council).
 
-## Unified primitives (preferred shape)
+## Primitives-only authoring contract
 
-Author content as the shared primitives (spec/unified-artifact-schema.md) so it renders through the one
-consistent renderer: **`statements`** (one per persona utterance: `{persona_id, text, stance:{value -2..2,
-label}, about:{kind:"prompt",id}, refs}`), **`findings`** (analysis items: `{text, kind:
-summary|key_problem|recommendation|open_question|…, score, refs}`), **`prompts`** (`{text, kind, id}`).
-One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment. Legacy fields
-(turns/votes/voices/key_problems/…) still work in parallel.
+Author everything as the shared primitives (spec/unified-artifact-schema.md) so it renders through the
+one consistent renderer. These are the ONLY accepted shapes — there is no
+`key_problems`/`pain_solvers`/`handlungsempfehlungen`/`offene_fragen`/`clusters`/`segmente`/`ranking`/
+`shortlist`/`voices` key, and a synthesis does NOT carry its own `statements` copy of council voices.
+
+`record_synthesis(title, start_input, council_ids, payload={…}, goal, …)` where `payload` =
+
+- prose: **`gesamtbild`** / **`positionierung`** / **`arc_narrative`** (Markdown), plus `status`,
+  `references`, `citations`.
+- **`findings`** — every analysis item: `{text (Markdown — your interpretation), kind:
+  summary|key_problem|pain_solver|open_question|recommendation|cluster|segment|ranking|shortlist,
+  score:{effort,value}, refs}`.
+- **`statements`** / **`prompts`** — only for the synthesis's own framing; **never** to re-host council
+  voices.
+
+**Cross-reference, never copy** (spec/artifact-cross-references.md): to reflect a council statement,
+author your own finding `text` and add a ref `{kind:"council", id:"<council-id>", anchor:"<statement-id>",
+role:"derived_from"}`. The source words resolve live from the council. One positivity scale only
+(oppose −2 … support +2) for every stance/sentiment.

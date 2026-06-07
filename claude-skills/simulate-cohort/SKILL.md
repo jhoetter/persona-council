@@ -7,13 +7,22 @@ description: Drive Persona Council's full simulation loop for one or more person
 
 Model-neutral driver for the agentic loop in
 `spec/memory-and-simulation-architecture.md`.
-You (the MCP host) author all text; the server gathers context and persists.
-Tools are MCP (`mcp__persona-council__*`) or the equivalent CLI
-(`.venv/bin/persona-council …`).
+The life-simulation is HOST-AUTHORED: there is NO in-process simulation engine —
+YOU (the MCP host) author every day/month; the server only gathers context,
+persists, and gates. Tools are MCP (`mcp__persona-council__*`) or the equivalent
+CLI (`.venv/bin/persona-council …`).
 
 ## Inputs
 - personas: one slug, a list, or "all" (→ `list_personas`).
 - months: e.g. `2026-09 … 2026-11` (process oldest → newest so each chains).
+
+## One day (host-authored, no engine)
+For a single concrete day: `brief_day(slug, date)` → gathers active projects, open
+threads, recall + world context and returns a `day_bundle_hint`. YOU author the
+`day_plan` + per-block `activities` + `deltas`, then
+`record_day(slug, date, day_plan, plan, activities, deltas, workday_start_hour, seed)`
+persists it end-to-end. (There is no `simulate_day`/`simulate_range`/
+`continue_simulation` — the host authors the day.)
 
 ## Loop (per persona, per month, oldest first)
 1. **Gather:** `brief_month(slug, month)` → returns SOUL, active projects, open
@@ -32,8 +41,11 @@ Tools are MCP (`mcp__persona-council__*`) or the equivalent CLI
    start hours + block counts; realistic done/open mix; pick sample_days that show
    an arc (routine + conflict + milestone, not only drama); **anti-steering** — no
    ungrounded product/tool enthusiasm.
-3. **Persist:** `record_month_bundle(slug, month, bundle)` (runs put_period_plan →
-   per day put_day_plan/simulate/record_memory_deltas → put_digest → embeddings).
+3. **Persist:** `record_month_bundle(slug, month, bundle)` — host-authored, no
+   engine: runs `put_period_plan` → per sample day `record_day` (put_day_plan +
+   the authored activities) → `brief_consolidation`/`record_memory_deltas` per day
+   → `put_digest` → embeddings. (For a freestanding consolidation pass:
+   `brief_consolidation(slug, date)` → author deltas → `record_memory_deltas`.)
 4. **Quality gate (after each persona's span):**
    - `evaluate_simulation(slug)` — structural (must be 0 reds).
    - `brief_eval_critic(slug)` → author verdict → `record_eval_critic` (semantic).

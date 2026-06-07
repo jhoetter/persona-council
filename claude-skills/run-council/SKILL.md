@@ -34,9 +34,11 @@ Aim: 0–2 targeted lookups, driven by the persona's judgement — not a fixed r
 - Speak as the persona. Support, skepticism, indifference, rejection are all
   valid; never force approval; no vendor tone. Ground claims in concrete memory
   (cite the specific project/event you recalled).
-- Output JSON: `{stance, headline, content, concerns[], would_use, memory_used[]}`
-  where `memory_used` records what you looked up and why — or is `[]` if you
-  judged that nothing specific applied (that is a valid, honest outcome).
+- Author a **statement**: `{persona_id, text (Markdown, in voice — headline,
+  reasoning, concerns, would-use all woven into the prose), stance:{value -2..2},
+  about:{kind:"prompt", id}, refs:[{kind:"memory", text}, …]}`. Record what you
+  looked up and why as `refs` of kind `memory` — or leave `refs` without memory
+  entries if you judged that nothing specific applied (that is a valid, honest outcome).
 
 ## 3b. Moderated back-and-forth (optional, recommended for rich topics)
 Instead of parallel monologues, run a directed debate:
@@ -46,12 +48,14 @@ Instead of parallel monologues, run a directed debate:
    next and to what** — pair opposites ("X doubts IFC, Y calls it the lever —
    respond to each other"), pull the undecided, or target a goal ("skeptics:
    what single thing flips you?"). Selection mechanisms: tension-driven,
-   sentiment-driven, or goal-driven. Add this as a turn with speaker="Moderator".
+   sentiment-driven, or goal-driven. Add the mediator's framing as a `finding`
+   (kind `summary`) so it sits alongside the round's statements.
 3. **Round 2 — directed:** ONLY the selected personas respond (to the mediator's
    question and to each other's quoted points), again researching memory if it
    sharpens the reply. Not everyone speaks every round.
 4. Repeat 2–3 while it stays productive (typically 1–2 directed rounds), then
-   synthesize. Store all turns (openings + moderator + directed) in order.
+   synthesize. Store every utterance (openings + moderator + directed) in order as
+   `statements`.
 
 ## 3c. Mediator strategies (pass `strategy=` to the council)
 The mediator's selection criterion is pluggable. Pick per goal:
@@ -82,13 +86,14 @@ Don't run a fixed number of rounds — run until the energy is spent:
    concrete additions, and ends. Never loop unbounded.
 
 ## 4. Synthesize (host)
-Collect turns → author a `proposal`, `votes` (SUPPORT/MAYBE/ABSTAIN/OPPOSE), a
-short `summary`, and a rich Markdown `exec_summary` (verdict · spectrum of
-who/why · cross-cutting conditions · tensions · bottom line). Persist via
-`record_council(prompt, persona_ids, turns, votes, proposal, summary, exec_summary)`
-(it carries `exec_summary`, shown in the web UI). Tip: `brief_council(prompt)`
-returns candidate personas to choose from, and `brief_council(prompt, persona_ids)`
-returns each participant's loaded context to author turns against.
+Collect each persona utterance as a **statement** → author a `proposal`, `votes`
+(SUPPORT/MAYBE/ABSTAIN/OPPOSE), a short `summary`, and a rich Markdown
+`exec_summary` (verdict · spectrum of who/why · cross-cutting conditions ·
+tensions · bottom line). Persist via
+`record_council(project_id, prompt, persona_ids, statements, votes, proposal, summary, exec_summary, questions, findings, prompts)`
+(`exec_summary` is shown in the web UI). Tip: `brief_council(prompt)` returns
+candidate personas to choose from, and `brief_council(prompt, persona_ids)`
+returns each participant's loaded context to author statements against.
 
 When the council is recorded, point the user to the web inspector to read it:
 **http://127.0.0.1:8787** (`make dev` if it is not running yet).
@@ -104,13 +109,27 @@ Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis
 `>` quotes, blank lines between paragraphs. **Never** use ALL-CAPS for emphasis or write a literal
 section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
 the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
-notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).
+notes, etc. A persona/proband statement `text` stays in that persona’s natural voice (it is a quote).
 
-## Unified primitives (preferred shape)
+## Primitives-only authoring contract
 
-Author content as the shared primitives (spec/unified-artifact-schema.md) so it renders through the one
-consistent renderer: **`statements`** (one per persona utterance: `{persona_id, text, stance:{value -2..2,
-label}, about:{kind:"prompt",id}, refs}`), **`findings`** (analysis items: `{text, kind:
-summary|key_problem|recommendation|open_question|…, score, refs}`), **`prompts`** (`{text, kind, id}`).
-One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment. Legacy fields
-(turns/votes/voices/key_problems/…) still work in parallel.
+Author everything as the shared primitives (spec/unified-artifact-schema.md) so it renders through the
+one consistent renderer. These are the ONLY accepted shapes — there is no `turns`/`votes-as-content`/
+`key_problems`/`voices` input anymore.
+
+- **`statements`** — one per persona utterance:
+  `{persona_id, text (Markdown, the persona's words in voice), stance:{value -2..2},
+  about:{kind:"prompt", id:"q0"|"q1"|"proposal"}, refs:[{kind:"memory", text} |
+  {kind:"council"|"synthesis", id, anchor:"<part-id>", role}], id?}`. This is the ONE voice shape.
+- **`findings`** — analysis items: `{text (Markdown), kind:
+  summary|key_problem|pain_solver|open_question|recommendation|cluster|segment|ranking|shortlist,
+  score:{effort,value}, refs}`.
+- **`prompts`** — `{text, kind, id}` (the questions / the proposal, addressed by `statement.about.id`).
+
+One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment.
+
+**Council modes:**
+- **DISCOVERY** — set `questions` + one statement per (persona, question) with `about.id` = `q0`/`q1`/…
+  (the question it answers). No proposal, no votes.
+- **EVALUATION** — set `proposal`; statements react with `about.id="proposal"` + a stance.
+- **DECISION** — like EVALUATION, and also pass `votes` (SUPPORT/MAYBE/ABSTAIN/OPPOSE) for the tally.

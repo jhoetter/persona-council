@@ -65,8 +65,9 @@ meta-brief → meta-outline → (per phase) meta-section-brief → meta-section 
 - A real minimal **prototype app** the user can open.
 - A **MetaReport** = the Double-Diamond write-up: build-order narrative + a section per phase,
   every claim traceable to a council. The Deliver synthesis + meta-report **is** the dev spec
-  (must-haves via `handlungsempfehlungen` effort/value, who-for via `segmente`, validated solves
-  via `pain_solvers`, open risks via `offene_fragen`).
+  (must-haves via `findings` `kind="recommendation"` with `score.effort`/`score.value`, who-for via
+  `findings` `kind="segment"`, validated solves via `kind="pain_solver"`, open risks via
+  `kind="open_question"`).
 
 ## Principle
 Diverge/converge is the run-council strategies (`pain-discovery`/`positive-deepdive` =
@@ -79,13 +80,23 @@ Write analysis/summary prose as **Markdown**: `**bold**`/`_italic_` for emphasis
 `>` quotes, blank lines between paragraphs. **Never** use ALL-CAPS for emphasis or write a literal
 section header inside the text (e.g. `SUMMARY:`, `VOTES:`, `WHAT THIS COUNCIL FOUND`) — the UI renders
 the headers/labels. Applies to `exec_summary`, `summary`, `gesamtbild`, recommendations, meta sections,
-notes, etc. A persona/proband turn `content` stays in that persona’s natural voice (it is a quote).
+notes, etc. A persona/proband statement `text` stays in that persona’s natural voice (it is a quote).
 
-## Unified primitives (preferred shape)
+## Unified primitives (the ONLY shape)
 
-Author content as the shared primitives (spec/unified-artifact-schema.md) so it renders through the one
-consistent renderer: **`statements`** (one per persona utterance: `{persona_id, text, stance:{value -2..2,
-label}, about:{kind:"prompt",id}, refs}`), **`findings`** (analysis items: `{text, kind:
-summary|key_problem|recommendation|open_question|…, score, refs}`), **`prompts`** (`{text, kind, id}`).
-One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment. Legacy fields
-(turns/votes/voices/key_problems/…) still work in parallel.
+Author content as the shared primitives (spec/unified-artifact-schema.md) — these are the only inputs
+the code accepts (legacy `turns`/`votes`/`voices`/`key_problems`/… were removed):
+
+- **`record_council(..., statements=[…], votes=None, proposal="", questions=[…], findings=[…])`** —
+  `statements`: one per persona utterance `{persona_id, text (Markdown), stance:{value -2..2, label},
+  about:{kind:"prompt", id:"q0"|"proposal"}, refs}`. DISCOVER councils carry `questions` + statements
+  with `about.id="q0"/"q1"…`; DEFINE/DEVELOP (evaluation) carry a `proposal` + stances; DELIVER
+  (decision) adds `votes` for the tally.
+- **`record_synthesis(..., payload={gesamtbild, positionierung, arc_narrative, references, citations,
+  status, findings:[…], statements:[…], prompts:[…]})`** — all analysis lives in `findings`
+  `{text, kind: key_problem|pain_solver|open_question|recommendation|cluster|segment|ranking|shortlist|summary,
+  score:{effort,value}, refs}`. A synthesis **cross-references, never copies**: it re-interprets council
+  statements via finding `refs {kind:"council", id, anchor:"<statement-id>", role:"derived_from"}` — it
+  does not re-host voices.
+
+One positivity scale only (oppose −2 … support +2) for every stance/vote/sentiment.
