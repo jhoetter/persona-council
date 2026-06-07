@@ -39,19 +39,36 @@ it create personas, simulate, run councils, and synthesize.
 
 ## How it works
 
-Four layers build on each other — **persona → simulation/memory → council →
-synthesis** — and every generative step follows one contract: `brief_*` (gather
-context) → the host authors JSON → `record_*`/`put_*` (validate + persist).
+**Personas** are the grounded foundation: built host-authored (`brief_persona` →
+`record_persona`), simulated day by day (`brief_day` → `record_day`) into a durable
+**memory graph** they can `recall` and time-travel.
+
+A **research project** (Double-Diamond) is then driven by a **plan engine**:
+`next_action`/`brief_next` proposes the next *analyze → act → verify* step; the host
+authors it and records evidence (`record_frame` / `link_evidence` / `record_judgment`
+→ `complete_task`, with `assess_project` for progress). Its evidence is
+memory-grounded **councils**, **prototypes** (personas test them), and **notes**,
+which converge into a **synthesis / report** — the answer.
+
+Every generative step follows one contract: `brief_*` (gather context) → the host
+authors JSON → `record_*` / `put_*` (validate + persist). No server-side text-LLM calls.
 
 ```mermaid
 flowchart TD
-  SRC["Source prompts"] -->|brief_persona / record_persona| P["Persona + SOUL.md"]
-  P -->|brief_day / record_day| D["Workday: calendar, activities, inner thoughts"]
-  D -->|brief_consolidation / record_memory_deltas| M[("Memory graph: entities, bi-temporal facts, threads")]
-  M -.->|recall_memory / get_state_at time-travel| P
-  P -->|run-council / record_council| C["Council: turns, votes, exec summary"]
+  subgraph F["Persona foundation (grounding)"]
+    P["Persona + SOUL.md"] -->|brief_day / record_day| D["Simulated days"]
+    D -->|consolidate| M[("Memory graph: entities, bi-temporal facts, threads")]
+    M -.->|recall / time-travel| P
+  end
+  PROJ["Research project (Double-Diamond)"] -->|next_action / brief_next| PLAN{{"Plan engine: analyze - act - verify"}}
+  PLAN --> C["Councils: turns, votes, exec summary"]
+  PLAN --> PR["Prototypes: persona test sessions"]
+  PLAN --> N["Notes / Sections"]
   M -.->|grounds| C
-  C -->|brief_synthesis / record_synthesis| S["Synthesis report: arc, recommendations, positioning"]
+  M -.->|grounds| PR
+  C -->|brief_synthesis / record_synthesis| S["Synthesis / Report - convergence or project; PDF export"]
+  PR --> S
+  N --> S
 ```
 
 ## Configuration
