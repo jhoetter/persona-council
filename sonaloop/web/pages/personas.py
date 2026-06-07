@@ -37,10 +37,6 @@ register_css(r"""
 .mem-pane{border:1px solid var(--line);border-radius:10px;background:var(--panel-2);padding:12px 15px;margin:0 0 16px}
 .mem-pane-h{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin:0 0 8px}
 .mem-hit{padding:7px 0;font-size:var(--t-sm)}.mem-hit+.mem-hit{border-top:1px solid var(--line-2)}
-.mem-quality{margin-top:26px;border-top:1px solid var(--line);padding-top:13px}
-.mem-quality summary{cursor:pointer;color:var(--muted);font-size:var(--t-sm);font-weight:600;list-style:none}
-.mem-quality summary::-webkit-details-marker{display:none}
-.mem-quality p{margin:9px 0;font-size:var(--t-sm)}
 """)
 
 
@@ -116,23 +112,12 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
         panes.append(h("div", {"class_": "mem-pane"}, h("div", {"class_": "mem-pane-h"}, t("recall")),
                        fragment(*rows) if rows else h("p", {"class_": "muted small"}, t("nothing"))))
 
-    # --- quality (eval metadata) demoted to a collapsible footer ---
-    struct = services.evaluate_simulation(pid, store=store, persist=False)
-    crit = services.latest_critic_report(pid, store=store)
-    struct_rows = fragment(*(_label(f'{c["name"]}: {c["status"]}', _stance_color(c["status"])) for c in struct["checks"]))
-    crit_rows = (fragment(*(_label(f"{k}: {v}/5", "var(--green)" if v >= 4 else "var(--amber)") for k, v in crit["dimensions"].items()))
-                 if crit else h("span", {"class_": "muted"}, t("no_critic_run")))
-    quality = h("details", {"class_": "mem-quality"}, h("summary", {}, t("quality")),
-                h("p", {}, h("strong", {}, f'{t("structure")}:'), " ", struct["verdict"], " ", struct_rows),
-                h("p", {}, h("strong", {}, f'{t("critic")}:'), " ", crit_rows))
-
     main = fragment(
         _hero(t("memory_title", name=p["display_name"]), sub=t("memory_sub"), icon="memory"),
         toolbar, fragment(*panes),
         h("div", {"class_": "sec"}, h("h2", {}, t("knowledge")), knowledge),
         h("div", {"class_": "sec"}, h("h2", {}, t("open_threads")),
-          h("div", {"class_": "mem-loops"}, fragment(*loops)) if loops else h("p", {"class_": "muted"}, t("none"))),
-        quality)
+          h("div", {"class_": "mem-loops"}, fragment(*loops)) if loops else h("p", {"class_": "muted"}, t("none"))))
     return _doc(main)
 
 
@@ -160,16 +145,6 @@ def register_personas(app) -> None:
         avatar = (h("img", {"class_": "avatar", "src": f'/{p["avatar"]["path"]}', "alt": ""})
                   if p.get("avatar") else h("div", {}, _avatar(p, 120)))
         has_sim = bool(data["daily_summaries"]) or bool(period.get("days"))
-        daycount = Counter()
-        for e in store.list_experience_events(p["id"]):
-            ts = e.get("timestamp") or ""
-            if len(ts) >= 10:
-                daycount[ts[:10]] += 1
-        act_pts = [(d[5:], daycount[d]) for d in sorted(daycount)]
-        # the year heatmap already IS "activity over time", so skip the redundant area chart there
-        activity = (h("div", {"class_": "sec", "id": "aktivitaet"}, h("h2", {}, t("activity_over_time")),
-                      h("p", {"class_": "ihint"}, t("activities_per_day", n=sum(daycount.values()))), _area(act_pts))
-                    if (act_pts and view != "year") else "")
         voices = _persona_voices_html(store, p["id"])
         rel_rows = fragment(*(h("p", {}, h("strong", {}, r["name"]), " ",
                               h("span", {"class_": "muted"}, f'— {r["type"]}: {r["friction"]}')) for r in p["relationships"]))
@@ -187,9 +162,9 @@ def register_personas(app) -> None:
                     (state["mood"] if state.get("mood") not in (None, "unknown") else None)] if x) or "—"),
                 (h("p", {"class_": "thought"}, state["current_thought"])
                  if state.get("current_thought") not in (None, "", "unknown") else "")))),
-            # the simulated LIFE (calendar + activity rhythm) is this persona's signature — surface it
-            # right after the snapshot, before the analysis voices.
-            cal_section, activity,
+            # the simulated LIFE (the calendar) is this persona's signature — surface it right after the
+            # snapshot, before the analysis voices.
+            cal_section,
             raw(voices),
             h("div", {"class_": "sec", "id": "ziele"}, h("h2", {}, t("goals")), raw(_pills(p["goals"]))),
             h("div", {"class_": "sec", "id": "pains"}, h("h2", {}, t("pain_points")),
@@ -205,10 +180,9 @@ def register_personas(app) -> None:
             ("dot", t("size"), p["company_context"].get("size", "")),
             ("memory", t("memory"), h("a", {"class_": "bc-link", "href": f'/personas/{p["id"]}/memory'}, raw(_icon("memory")), " ", t("open"))),
         ], aside=True)
-        prail = [("cal", t("calendar"))]
-        prail += [("aktivitaet", t("activity_over_time"))] if activity else []
-        prail += [("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
-                  ("bez", t("relationships")), ("sec-properties", t("properties"))]
+        prail = [("cal", t("calendar")),
+                 ("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
+                 ("bez", t("relationships")), ("sec-properties", t("properties"))]
         return _layout(p["display_name"], _doc(main, rail=props) + _page_rail(prail), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
                        actions=_star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}'))

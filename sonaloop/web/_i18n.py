@@ -140,8 +140,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "proposal": "Proposal", "summary": "Summary",
         "vote": "Abstimmung", "created": "Erzeugt", "status": "Status", "project": "Projekt", "fidelity": "Fidelity", "done": "done",
         # persona detail
-        "activity_over_time": "Aktivität über Zeit",
-        "activities_per_day": "Simulierte Aktivitäten pro Tag ({n} gesamt).",
         "current_state": "Aktueller Zustand",
         "goals": "Ziele", "pain_points": "Pain Points", "relationships": "Beziehungen",
         "calendar": "Kalender", "no_days_yet": "Noch keine Tage.",
@@ -161,7 +159,6 @@ STRINGS: dict[str, dict[str, str]] = {
         # memory
         "memory_title": "Memory — {name}",
         "memory_sub": "Projekt-Timelines, Time-Travel und Recall.",
-        "quality": "Qualität", "structure": "Struktur", "critic": "Kritiker",
         "show_state": "Stand zeigen", "recall": "Recall", "today": "Heute",
         "cmdk_placeholder": "Suchen oder springen… (Projekte, Personas, Councils, …)", "cmdk_empty": "Keine Treffer",
         "cmdk_jump": "Springen", "cmdk_nav": "navigieren", "cmdk_open": "öffnen", "cmdk_close": "schließen", "notes_h": "Notizen",
@@ -171,7 +168,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "none": "keine", "nothing": "nichts",
         "state_at": "Stand am {date}", "nothing_valid": "nichts gültig",
         "open_threads_count": "Offene Fäden: {n}",
-        "no_critic_run": "noch kein Kritiker-Lauf",
         "outdated": "überholt", "since": "seit",
     },
     "en": {
@@ -288,8 +284,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "proposal": "Proposal", "summary": "Summary",
         "vote": "Vote", "created": "Created", "status": "Status", "project": "Project", "fidelity": "Fidelity", "done": "done",
         # persona detail
-        "activity_over_time": "Activity over time",
-        "activities_per_day": "Simulated activities per day ({n} total).",
         "current_state": "Current state",
         "goals": "Goals", "pain_points": "Pain points", "relationships": "Relationships",
         "calendar": "Calendar", "no_days_yet": "No days yet.",
@@ -309,7 +303,6 @@ STRINGS: dict[str, dict[str, str]] = {
         # memory
         "memory_title": "Memory — {name}",
         "memory_sub": "Project timelines, time travel and recall.",
-        "quality": "Quality", "structure": "Structure", "critic": "Critic",
         "show_state": "Show state", "recall": "Recall", "today": "Today",
         "cmdk_placeholder": "Search or jump to… (projects, personas, councils, …)", "cmdk_empty": "No results",
         "cmdk_jump": "Jump to", "cmdk_nav": "navigate", "cmdk_open": "open", "cmdk_close": "close", "notes_h": "Notes",
@@ -319,7 +312,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "none": "none", "nothing": "nothing",
         "state_at": "State at {date}", "nothing_valid": "nothing valid",
         "open_threads_count": "Open threads: {n}",
-        "no_critic_run": "no critic run yet",
         "outdated": "outdated", "since": "since",
     },
 }
