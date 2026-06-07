@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from sonaloop_icons import icon as _picon       # direct import avoids a cycle (_components imports _palette)
+from .._icons import icon as _picon       # direct import avoids a cycle (_components imports _palette)
 from ._i18n import t
 from ._html import h, raw
 

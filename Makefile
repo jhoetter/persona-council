@@ -3,7 +3,12 @@ FORWARDED_WEB_PORT ?= 18787
 
 UV ?= uv
 
-.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright
+.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons
+
+# Refresh the vendored icon module (sonaloop/_icons.py) from ../sonaloop-icons.
+# Run after editing icons.data.mjs + `node scripts/gen.mjs` in that repo.
+icons:
+	bash scripts/sync_icons.sh
 
 # Symlink version-controlled skills into .claude/skills/ so Claude Code discovers
 # them (.claude/skills is gitignored). Run once after clone.

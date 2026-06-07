@@ -42,6 +42,12 @@ def register_syntheses(app) -> None:
         syn = store.get_synthesis(synthesis_id)
         if not syn:
             return Response(t("not_found"), status_code=404)
+        from ... import browser as _browser
+        if not _browser.available():
+            return Response(
+                "PDF export needs the headless browser. Run `sonaloop setup` "
+                "(or `playwright install chromium`) and retry.",
+                status_code=503)
         from playwright.sync_api import sync_playwright
         url = str(request.base_url).rstrip("/") + f"/syntheses/{synthesis_id}"
         _hf = "font-size:8px;color:#9aa0a6;width:100%;padding:0 16mm"

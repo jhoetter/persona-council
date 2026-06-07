@@ -4,7 +4,37 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "data"
+PACKAGE_DIR = Path(__file__).resolve().parent
+
+
+def _is_source_checkout() -> bool:
+    """True when running from the repo (editable/dev), false when pip-installed.
+
+    In a wheel the package sits in site-packages with no pyproject.toml beside it;
+    in the repo, ROOT/pyproject.toml exists. We use this to keep the dev workflow
+    writing to repo/data while an installed package writes to a per-user dir."""
+    return (ROOT / "pyproject.toml").exists()
+
+
+def _resolve_data_dir() -> Path:
+    """Where the writable runtime lives (DB, assets, settings).
+
+    Precedence: SONALOOP_DATA_DIR env override -> repo/data (source checkout) ->
+    per-user data dir (installed package; platformdirs, XDG fallback)."""
+    env = os.getenv("SONALOOP_DATA_DIR")
+    if env:
+        return Path(env).expanduser()
+    if _is_source_checkout():
+        return ROOT / "data"
+    try:
+        from platformdirs import user_data_dir
+        return Path(user_data_dir("sonaloop", appauthor=False))
+    except Exception:
+        base = os.getenv("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+        return Path(base).expanduser() / "sonaloop"
+
+
+DATA_DIR = _resolve_data_dir()
 DEFAULT_DB_PATH = DATA_DIR / "sonaloop.db"
 
 
@@ -47,23 +77,28 @@ MEMORY_SCHEMA_VERSION = 4
 # --- Methodology engine & prototyping (spec/methodology-engine-and-prototyping.md) ---
 
 def methodologies_dir() -> Path:
-    """Built-in methodology specs ship inside the package."""
-    return ROOT / "sonaloop" / "methodologies"
+    """Built-in methodology specs ship inside the package (read-only package data)."""
+    return PACKAGE_DIR / "methodologies"
 
 
 def prototype_templates_dir() -> Path:
-    return ROOT / "sonaloop" / "prototype_templates"
+    return PACKAGE_DIR / "prototype_templates"
 
 
 def suggestions_dir() -> Path:
     """Editable, MCP-served SUGGESTIONS (capabilities/roles/artifact-types/templates). Pure
-    data — never enforced. See spec/methodology-constellations.md §2.3."""
-    return ROOT / "sonaloop" / "suggestions"
+    data — never enforced. See spec/methodology-constellations.md §2.3. Ships as package data."""
+    return PACKAGE_DIR / "suggestions"
 
 
 def prototypes_dir() -> Path:
-    """Where generated/registered prototype apps live (committed, runnable locally)."""
-    return ROOT / "prototypes"
+    """Where generated/registered prototype apps live (writable runtime).
+
+    Dev (source checkout): alongside the repo at ./prototypes (committed, runnable
+    locally). Installed: under the per-user data dir so a read-only install still works."""
+    if _is_source_checkout():
+        return ROOT / "prototypes"
+    return DATA_DIR / "prototypes"
 
 
 def max_browser_sessions() -> int:

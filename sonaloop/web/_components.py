@@ -5,7 +5,7 @@ import json
 import re
 from collections import Counter, defaultdict
 
-from sonaloop_icons import icon as _persona_icon, hifi as _persona_hifi, HIFI_ANIM_CSS as _ICON_ANIM_CSS
+from .._icons import icon as _persona_icon, hifi as _persona_hifi, HIFI_ANIM_CSS as _ICON_ANIM_CSS
 
 from .. import services
 from .. import presentation as _pres

@@ -11,6 +11,14 @@ from .config import load_env
 from . import services
 
 
+def _pkg_version() -> str:
+    try:
+        from importlib.metadata import version
+        return version("sonaloop")
+    except Exception:
+        return "0.0.0+local"
+
+
 def _print(data: Any, as_json: bool = True) -> None:
     if as_json:
         print(json.dumps(data, indent=2, ensure_ascii=False))
@@ -28,6 +36,10 @@ def _read_descriptions(path: str) -> list[str]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sonaloop")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    # Post-install setup + diagnostics (matter most for the pip/uvx-installed MCP).
+    sub.add_parser("setup", help="Fetch the headless-browser binary (prototype screenshots + PDF export).")
+    sub.add_parser("info", help="Show resolved data dir, DB path, and browser availability.")
 
     p = sub.add_parser("persona-create")
     p.add_argument("description")
@@ -394,7 +406,31 @@ def main(argv: list[str] | None = None) -> int:
     load_env()
     args = build_parser().parse_args(argv)
     try:
-        if args.command == "persona-create":
+        if args.command == "setup":
+            import subprocess
+            print("Installing the chromium browser for prototype screenshots + PDF export…")
+            rc = subprocess.call([sys.executable, "-m", "playwright", "install", "chromium"])
+            if rc == 0:
+                print("Done. Prototype screenshots and meta-report PDF export are now available.")
+            else:
+                print("playwright install failed; you can retry with:\n  python -m playwright install chromium",
+                      file=sys.stderr)
+            return rc
+        elif args.command == "info":
+            from . import config as _cfg
+            from . import browser as _browser
+            _print({
+                "version": _pkg_version(),
+                "data_dir": str(_cfg.DATA_DIR),
+                "db_path": str(_cfg.database_path()),
+                "prototypes_dir": str(_cfg.prototypes_dir()),
+                "source_checkout": _cfg._is_source_checkout(),
+                "browser_available": _browser.available(),
+                "embeddings_enabled": _cfg.embeddings_enabled(),
+                "content_language": _cfg.content_language(),
+            })
+            return 0
+        elif args.command == "persona-create":
             _print(services.create_persona(args.description, args.segment, args.evidence, args.avatar))
         elif args.command == "brief-persona":
             _print(services.brief_persona(args.description, args.segment, args.evidence))

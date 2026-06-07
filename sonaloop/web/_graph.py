@@ -396,7 +396,7 @@ def _graph_interactive(graph: dict) -> str:
     # Icon path bodies for the notation/markers the graph JS renders inline (glyph icon
     # names arrive on nodes/sections; the renderer looks each up here). Single source of
     # truth: sonaloop-icons. Small fixed set, sent once per graph.
-    from sonaloop_icons import REGULAR as _ICON_REGULAR
+    from .._icons import REGULAR as _ICON_REGULAR
     _GRAPH_ICON_NAMES = ("diamond", "diamondFilled", "square", "squareSplit", "squareRows",
                          "squareCols", "squareGrid", "rectangle", "exchange", "wave",
                          "search", "pencil", "caretRight", "external")

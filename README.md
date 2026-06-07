@@ -96,7 +96,27 @@ sequenceDiagram
   Note over H,PC: day to consolidate to digest, then councils to synthesis
 ```
 
-## Setup
+## Install (PyPI)
+
+Sonaloop publishes a normal Python package — use it as an MCP server without cloning:
+
+```bash
+# one-off, no install (recommended for MCP clients):
+uvx sonaloop-mcp
+
+# or install the CLI + MCP + web entrypoints:
+pip install sonaloop      # or: uv tool install sonaloop
+sonaloop setup            # fetch the headless browser (prototype screenshots + PDF export)
+sonaloop info             # show resolved data dir, DB path, browser availability
+```
+
+When installed (not a source checkout), all writable state lives in a per-user data
+directory (`platformdirs` — e.g. `~/.local/share/sonaloop` on Linux). Override with
+`SONALOOP_DATA_DIR=/path`. Read-only package data (methodology specs, MCP suggestions,
+prototype templates) ships inside the wheel. `sonaloop setup` is optional — screenshots
+and PDF export degrade gracefully if the browser is absent.
+
+## Setup (from source / development)
 
 ```mermaid
 flowchart LR
@@ -112,6 +132,9 @@ flowchart LR
 uv sync
 cp .env.example .env
 ```
+
+In a source checkout, writable state stays under `./data` (as before) so the dev
+workflow is unchanged.
 
 Text generation is performed by the MCP host agent, such as Claude Code or
 Codex. Sonaloop does not call text LLM APIs and does not use text API
@@ -212,7 +235,22 @@ Skills live in [`claude-skills/`](claude-skills/) (`simulate-cohort`,
 
 ## Claude MCP
 
-Add Sonaloop as an MCP server in Claude Desktop or any Claude MCP client:
+Add Sonaloop as an MCP server in Claude Desktop or any Claude MCP client.
+
+Installed from PyPI (no checkout needed):
+
+```json
+{
+  "mcpServers": {
+    "sonaloop": {
+      "command": "uvx",
+      "args": ["sonaloop-mcp"]
+    }
+  }
+}
+```
+
+Or, from a source checkout (development):
 
 ```json
 {

@@ -1,26 +1,38 @@
 [project]
 name = "sonaloop"
 version = "0.1.0"
-description = "Terminal-first MCP customer persona simulation and council system."
+description = "MCP server for customer-persona simulation, councils, and design-research synthesis."
+readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Johannes Hötter", email = "jt.hoetter@gmail.com" }]
+keywords = ["mcp", "model-context-protocol", "personas", "design-research", "simulation", "councils"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "fastapi>=0.115.0",
     "mcp>=1.2.0",
     "python-multipart>=0.0.9",
     "python-dotenv>=1.0.0",
     "uvicorn>=0.30.0",
-    "sonaloop-icons",
-    # Headless-browser harness — REQUIRED, not optional: prototype screenshots + the meta-report PDF
-    # export depend on it. The chromium binary itself is fetched by `make install` (`playwright install
-    # chromium`), which a pip/uv dependency can't do.
+    "platformdirs>=4.0.0",
+    # Headless-browser harness for prototype screenshots + the meta-report PDF export. The pip/uv
+    # dependency installs the Python package; the chromium binary itself is fetched separately via
+    # `sonaloop setup` (or `playwright install chromium`). Both features degrade gracefully if absent.
     "playwright>=1.40.0",
 ]
 
-# Shared icon library — single source of truth lives in ../sonaloop-icons
-# (mirrors how bim-website consumes ../bim-icons). The React website imports the
-# TSX build; the council imports the generated Python module under py/.
-[tool.uv.sources]
-sonaloop-icons = { path = "../sonaloop-icons/py", editable = true }
+[project.urls]
+Homepage = "https://github.com/jhoetter/sonaloop"
+Repository = "https://github.com/jhoetter/sonaloop"
 
 [project.scripts]
 sonaloop = "sonaloop.cli:main"
@@ -38,4 +50,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
+# hatchling includes all non-VCS-ignored files under the package dir, so the methodology
+# specs, MCP suggestions, and prototype templates (all tracked, non-.py) ship automatically.
 packages = ["sonaloop"]
+
+[tool.hatch.build.targets.sdist]
+include = ["sonaloop", "README.md", "LICENSE", "AGENTS.md"]
