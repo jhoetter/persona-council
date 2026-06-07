@@ -5,7 +5,7 @@
 that `web/__init__` and tests import."""
 from __future__ import annotations
 
-from ._calendar import _calendar_html, _calendar_tabs, _event_chip, _period_calendar_html  # noqa: F401
+from ._calendar import _calendar_tabs, _event_chip, _period_calendar_html  # noqa: F401
 from .personas import _memory_html, register_personas  # noqa: F401
 from .councils import register_councils
 from .syntheses import register_syntheses

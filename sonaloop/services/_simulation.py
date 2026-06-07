@@ -354,7 +354,7 @@ def get_current_state(persona_id: str, at_time: str | None = None, store: Store 
         "current_activity": latest["task"] if latest else "not simulated yet",
         "current_tool": latest["tool"] if latest else None,
         "collaboration_mode": latest.get("collaboration_mode") if latest else None,
-        "mood": latest["impact"]["mood"] if latest else "unknown",
+        "mood": (latest.get("impact") or {}).get("mood", "unknown") if latest else "unknown",
         "current_thought": latest.get("persona_thought") if latest else "unknown",
         "blocked_by": summaries[-1]["blockers"] if summaries else [],
         "likely_next": summaries[-1]["open_loops"][:3] if summaries else persona["goals"][:2],

@@ -155,7 +155,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "persona": "Persona", "tool": "Tool", "mood": "Mood",
         "participants": "Beteiligte", "alone": "allein", "decision": "Entscheidung",
         # calendar
-        "tab_day": "Tag", "tab_week": "Woche", "tab_month": "Monat", "tab_year": "Jahr",
+        "tab_week": "Woche", "tab_month": "Monat", "tab_year": "Jahr",
+        "n_more": "+{n} mehr", "less": "weniger", "more": "mehr",
         "n_events": "{n} Events",
         # memory
         "memory_title": "Memory — {name}",
@@ -302,7 +303,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "persona": "Persona", "tool": "Tool", "mood": "Mood",
         "participants": "Participants", "alone": "alone", "decision": "Decision",
         # calendar
-        "tab_day": "Day", "tab_week": "Week", "tab_month": "Month", "tab_year": "Year",
+        "tab_week": "Week", "tab_month": "Month", "tab_year": "Year",
+        "n_more": "+{n} more", "less": "less", "more": "more",
         "n_events": "{n} events",
         # memory
         "memory_title": "Memory — {name}",

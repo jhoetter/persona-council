@@ -82,7 +82,7 @@ def register_personas(app) -> None:
                           empty_icon="personas", empty_msg=t("no_personas"), active="personas")
 
     @app.get("/personas/{persona_id}", response_class=HTMLResponse)
-    def persona_detail(persona_id: str, date_value: str | None = Query(default=None, alias="date"), view: str = Query(default="day")) -> str:
+    def persona_detail(persona_id: str, date_value: str | None = Query(default=None, alias="date"), view: str = Query(default="month")) -> str:
         store = Store()
         try:
             data = services.get_persona(persona_id, store)
@@ -91,13 +91,11 @@ def register_personas(app) -> None:
         p = data["persona"]
         state = services.get_current_state(p["id"], store=store)
         selected_date = date_value or (data["daily_summaries"][-1]["date"] if data["daily_summaries"] else date.today().isoformat())
-        view = view if view in {"day", "week", "month", "year"} else "day"
+        view = view if view in {"week", "month", "year"} else "month"
         period = services.get_calendar_period(p["id"], selected_date, view, store)
         avatar = (h("img", {"class_": "avatar", "src": f'/{p["avatar"]["path"]}', "alt": ""})
                   if p.get("avatar") else h("div", {}, _avatar(p, 120)))
-        date_links = fragment(*(
-            h("a", {"class_": "pill", "href": f'/personas/{p["id"]}?date={s["date"]}&view={view}'}, s["date"])
-            for s in data["daily_summaries"][-10:]))
+        has_sim = bool(data["daily_summaries"]) or bool(period.get("days"))
         daycount = Counter()
         for e in store.list_experience_events(p["id"]):
             ts = e.get("timestamp") or ""
@@ -126,9 +124,9 @@ def register_personas(app) -> None:
             h("div", {"class_": "sec", "id": "tools"}, h("h2", {}, t("tools")), raw(_pills(p["tools"]))),
             h("div", {"class_": "sec", "id": "bez"}, h("h2", {}, t("relationships")), rel_rows),
             h("div", {"class_": "sec", "id": "cal"}, h("h2", {}, t("calendar")),
-              h("p", {"class_": "muted"}, date_links or t("no_days_yet")),
-              raw(_calendar_tabs(p["id"], selected_date, view)),
-              raw(_period_calendar_html(p["id"], selected_date, view, period))))
+              (fragment(raw(_calendar_tabs(p["id"], selected_date, view)),
+                        raw(_period_calendar_html(p["id"], selected_date, view, period)))
+               if has_sim else h("p", {"class_": "muted"}, t("no_days_yet")))))
         props = _properties_html([
             ("personas", t("role"), p["role"]["title"]),
             ("projects", t("industry"), p["company_context"]["industry"]),
