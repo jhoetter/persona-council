@@ -11,6 +11,8 @@ Simulation is non-directional: profiles are never nudged toward a product thesis
 unless their own source description, evidence, calendar, or explicit task context
 supports it.
 
+![Sonaloop inspector — a memory-grounded council with executive summary, sentiment breakdown, and links into the synthesis](docs/assets/sonaloop-council.png)
+
 ## Get started — paste this to your AI agent
 
 No setup knowledge needed. Paste the prompt below into an **AI agent that can run commands
@@ -103,6 +105,10 @@ page (project timelines, time-travel, recall), and the **Synthese** report as a
 Notion-style document with table of contents, callouts, and **PDF export**. Dark
 mode, keyboard nav (`g o/p/c/s`, `[`), bilingual (de/en, auto-detected; toggle via
 `?lang=de|en` or `sonaloop set-language`). All creation happens via CLI/MCP.
+
+| Synthesis as a report | Persona memory page |
+| --- | --- |
+| [![Meta-report — a Notion-style document with table of contents and callouts](docs/assets/sonaloop-report.png)](docs/assets/sonaloop-report.png) | [![Persona detail — voices in analyses, goals, and pain points](docs/assets/sonaloop-persona.png)](docs/assets/sonaloop-persona.png) |
 
 ## Councils & synthesis
 
