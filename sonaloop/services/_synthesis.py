@@ -455,7 +455,8 @@ def record_meta_section(project_id: str, section_id: str, content: dict[str, Any
     if not any(s["id"] == section_id for s in report["outline"]):
         raise KeyError(f"Unknown section {section_id} in meta-report {report['id']}")
     data = validate_meta_section_payload(content)
-    entry = {"section_id": section_id, "markdown": data["markdown"], "citations": data["citations"]}
+    entry = {"section_id": section_id, "markdown": data["markdown"], "citations": data["citations"],
+             "figures": data.get("figures", [])}
     report["sections"] = [s for s in report.get("sections", []) if s.get("section_id") != section_id] + [entry]
     store.upsert_meta_report(report)
     return report

@@ -328,7 +328,16 @@ def validate_meta_section_payload(payload: dict[str, Any]) -> dict[str, Any]:
             citations.append({"study_id": str(c["study_id"]).strip()[:80],
                               "council_id": str(c.get("council_id", "")).strip()[:80],
                               "quote": str(c.get("quote", "")).strip()[:600]})
-    return {"markdown": str(payload.get("markdown", "")).strip()[:20000], "citations": citations[:50]}
+    # figures (spec/meta-report-presentation-and-pdf §2): typed refs the renderer resolves to visuals —
+    # {kind: asset|prototype|chart|avatar|graph, id|of|source_id, caption}.
+    figures = []
+    for f in payload.get("figures", []) or []:
+        if isinstance(f, dict) and str(f.get("kind", "")).strip():
+            figures.append({"kind": str(f["kind"]).strip()[:24], "id": str(f.get("id", "")).strip()[:160],
+                            "of": str(f.get("of", "")).strip()[:40], "source_id": str(f.get("source_id", "")).strip()[:120],
+                            "caption": str(f.get("caption", "")).strip()[:300]})
+    return {"markdown": str(payload.get("markdown", "")).strip()[:20000],
+            "citations": citations[:50], "figures": figures[:20]}
 
 
 def validate_synthesis_payload(payload: dict[str, Any]) -> dict[str, Any]:

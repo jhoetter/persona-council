@@ -14,6 +14,7 @@ from ._html import h, raw, fragment, register_css
 from ._components import _md, _icon
 from ._i18n import t
 from ..config import content_language
+from ..assets import asset_url
 
 # callout directive kind → (icon, css-suffix). A small fixed PRESENTATION set (not methodology vocab).
 _CALLOUT = {"insight": ("bulb", "insight"), "recommendation": ("check", "rec"),
@@ -38,8 +39,35 @@ def _ref_titler(report, store):
     return title
 
 
-def _body(md_text: str) -> str:
-    """Render a section body — plain markdown, with :::callout::: blocks lifted into styled boxes."""
+_FIG = re.compile(r"!\[\[fig:(\d+)\]\]")
+
+
+def _resolve_figure(f: dict, store) -> dict | None:
+    """A figure ref → {url, caption} (or None if it can't be shown). Web is read-only: a prototype that
+    was never screenshotted simply doesn't render (capture happens via an explicit MCP/CLI action)."""
+    kind = f.get("kind")
+    cap = f.get("caption", "")
+    if kind == "asset" and f.get("id"):
+        return {"url": asset_url(f["id"]), "caption": cap}
+    if kind == "prototype" and f.get("id"):
+        p = store.get_prototype(f["id"])
+        if p and p.get("shot"):
+            return {"url": asset_url(p["shot"]), "caption": cap or p.get("name", "")}
+    if kind == "avatar" and f.get("id"):
+        p = store.get_persona(f["id"])
+        if p and p.get("avatar", {}).get("path"):
+            return {"url": "/" + p["avatar"]["path"], "caption": cap or p.get("display_name", "")}
+    return None
+
+
+def _figure_html(fig: dict) -> str:
+    return h("figure", {"class_": "rp-fig"},
+             h("img", {"src": fig["url"], "alt": fig.get("caption", ""), "loading": "lazy"}),
+             h("figcaption", {}, fig["caption"]) if fig.get("caption") else "")
+
+
+def _segment(md_text: str) -> str:
+    """A markdown segment with :::callout::: blocks lifted into styled boxes."""
     out, pos = [], 0
     for m in _DIRECTIVE.finditer(md_text):
         pre = md_text[pos:m.start()].strip()
@@ -53,6 +81,25 @@ def _body(md_text: str) -> str:
     rest = md_text[pos:].strip()
     if rest:
         out.append(raw(_md(rest)))
+    return fragment(*out)
+
+
+def _body(md_text: str, figs: list) -> str:
+    """Render a section body: markdown + callouts, with inline ![[fig:N]] placeholders resolved to
+    figures; any unreferenced figures append at the end."""
+    out, used = [], set()
+    parts = _FIG.split(md_text)
+    for k, part in enumerate(parts):
+        if k % 2 == 0:
+            if part.strip():
+                out.append(_segment(part))
+        else:
+            i = int(part) - 1
+            if 0 <= i < len(figs):
+                out.append(_figure_html(figs[i])); used.add(i)
+    for i, fg in enumerate(figs):
+        if i not in used:
+            out.append(_figure_html(fg))
     return fragment(*out)
 
 
@@ -83,7 +130,9 @@ def render_meta_report(report: dict, store) -> str:
     secs = []
     for i, sec in enumerate(outline, 1):
         body = authored.get(sec["id"])
-        body_html = (_body(body["markdown"]) if body and body.get("markdown")
+        figs = [rf for rf in (_resolve_figure(f, store) for f in (body.get("figures") or []))
+                if rf] if body else []
+        body_html = (_body(body["markdown"], figs) if body and body.get("markdown")
                      else h("p", {"class_": "muted"}, f"_({'noch nicht verfasst' if de else 'not yet authored'})_"))
         cites = ""
         if body and body.get("citations"):
@@ -151,6 +200,10 @@ register_css(r"""
   font-size:var(--t-xs);display:inline-flex;align-items:center;justify-content:center;color:var(--faint)}
 .rp-cites b{color:var(--ink);font-weight:550}.rp-cite-q{color:var(--muted)}
 .rp-src{margin-top:10px;font-size:var(--t-xs);color:var(--faint)}
+/* figures (Phase 2) — prototype screenshots, images, charts */
+.rp-fig{margin:22px 0}
+.rp-fig img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.rp-fig figcaption{margin-top:9px;font-size:var(--t-sm);color:var(--muted);text-align:center}
 /* print: drop the app chrome, give the report the page (foundation for the Chromium PDF, Phase 3) */
 @media print{
   .sidebar,.topbar,.cmdk,.drawer-wrap,.toc,.rail,.actions,.crumbs{display:none!important}
@@ -158,7 +211,7 @@ register_css(r"""
   body{background:#fff}
   .report{max-width:none}
   .rp-sec{break-inside:avoid}
-  .rp-call,.report blockquote,.rp-cites{break-inside:avoid}
+  .rp-call,.report blockquote,.rp-cites,.rp-fig{break-inside:avoid}
   .rp-cover{break-after:avoid}
 }
 """)
