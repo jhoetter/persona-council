@@ -37,39 +37,18 @@ sonaloop info                 # show data dir, DB path, browser availability
 Then point your host agent at the operating rules in [AGENTS.md](AGENTS.md) and let
 it create personas, simulate, run councils, and synthesize.
 
-## How it works
+## The model in one minute
 
-**Personas** are the grounded foundation: built host-authored (`brief_persona` →
-`record_persona`), simulated day by day (`brief_day` → `record_day`) into a durable
-**memory graph** they can `recall` and time-travel.
+- **Personas** — host-authored profiles, simulated day by day into a **memory graph** they recall + time-travel.
+- **Research project** (Double-Diamond) driven by a **plan engine** (`next_action` → analyze/act/verify).
+- **Evidence** — memory-grounded **councils**, **prototypes** (personas test them), and **notes**.
+- **Synthesis / report** — converges the evidence into the answer (convergence 2×2 or project report, PDF).
 
-A **research project** (Double-Diamond) is then driven by a **plan engine**:
-`next_action`/`brief_next` proposes the next *analyze → act → verify* step; the host
-authors it and records evidence (`record_frame` / `link_evidence` / `record_judgment`
-→ `complete_task`, with `assess_project` for progress). Its evidence is
-memory-grounded **councils**, **prototypes** (personas test them), and **notes**,
-which converge into a **synthesis / report** — the answer.
+Every generative step follows one contract: `brief_*` (gather) → the host authors JSON → `record_*` /
+`put_*` (validate + persist). No server-side text-LLM calls.
 
-Every generative step follows one contract: `brief_*` (gather context) → the host
-authors JSON → `record_*` / `put_*` (validate + persist). No server-side text-LLM calls.
-
-```mermaid
-flowchart TD
-  subgraph F["Persona foundation (grounding)"]
-    P["Persona + SOUL.md"] -->|brief_day / record_day| D["Simulated days"]
-    D -->|consolidate| M[("Memory graph: entities, bi-temporal facts, threads")]
-    M -.->|recall / time-travel| P
-  end
-  PROJ["Research project (Double-Diamond)"] -->|next_action / brief_next| PLAN{{"Plan engine: analyze - act - verify"}}
-  PLAN --> C["Councils: turns, votes, exec summary"]
-  PLAN --> PR["Prototypes: persona test sessions"]
-  PLAN --> N["Notes / Sections"]
-  M -.->|grounds| C
-  M -.->|grounds| PR
-  C -->|brief_synthesis / record_synthesis| S["Synthesis / Report - convergence or project; PDF export"]
-  PR --> S
-  N --> S
-```
+The full flow, every artefact's data + purpose, and the data model live in the app's **Documentation**
+page (sidebar → Documentation, or `/documentation`). Agent operating rules are in [AGENTS.md](AGENTS.md).
 
 ## Configuration
 

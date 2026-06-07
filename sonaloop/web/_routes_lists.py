@@ -21,6 +21,48 @@ DOCS_INTRO = {
           "distinct role — from a raw signal to a decision-ready spec. All content is host-**authored** "
           "via MCP (no in-process LLM generation).",
 }
+# The lifecycle / flow — how the artefacts above fit together end to end. Authored prose (de/en),
+# rendered as numbered phases above the per-artefact catalog so a reader gets the model before the parts.
+# Step shape: ((title_de, body_de), (title_en, body_en)).
+HOWITWORKS = [
+    (("Personas — das geerdete Fundament",
+      "Synthetische Kundenprofile werden host-authored angelegt (`brief_persona` → `record_persona`) "
+      "und Tag für Tag simuliert (`brief_day` → `record_day`) zu einem **Memory-Graph**, den sie "
+      "`recall`-en und per Zeitreise abfragen können."),
+     ("Personas — the grounded foundation",
+      "Synthetic customer profiles are created host-authored (`brief_persona` → `record_persona`) and "
+      "simulated day by day (`brief_day` → `record_day`) into a **memory graph** they can `recall` and "
+      "time-travel.")),
+    (("Projekt + Plan-Engine",
+      "Ein **Research-Projekt** (Double-Diamond) wird von der **Plan-Engine** getrieben: "
+      "`next_action`/`brief_next` schlägt den nächsten *Analyze → Act → Verify*-Schritt vor; der Host "
+      "autort ihn und hält Evidenz fest (`record_frame` / `link_evidence` / `record_judgment` → "
+      "`complete_task`, mit `assess_project` für den Fortschritt)."),
+     ("Project + plan engine",
+      "A **research project** (Double-Diamond) is driven by the **plan engine**: `next_action`/"
+      "`brief_next` proposes the next *analyze → act → verify* step; the host authors it and records "
+      "evidence (`record_frame` / `link_evidence` / `record_judgment` → `complete_task`, with "
+      "`assess_project` for progress).")),
+    (("Evidenz — Councils, Prototypen, Notizen",
+      "Die Evidenz ist memory-geerdet: **Councils** (Persona-Debatten), **Prototypen** (Personas testen "
+      "sie in Sessions) und **Notizen/Sections** — jeweils auf die Erinnerung der Personas zurückführbar."),
+     ("Evidence — councils, prototypes, notes",
+      "The evidence is memory-grounded: **councils** (persona debates), **prototypes** (personas test "
+      "them in sessions), and **notes/sections** — each traceable back to a persona's memory.")),
+    (("Synthese / Report — die Antwort",
+      "Die Evidenz konvergiert zu einer **Synthese**: als *Convergence* (Kernprobleme + Empfehlungen, "
+      "Aufwand·Nutzen-2×2) oder als *Projekt-Report* (erzählerisch, präsentationsreif) — beide "
+      "PDF-exportierbar."),
+     ("Synthesis / report — the answer",
+      "The evidence converges into a **synthesis**: as *convergence* (key problems + recommendations, "
+      "effort·impact 2×2) or a *project report* (narrative, presentation-grade) — both PDF-exportable.")),
+]
+HOWITWORKS_CONTRACT = {
+    "de": "Jeder generative Schritt folgt **einem Vertrag**: `brief_*` (Kontext sammeln) → der Host "
+          "autort JSON → `record_*` / `put_*` (validieren + persistieren). Keine Server-seitige Text-LLM-Generierung.",
+    "en": "Every generative step follows **one contract**: `brief_*` (gather context) → the host authors "
+          "JSON → `record_*` / `put_*` (validate + persist). No server-side text-LLM generation.",
+}
 # Each entry documents ONE artefact in depth, with three authored facets so the page answers the same
 # questions for every node: WAS es ist (desc), WELCHE Datenpunkte es hält (data), WORIN der große Vorteil
 # liegt (advantage). NAME + COLOR still come from data — t(name_key) when a chrome label exists, else
@@ -173,10 +215,24 @@ def _docs_page() -> str:
                   ("Under the hood every artefact is composed of **the same five JSON primitives** — so the "
                    "\"same thing\" is rendered the same way everywhere (details: `spec/unified-artifact-schema.md`).")))),
         fragment(*prim_rows))
+    how_steps = []
+    for n, step in enumerate(HOWITWORKS, 1):
+        title, bodytxt = step[0 if de else 1]
+        how_steps.append(h("div", {"class_": "hiw-step"},
+            h("div", {"class_": "hiw-num"}, str(n)),
+            h("div", {"class_": "hiw-main"},
+              h("div", {"class_": "hiw-title"}, title),
+              h("div", {"class_": "es-prose sm hiw-body"}, raw(_md(bodytxt))))))
+    howitworks = h("div", {"class_": "block", "style": "margin-top:30px"},
+        h("h2", {"class_": "bh"}, ("So funktioniert's" if de else "How it works")),
+        h("div", {"class_": "hiw"}, fragment(*how_steps)),
+        h("div", {"class_": "es-prose sm hiw-contract"}, raw(_md(HOWITWORKS_CONTRACT["de" if de else "en"]))))
     body = h("section", {},
              h("div", {"class_": "hero"}, h("h1", {}, raw(_icon("overview")), t("documentation")),
                h("div", {"class_": "es-prose sm", "style": "margin-top:6px"}, raw(_md(DOCS_INTRO["de" if de else "en"])))),
-             h("div", {"class_": "docgrid"}, fragment(*cards)), primitives)
+             howitworks,
+             h("h2", {"class_": "bh", "style": "margin-top:38px"}, ("Artefakte" if de else "Artefacts")),
+             h("div", {"class_": "docgrid", "style": "margin-top:14px"}, fragment(*cards)), primitives)
     return _layout(t("documentation"), body, store, crumbs=[(t("documentation"), None)], active="docs")
 
 
@@ -311,4 +367,14 @@ register_css(r"""
 .doc-caps li{position:relative;padding-left:16px;font-size:var(--t-sm);color:var(--muted);line-height:1.5}
 .doc-caps li::before{content:"";position:absolute;left:2px;top:8px;width:4px;height:4px;border-radius:50%;background:var(--accent)}
 .doc-adv{color:var(--ink)}.doc-adv p{margin:0;max-width:none}
+/* ---- How it works (lifecycle steps) ---- */
+.hiw{display:flex;flex-direction:column;gap:2px;margin-top:14px}
+.hiw-step{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--line-2)}
+.hiw-step:last-child{border-bottom:0}
+.hiw-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--panel-2);color:var(--accent);font-weight:650;font-size:var(--t-sm);display:flex;align-items:center;justify-content:center}
+.hiw-main{min-width:0}
+.hiw-title{font-weight:600;font-size:var(--t-md);letter-spacing:-.01em;margin-bottom:3px}
+.hiw-body{color:var(--muted)}.hiw-body p{margin:0;max-width:none}
+.hiw-contract{margin-top:14px;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--radius-md,10px);background:var(--panel-2);color:var(--ink)}
+.hiw-contract p{margin:0;max-width:none}
 """)
