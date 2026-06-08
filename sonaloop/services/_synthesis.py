@@ -726,3 +726,56 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
             slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["open_questions"], "blocks": _li(oqs)})
 
     return _pptx.render(slides, title=title or kind_label)
+
+
+# Google-Fonts links (same as the live inspector head) so a standalone PDF renders in Geist, not a
+# system fallback — keeps the PDF pixel-faithful to the web report.
+_PDF_FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com">'
+              '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+              '<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700'
+              '&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">')
+
+
+def export_synthesis_pdf(synthesis_id: str, store: Store | None = None) -> bytes:
+    """Render ANY report (synthesis) to a self-contained PDF — the report HTML + the app's CSS through
+    headless Chromium (print media), no running web server needed. Raises if the browser is absent."""
+    from .. import browser as _browser
+    if not _browser.available():
+        raise RuntimeError("PDF export needs the headless browser (run `sonaloop setup` / "
+                           "`playwright install chromium`).")
+    store = store or Store()
+    syn = get_synthesis(synthesis_id, store)
+    # import the web layer so render_report + all register_css() styles are registered in this process
+    from ..web import _components as _wc       # noqa: F401  (component + base CSS)
+    from ..web import _synthesis as _ws        # noqa: F401  (convergence-view CSS)
+    from ..web._report import render_report
+    from ..web._html import collect_css
+    from ..web_assets import CSS
+    from html import escape as _h_esc
+    body = render_report(syn, store)
+    doc = (f'<!doctype html><html lang="{content_language()}"><head><meta charset="utf-8">'
+           f'{_PDF_FONTS}<style>{CSS}{collect_css()}</style></head>'
+           f'<body><main class="content"><div class="page">{body}</div></main></body></html>')
+    import os
+    import tempfile
+    from playwright.sync_api import sync_playwright
+    title = _h_esc(syn.get("title", "Report"))
+    _hf = "font-size:8px;color:#9aa0a6;width:100%;padding:0 16mm"
+    with tempfile.TemporaryDirectory() as td:
+        fp = os.path.join(td, "report.html")
+        with open(fp, "w", encoding="utf-8") as fh:
+            fh.write(doc)
+        with sync_playwright() as pw:
+            b = pw.chromium.launch()
+            pg = b.new_page()
+            pg.goto("file://" + fp, wait_until="networkidle")
+            pg.emulate_media(media="print")
+            pg.wait_for_timeout(250)
+            pdf = pg.pdf(format="A4", print_background=True,
+                         margin={"top": "18mm", "bottom": "16mm", "left": "16mm", "right": "16mm"},
+                         display_header_footer=True,
+                         header_template=f'<div style="{_hf}">{title}</div>',
+                         footer_template=f'<div style="{_hf};text-align:center;padding:0">'
+                                         f'<span class="pageNumber"></span> / <span class="totalPages"></span></div>')
+            b.close()
+    return pdf

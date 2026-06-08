@@ -75,6 +75,15 @@ def test_pptx_embeds_image_figure(tmp_path):
     assert any(sh.shape_type == MSO_SHAPE_TYPE.PICTURE for sl in prs.slides for sh in sl.shapes)
 
 
+def test_write_export_bytes_round_trip(tmp_path):
+    """Binary exports (pdf/pptx) write to disk — the MCP export tool / CLI return this path."""
+    from sonaloop import services
+    out = services.write_export_bytes(b"%PDF-x", tmp_path / "r.pdf")
+    assert out.endswith("r.pdf")
+    with open(out, "rb") as fh:
+        assert fh.read() == b"%PDF-x"
+
+
 def test_report_section_image_figure_becomes_image_slide(store, tmp_path, monkeypatch):
     """A section's prototype/asset figure resolves to a file and exports as an image slide."""
     import io

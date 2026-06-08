@@ -96,10 +96,22 @@ def register_council(mcp):
         return _env("list_syntheses", services.list_syntheses(), t)
 
     @mcp.tool()
-    def export_synthesis(synthesis_id: str, format: str = "md") -> dict[str, Any]:
-        """Render the synthesis as a stakeholder report (md|json), referencing each council."""
+    def export_synthesis(synthesis_id: str, format: str = "md", out_path: str | None = None) -> dict[str, Any]:
+        """Export a report (synthesis). format: `md`|`json` returned inline · `pdf`|`pptx` rendered as a
+        presentation-grade file written to disk (returns its path). Compose with the authoring tools
+        (record_synthesis_outline → record_synthesis_section, attach chart/figure figures) to shape the
+        report from a request, then export it to share — no UI button needed."""
         t = time.perf_counter()
-        return _env("export_synthesis", services.export_synthesis(synthesis_id, format), t)
+        fmt = (format or "md").lower()
+        if fmt in ("pdf", "pptx"):
+            data = (services.export_synthesis_pdf(synthesis_id) if fmt == "pdf"
+                    else services.export_synthesis_pptx(synthesis_id))
+            path = services.write_export_bytes(data, out_path or f"{synthesis_id}.{fmt}")
+            return _env("export_synthesis", {"path": path, "format": fmt, "bytes": len(data)}, t)
+        content = services.export_synthesis(synthesis_id, fmt)
+        if out_path:
+            return _env("export_synthesis", {"path": services.write_export(content, out_path), "format": fmt}, t)
+        return _env("export_synthesis", content, t)
 
     # ================= Resources & prompts =================
     @mcp.resource("sonaloop://schema/memory")

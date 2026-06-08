@@ -1,12 +1,8 @@
 """Report pages: list + detail (spec/roadmap.md R2). A report IS a synthesis — one concept, short or
 exhaustive. Internally scope=convergence renders the structured view (findings → 2×2) and
-scope=project the narrative sections + figures; one detail route + one PDF export serve both."""
+scope=project the narrative sections + figures; one detail route serves both. The web is READ-ONLY:
+PDF / PPTX export is an MCP tool (export_synthesis) + the CLI, not a UI action."""
 from __future__ import annotations
-
-import re
-
-from fastapi import Request
-from fastapi.responses import Response
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._report import render_report
@@ -35,56 +31,6 @@ def register_syntheses(app) -> None:
         return _list_page(store, title=t("syntheses"), lead=t("syntheses_lead"), rows=rows,
                           empty_icon="syntheses", empty_msg=t("no_synthesis"), active="syntheses")
 
-    @app.get("/syntheses/{synthesis_id}.pdf")
-    def synthesis_pdf(synthesis_id: str, request: Request):
-        """Proper PDF via headless Chromium — navigate to the live detail page, emulate print, page.pdf().
-        Reuses the EXACT page HTML (spec/unified-synthesis-report.md; meta-report Phase 3)."""
-        store = Store()
-        syn = store.get_synthesis(synthesis_id)
-        if not syn:
-            return Response(t("not_found"), status_code=404)
-        from ... import browser as _browser
-        if not _browser.available():
-            return Response(
-                "PDF export needs the headless browser. Run `sonaloop setup` "
-                "(or `playwright install chromium`) and retry.",
-                status_code=503)
-        from playwright.sync_api import sync_playwright
-        url = str(request.base_url).rstrip("/") + f"/syntheses/{synthesis_id}"
-        _hf = "font-size:8px;color:#9aa0a6;width:100%;padding:0 16mm"
-        header = h("div", {"style": _hf}, syn.get("title", ""))
-        footer = h("div", {"style": _hf + ";text-align:center;padding:0"},
-                   h("span", {"class_": "pageNumber"}), " / ", h("span", {"class_": "totalPages"}))
-        with sync_playwright() as pw:
-            b = pw.chromium.launch()
-            pg = b.new_page()
-            pg.goto(url, wait_until="networkidle")
-            pg.emulate_media(media="print")
-            pg.wait_for_timeout(200)
-            pdf = pg.pdf(format="A4", print_background=True,
-                         margin={"top": "18mm", "bottom": "16mm", "left": "16mm", "right": "16mm"},
-                         display_header_footer=True, header_template=header, footer_template=footer)
-            b.close()
-        fn = (re.sub(r"[^\w\-]+", "-", syn.get("title", "")).strip("-").lower() or "synthesis") + ".pdf"
-        return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{fn}"'})
-
-    @app.get("/syntheses/{synthesis_id}.pptx")
-    def synthesis_pptx(synthesis_id: str):
-        """Native PowerPoint deck — title slide + one slide per section/layer, with native charts
-        (spec/unified-synthesis-report.md; Phase 2). The section/figure model exports to PPTX the same
-        way it exports to PDF."""
-        store = Store()
-        syn = store.get_synthesis(synthesis_id)
-        if not syn:
-            return Response(t("not_found"), status_code=404)
-        try:
-            data = services.export_synthesis_pptx(synthesis_id, store=store)
-        except RuntimeError as e:
-            return Response(str(e), status_code=503)
-        fn = (re.sub(r"[^\w\-]+", "-", syn.get("title", "")).strip("-").lower() or "report") + ".pptx"
-        return Response(data, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                        headers={"Content-Disposition": f'attachment; filename="{fn}"'})
-
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:
         store = Store()
@@ -103,7 +49,5 @@ def register_syntheses(app) -> None:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
         body = h("div", {"class_": "page"}, raw(render_report(syn, store)))
-        actions = fragment(h("a", {"class_": "sl-btn", "href": f"/syntheses/{synthesis_id}.pdf"}, t("export_pdf")),
-                           h("a", {"class_": "sl-btn", "href": f"/syntheses/{synthesis_id}.pptx"}, t("export_pptx")),
-                           raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}")))
+        actions = raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}"))
         return _layout(short_title, body, store, crumbs=crumbs, active="syntheses", actions=actions)
