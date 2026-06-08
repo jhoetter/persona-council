@@ -22,6 +22,7 @@ Series colours come from position unless an item sets `color`.
 from __future__ import annotations
 
 import html
+import re
 from typing import Any, Sequence
 
 # Position → CSS custom property carrying that series' colour (defined on `.sl-chart`).
@@ -32,12 +33,24 @@ def _esc(s: Any) -> str:
     return html.escape(str(s if s is not None else ""), quote=True)
 
 
+def _md(s: Any) -> str:
+    """Escape text, then render inline markdown (**bold**, *italic* / _italic_, `code`) — so a chart
+    label authored in Markdown reads like the rest of a report instead of showing raw `**` markers."""
+    t = _esc(s)
+    t = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", t)
+    t = re.sub(r"__(.+?)__", r"<strong>\1</strong>", t)
+    t = re.sub(r"(?<!\w)\*(.+?)\*(?!\w)", r"<em>\1</em>", t)
+    t = re.sub(r"(?<!\w)_(.+?)_(?!\w)", r"<em>\1</em>", t)
+    t = re.sub(r"`(.+?)`", r"<code>\1</code>", t)
+    return t
+
+
 def _color(item: dict, i: int) -> str:
     return str(item.get("color") or _SERIES[i % len(_SERIES)])
 
 
 def _title(title: str) -> str:
-    return f'<div class="sl-chart__title">{_esc(title)}</div>' if title else ""
+    return f'<div class="sl-chart__title">{_md(title)}</div>' if title else ""
 
 
 def bar_chart(items: Sequence[dict], *, title: str = "", max_value: float | None = None,
@@ -54,7 +67,7 @@ def bar_chart(items: Sequence[dict], *, title: str = "", max_value: float | None
         val = f'<span class="sl-bar__val">{_fmt(v)}</span>' if show_values else ""
         bars.append(
             f'<div class="sl-bar">'
-            f'<span class="sl-bar__label" title="{_esc(it.get("label"))}">{_esc(it.get("label"))}</span>'
+            f'<span class="sl-bar__label" title="{_esc(it.get("label"))}">{_md(it.get("label"))}</span>'
             f'<span class="sl-bar__track"><span class="sl-bar__fill" '
             f'style="--v:{pct:.1f}%;--c:{_color(it, i)}"></span></span>{val}</div>')
     return f'<figure class="sl-chart">{_title(title)}<div class="sl-bars">{"".join(bars)}</div></figure>'
@@ -78,7 +91,7 @@ def pie_chart(items: Sequence[dict], *, title: str = "", donut: bool = True,
         val = f'<span class="sl-legend__val">{_fmt(v)} · {v / total * 100:.0f}%</span>' if show_values else ""
         legend.append(
             f'<span class="sl-legend__item"><span class="sl-legend__sw" style="--c:{c}"></span>'
-            f'<span class="sl-legend__label">{_esc(it.get("label"))}</span>{val}</span>')
+            f'<span class="sl-legend__label">{_md(it.get("label"))}</span>{val}</span>')
     cls = "sl-pie sl-pie--donut" if donut else "sl-pie"
     grad = f"conic-gradient({', '.join(stops)})"
     return (f'<figure class="sl-chart">{_title(title)}<div class="sl-pie-wrap">'
@@ -111,7 +124,7 @@ def effort_impact(items: Sequence[dict], *, title: str = "", x_label: str = "Eff
         dots.append(f'<span class="sl-quad__dot" style="--x:{left:.1f}%;--y:{top:.1f}%;--c:{c}">{i}</span>')
         legend.append(
             f'<span class="sl-legend__item"><span class="sl-legend__num" style="--c:{c}">{i}</span>'
-            f'<span class="sl-legend__label">{_esc(it.get("label"))}</span>'
+            f'<span class="sl-legend__label">{_md(it.get("label"))}</span>'
             f'<span class="sl-legend__val">{x_label[:1]}{_fmt(x)}·{y_label[:1]}{_fmt(y)}</span></span>')
     quad = (f'<div class="sl-quad-wrap"><div class="sl-quad-ylab">{_esc(y_label)}</div>'
             f'<div class="sl-quad"><div class="sl-quad__gx"></div><div class="sl-quad__gy"></div>'
