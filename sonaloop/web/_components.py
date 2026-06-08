@@ -426,8 +426,16 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     # / "Sonaloop Research" get the pixel treatment too, not just the bare "Sonaloop".
     _bn = brand_name()
     _i = _bn.lower().find("loop")
-    _brand_word = (f'{_esc(_bn[:_i])}<span class="sl-logo__loop">{_esc(_bn[_i:_i+4])}</span>{_esc(_bn[_i+4:])}'
-                   if _i != -1 else _esc(_bn))
+    if _i != -1:
+        # .sl-logo__word is an inline-flex box, which collapses whitespace *between* flex
+        # items — so the space after the pixel "loop" in a multi-word brand ("Sonaloop
+        # Cloud") would vanish. Pin it with a non-breaking space.
+        _post = _bn[_i + 4:]
+        _post = "\u00a0" + _post.lstrip() if _post[:1].isspace() else _post
+        _brand_word = (f'{_esc(_bn[:_i])}<span class="sl-logo__loop">{_esc(_bn[_i:_i+4])}</span>'
+                       f'{_esc(_post)}')
+    else:
+        _brand_word = _esc(_bn)
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_esc(title)} · {_esc(brand_name())}</title>
