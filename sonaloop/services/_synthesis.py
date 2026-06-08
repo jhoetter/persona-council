@@ -529,30 +529,66 @@ def export_report(project_id: str, report_id: str | None = None, format: str = "
 import re as _re_pptx
 
 
-def _md_blocks(md: str) -> list[tuple[int, str]]:
-    """Markdown section body → [(level, text)] for slide bullets (level 0 = paragraph, 1 = bullet).
-    Lossy by design: strips emphasis/code/links/figure-refs/callout fences to clean presenter text."""
-    out: list[tuple[int, str]] = []
-    for line in (md or "").split("\n"):
-        s = line.strip()
-        if not s or s.startswith(":::"):
+def _strip_md(s: str) -> str:
+    """Inline markdown → clean presenter text (bold/italic/code/links/figure-refs removed) so no raw
+    `**`, `_`, `` ` `` or `![[fig]]` markers leak into a slide."""
+    s = _re_pptx.sub(r"!\[\[.*?\]\]", "", s or "")
+    s = _re_pptx.sub(r"\*\*(.+?)\*\*", r"\1", s)
+    s = _re_pptx.sub(r"__(.+?)__", r"\1", s)
+    s = _re_pptx.sub(r"(?<!\w)\*(.+?)\*(?!\w)", r"\1", s)
+    s = _re_pptx.sub(r"(?<!\w)_(.+?)_(?!\w)", r"\1", s)
+    s = _re_pptx.sub(r"`(.+?)`", r"\1", s)
+    s = _re_pptx.sub(r"\[(.+?)\]\(.*?\)", r"\1", s)
+    return s.strip()
+
+
+# callout directive kind → the colour role the slide paints it (mirrors the report's :::insight /
+# :::recommendation / :::risk callout cards).
+_CALLOUT_KIND = {"insight": "accent", "recommendation": "green", "rec": "green",
+                 "risk": "amber", "key": "accent", "keytakeaway": "accent"}
+
+
+def _md_blocks(md: str) -> list[dict]:
+    """Markdown section body → a list of typed blocks the slide renderer styles like the report:
+    {type: p|li|quote|callout|h, text, [kind,label]}. Callout fences (:::insight … :::) and
+    blockquotes (>) are PRESERVED (not dropped) and inline markdown is stripped."""
+    blocks: list[dict] = []
+    lines = (md or "").split("\n")
+    i, n = 0, len(lines)
+    while i < n:
+        s = lines[i].strip()
+        if not s:
+            i += 1; continue
+        if s.startswith(":::"):
+            tag = s[3:].strip().lower()
+            body = []
+            i += 1
+            while i < n and lines[i].strip() != ":::":
+                if lines[i].strip():
+                    body.append(_strip_md(lines[i].strip()))
+                i += 1
+            i += 1  # closing fence
+            if body:
+                blocks.append({"type": "callout", "kind": _CALLOUT_KIND.get(tag, "accent"),
+                               "label": (tag or "insight").replace("keytakeaway", "key").capitalize(),
+                               "text": " ".join(body)})
             continue
-        level = 0
-        if s[:2] in ("- ", "* "):
-            s, level = s[2:], 1
+        if s.startswith(">"):
+            blocks.append({"type": "quote", "text": _strip_md(s.lstrip("> ").strip())})
+        elif s[:2] in ("- ", "* "):
+            blocks.append({"type": "li", "text": _strip_md(s[2:])})
         elif _re_pptx.match(r"^\d+\.\s", s):
-            s, level = _re_pptx.sub(r"^\d+\.\s", "", s), 1
+            blocks.append({"type": "li", "text": _strip_md(_re_pptx.sub(r"^\d+\.\s", "", s))})
         elif s.startswith("#"):
-            s = s.lstrip("# ").strip()
-        s = _re_pptx.sub(r"!\[\[.*?\]\]", "", s)              # figure refs
-        s = _re_pptx.sub(r"\*\*(.+?)\*\*", r"\1", s)
-        s = _re_pptx.sub(r"\*(.+?)\*", r"\1", s)
-        s = _re_pptx.sub(r"`(.+?)`", r"\1", s)
-        s = _re_pptx.sub(r"\[(.+?)\]\(.*?\)", r"\1", s)
-        s = s.strip()
-        if s:
-            out.append((level, s))
-    return out
+            blocks.append({"type": "h", "text": _strip_md(s.lstrip("# ").strip())})
+        else:
+            blocks.append({"type": "p", "text": _strip_md(s)})
+        i += 1
+    return [b for b in blocks if b.get("text")]
+
+
+def _li(texts: list[str]) -> list[dict]:
+    return [{"type": "li", "text": _strip_md(t)} for t in texts if (t or "").strip()]
 
 
 def _figure_to_chart(fig: dict, store: Store) -> dict | None:
@@ -564,7 +600,7 @@ def _figure_to_chart(fig: dict, store: Store) -> dict | None:
         series = [s for s in (fig.get("series") or []) if isinstance(s, dict) and s.get("value") not in (None, "")]
         if not series:
             return None
-        return {"type": of, "categories": [s.get("label", "") for s in series],
+        return {"type": of, "categories": [_strip_md(s.get("label", "")) for s in series],
                 "values": [s.get("value") for s in series]}
     if of == "effort_impact":
         sid = fig.get("source_id") or fig.get("id")
@@ -576,7 +612,7 @@ def _figure_to_chart(fig: dict, store: Store) -> dict | None:
 
 
 def _effort_impact_chart(syn: dict) -> dict | None:
-    pts = [{"x": e, "y": v, "label": txt} for (txt, e, v) in _A.synthesis_recommendations(syn) if e and v]
+    pts = [{"x": e, "y": v, "label": _strip_md(txt)} for (txt, e, v) in _A.synthesis_recommendations(syn) if e and v]
     if not pts:
         return None
     L = _SYNTHESIS_EXPORT_LABELS[content_language()]
@@ -617,35 +653,45 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
             c = store.get_council_session(rid)
             return (c.get("prompt") or rid)[:60] if c else rid
 
-        subtitle = f"{kind_label} · {len(secs)} {'Abschnitte' if de else 'sections'} · {syn.get('created_at','')[:10]}"
-        slides.append({"kind": "title", "title": title, "subtitle": subtitle, "lead": syn.get("lead", "")})
-        for sec in secs:
+        subtitle = f"{len(secs)} {'Abschnitte' if de else 'sections'} · {syn.get('created_at','')[:10]}"
+        slides.append({"kind": "title", "eyebrow": kind_label, "title": title,
+                       "subtitle": subtitle, "lead": _strip_md(syn.get("lead", ""))})
+        for idx, sec in enumerate(secs, 1):
             charts = [c for c in (_figure_to_chart(f, store) for f in (sec.get("figures") or [])) if c]
             foot = ""
             if sec.get("source_study_ids"):
                 foot = ("Quellen: " if de else "Sources: ") + ", ".join(ref_title(x) for x in sec["source_study_ids"])
-            slides.append({"kind": "content", "heading": sec.get("heading", ""),
-                           "bullets": _md_blocks(sec.get("markdown", "")),
+            slides.append({"kind": "content", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
+                           "blocks": _md_blocks(sec.get("markdown", "")),
                            "chart": charts[0] if charts else None, "footnote": foot})
             for c in charts[1:]:
-                slides.append({"kind": "content", "heading": sec.get("heading", ""), "bullets": [], "chart": c})
+                slides.append({"kind": "content", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
+                               "blocks": [], "chart": c})
     else:
-        status = syn.get("status", "done")
-        subtitle = f"{kind_label} · {len(syn.get('council_ids', []))} {'Councils' if de else 'councils'} · {syn.get('created_at','')[:10]}"
-        slides.append({"kind": "title", "title": title, "subtitle": subtitle, "lead": syn.get("goal", "")})
+        subtitle = f"{len(syn.get('council_ids', []))} {'Councils' if de else 'councils'} · {syn.get('created_at','')[:10]}"
+        slides.append({"kind": "title", "eyebrow": kind_label, "title": title,
+                       "subtitle": subtitle, "lead": _strip_md(syn.get("goal", ""))})
+        n = 0
         for key, heading in (("gesamtbild", L["big_picture"]), ("positionierung", L["positioning"])):
             if (syn.get(key) or "").strip():
-                slides.append({"kind": "content", "heading": heading, "bullets": _md_blocks(syn[key])})
+                n += 1
+                slides.append({"kind": "content", "num": f"{n:02d}", "heading": heading,
+                               "blocks": _md_blocks(syn[key])})
         kps = _A.finding_texts(syn, "key_problem")
         if kps:
-            slides.append({"kind": "content", "heading": L["key_problems"], "bullets": [(1, x) for x in kps]})
+            n += 1
+            slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["key_problems"], "blocks": _li(kps)})
         chart = _effort_impact_chart(syn)
         if chart:
+            n += 1
             recs = [(txt, e, v) for (txt, e, v) in _A.synthesis_recommendations(syn) if e and v]
-            bullets = [(1, f"{txt} ({L['effort']} {e}/5 · {L['value']} {v}/5)") for (txt, e, v) in recs]
-            slides.append({"kind": "content", "heading": L["recommendations"], "bullets": bullets, "chart": chart})
+            blocks = [{"type": "li", "text": f"{_strip_md(txt)}  ({L['effort']} {e}/5 · {L['value']} {v}/5)"}
+                      for (txt, e, v) in recs]
+            slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["recommendations"],
+                           "blocks": blocks, "chart": chart})
         oqs = _A.finding_texts(syn, "open_question")
         if oqs:
-            slides.append({"kind": "content", "heading": L["open_questions"], "bullets": [(1, x) for x in oqs]})
+            n += 1
+            slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["open_questions"], "blocks": _li(oqs)})
 
     return _pptx.render(slides, title=title or kind_label)

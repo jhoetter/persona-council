@@ -86,60 +86,89 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         r.font.color.rgb = rgb(color)
         return r
 
+    def _rule(slide, l, t, w):
+        bar = slide.shapes.add_shape(1, Inches(l), Inches(t), Inches(w), Pt(3.5))
+        bar.fill.solid(); bar.fill.fore_color.rgb = rgb(_ACCENT); bar.line.fill.background()
+        _noshadow(bar)
+
+    def _footer(slide):
+        ft = _box(slide, W - Inches(5.0), H - Inches(0.42), Inches(4.3), Inches(0.3))
+        p = ft.paragraphs[0]; p.alignment = PP_ALIGN.RIGHT
+        _run(p, title, size=9, color=_FAINT)
+
     # ── title slide ──────────────────────────────────────────────────────────
     def _title_slide(s):
         slide = prs.slides.add_slide(blank)
         _bg(slide)
-        tf = _box(slide, Inches(0.9), Inches(2.2), W - Inches(1.8), Inches(3.0))
-        p = tf.paragraphs[0]
-        _run(p, s.get("title", title), size=40, bold=True)
+        _rule(slide, 0.92, 2.0, 1.0)
+        tf = _box(slide, Inches(0.9), Inches(2.15), W - Inches(1.8), Inches(3.4))
+        p0 = tf.paragraphs[0]
+        eb = _run(p0, (s.get("eyebrow", "") or "").upper(), size=12, bold=True, color=_ACCENT)
+        eb.font.name = "Geist Mono"
+        p1 = tf.add_paragraph(); p1.space_before = Pt(8)
+        _run(p1, s.get("title", title), size=38, bold=True)
         if s.get("subtitle"):
-            p2 = tf.add_paragraph(); p2.space_before = Pt(10)
-            _run(p2, s["subtitle"], size=15, color=_MUTED)
+            p2 = tf.add_paragraph(); p2.space_before = Pt(12)
+            _run(p2, s["subtitle"], size=14, color=_MUTED)
         if s.get("lead"):
-            p3 = tf.add_paragraph(); p3.space_before = Pt(18)
-            _run(p3, s["lead"], size=16, color=_INK)
-        # accent rule
-        bar = slide.shapes.add_shape(1, Inches(0.92), Inches(2.05), Inches(2.2), Pt(4))
-        bar.fill.solid(); bar.fill.fore_color.rgb = rgb(_ACCENT); bar.line.fill.background()
+            p3 = tf.add_paragraph(); p3.space_before = Pt(20)
+            _run(p3, s["lead"], size=17, color=_INK)
+        _footer(slide)
 
     # ── content slide ────────────────────────────────────────────────────────
+    _CALLOUT_RGB = {"accent": _ACCENT, "green": _GREEN, "amber": _AMBER}
+
     def _content_slide(s):
         slide = prs.slides.add_slide(blank)
         _bg(slide)
-        # heading
+        # heading: mono section number + bold title, accent rule beneath
         htf = _box(slide, Inches(0.7), Inches(0.5), W - Inches(1.4), Inches(0.9))
-        _run(htf.paragraphs[0], s.get("heading", ""), size=26, bold=True)
-        slide.shapes.add_shape(1, Inches(0.72), Inches(1.32), Inches(0.9), Pt(3)).fill.solid()
-        slide.shapes[-1].fill.fore_color.rgb = rgb(_ACCENT); slide.shapes[-1].line.fill.background()
+        hp = htf.paragraphs[0]
+        if s.get("num"):
+            r = _run(hp, s["num"] + "   ", size=16, bold=True, color=_FAINT); r.font.name = "Geist Mono"
+        _run(hp, s.get("heading", ""), size=24, bold=True)
+        _rule(slide, 0.72, 1.34, 0.85)
 
         has_visual = bool(s.get("chart") or s.get("image"))
-        body_w = (Inches(6.6) if has_visual else W - Inches(1.4))
-        top = Inches(1.6)
-        bullets = s.get("bullets") or []
-        if bullets:
+        body_w = (Inches(6.5) if has_visual else W - Inches(1.4))
+        top = Inches(1.65)
+        blocks = s.get("blocks") or []
+        if blocks:
             tf = _box(slide, Inches(0.7), top, body_w, H - top - Inches(0.9))
             first = True
-            for level, text in bullets:
+            for b in blocks:
                 p = tf.paragraphs[0] if first else tf.add_paragraph()
                 first = False
-                p.level = max(0, min(4, level))
-                p.space_after = Pt(6)
-                if level == 0:
-                    _run(p, text, size=14)
+                bt = b.get("type", "p"); txt = b.get("text", "")
+                if bt == "li":
+                    p.space_after = Pt(5)
+                    _run(p, "•  ", size=13, bold=True, color=_ACCENT)
+                    _run(p, txt, size=13, color=_INK)
+                elif bt == "quote":
+                    p.space_before = Pt(6); p.space_after = Pt(8)
+                    _run(p, txt, size=15, italic=True, color=_MUTED)
+                elif bt == "callout":
+                    p.space_before = Pt(6); p.space_after = Pt(8)
+                    _run(p, b.get("label", "Insight") + "  ", size=13, bold=True,
+                         color=_CALLOUT_RGB.get(b.get("kind"), _ACCENT))
+                    _run(p, txt, size=13, color=_INK)
+                elif bt == "h":
+                    p.space_before = Pt(10); p.space_after = Pt(3)
+                    _run(p, txt, size=15, bold=True, color=_INK)
                 else:
-                    _run(p, "•  ", size=13, color=_ACCENT)
-                    _run(p, text, size=13, color=_INK)
+                    p.space_after = Pt(7)
+                    _run(p, txt, size=14, color=_INK)
         if s.get("chart"):
-            _chart(slide, s["chart"], Inches(7.5), top, Inches(5.1), Inches(4.6))
+            _chart(slide, s["chart"], Inches(7.4), top, Inches(5.2), Inches(4.5))
         elif s.get("image"):
             try:
-                slide.shapes.add_picture(s["image"], Inches(7.5), top, width=Inches(5.1))
+                slide.shapes.add_picture(s["image"], Inches(7.4), top, width=Inches(5.2))
             except Exception:
                 pass
         if s.get("footnote"):
-            ftf = _box(slide, Inches(0.7), H - Inches(0.7), W - Inches(1.4), Inches(0.5))
+            ftf = _box(slide, Inches(0.7), H - Inches(0.72), W - Inches(1.4), Inches(0.5))
             _run(ftf.paragraphs[0], s["footnote"], size=10, color=_FAINT, italic=True)
+        _footer(slide)
 
     from pptx.oxml.ns import qn
     from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
