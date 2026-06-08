@@ -2,6 +2,8 @@
 reports via the `chart` figure-kind: bar · pie · effort·impact. (Phase 2 — spec/unified-synthesis-report.)"""
 from __future__ import annotations
 
+import base64
+
 from sonaloop import _charts
 from sonaloop.web._report import render_report
 
@@ -52,6 +54,45 @@ def test_report_embeds_synthesis_effort_impact_2x2(store):
 
 def _has_chart(shape):
     return bool(getattr(shape, "has_chart", False))
+
+
+# a minimal valid 1×1 PNG (so add_picture accepts it)
+_PNG_1X1 = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+
+
+def test_pptx_embeds_image_figure(tmp_path):
+    """Prototype screenshots / image assets must travel in the deck (the PDF loads them by URL; a PPTX
+    has to carry the bytes). An image slide embeds the picture."""
+    import io
+    from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    from sonaloop import _pptx
+    png = tmp_path / "shot.png"; png.write_bytes(_PNG_1X1)
+    data = _pptx.render([{"kind": "image", "heading": "Prototype", "num": "03",
+                          "image": str(png), "caption": "v0.2"}], title="R")
+    prs = Presentation(io.BytesIO(data))
+    assert any(sh.shape_type == MSO_SHAPE_TYPE.PICTURE for sl in prs.slides for sh in sl.shapes)
+
+
+def test_report_section_image_figure_becomes_image_slide(store, tmp_path, monkeypatch):
+    """A section's prototype/asset figure resolves to a file and exports as an image slide."""
+    import io
+    from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    from sonaloop import services, assets
+    monkeypatch.setattr(assets, "ASSETS_DIR", tmp_path / "assets")
+    monkeypatch.setattr("sonaloop.config.DATA_DIR", tmp_path)
+    aid = assets.put_asset(_PNG_1X1, "png")
+    rep = {"id": "rimg", "title": "Demo — Report", "scope": "project", "project_id": "",
+           "created_at": "2026-06-08T00:00:00+00:00", "lead": "", "council_ids": [],
+           "findings": [], "statements": [], "prompts": [], "graph_snapshot": None,
+           "sections": [{"id": "s1", "heading": "Deliver", "markdown": "Body.", "citations": [],
+                         "source_study_ids": [], "figures": [{"kind": "asset", "id": aid, "caption": "Shot"}]}]}
+    store.upsert_synthesis(rep)
+    data = services.export_synthesis_pptx("rimg", store=store)
+    prs = Presentation(io.BytesIO(data))
+    assert any(sh.shape_type == MSO_SHAPE_TYPE.PICTURE for sl in prs.slides for sh in sl.shapes)
 
 
 def test_pptx_export_convergence_synthesis(store):

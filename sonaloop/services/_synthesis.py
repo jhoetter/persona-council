@@ -611,6 +611,32 @@ def _figure_to_chart(fig: dict, store: Store) -> dict | None:
     return None
 
 
+def _figure_image(fig: dict, store: Store) -> tuple[str, str] | None:
+    """An image figure (asset | prototype screenshot | avatar) → (local_file_path, caption), or None
+    if it can't be embedded. Mirrors web/_report._resolve_figure but resolves to a FILE on disk so the
+    PPTX can embed the actual bytes (the web/PDF load it by URL; a deck must carry it)."""
+    from ..config import DATA_DIR
+    kind = (fig or {}).get("kind"); cap = fig.get("caption", "")
+    aid = None
+    if kind == "asset" and fig.get("id"):
+        aid = fig["id"]
+    elif kind == "prototype" and fig.get("id"):
+        p = store.get_prototype(fig["id"]) or {}
+        aid = p.get("shot"); cap = cap or p.get("name", "")
+    elif kind == "avatar" and fig.get("id"):
+        p = store.get_persona(fig["id"]) or {}
+        ap = (p.get("avatar") or {}).get("path")
+        if ap:
+            path = ROOT / ap
+            return (str(path), cap or p.get("display_name", "")) if path.exists() else None
+        return None
+    if aid:
+        path = DATA_DIR / aid
+        if path.exists():
+            return (str(path), cap)
+    return None
+
+
 def _effort_impact_chart(syn: dict) -> dict | None:
     pts = [{"x": e, "y": v, "label": _strip_md(txt)} for (txt, e, v) in _A.synthesis_recommendations(syn) if e and v]
     if not pts:
@@ -657,7 +683,9 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
         slides.append({"kind": "title", "eyebrow": kind_label, "title": title,
                        "subtitle": subtitle, "lead": _strip_md(syn.get("lead", ""))})
         for idx, sec in enumerate(secs, 1):
-            charts = [c for c in (_figure_to_chart(f, store) for f in (sec.get("figures") or [])) if c]
+            figs = sec.get("figures") or []
+            charts = [c for c in (_figure_to_chart(f, store) for f in figs) if c]
+            images = [im for im in (_figure_image(f, store) for f in figs) if im]
             foot = ""
             if sec.get("source_study_ids"):
                 foot = ("Quellen: " if de else "Sources: ") + ", ".join(ref_title(x) for x in sec["source_study_ids"])
@@ -667,6 +695,9 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
             for c in charts[1:]:
                 slides.append({"kind": "content", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
                                "blocks": [], "chart": c})
+            for path, cap in images:   # prototype screenshots / images / avatars — one slide each, fitted
+                slides.append({"kind": "image", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
+                               "image": path, "caption": cap})
     else:
         subtitle = f"{len(syn.get('council_ids', []))} {'Councils' if de else 'councils'} · {syn.get('created_at','')[:10]}"
         slides.append({"kind": "title", "eyebrow": kind_label, "title": title,

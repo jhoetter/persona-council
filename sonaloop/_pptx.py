@@ -170,6 +170,32 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             _run(ftf.paragraphs[0], s["footnote"], size=10, color=_FAINT, italic=True)
         _footer(slide)
 
+    # ── image slide (prototype screenshots / images / avatars) — fitted + centred ──
+    def _image_slide(s):
+        slide = prs.slides.add_slide(blank)
+        _bg(slide)
+        htf = _box(slide, Inches(0.7), Inches(0.5), W - Inches(1.4), Inches(0.9))
+        hp = htf.paragraphs[0]
+        if s.get("num"):
+            r = _run(hp, s["num"] + "   ", size=16, bold=True, color=_FAINT); r.font.name = "Geist Mono"
+        _run(hp, s.get("heading", ""), size=24, bold=True)
+        _rule(slide, 0.72, 1.34, 0.85)
+        L, T = 0.7, 1.7
+        maxw, maxh = W.inches - 1.4, H.inches - T - 0.95
+        try:
+            pic = slide.shapes.add_picture(s["image"], Inches(L), Inches(T))
+            scale = min(Inches(maxw) / pic.width, Inches(maxh) / pic.height)
+            pic.width = int(pic.width * scale); pic.height = int(pic.height * scale)
+            pic.left = Inches(L) + (Inches(maxw) - pic.width) // 2
+            pic.top = Inches(T) + (Inches(maxh) - pic.height) // 2
+            pic.line.color.rgb = rgb(_LINE); pic.line.width = Pt(0.75)
+            if s.get("caption"):
+                cap_t = (pic.top + pic.height) / 914400 + 0.06
+                _text(slide, L, cap_t, maxw, 0.3, s["caption"], size=10, color=_MUTED, align=PP_ALIGN.CENTER)
+        except Exception:
+            pass
+        _footer(slide)
+
     from pptx.oxml.ns import qn
     from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
     from pptx.enum.text import MSO_ANCHOR
@@ -337,8 +363,11 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             pass
 
     for s in slides:
-        if s.get("kind") == "title":
+        kind = s.get("kind")
+        if kind == "title":
             _title_slide(s)
+        elif kind == "image":
+            _image_slide(s)
         else:
             _content_slide(s)
 
