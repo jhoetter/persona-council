@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/sonaloop-banner.png" alt="Sonaloop — customer-persona simulation · memory-grounded councils · design-research synthesis" width="100%">
+  <img src="docs/assets/sonaloop-banner-v2.png" alt="Sonaloop — customer-persona simulation · memory-grounded councils · design-research synthesis" width="100%">
 </p>
 
 # Sonaloop
