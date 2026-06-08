@@ -4,6 +4,7 @@ import html
 import json
 import re
 from collections import Counter, defaultdict
+from urllib.parse import quote as _urlquote
 
 from .._icons import icon as _persona_icon, hifi as _persona_hifi, HIFI_ANIM_CSS as _ICON_ANIM_CSS
 
@@ -60,6 +61,27 @@ register_css(_ICON_ANIM_CSS)
 
 
 _AV_COLORS = ["#3d7b5f", "#2f6f9f", "#a66b1f", "#7a5ea6", "#b3493f", "#4a7d7d", "#5a6b8a"]
+
+# Sonaloop-mark favicon — the brand loop + nodes (same geometry as the `sonaloop` icon),
+# indigo and theme-aware, inlined as a data-URI so the tab icon needs no static route.
+_FAVICON_SVG = (
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='1.5 1 21 21' fill='none'"
+    " stroke-width='1.85' stroke-linecap='round' stroke-linejoin='round'>"
+    "<style>.s{stroke:#5e6ad2}.f{fill:#5e6ad2}"
+    "@media(prefers-color-scheme:dark){.s{stroke:#7c84e8}.f{fill:#7c84e8}}</style>"
+    "<path class='s' d='M17 12L17.31 12.62L17.49 13.3L17.51 14.01L17.35 14.69L17 15.29"
+    "L16.49 15.77L15.87 16.1L15.19 16.28L14.5 16.33L13.84 16.28L13.25 16.17L12.72 16.07"
+    "L12.23 16.01L11.77 16.01L11.28 16.07L10.75 16.17L10.16 16.28L9.5 16.33L8.81 16.28"
+    "L8.13 16.1L7.51 15.77L7 15.29L6.65 14.69L6.49 14.01L6.51 13.3L6.69 12.62L7 12"
+    "L7.37 11.46L7.76 11L8.12 10.59L8.41 10.2L8.65 9.79L8.83 9.34L9.01 8.83L9.22 8.26"
+    "L9.5 7.67L9.88 7.09L10.38 6.59L10.98 6.22L11.65 6.03L12.35 6.03L13.02 6.22L13.62 6.59"
+    "L14.12 7.09L14.5 7.67L14.78 8.26L14.99 8.83L15.17 9.34L15.35 9.79L15.59 10.2L15.88 10.59"
+    "L16.24 11L16.63 11.46L17 12Z'/>"
+    "<circle class='f' cx='12' cy='3.7' r='1.85'/>"
+    "<circle class='f' cx='19.19' cy='16.15' r='1.85'/>"
+    "<circle class='f' cx='4.81' cy='16.15' r='1.85'/></svg>"
+)
+_FAVICON_HREF = "data:image/svg+xml," + _urlquote(_FAVICON_SVG, safe="")
 
 
 def _avatar(p: dict, size: int = 36) -> str:
@@ -402,6 +424,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_esc(title)} · {_esc(brand_name())}</title>
+<link rel="icon" type="image/svg+xml" href="{_FAVICON_HREF}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 {HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
