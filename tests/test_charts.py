@@ -15,9 +15,19 @@ def test_chart_components_render_and_are_empty_safe():
     assert "conic-gradient(" in pie and "sl-pie--donut" in pie and "75%" in pie  # 12/16
     ei = _charts.effort_impact([{"label": "Auto list", "x": 2, "y": 5}], x_label="Effort", y_label="Value")
     assert "sl-quad__dot" in ei and "sl-legend__num" in ei and "Quick wins" in ei
+    stacked = _charts.stacked_bar_chart([
+        {"label": "Pricing", "segments": [{"label": "For", "value": 6}, {"label": "Against", "value": 2}]},
+        {"label": "Support", "segments": [{"label": "For", "value": 2}, {"label": "Against", "value": 5}]}])
+    # series colour keyed by segment label → one shared legend with 2 series (not 4)
+    assert stacked.count("sl-bar__fill--stack") == 2 and "sl-bar__seg" in stacked
+    assert "sl-legend--row" in stacked and stacked.count("sl-legend__sw") == 2
+    gauge = _charts.gauge_chart([{"label": "Confidence", "value": 72}, {"label": "Done", "value": 9, "max": 12}])
+    assert "sl-gauge" in gauge and "--p:72.0" in gauge and "72%" in gauge and "75%" in gauge  # 9/12
+    assert "9 / 12" in gauge  # non-100 max shows the raw ratio
     # empty / unscored inputs never fabricate a chart
     assert _charts.bar_chart([]) == "" and _charts.pie_chart([{"label": "x", "value": 0}]) == ""
     assert _charts.effort_impact([{"label": "no score", "x": None, "y": 2}]) == ""
+    assert _charts.stacked_bar_chart([]) == "" and _charts.gauge_chart([]) == ""
 
 
 def test_chart_escapes_labels():
@@ -38,6 +48,29 @@ def test_report_embeds_author_supplied_pie_and_bar(store):
         {"kind": "chart", "of": "bar", "series": [{"label": "X", "value": 5}]},
     ]), store)
     assert "sl-pie" in html and "conic-gradient" in html and "sl-bars" in html
+
+
+def test_report_embeds_author_supplied_stacked_bar_and_gauge(store):
+    html = render_report(_report_with_figures([
+        {"kind": "chart", "of": "stacked_bar", "caption": "Stance per theme", "series": [
+            {"label": "Pricing", "segments": [{"label": "For", "value": 6}, {"label": "Against", "value": 2}]}]},
+        {"kind": "chart", "of": "gauge", "series": [{"label": "Confidence", "value": 72}]},
+    ]), store)
+    assert "sl-bar__fill--stack" in html and "sl-bar__seg" in html
+    assert "sl-gauge" in html and "72%" in html
+
+
+def test_section_validator_preserves_gauge_max_and_stacked_segments():
+    from sonaloop.llm_simulation._validators import validate_synthesis_section_payload
+    out = validate_synthesis_section_payload({"markdown": "Body.", "figures": [
+        {"kind": "chart", "of": "gauge", "series": [{"label": "Confidence", "value": 72, "max": 100}]},
+        {"kind": "chart", "of": "stacked_bar", "series": [
+            {"label": "Pricing", "segments": [{"label": "For", "value": 6}, {"label": "Against", "value": 2}]}]},
+    ]})
+    gauge, stacked = out["figures"]
+    assert gauge["series"][0]["max"] == 100  # gauge scale survives sanitization
+    segs = stacked["series"][0]["segments"]
+    assert [s["label"] for s in segs] == ["For", "Against"] and segs[0]["value"] == 6
 
 
 def test_report_embeds_synthesis_effort_impact_2x2(store):

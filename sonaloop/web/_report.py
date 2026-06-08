@@ -59,13 +59,16 @@ def _resolve_figure(f: dict, store) -> dict | None:
             return {"url": "/" + p["avatar"]["path"], "caption": cap or p.get("display_name", "")}
     if kind == "chart":
         # Design-system chart components (sonaloop._charts, vendored from sonaloop-design):
-        #   of="bar"|"pie"  → author-supplied `series` [{label, value, color?}]
+        #   of="bar"|"pie"   → author-supplied `series` [{label, value, color?}]
+        #   of="stacked_bar" → `series` [{label, segments:[{label, value, color?}]}] (composition)
+        #   of="gauge"       → `series` [{label, value, max?, color?}] (radial progress / KPI)
         #   of="effort_impact" → a synthesis's structured 2×2 (the payoff of unifying synthesis + report)
         of = f.get("of", "effort_impact")
-        if of in ("bar", "pie"):
-            from .._charts import bar_chart, pie_chart
+        if of in ("bar", "pie", "stacked_bar", "gauge"):
+            from .._charts import bar_chart, gauge_chart, pie_chart, stacked_bar_chart
             series = [s for s in (f.get("series") or []) if isinstance(s, dict)]
-            chart = (pie_chart(series) if of == "pie" else bar_chart(series))
+            render = {"pie": pie_chart, "stacked_bar": stacked_bar_chart, "gauge": gauge_chart}.get(of, bar_chart)
+            chart = render(series)
             return {"html": chart, "caption": cap} if chart else None
         sid = f.get("source_id") or f.get("id")
         syn = store.get_synthesis(sid) if sid else None
