@@ -40,7 +40,10 @@ sonaloop-mcp = "sonaloop.mcp_server:main"
 sonaloop-web = "sonaloop.web:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "watchfiles>=1.2.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
