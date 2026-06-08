@@ -40,10 +40,10 @@ def test_expected_tools_registered():
         "brief_eval_critic", "record_eval_critic", "evaluate_simulation_full",
         # the tracker's new tools:
         "evaluate_cohort_diversity", "brief_cohort_critic", "record_cohort_critic",
-        # research graph + meta-report:
+        # research graph + report (a report IS a project-scope synthesis):
         "create_research_project", "list_research_projects", "get_project_graph",
-        "brief_meta_report", "record_meta_outline", "brief_meta_section",
-        "record_meta_section", "export_meta_report",
+        "brief_synthesis_outline", "record_synthesis_outline", "brief_synthesis_section",
+        "record_synthesis_section",
         # deletes (CRUD complete via MCP):
         "delete_research_project",
         "delete_synthesis", "delete_council", "delete_persona",

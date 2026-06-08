@@ -224,8 +224,8 @@ CREATE TABLE IF NOT EXISTS eval_reports (
   created_at TEXT NOT NULL
 );
 
--- Research graph: a Project groups studies (syntheses) into a themed graph,
--- with typed edges between studies, promotable open questions, and meta-reports.
+-- Research graph: a Project groups studies (syntheses, incl. project-scope reports)
+-- into a themed graph, with typed edges between studies and promotable open questions.
 -- (Distinct from the memory "project" entity, which is a persona's own work project.)
 CREATE TABLE IF NOT EXISTS research_projects (
   id TEXT PRIMARY KEY,
@@ -246,15 +246,6 @@ CREATE TABLE IF NOT EXISTS research_open_questions (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_roq_project ON research_open_questions(project_id);
-
-CREATE TABLE IF NOT EXISTS meta_reports (
-  id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL,
-  title TEXT NOT NULL,
-  data TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_meta_reports_project ON meta_reports(project_id);
 
 -- ESV: the resumable run object (driver journal). One run drives one project's plan to a
 -- self-verified, finished result; `data` holds the step journal + critic rounds (resume = replay it).

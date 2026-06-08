@@ -31,6 +31,6 @@ MARKDOWN_CONTRACT = (
     "NOT write a literal section header inside the text (e.g. 'SUMMARY:', 'VOTES:', 'WHAT THIS COUNCIL "
     "FOUND') — the UI already renders the headers/labels around your text. This applies to the "
     "moderator/analysis fields (exec_summary, summary, gesamtbild, positionierung, recommendations, "
-    "meta-report sections, key problems, open questions, notes). A persona/proband turn `content` may "
+    "report sections, key problems, open questions, notes). A persona/proband turn `content` may "
     "stay in that persona's own natural voice — it is a quote, not a report."
 )

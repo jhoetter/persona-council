@@ -49,42 +49,37 @@ def register_research(mcp):
 
     # backfill_project_from_syntheses fully RETIRED (a one-time study-graph migration).
 
-    # ----- Meta-Report: second-order synthesis over a whole project graph -----
+    # ----- Project REPORT: a project-scope synthesis over the whole graph (one concept; export via
+    #       export_synthesis(report_id)). A report is short or exhaustive — just block count, not a type.
     @mcp.tool()
-    def brief_meta_report(project_id: str) -> dict[str, Any]:
-        """GATHER the whole project graph + study content so you can author the meta-report OUTLINE."""
+    def brief_synthesis_outline(project_id: str) -> dict[str, Any]:
+        """GATHER the whole project graph + study content so you can author the project REPORT outline."""
         t = time.perf_counter()
-        return _env("brief_meta_report", services.brief_meta_report(project_id), t)
+        return _env("brief_synthesis_outline", services.brief_synthesis_outline(project_id), t)
 
     @mcp.tool()
-    def record_meta_outline(project_id: str, outline: dict[str, Any]) -> dict[str, Any]:
-        """Persist the host-authored meta-report outline (sections derived from the graph)."""
+    def record_synthesis_outline(project_id: str, outline: dict[str, Any]) -> dict[str, Any]:
+        """Persist the host-authored report outline (sections derived from the graph)."""
         t = time.perf_counter()
-        return _env("record_meta_outline", services.record_meta_outline(project_id, outline), t)
+        return _env("record_synthesis_outline", services.record_synthesis_outline(project_id, outline), t)
 
     @mcp.tool()
-    def brief_meta_section(project_id: str, section_id: str, report_id: str | None = None) -> dict[str, Any]:
+    def brief_synthesis_section(project_id: str, section_id: str, report_id: str | None = None) -> dict[str, Any]:
         """GATHER one section's source studies (+ councils) so you can author it with citations."""
         t = time.perf_counter()
-        return _env("brief_meta_section", services.brief_meta_section(project_id, section_id, report_id), t)
+        return _env("brief_synthesis_section", services.brief_synthesis_section(project_id, section_id, report_id), t)
 
     @mcp.tool()
-    def record_meta_section(project_id: str, section_id: str, content: dict[str, Any], report_id: str | None = None) -> dict[str, Any]:
-        """Persist one authored meta-report section (markdown + citations: study_id/council_id)."""
+    def record_synthesis_section(project_id: str, section_id: str, content: dict[str, Any], report_id: str | None = None) -> dict[str, Any]:
+        """Persist one authored report section (markdown + citations: study_id/council_id)."""
         t = time.perf_counter()
-        return _env("record_meta_section", services.record_meta_section(project_id, section_id, content, report_id), t)
-
-    @mcp.tool()
-    def export_meta_report(project_id: str, report_id: str | None = None, format: str = "md") -> dict[str, Any]:
-        """Render the assembled meta-report (md or json)."""
-        t = time.perf_counter()
-        return _env("export_meta_report", services.export_meta_report(project_id, report_id, format), t)
+        return _env("record_synthesis_section", services.record_synthesis_section(project_id, section_id, content, report_id), t)
 
     # ----- Deletes (CRUD complete; MCP/CLI-only, never the read-only UI). Relocated here (M3): these
     # are research-artifact deletions (project/synthesis/council/persona), not prototype tools. -----
     @mcp.tool()
     def delete_research_project(project_id: str) -> dict[str, Any]:
-        """Delete a project container + its edges/open-questions/meta-reports. Syntheses are kept."""
+        """Delete a project container + its edges/open-questions. Syntheses (incl. reports) are kept."""
         t = time.perf_counter()
         return _env("delete_research_project", services.delete_research_project(project_id), t)
 

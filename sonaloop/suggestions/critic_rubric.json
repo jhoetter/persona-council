@@ -15,6 +15,6 @@
     {"key": "iteration", "threshold": 3,
      "probe": "Was the winning concept iterated on real feedback across the fidelity ladder, or one-shot? Which fidelity rung / refinement is missing?"},
     {"key": "finish", "threshold": 4,
-     "probe": "Is the project organized (sections), concluded (a substantial solution-presentation), and handed-off (a meta-report)?"}
+     "probe": "Is the project organized (sections), concluded (a substantial solution-presentation), and handed-off (a report)?"}
   ]
 }

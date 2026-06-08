@@ -307,7 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("syntheses")
     p = sub.add_parser("synthesis")
     p.add_argument("synthesis_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out")
-    # Research graph (Project container + edges + tags) + Meta-Report
+    # Research graph (Project container + edges + tags) + Report
     p = sub.add_parser("research-create")
     p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--persona", action="append", dest="personas")
     p = sub.add_parser("research-list")
@@ -331,11 +331,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("note-create"); p.add_argument("project_id"); p.add_argument("text"); p.add_argument("--title", default="")
     p = sub.add_parser("note-list"); p.add_argument("project_id")
     p = sub.add_parser("note-delete"); p.add_argument("project_id"); p.add_argument("note_id")
-    p = sub.add_parser("meta-brief"); p.add_argument("project_id")
-    p = sub.add_parser("meta-outline"); p.add_argument("project_id"); p.add_argument("file")
-    p = sub.add_parser("meta-section-brief"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("--report")
-    p = sub.add_parser("meta-section"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("file"); p.add_argument("--report")
-    p = sub.add_parser("meta-export")
+    p = sub.add_parser("report-brief"); p.add_argument("project_id")
+    p = sub.add_parser("report-outline"); p.add_argument("project_id"); p.add_argument("file")
+    p = sub.add_parser("report-section-brief"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("--report")
+    p = sub.add_parser("report-section"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("file"); p.add_argument("--report")
+    p = sub.add_parser("report-export")
     p.add_argument("project_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out"); p.add_argument("--report")
     # Methodology engine (data-driven, structure+LLM-judged)
     p = sub.add_parser("methodology-list")
@@ -412,7 +412,7 @@ def main(argv: list[str] | None = None) -> int:
             print("Installing the chromium browser for prototype screenshots + PDF export…")
             rc = subprocess.call([sys.executable, "-m", "playwright", "install", "chromium"])
             if rc == 0:
-                print("Done. Prototype screenshots and meta-report PDF export are now available.")
+                print("Done. Prototype screenshots and report PDF export are now available.")
             else:
                 print("playwright install failed; you can retry with:\n  python -m playwright install chromium",
                       file=sys.stderr)
@@ -645,16 +645,16 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.list_notes(args.project_id))
         elif args.command == "note-delete":
             _print(services.delete_note(args.project_id, args.note_id))
-        elif args.command == "meta-brief":
-            _print(services.brief_meta_report(args.project_id))
-        elif args.command == "meta-outline":
-            _print(services.record_meta_outline(args.project_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
-        elif args.command == "meta-section-brief":
-            _print(services.brief_meta_section(args.project_id, args.section_id, args.report))
-        elif args.command == "meta-section":
-            _print(services.record_meta_section(args.project_id, args.section_id, json.loads(Path(args.file).read_text(encoding="utf-8")), args.report))
-        elif args.command == "meta-export":
-            content = services.export_meta_report(args.project_id, args.report, args.format)
+        elif args.command == "report-brief":
+            _print(services.brief_synthesis_outline(args.project_id))
+        elif args.command == "report-outline":
+            _print(services.record_synthesis_outline(args.project_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "report-section-brief":
+            _print(services.brief_synthesis_section(args.project_id, args.section_id, args.report))
+        elif args.command == "report-section":
+            _print(services.record_synthesis_section(args.project_id, args.section_id, json.loads(Path(args.file).read_text(encoding="utf-8")), args.report))
+        elif args.command == "report-export":
+            content = services.export_report(args.project_id, args.report, args.format)
             _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
         elif args.command == "methodology-list":
             _print(services.list_methodologies())

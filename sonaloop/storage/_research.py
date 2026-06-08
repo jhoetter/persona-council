@@ -6,30 +6,8 @@ from typing import Any
 from ..config import utc_now_iso
 
 
-def _meta_report_to_synthesis(mr: dict[str, Any]) -> dict[str, Any]:
-    """Legacy MetaReport dict → unified Synthesis dict (scope=project). Merges the meta-report's split
-    `outline` (structure) + `sections` (authored content) into one `sections` list."""
-    authored = {s.get("section_id"): s for s in (mr.get("sections") or [])}
-    sections = []
-    for o in (mr.get("outline") or []):
-        a = authored.get(o.get("id"), {})
-        sections.append({"id": o.get("id", ""), "heading": o.get("heading", ""),
-                         "intent": o.get("intent", ""), "theme_tags": o.get("theme_tags", []),
-                         "source_study_ids": o.get("source_study_ids", []),
-                         "markdown": a.get("markdown", ""), "citations": a.get("citations", []),
-                         "figures": a.get("figures", [])})
-    return {"id": mr["id"], "title": mr.get("title", ""), "scope": "project",
-            "project_id": mr.get("project_id", ""), "lead": mr.get("build_order_narrative", ""),
-            "sections": sections, "graph_snapshot": mr.get("graph_snapshot"),
-            "created_at": mr.get("created_at", ""), "start_input": "", "council_ids": [],
-            "arc_narrative": "", "gesamtbild": "", "positionierung": "", "references": [],
-            "citations": [], "goal": "", "status": "done", "next_council_question": "",
-            "stop_reason": "", "iterations": 0, "phase": "", "mode": "", "role": "", "methodology": "",
-            "statements": [], "findings": [], "prompts": []}
-
-
 class ResearchMixin:
-    # ---- Research graph: projects / edges / open questions / meta-reports ----
+    # ---- Research graph: projects / edges / open questions / reports ----
     def upsert_research_project(self, project: dict[str, Any]) -> None:
         self.conn.execute(
             "INSERT INTO research_projects (id, slug, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) "
@@ -63,39 +41,15 @@ class ResearchMixin:
             "SELECT data FROM research_open_questions WHERE project_id=? ORDER BY created_at", (project_id,)).fetchall()
         return [json.loads(r["data"]) for r in rows]
 
-    # Meta-reports are now project-scope SYNTHESES (spec/unified-synthesis-report.md). These methods are
-    # thin back-compat shims over the syntheses store so existing callers keep working.
-    def upsert_meta_report(self, report: dict[str, Any]) -> None:
-        report = dict(report)
-        report.setdefault("scope", "project")
-        self.upsert_synthesis(report)
-
-    def get_meta_report(self, report_id: str) -> dict[str, Any] | None:
+    # A report IS a project-scope SYNTHESIS (scope="project") — one concept. These are thin views
+    # over the syntheses store, queried by scope.
+    def get_report(self, report_id: str) -> dict[str, Any] | None:
         syn = self.get_synthesis(report_id)
         return syn if syn and syn.get("scope") == "project" else None
 
-    def list_meta_reports(self, project_id: str) -> list[dict[str, Any]]:
+    def list_reports(self, project_id: str) -> list[dict[str, Any]]:
         rep = [s for s in self.list_syntheses() if s.get("scope") == "project" and s.get("project_id") == project_id]
         return sorted(rep, key=lambda s: s.get("created_at", ""), reverse=True)
-
-    def list_all_meta_reports(self) -> list[dict[str, Any]]:
-        rep = [s for s in self.list_syntheses() if s.get("scope") == "project"]
-        return sorted(rep, key=lambda s: s.get("created_at", ""), reverse=True)
-
-    def migrate_meta_reports(self) -> None:
-        """One-time, idempotent: move legacy `meta_reports` rows into the syntheses store as
-        scope='project' syntheses (same id), merging outline+sections into the unified section shape."""
-        try:
-            rows = self.conn.execute("SELECT id, data FROM meta_reports").fetchall()
-        except Exception:
-            return
-        for r in rows:
-            mr = json.loads(r["data"])
-            if not self.get_synthesis(mr["id"]):
-                self.upsert_synthesis(_meta_report_to_synthesis(mr))
-            self.conn.execute("DELETE FROM meta_reports WHERE id=?", (mr["id"],))
-        if rows:
-            self.conn.commit()
 
     # ---- ESV: the resumable run object ----
     def upsert_run(self, run: dict[str, Any]) -> None:
@@ -161,14 +115,14 @@ class ResearchMixin:
 
     # ---- Granular deletes (D in CRUD; all via MCP/CLI, never the read-only UI) ----
     def delete_research_project(self, project_id: str) -> dict[str, int]:
-        """Delete a project container + its graph metadata (edges, open questions,
-        meta-reports). The syntheses themselves are independent studies and are kept."""
+        """Delete a project container + its graph metadata (edges, open questions).
+        The syntheses (incl. project-scope reports) are independent studies and are kept."""
         p = self.get_research_project(project_id)
         if not p:
             return {}
         pid = p["id"]
         deleted: dict[str, int] = {}
-        for table in ("research_open_questions", "meta_reports", "methodology_judgments"):
+        for table in ("research_open_questions", "methodology_judgments"):
             cur = self.conn.execute(f"DELETE FROM {table} WHERE project_id=?", (pid,))
             deleted[table] = cur.rowcount
         cur = self.conn.execute("DELETE FROM research_projects WHERE id=?", (pid,))
@@ -178,10 +132,5 @@ class ResearchMixin:
 
     def delete_open_question(self, question_id: str) -> int:
         cur = self.conn.execute("DELETE FROM research_open_questions WHERE id=?", (question_id,))
-        self.conn.commit()
-        return cur.rowcount
-
-    def delete_meta_report(self, report_id: str) -> int:
-        cur = self.conn.execute("DELETE FROM meta_reports WHERE id=?", (report_id,))
         self.conn.commit()
         return cur.rowcount

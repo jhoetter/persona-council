@@ -138,7 +138,7 @@ def test_pipeline_regression_score_and_memory_depth(store):
     assert out["kind"] == "done" and out["status"] == "finished"
     # the finished project is organized + concluded + handed-off, with a structured terminal synthesis
     g = services.get_project_graph(pid, store=store)
-    assert len(g["sections"]) >= 1 and store.list_meta_reports(pid)
+    assert len(g["sections"]) >= 1 and store.list_reports(pid)
     from sonaloop import artifacts as A
     syns = store.list_syntheses()
     assert any((s.get("gesamtbild") or "").strip()

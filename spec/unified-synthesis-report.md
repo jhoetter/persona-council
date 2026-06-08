@@ -3,6 +3,26 @@
 Status: **DONE (A+B)** (2026-06-07). Author: "ist Synthese das gleiche wie Report? … ich denke,
 dass es letztlich eins sein sollte, nur sehr sauber und gut strukturiert." → migrate **A + B** fully.
 
+**Follow-on — full surface unification to "Report" (2026-06-08).** A+B unified the *entity* but
+deliberately kept labeling project-scope syntheses as "Meta-Report" and convergence ones as
+"Synthese" (§4 "the UI labels by scope"). The author then asked for it to be *one concept*, period:
+"a synthesis IS a meta report … they should really be just one concept", with reports being short or
+exhaustive (just block count) built from shared blocks (sections + figures/charts) and exportable
+(PDF now, PPTX later). So the residual duality was removed:
+- **Vocabulary:** one user-facing name, **"Report"**, everywhere (nav, list, timeline, covers,
+  glossary, leads). The `meta_report` i18n key is gone; `synthesis_kind`="Report"; the synthesis
+  node presentation label is "Report". (Code/storage keep the name `synthesis`.)
+- **MCP/CLI surface:** the parallel `*_meta_*` tool family collapsed into one `synthesis_*` family —
+  `brief_synthesis_outline`/`record_synthesis_outline`/`brief_synthesis_section`/
+  `record_synthesis_section`/`scaffold_synthesis`; export via `export_synthesis`. CLI `meta-*` →
+  `report-*`. Internal `build_meta_*`/`validate_meta_*` helpers renamed `*_synthesis_*`.
+- **Storage cleanup:** the dead `meta_reports` table + index, the `migrate_meta_reports` shim, the
+  `_meta_report_to_synthesis` converter, and the `/meta-reports/*` routes were removed (live DB was
+  already fully migrated). Storage methods renamed `list_reports`/`get_report`.
+- `scope` stays **internal** (plan-node-vs-handoff, 2×2-vs-sections); it is never a separate identity.
+- Open follow-up (Phase 2, not in this pass): generalize the `chart` figure-kind beyond
+  `effort_impact` (pie/bar) and add a PPTX exporter over the same section/figure model.
+
 Builds on `spec/unified-artifact-schema.md` (the 5 primitives — synthesis findings already use them),
 `spec/research-graph-and-meta-report.md`, and `spec/meta-report-presentation-and-pdf.md` (the report
 renderer + figures + PDF). Preserves the standing invariants: host authors all text, web is read-only,

@@ -42,10 +42,10 @@ from .. import evaluation as evaluation_mod
 from ..llm_simulation import (
     build_cohort_critic_prompt,
     build_consolidation_prompt,
-    build_meta_outline_prompt,
-    build_meta_section_prompt,
-    validate_meta_outline_payload,
-    validate_meta_section_payload,
+    build_synthesis_outline_prompt,
+    build_synthesis_section_prompt,
+    validate_synthesis_outline_payload,
+    validate_synthesis_section_payload,
     build_digest_prompt,
     build_eval_critic_prompt,
     build_evidence_check_prompt,
@@ -230,7 +230,7 @@ def ref_backlinks(project_id: str, store: Store | None = None) -> dict[str, list
 
 
 def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
-    """A graph node for a synthesis (study) — used by the plan-less / meta-report study_ids path."""
+    """A graph node for a synthesis (study) — used by the plan-less / report study_ids path."""
     syn = store.get_synthesis(study_id)
     if not syn:
         return None
@@ -245,11 +245,11 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
     }
 
 
-def _attach_meta_reports(g: dict, project_id: str, store: Store) -> dict:
-    """Meta-reports are first-class project artifacts — expose them on the graph so the outline lists them
-    inline (among the methodology rows), not just as a top-bar button."""
-    g["meta_reports"] = [{"id": r["id"], "title": r.get("title", ""), "created_at": r.get("created_at", ""),
-                          "n_sections": len(r.get("outline") or [])} for r in store.list_meta_reports(project_id)]
+def _attach_reports(g: dict, project_id: str, store: Store) -> dict:
+    """Reports (project-scope syntheses) are first-class project artifacts — expose them on the graph so
+    the outline lists them inline (among the methodology rows), not just as a top-bar button."""
+    g["reports"] = [{"id": r["id"], "title": r.get("title", ""), "created_at": r.get("created_at", ""),
+                     "n_sections": len(r.get("sections") or [])} for r in store.list_reports(project_id)]
     return g
 
 
@@ -261,9 +261,9 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
     store = store or Store()
     plan = _plan.get_plan(project_id, store=store)
     if plan is not None:                       # the plan engine is the single source of truth (HX3)
-        return _attach_meta_reports(plan_graph(project_id, store=store), project_id, store)
+        return _attach_reports(plan_graph(project_id, store=store), project_id, store)
     # Plan-less fallback (start_project always seeds a plan, so this is only hit by hand-built data /
-    # the study_ids-based meta-report path): nodes from the project's studies + notes — NO study-edge
+    # the study_ids-based report path): nodes from the project's studies + notes — NO study-edge
     # layer (retired), so no edges.
     project = _require_research_project(store, project_id)
     tags = project.get("study_tags", {})
@@ -292,7 +292,7 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
                    "open_questions": sum(1 for o in oqs if o.get("status") == "open"),
                    "themes": len(project.get("themes", []))},
     }
-    return _attach_meta_reports(g, project_id, store)
+    return _attach_reports(g, project_id, store)
 
 
 
@@ -524,12 +524,12 @@ def derive_sections(project_id: str, store: Store | None = None) -> dict[str, An
             "sections": len(list_sections(project_id, store=store))}
 
 
-def scaffold_meta_report(project_id: str, store: Store | None = None) -> dict[str, Any]:
-    """ESV1 — seed a meta-report OUTLINE from the project's phases so the conclusion hand-off is one
-    author step (brief_meta_section → record_meta_section), not authored from scratch. Makes
+def scaffold_synthesis(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """ESV1 — seed a project REPORT outline from the project's phases so the conclusion hand-off is one
+    author step (brief_synthesis_section → record_synthesis_section), not authored from scratch. Makes
     assess_project.finish.handed_off flip true. Idempotent: returns the existing report if one exists."""
     store = store or Store()
-    existing = store.list_meta_reports(project_id)
+    existing = store.list_reports(project_id)
     if existing:
         return existing[0]
     graph = get_project_graph(project_id, store=store)
@@ -552,7 +552,7 @@ def scaffold_meta_report(project_id: str, store: Store | None = None) -> dict[st
                      "theme_tags": [], "source_study_ids": graph.get("build_order", [])}]
     outline = {"build_order_narrative": f"Auto-seeded outline for {graph['project'].get('title','')}.",
                "sections": sections}
-    return record_meta_outline(project_id, outline, store=store)
+    return record_synthesis_outline(project_id, outline, store=store)
 
 
 def get_research_frontier(project_id: str, store: Store | None = None) -> dict[str, Any]:
@@ -576,7 +576,7 @@ def get_research_frontier(project_id: str, store: Store | None = None) -> dict[s
 
 
 def delete_research_project(project_id: str, store: Store | None = None) -> dict[str, Any]:
-    """Delete a project container + its graph metadata (edges/open questions/meta-reports).
+    """Delete a project container + its graph metadata (edges/open questions).
     The syntheses stay (they are independent studies)."""
     store = store or Store()
     p = _require_research_project(store, project_id)

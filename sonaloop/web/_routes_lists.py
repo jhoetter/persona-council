@@ -49,13 +49,14 @@ HOWITWORKS = [
      ("Evidence — councils, prototypes, notes",
       "The evidence is memory-grounded: **councils** (persona debates), **prototypes** (personas test "
       "them in sessions), and **notes/sections** — each traceable back to a persona's memory.")),
-    (("Synthese / Report — die Antwort",
-      "Die Evidenz konvergiert zu einer **Synthese**: als *Convergence* (Kernprobleme + Empfehlungen, "
-      "Aufwand·Nutzen-2×2) oder als *Projekt-Report* (erzählerisch, präsentationsreif) — beide "
-      "PDF-exportierbar."),
-     ("Synthesis / report — the answer",
-      "The evidence converges into a **synthesis**: as *convergence* (key problems + recommendations, "
-      "effort·impact 2×2) or a *project report* (narrative, presentation-grade) — both PDF-exportable.")),
+    (("Report — die Antwort",
+      "Die Evidenz konvergiert zu einem **Report** — kurz oder ausführlich, das ist nur die Zahl der "
+      "Bausteine: Kernprobleme + Empfehlungen (Aufwand·Nutzen-2×2) und/oder erzählerische, "
+      "präsentationsreife Sections mit Figuren. Exportierbar als PDF."),
+     ("Report — the answer",
+      "The evidence converges into a **report** — short or exhaustive, which is just how many building "
+      "blocks it has: key problems + recommendations (effort·impact 2×2) and/or narrative, "
+      "presentation-grade sections with figures. Exportable as PDF.")),
 ]
 HOWITWORKS_CONTRACT = {
     "de": "Jeder generative Schritt folgt **einem Vertrag**: `brief_*` (Kontext sammeln) → der Host "
@@ -78,11 +79,11 @@ DOCS = [
               "(Discover → Define → Develop → Deliver). Everything belonging to a question lives here."),
      "data": (["Methodologie + Phasen-Fortschritt (Discover→Deliver)",
                "Offene Fragen & die *Build-Order*-Narrative",
-               "Verknüpfte Councils, Synthesen/Reports, Notizen, Prototypen, Sections",
+               "Verknüpfte Councils, Reports, Notizen, Prototypen, Sections",
                "Ein Graph-Snapshot (Knoten + Kanten) für die Outline"],
               ["Methodology + phase progress (Discover→Deliver)",
                "Open questions & the *build-order* narrative",
-               "Linked councils, syntheses/reports, notes, prototypes, sections",
+               "Linked councils, reports, notes, prototypes, sections",
                "A graph snapshot (nodes + edges) driving the outline"]),
      "adv": ("Eine Studie an *einem* Ort: du siehst jederzeit, was erledigt und was offen ist — und "
              "wie jedes Artefakt zum Ergebnis beiträgt, statt verstreuter Dokumente.",
@@ -121,24 +122,22 @@ DOCS = [
              "Real, *traceable* reactions instead of opinions: every statement can be traced back to a "
              "persona's memory.")},
     {"art": "synthesis", "icon": "syntheses", "name": "syntheses",
-     "desc": ("Der **Report-Knoten** — *eine* Entität für zwei Tiefen: eine **Convergence**-Synthese "
-              "faltet Councils zu Kernproblemen + Empfehlungen (Aufwand·Nutzen-2×2); ein **Projekt**-"
-              "Report ist die erzählerische, präsentationsreife Sicht über die ganze Studie.",
-              "The **report node** — *one* entity at two depths: a **convergence** synthesis folds "
-              "councils into key problems + recommendations (effort·impact 2×2); a **project** report "
-              "is the narrative, presentation-grade view across the whole study."),
-     "data": (["`scope`-Tag: `convergence` (strukturiert) oder `project` (Report)",
-               "Findings: Kernprobleme & Empfehlungen mit Aufwand·Nutzen-Score",
+     "desc": ("Ein **Report** — *ein* Konzept, beliebig kurz oder ausführlich: faltet Councils zu "
+              "Kernproblemen + Empfehlungen (Aufwand·Nutzen-2×2) und/oder erzählt die ganze Studie in "
+              "präsentationsreifen Sections. Länge ist nur die Zahl der Bausteine, kein eigener Typ.",
+              "A **report** — *one* concept, as short or exhaustive as you like: it folds councils into "
+              "key problems + recommendations (effort·impact 2×2) and/or tells the whole study in "
+              "presentation-grade sections. Length is just block count, not a separate type."),
+     "data": (["Findings: Kernprobleme & Empfehlungen mit Aufwand·Nutzen-Score",
                "Voices (Persona-Stimmen) + Quell-Councils + Graph-Snapshot",
-               "Report: Markdown-Sections, Lead, Figuren (Prototyp-Shots, Avatare, 2×2-Charts, Assets)"],
-              ["A `scope` tag: `convergence` (structured) or `project` (report)",
-               "Findings: key problems & recommendations scored by effort·impact",
+               "Sections: Markdown, Lead, Figuren (Prototyp-Shots, Avatare, 2×2-Charts, Assets)"],
+              ["Findings: key problems & recommendations scored by effort·impact",
                "Voices (persona quotes) + source councils + graph snapshot",
-               "Report: markdown sections, lead, figures (prototype shots, avatars, 2×2 charts, assets)"]),
-     "adv": ("**Ein** Renderer, *ein* Export: beide Tiefen sind report-grade und als **PDF** abrufbar. "
-             "Synthesen verketten sich zu einem wachsenden Studien-Bogen statt loser Einzelreports.",
-             "**One** renderer, *one* export: both depths are report-grade and **PDF**-exportable. "
-             "Syntheses chain into one growing study arc instead of loose one-off reports.")},
+               "Sections: markdown, lead, figures (prototype shots, avatars, 2×2 charts, assets)"]),
+     "adv": ("**Ein** Renderer, *ein* Export: jeder Report ist report-grade und als **PDF** abrufbar. "
+             "Reports verketten sich zu einem wachsenden Studien-Bogen statt loser Einzeldokumente.",
+             "**One** renderer, *one* export: every report is report-grade and **PDF**-exportable. "
+             "Reports chain into one growing study arc instead of loose one-off documents.")},
     {"art": "prototype", "icon": "prototype", "name": "prototypes_h",
      "desc": ("Ein **lauffähiges Artefakt** (von grob bis hochauflösend), das Personas tatsächlich testen.",
               "A **runnable artefact** (low to high fidelity) that personas actually test."),
@@ -238,8 +237,8 @@ def _docs_page() -> str:
 
 # The unified data primitives (spec/unified-artifact-schema.md) — surfaced here so the data model is visible.
 PRIMITIVES = [
-    ("Statement", "Eine Persona-Aussage: Text, Haltung, Bezug, Belege. Vereint Council-Turns, Synthese-Voices und Prototyp-Reaktionen.",
-     "A persona's utterance: text, stance, target, refs. Unifies council turns, synthesis voices and prototype reactions."),
+    ("Statement", "Eine Persona-Aussage: Text, Haltung, Bezug, Belege. Vereint Council-Turns, Report-Voices und Prototyp-Reaktionen.",
+     "A persona's utterance: text, stance, target, refs. Unifies council turns, report voices and prototype reactions."),
     ("Finding", "Ein authored Analyse-Item (Kernproblem, Empfehlung, offene Frage …): Markdown-Text, optionaler Score, Belege.",
      "An authored analysis item (key problem, recommendation, open question …): markdown text, optional score, refs."),
     ("Prompt", "Das Gestellte: Frage, Proposal, Ziel oder Fokus — eine Form für alles, was untersucht wird.",
@@ -330,21 +329,16 @@ def register_lists(app) -> None:
         return _list_page(store, title=t("notes"), lead=t("notes_lead"), rows=rows,
                           empty_icon="panel", empty_msg=t("no_notes"), active="note")
 
-    @app.get("/meta-reports")                       # unified: reports are project-scope syntheses
-    def meta_reports_list():
-        from fastapi.responses import RedirectResponse
-        return RedirectResponse("/syntheses")
-
 # Co-located CSS (spec/roadmap.md R3): linear list rows.
 register_css(r"""
 /* ---- linear list rows (G3) ---- */
 .group{margin:18px 0 2px;display:flex;align-items:center;gap:8px;font-size:var(--t-sm);color:var(--muted);font-weight:600}
 .group .cnt{color:var(--muted);font-weight:500}
 .rows{border:0;border-top:1px solid var(--line-2);background:transparent}
-.row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-bottom:1px solid var(--line-2);min-height:40px;border-radius:7px;transition:background 110ms}
+.row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-bottom:1px solid var(--line-2);min-height:40px;border-radius:var(--radius-sm);transition:background 110ms}
 .row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
 .row>svg.ic,.row>.ic{color:var(--faint);flex-shrink:0;width:16px;height:16px}.row:hover>svg.ic{color:var(--muted)}
-.rico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;border-radius:6px;background:var(--panel-2)}
+.rico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;border-radius:var(--radius-sm);background:var(--panel-2)}
 .rico svg{width:15px;height:15px}
 .h1cnt{font-size:var(--t-body);font-weight:500;color:var(--faint);margin-left:7px;vertical-align:middle}
 .list-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 0;color:var(--muted);text-align:center}.list-empty svg{width:26px;height:26px;color:var(--faint)}

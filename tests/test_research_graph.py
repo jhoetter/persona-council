@@ -35,28 +35,28 @@ def _project_with_studies(store, sids, title="MR"):
     return proj["id"]
 
 
-def test_meta_report_round_trip(store):
+def test_report_round_trip(store):
     _seed_studies(store, 2)
     pid = _project_with_studies(store, ["syn0", "syn1"])
 
-    brief = services.brief_meta_report(pid, store=store)
+    brief = services.brief_synthesis_outline(pid, store=store)
     assert brief["study_ids"] == ["syn0", "syn1"] and "instructions" in brief
 
     outline = {"build_order_narrative": "pains then pricing",
                "sections": [{"heading": "Pains", "theme_tags": ["pains"], "source_study_ids": ["syn0"], "intent": "establish"},
                             {"heading": "Pricing", "theme_tags": ["pricing"], "source_study_ids": ["syn1"], "intent": "price"}]}
-    report = services.record_meta_outline(pid, outline, store=store)
-    # meta-reports are now project-scope syntheses; outline+sections merged into one `sections` list
+    report = services.record_synthesis_outline(pid, outline, store=store)
+    # a report IS a project-scope synthesis; outline+sections merged into one `sections` list
     assert report["scope"] == "project"
     assert [s["id"] for s in report["sections"]] == ["sec1", "sec2"]
 
-    sb = services.brief_meta_section(pid, "sec1", store=store)
+    sb = services.brief_synthesis_section(pid, "sec1", store=store)
     assert [s["title"] for s in sb["frame"]["studies"]] == ["Pains"]
-    services.record_meta_section(pid, "sec1",
-                                 {"markdown": "## Pains\nReconciliation is the core pain.",
-                                  "citations": [{"study_id": "syn0", "council_id": "c1", "quote": "exec"}]}, store=store)
+    services.record_synthesis_section(pid, "sec1",
+                                      {"markdown": "## Pains\nReconciliation is the core pain.",
+                                       "citations": [{"study_id": "syn0", "council_id": "c1", "quote": "exec"}]}, store=store)
 
-    md = services.export_meta_report(pid, format="md", store=store)
+    md = services.export_report(pid, format="md", store=store)
     assert "pains then pricing" in md and "Reconciliation is the core pain." in md
     # unauthored section shows a marker, not fabricated content
     assert ("not yet authored" in md) or ("noch nicht verfasst" in md)
@@ -69,7 +69,7 @@ def test_purge_clears_research_graph(store):
     assert services.list_research_projects(store=store)
     services.purge_runtime_data(remove_files=False, store=store)
     assert services.list_research_projects(store=store) == []
-    assert store.list_meta_reports(pid) == []
+    assert store.list_reports(pid) == []
     assert store.list_open_questions(pid) == []
 
 
@@ -101,7 +101,7 @@ def test_invalid_outline_rejected(store):
     _seed_studies(store, 1)
     pid = _project_with_studies(store, ["syn0"], title="X")
     with pytest.raises(ValueError):
-        services.record_meta_outline(pid, {"sections": []}, store=store)
+        services.record_synthesis_outline(pid, {"sections": []}, store=store)
 
 
 def test_synthesis_preserves_structured_blocks_and_warns_when_thin(store):
@@ -137,9 +137,9 @@ def test_synthesis_preserves_structured_blocks_and_warns_when_thin(store):
     assert any("SYNTHESIS_THIN" in w for w in thin.get("warnings", []))
 
 
-def test_derive_sections_and_scaffold_meta_report_finish_by_construction(store):
+def test_derive_sections_and_scaffold_synthesis_finish_by_construction(store):
     """ESV1: derive_sections organizes a completed methodology project (phase + prototype + deliver +
-    run-journal sections, idempotent) and scaffold_meta_report seeds a meta-report — together flipping
+    run-journal sections, idempotent) and scaffold_synthesis seeds a project report — together flipping
     assess_project.finish to organized + handed-off, so a finished run is organized BY CONSTRUCTION."""
     proj = services.start_project("ESV1", "hmw?", "double_diamond", persona_ids=["p1"], store=store)
     pid = proj["id"]
@@ -158,14 +158,14 @@ def test_derive_sections_and_scaffold_meta_report_finish_by_construction(store):
     assert services.assess_project(pid, store=store)["finish"]["organized"] is False
     out = services.derive_sections(pid, store=store)
     assert "Discover" in out["created"] and "Deliver — Conclusion" in out["created"]
-    services.scaffold_meta_report(pid, store=store)
+    services.scaffold_synthesis(pid, store=store)
     f = services.assess_project(pid, store=store)["finish"]
     assert f["organized"] is True and f["handed_off"] is True
     # idempotent: re-deriving doesn't duplicate
     n1 = len(services.list_sections(pid, store=store))
     services.derive_sections(pid, store=store)
     assert len(services.list_sections(pid, store=store)) == n1
-    assert services.scaffold_meta_report(pid, store=store)["id"]  # returns existing, no error
+    assert services.scaffold_synthesis(pid, store=store)["id"]  # returns existing, no error
 
 
 def test_notes_are_one_entity_built_notes_carry_prototype(store):

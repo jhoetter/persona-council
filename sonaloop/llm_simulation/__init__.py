@@ -24,8 +24,8 @@ from ._prompts import (
     build_eval_critic_prompt,
     build_cohort_critic_prompt,
     build_evidence_check_prompt,
-    build_meta_outline_prompt,
-    build_meta_section_prompt,
+    build_synthesis_outline_prompt,
+    build_synthesis_section_prompt,
     build_synthesis_prompt,
 )
 from ._validators import (
@@ -39,7 +39,7 @@ from ._validators import (
     validate_eval_critic_payload,
     validate_cohort_critic_payload,
     validate_evidence_check_payload,
-    validate_meta_outline_payload,
-    validate_meta_section_payload,
+    validate_synthesis_outline_payload,
+    validate_synthesis_section_payload,
     validate_synthesis_payload,
 )

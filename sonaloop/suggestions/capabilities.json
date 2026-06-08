@@ -7,6 +7,6 @@
     {"tag": "decide", "hint": "Consolidate a fan into one decision node (POV / shortlist / spec / presentation).", "typical_requires": {"min_inputs": 2, "gate_tag": "divergence_complete"}},
     {"tag": "build", "hint": "Scaffold real artifact(s) of produces.artifact_type (e.g. a prototype, survey, journey-map).", "typical_requires": {}},
     {"tag": "test", "hint": "Personas USE an artifact (a real session, e.g. via the Playwright harness) → grounded reactions.", "typical_requires": {"session_of_tags": ["prototype"]}},
-    {"tag": "synthesize", "hint": "Second-order report / solution presentation over upstream nodes (the meta-report).", "typical_requires": {"min_inputs": 2}}
+    {"tag": "synthesize", "hint": "Second-order report / solution presentation over upstream nodes (the project report).", "typical_requires": {"min_inputs": 2}}
   ]
 }

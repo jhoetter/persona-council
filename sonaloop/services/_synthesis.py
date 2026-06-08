@@ -1,4 +1,4 @@
-"""Syntheses (study arcs) + meta-report.
+"""Syntheses (study arcs) — including project-scope reports (a report IS a synthesis).
 
 Split out of the original sonaloop/services.py (behavior-preserving).
 Cross-module function references are bound at import time by services/__init__.py."""
@@ -43,10 +43,10 @@ from .. import evaluation as evaluation_mod
 from ..llm_simulation import (
     build_cohort_critic_prompt,
     build_consolidation_prompt,
-    build_meta_outline_prompt,
-    build_meta_section_prompt,
-    validate_meta_outline_payload,
-    validate_meta_section_payload,
+    build_synthesis_outline_prompt,
+    build_synthesis_section_prompt,
+    validate_synthesis_outline_payload,
+    validate_synthesis_section_payload,
     build_digest_prompt,
     build_eval_critic_prompt,
     build_evidence_check_prompt,
@@ -224,7 +224,7 @@ def list_syntheses(store: Store | None = None) -> list[dict[str, Any]]:
 
 _SYNTHESIS_EXPORT_LABELS = {
     "de": {
-        "report_title": "Synthese-Report",
+        "report_title": "Report",
         "arc_line": "Studien-Bogen aus {n} Councils · Status: {status} · erzeugt {date}.",
         "goal": "Ziel", "next_council": "Vorgeschlagener nächster Council (self-contained)",
         "stop_reason": "Abschlussgrund", "start": "Ausgangspunkt", "arc": "Bogen / Verlauf",
@@ -238,7 +238,7 @@ _SYNTHESIS_EXPORT_LABELS = {
         "sources": "Quellen (Councils in Reihenfolge)",
     },
     "en": {
-        "report_title": "Synthesis report",
+        "report_title": "Report",
         "arc_line": "Study arc across {n} councils · status: {status} · generated {date}.",
         "goal": "Goal", "next_council": "Proposed next council (self-contained)",
         "stop_reason": "Stop reason", "start": "Starting point", "arc": "Arc / trajectory",
@@ -260,7 +260,7 @@ def export_synthesis(synthesis_id: str, format: str = "md", store: Store | None 
     store = store or Store()
     syn = get_synthesis(synthesis_id, store)
     if syn.get("scope") == "project":      # a report → the report exporter (one export across scopes)
-        return export_meta_report(syn.get("project_id", ""), report_id=synthesis_id, format=format, store=store)
+        return export_report(syn.get("project_id", ""), report_id=synthesis_id, format=format, store=store)
     if format == "json":
         return json.dumps(syn, indent=2, ensure_ascii=False)
     role = {r["council_id"]: r.get("role", "") for r in syn.get("references", [])}
@@ -384,9 +384,9 @@ def _study_full(store: Store, study_id: str) -> dict[str, Any]:
 
 
 
-def brief_meta_report(project_id: str, store: Store | None = None) -> dict[str, Any]:
+def brief_synthesis_outline(project_id: str, store: Store | None = None) -> dict[str, Any]:
     """GATHER the whole project graph + each study's compact content so the host can
-    author the meta-report OUTLINE (then author sections)."""
+    author the project REPORT outline (then author its sections)."""
     store = store or Store()
     graph = get_project_graph(project_id, store=store)
     tags = _require_research_project(store, project_id).get("study_tags", {})
@@ -395,22 +395,22 @@ def brief_meta_report(project_id: str, store: Store | None = None) -> dict[str, 
         "edges": graph["edges"], "open_questions": [o for o in graph["open_questions"] if o.get("status") == "open"],
         "studies": [_study_compact(store, sid, tags.get(sid, [])) for sid in graph["build_order"]],
     }
-    return {"project_id": graph["project"]["id"], "schema": "meta_outline",
-            "study_ids": graph["build_order"], "instructions": build_meta_outline_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
+    return {"project_id": graph["project"]["id"], "schema": "synthesis_outline",
+            "study_ids": graph["build_order"], "instructions": build_synthesis_outline_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
 
 
 
-def record_meta_outline(project_id: str, outline: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
+def record_synthesis_outline(project_id: str, outline: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
     """Persist the host-authored outline as a new project-scope SYNTHESIS (a report); its sections are
-    authored next via record_meta_section. (spec/unified-synthesis-report.md — meta-reports ARE syntheses.)"""
+    authored next via record_synthesis_section. (A report IS a synthesis — one concept.)"""
     store = store or Store()
     project = _require_research_project(store, project_id)
-    data = validate_meta_outline_payload(outline, study_ids=project["study_ids"])
+    data = validate_synthesis_outline_payload(outline, study_ids=project["study_ids"])
     now = utc_now_iso()
-    # merge the outline's structure into the unified section shape (content filled by record_meta_section).
+    # merge the outline's structure into the unified section shape (content filled by record_synthesis_section).
     sections = [{**sec, "markdown": "", "citations": [], "figures": []} for sec in data["sections"]]
     report = Synthesis(
-        id=stable_id("metareport", project["id"], now), title=data.get("title") or f"{project['title']} — Meta-Report",
+        id=stable_id("report", project["id"], now), title=data.get("title") or f"{project['title']} — Report",
         start_input="", council_ids=[], arc_narrative="", gesamtbild="", positionierung="", references=[],
         created_at=now, scope="project", project_id=project["id"], lead=data["build_order_narrative"],
         sections=sections, graph_snapshot=get_project_graph(project["id"], store=store),
@@ -420,46 +420,46 @@ def record_meta_outline(project_id: str, outline: dict[str, Any], store: Store |
 
 
 
-def _latest_meta_report(store: Store, project_id: str, report_id: str | None) -> dict[str, Any]:
+def _latest_report(store: Store, project_id: str, report_id: str | None) -> dict[str, Any]:
     if report_id:
-        r = store.get_meta_report(report_id)
+        r = store.get_report(report_id)
         if not r:
-            raise KeyError(f"Unknown meta-report: {report_id}")
+            raise KeyError(f"Unknown report: {report_id}")
         return r
-    reports = store.list_meta_reports(project_id)
+    reports = store.list_reports(project_id)
     if not reports:
-        raise KeyError(f"No meta-report for project {project_id} — run brief_meta_report -> record_meta_outline first.")
+        raise KeyError(f"No report for project {project_id} — run brief_synthesis_outline -> record_synthesis_outline first.")
     return reports[0]
 
 
 
-def brief_meta_section(project_id: str, section_id: str, report_id: str | None = None,
-                       store: Store | None = None) -> dict[str, Any]:
+def brief_synthesis_section(project_id: str, section_id: str, report_id: str | None = None,
+                            store: Store | None = None) -> dict[str, Any]:
     """GATHER the full content of a section's source studies (+ their councils) so the
     host can author that section grounded with citations."""
     store = store or Store()
     project = _require_research_project(store, project_id)
-    report = _latest_meta_report(store, project["id"], report_id)
+    report = _latest_report(store, project["id"], report_id)
     section = next((s for s in report.get("sections", []) if s["id"] == section_id), None)
     if not section:
-        raise KeyError(f"Unknown section {section_id} in meta-report {report['id']}")
+        raise KeyError(f"Unknown section {section_id} in report {report['id']}")
     frame = {"heading": section["heading"], "intent": section.get("intent", ""), "theme_tags": section.get("theme_tags", []),
              "studies": [_study_full(store, sid) for sid in section.get("source_study_ids", [])]}
     return {"project_id": project["id"], "report_id": report["id"], "section_id": section_id,
-            "schema": "meta_section", "instructions": build_meta_section_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
+            "schema": "synthesis_section", "instructions": build_synthesis_section_prompt(frame) + MARKDOWN_CONTRACT, "frame": frame}
 
 
 
-def record_meta_section(project_id: str, section_id: str, content: dict[str, Any],
-                        report_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
+def record_synthesis_section(project_id: str, section_id: str, content: dict[str, Any],
+                             report_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
     """Author one section's body (markdown + citations + figures) into the project-scope synthesis."""
     store = store or Store()
     project = _require_research_project(store, project_id)
-    report = _latest_meta_report(store, project["id"], report_id)
+    report = _latest_report(store, project["id"], report_id)
     sec = next((s for s in report.get("sections", []) if s.get("id") == section_id), None)
     if not sec:
-        raise KeyError(f"Unknown section {section_id} in meta-report {report['id']}")
-    data = validate_meta_section_payload(content)
+        raise KeyError(f"Unknown section {section_id} in report {report['id']}")
+    data = validate_synthesis_section_payload(content)
     sec["markdown"] = data["markdown"]
     sec["citations"] = data["citations"]
     sec["figures"] = data.get("figures", [])
@@ -468,12 +468,12 @@ def record_meta_section(project_id: str, section_id: str, content: dict[str, Any
 
 
 
-def export_meta_report(project_id: str, report_id: str | None = None, format: str = "md",
-                       store: Store | None = None) -> str:
-    """Assemble the meta-report (outline + authored sections) into a stakeholder document."""
+def export_report(project_id: str, report_id: str | None = None, format: str = "md",
+                  store: Store | None = None) -> str:
+    """Assemble the report (outline + authored sections) into a stakeholder document."""
     store = store or Store()
     project = _require_research_project(store, project_id)
-    report = _latest_meta_report(store, project["id"], report_id)
+    report = _latest_report(store, project["id"], report_id)
     if format == "json":
         return json.dumps(report, indent=2, ensure_ascii=False)
     de = content_language() == "de"
@@ -496,7 +496,7 @@ def export_meta_report(project_id: str, report_id: str | None = None, format: st
 
     n_studies = len({x for sec in secs for x in sec.get("source_study_ids", [])})
     lines = [f"# {report['title']}", "",
-             f"*{'Meta-Synthese' if de else 'Meta-synthesis'} · {len(secs)} "
+             f"*{'Report' if de else 'Report'} · {len(secs)} "
              f"{'Abschnitte' if de else 'sections'} · {n_studies} "
              f"{'Studien' if de else 'studies'} · {report['created_at'][:10]}*", ""]
     if report.get("lead"):

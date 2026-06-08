@@ -1,6 +1,6 @@
-"""Synthesis pages: list + detail (spec/roadmap.md R2). A synthesis is scoped (spec/unified-synthesis-
-report.md): scope=convergence renders the structured view (findings → 2×2); scope=project renders the
-report (sections + figures). One detail route + one PDF export serve both."""
+"""Report pages: list + detail (spec/roadmap.md R2). A report IS a synthesis — one concept, short or
+exhaustive. Internally scope=convergence renders the structured view (findings → 2×2) and
+scope=project the narrative sections + figures; one detail route + one PDF export serve both."""
 from __future__ import annotations
 
 import re
@@ -9,7 +9,7 @@ from fastapi import Request
 from fastapi.responses import Response
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
-from .._report import render_meta_report
+from .._report import render_report
 
 
 def register_syntheses(app) -> None:
@@ -18,17 +18,18 @@ def register_syntheses(app) -> None:
         store = Store()
         rows = []
         for s in store.list_syntheses():
-            is_report = s.get("scope") == "project"
+            # ONE concept — a Report. It can be short or exhaustive; that's just block count, not a type.
             done = s.get("status", "done") == "done"
-            scope_pill = (_label(t("meta_report"), "var(--accent)") if is_report
-                          else _label(t("done") if done else t("running"), "var(--green)" if done else "var(--amber)"))
-            meta_right = (h("span", {}, t("n_sections", n=len(s.get("sections", [])))) if is_report
-                          else h("span", {}, f'{len(s.get("council_ids", []))} {t("councils")}'))
+            status_pill = _label(t("done") if done else t("running"),
+                                 "var(--green)" if done else "var(--amber)")
+            n_sec = len(s.get("sections", []))
+            blocks = (t("n_sections", n=n_sec) if n_sec
+                      else f'{len(s.get("council_ids", []))} {t("councils")}')
             rows.append(h("a", {"class_": "row", "href": f'/syntheses/{s["id"]}'},
                           h("span", {"class_": "rico", "style": "color:var(--violet)"},
-                            raw(_icon("report" if is_report else "syntheses"))),
+                            raw(_icon("report"))),
                           h("span", {"class_": "title"}, s["title"]),
-                          h("span", {"class_": "right"}, scope_pill, meta_right,
+                          h("span", {"class_": "right"}, status_pill, h("span", {}, blocks),
                             h("span", {}, s["created_at"][:10]),
                             raw(_star("synthesis", s["id"], s["title"], f"/syntheses/{s['id']}")))))
         return _list_page(store, title=t("syntheses"), lead=t("syntheses_lead"), rows=rows,
@@ -84,7 +85,7 @@ def register_syntheses(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
-        body = h("div", {"class_": "page"}, raw(render_meta_report(syn, store)))
+        body = h("div", {"class_": "page"}, raw(render_report(syn, store)))
         actions = fragment(h("a", {"class_": "sl-btn", "href": f"/syntheses/{synthesis_id}.pdf"}, t("export_pdf")),
                            raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}")))
         return _layout(short_title, body, store, crumbs=crumbs, active="syntheses", actions=actions)

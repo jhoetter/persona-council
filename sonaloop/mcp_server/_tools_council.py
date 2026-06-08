@@ -158,7 +158,7 @@ def register_council(mcp):
             "       ranking/shortlist) -> record_judgment(gate) -> complete_task.\n"
             "\n"
             "4. FINISH (the engine drives this on recommendation=='finish'): derive_sections (organize)\n"
-            "   + scaffold_meta_report -> brief_meta_section/record_meta_section + a rich terminal Deliver\n"
+            "   + scaffold_synthesis -> brief_synthesis_section/record_synthesis_section + a rich terminal Deliver\n"
             "   synthesis. score_run(project_id) snapshots quality. DONE only when assess_project.finish\n"
             "   is finished AND the completeness critic passes.\n"
             "\n"

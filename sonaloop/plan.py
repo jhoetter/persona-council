@@ -536,7 +536,7 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
         novelty = {}
     # FINISH readiness: gates-passed is NOT the same as a finished, exhaustive, well-told project. A
     # run must not stop at "a good starting point". `finish` checks the project is ORGANIZED (sections),
-    # CONCLUDED (a substantial terminal synthesis), and HANDED OFF (a meta-report) — generic, data-
+    # CONCLUDED (a substantial terminal synthesis), and HANDED OFF (a report) — generic, data-
     # driven, methodology-agnostic. When the plan's gates are all met but these are missing, the
     # recommendation is `finish`, not `complete`.
     finish_gaps: list[str] = []
@@ -557,8 +557,8 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
             finish_gaps.append("no substantial CONCLUSION — author a rich terminal solution-presentation "
                                "synthesis (the answer, who-wins + non-targets, validated solvers, build spec)")
         try:
-            if substantial and not store.list_meta_reports(project_id):
-                finish_gaps.append("no META-REPORT — author the project narrative/handover (meta_report)")
+            if substantial and not store.list_reports(project_id):
+                finish_gaps.append("no REPORT — author the project narrative/handover (scaffold_synthesis)")
         except Exception:
             pass
     except Exception:
@@ -567,7 +567,7 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
         gaps.extend(finish_gaps)
     finish = {"organized": not any("organized" in g for g in finish_gaps),
               "concluded": not any("CONCLUSION" in g for g in finish_gaps),
-              "handed_off": not any("META-REPORT" in g for g in finish_gaps),
+              "handed_off": not any("no REPORT" in g for g in finish_gaps),
               "finished": not finish_gaps, "gaps": finish_gaps}
     # memory_depth (ESV6): councils are only as deep as the simulated lives behind them — flag a thin
     # cohort so a run deepens memory (simulate-cohort) before concluding it has explored deeply.

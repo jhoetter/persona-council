@@ -295,7 +295,7 @@ def validate_evidence_check_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def validate_meta_outline_payload(payload: dict[str, Any], study_ids: list[str] | None = None) -> dict[str, Any]:
+def validate_synthesis_outline_payload(payload: dict[str, Any], study_ids: list[str] | None = None) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("Meta outline must be a JSON object.")
     allowed = set(study_ids or [])
@@ -320,7 +320,7 @@ def validate_meta_outline_payload(payload: dict[str, Any], study_ids: list[str] 
             "sections": sections[:40]}
 
 
-def validate_meta_section_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def validate_synthesis_section_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("Meta section must be a JSON object.")
     citations = []

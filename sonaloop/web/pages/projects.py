@@ -1,4 +1,4 @@
-"""Project pages: home/index, detail (outline/graph), meta-report, plan (spec/roadmap.md R2)."""
+"""Project pages: home/index, detail (outline/graph), report, plan (spec/roadmap.md R2)."""
 from __future__ import annotations
 
 from fastapi.responses import RedirectResponse
@@ -29,7 +29,7 @@ def register_projects(app) -> None:
                               for ty in used_types)) or h("span", {"class_": "muted small"}, "—")
         oqs = [o for o in graph["open_questions"] if o.get("status") == "open"]
         oq_html = fragment(*(h("li", {}, o["text"]) for o in oqs[:30])) or h("li", {"class_": "muted"}, "—")
-        # Plan opens in a right drawer. Meta-reports are NOT a top-bar button anymore — they're listed
+        # Plan opens in a right drawer. Reports are NOT a top-bar button anymore — they're listed
         # inline in the outline as first-class artifacts (add as many as you like; they flow into the project).
         top_btn = ""
         if services.get_plan(proj["id"], store=store):
@@ -146,30 +146,22 @@ def register_projects(app) -> None:
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
 
-    # ---- meta-reports are project-scope SYNTHESES now (spec/unified-synthesis-report.md). The canonical
-    #      URL is /syntheses/{id} (+ .pdf); these old paths redirect for back-compat. ----
-    @app.get("/meta-reports/{report_id}.pdf")
-    def meta_report_pdf(report_id: str):
-        return RedirectResponse(f"/syntheses/{report_id}.pdf")
-
-    @app.get("/meta-reports/{report_id}")
-    def meta_report_view(report_id: str):
-        return RedirectResponse(f"/syntheses/{report_id}")
-
-    @app.get("/projects/{project_id}/meta")                     # back-compat → the project's latest report
+    # ---- A report is a project-scope synthesis; its canonical URL is /syntheses/{id} (+ .pdf).
+    #      /projects/{id}/meta is a convenience → the project's latest report. ----
+    @app.get("/projects/{project_id}/meta")
     def project_meta(project_id: str):
         store = Store()
-        reports = store.list_meta_reports(project_id)
+        reports = store.list_reports(project_id)
         if reports:
             return RedirectResponse(f'/syntheses/{reports[0]["id"]}')
         try:
             proj = services.get_research_project(project_id, store=store)
         except KeyError:
-            return HTMLResponse(_layout(t("not_found"), _empty_state(t("meta_report"), t("runtime_maybe_cleared"), icon="overview"), store, active="projects"))
-        return HTMLResponse(_layout(proj["title"] + " — " + t("meta_report"),
-                                    _empty_state(t("meta_report"), t("meta_report_unavailable"), icon="overview"),
+            return HTMLResponse(_layout(t("not_found"), _empty_state(t("synthesis_kind"), t("runtime_maybe_cleared"), icon="overview"), store, active="projects"))
+        return HTMLResponse(_layout(proj["title"] + " — " + t("synthesis_kind"),
+                                    _empty_state(t("synthesis_kind"), t("report_unavailable"), icon="overview"),
                                     store, active="projects",
-                                    crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("meta_report"), None)]))
+                                    crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("synthesis_kind"), None)]))
 
     @app.get("/projects/{project_id}/plan", response_class=HTMLResponse)
     def project_plan(project_id: str) -> str:

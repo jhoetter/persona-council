@@ -41,10 +41,10 @@ from .. import evaluation as evaluation_mod
 from ..llm_simulation import (
     build_cohort_critic_prompt,
     build_consolidation_prompt,
-    build_meta_outline_prompt,
-    build_meta_section_prompt,
-    validate_meta_outline_payload,
-    validate_meta_section_payload,
+    build_synthesis_outline_prompt,
+    build_synthesis_section_prompt,
+    validate_synthesis_outline_payload,
+    validate_synthesis_section_payload,
     build_digest_prompt,
     build_eval_critic_prompt,
     build_evidence_check_prompt,
@@ -557,7 +557,7 @@ def run_step(run_id: str, store: Store | None = None) -> dict[str, Any]:
     """The deterministic brain. Returns the next dispatch for the host to execute:
     {kind: analyze|act|verify, step_id, key, next_action, directive} → spawn ONE authoring subagent
     then checkpoint_step; {kind: critic, brief} → spawn an INDEPENDENT critic then record_critic_round;
-    {kind: done, status, summary} → stop. Deterministic finish work (organize + meta-report outline +
+    {kind: done, status, summary} → stop. Deterministic finish work (organize + report outline +
     critic-gap injection) is done inline. Idempotent / resumable: it reads the live plan state."""
     store = store or Store()
     run = store.get_run(run_id)
@@ -566,7 +566,7 @@ def run_step(run_id: str, store: Store | None = None) -> dict[str, Any]:
     pid = run["project_id"]
     budget = run.get("budget")
     if budget is not None and len(run.get("steps", [])) >= budget:
-        derive_sections(pid, store=store); scaffold_meta_report(pid, store=store)  # noqa: F821 (bound)
+        derive_sections(pid, store=store); scaffold_synthesis(pid, store=store)  # noqa: F821 (bound)
         finish_run(run_id, "capped", store=store)
         return {"kind": "done", "status": "capped", "summary": _rl_summary(pid, store)}
     _rl_inject_pending(pid, run, store)
@@ -580,7 +580,7 @@ def run_step(run_id: str, store: Store | None = None) -> dict[str, Any]:
         if not a["finish"].get("organized"):
             derive_sections(pid, store=store)              # noqa: F821 (bound)
         if not a["finish"].get("handed_off"):
-            scaffold_meta_report(pid, store=store)          # noqa: F821 (bound)
+            scaffold_synthesis(pid, store=store)          # noqa: F821 (bound)
         a = assess_project(pid, store=store)
         if not a["finish"].get("concluded"):
             terminal = next((t["id"] for t in reversed((_plan.get_plan(pid, store=store) or {}).get("tasks", []))

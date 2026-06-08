@@ -131,8 +131,8 @@ def register_sections(mcp):
         return _env("derive_sections", services.derive_sections(project_id), t)
 
     @mcp.tool()
-    def scaffold_meta_report(project_id: str) -> dict[str, Any]:
-        """Seed a meta-report OUTLINE from the project's phases so the conclusion hand-off is one author
-        step (brief_meta_section → record_meta_section). Idempotent. Flips finish.handed_off true."""
+    def scaffold_synthesis(project_id: str) -> dict[str, Any]:
+        """Seed a project REPORT outline from the project's phases so the conclusion hand-off is one author
+        step (brief_synthesis_section → record_synthesis_section). Idempotent. Flips finish.handed_off true."""
         t = time.perf_counter()
-        return _env("scaffold_meta_report", services.scaffold_meta_report(project_id), t)
+        return _env("scaffold_synthesis", services.scaffold_synthesis(project_id), t)

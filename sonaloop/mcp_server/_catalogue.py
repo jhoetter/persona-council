@@ -15,7 +15,7 @@ _DOMAIN_LABELS = {
     "council": "Councils & syntheses",
     "prototypes": "Prototypes & proband sessions",
     "sections": "Sections, notes & organization",
-    "research": "Research projects, graph & meta-report",
+    "research": "Research projects, graph & report",
     "methodology": "Methodologies (plan seeds)",
     "personas": "Personas (profiles + evidence)",
     "simulation": "Simulation & memory (days/months/recall/timeline)",

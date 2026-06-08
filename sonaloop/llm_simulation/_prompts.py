@@ -228,8 +228,8 @@ Frame (profile claims + attached evidence):
 """
 
 
-def build_meta_outline_prompt(frame: dict[str, Any], language: str | None = None) -> str:
-    return f"""You are writing a META-REPORT over a whole research PROJECT: a graph of studies
+def build_synthesis_outline_prompt(frame: dict[str, Any], language: str | None = None) -> str:
+    return f"""You are writing a REPORT over a whole research PROJECT: a graph of studies
 (each study = a council chain consolidated into a synthesis). Derive the report's OUTLINE
 from the graph — its themes and dependency edges — not from a fixed template.
 
@@ -255,8 +255,8 @@ and each study's compact content):
 """
 
 
-def build_meta_section_prompt(frame: dict[str, Any], language: str | None = None) -> str:
-    return f"""You are authoring ONE section of a research meta-report. Write it grounded in the
+def build_synthesis_section_prompt(frame: dict[str, Any], language: str | None = None) -> str:
+    return f"""You are authoring ONE section of a research report. Write it grounded in the
 source studies provided — every load-bearing claim must cite a study (and, where possible, the
 council inside it).
 

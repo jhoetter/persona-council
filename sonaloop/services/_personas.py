@@ -41,10 +41,10 @@ from .. import evaluation as evaluation_mod
 from ..llm_simulation import (
     build_cohort_critic_prompt,
     build_consolidation_prompt,
-    build_meta_outline_prompt,
-    build_meta_section_prompt,
-    validate_meta_outline_payload,
-    validate_meta_section_payload,
+    build_synthesis_outline_prompt,
+    build_synthesis_section_prompt,
+    validate_synthesis_outline_payload,
+    validate_synthesis_section_payload,
     build_digest_prompt,
     build_eval_critic_prompt,
     build_evidence_check_prompt,
@@ -641,7 +641,7 @@ def delete_persona(persona_id: str, store: Store | None = None) -> dict[str, Any
 
 
 # ===================================================================== #
-# Meta-Report: second-order synthesis over a whole project graph.        #
+# Project REPORT: a project-scope synthesis over a whole project graph.   #
 # gather graph -> author OUTLINE -> author each SECTION (grounded) ->     #
-# export. Two-level provenance: meta-section -> study -> council.         #
+# export. Two-level provenance: section -> study -> council.              #
 # ===================================================================== #

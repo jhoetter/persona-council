@@ -3,7 +3,7 @@
 The whole research corpus reduces to five content primitives — Statement, Finding, Prompt, Ref, Stance —
 that every artifact composes. This module is the DOMAIN layer (no web imports): the primitive
 constructors, the data-driven vocabularies (stance scale, finding kinds), and — added in Phase 1 — the
-read adapters that map current records onto the primitives. Reusable by web, export, meta-report, search.
+read adapters that map current records onto the primitives. Reusable by web, export, report, search.
 """
 from __future__ import annotations
 

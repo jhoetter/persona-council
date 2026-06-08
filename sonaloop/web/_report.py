@@ -1,10 +1,10 @@
-"""Meta-report — report-grade renderer (spec/meta-report-presentation-and-pdf.md, Phase 1).
+"""Report — report-grade renderer (spec/meta-report-presentation-and-pdf.md, Phase 1).
 
-Turns a stored MetaReport (outline + authored markdown sections + citations) into a presentation-
-quality document: a cover, a table of contents, numbered sections, callout boxes (:::insight /
-:::recommendation / :::risk), pull-quotes, and footnote-style citations. Built as clean semantic HTML
-+ a print-first stylesheet so the eventual headless-Chromium PDF (Phase 3) reuses the exact same
-markup. The host authors all text; this only typesets.
+Turns a stored report (a synthesis: outline + authored markdown sections + citations, and/or the
+structured findings layer) into a presentation-quality document: a cover, a table of contents,
+numbered sections, callout boxes (:::insight / :::recommendation / :::risk), pull-quotes, and
+footnote-style citations. Built as clean semantic HTML + a print-first stylesheet so the
+headless-Chromium PDF reuses the exact same markup. The host authors all text; this only typesets.
 """
 from __future__ import annotations
 
@@ -115,13 +115,17 @@ def _body(md_text: str, figs: list) -> str:
     return fragment(*out)
 
 
-def render_meta_report(report: dict, store) -> str:
+def render_report(report: dict, store) -> str:
     """Report-grade render of ANY synthesis (spec/unified-synthesis-report.md §3 — one renderer):
     project scope → narrative sections + figures; convergence scope → the structured analysis
     (findings → 2×2, voices) in the SAME report shell (cover + report typography)."""
     de = content_language() == "de"
-    _t = report.get("title", "")           # the default title ends in " — Meta-Report"; custom titles show as-is
-    project_title = _t[:-len(" — Meta-Report")] if _t.endswith(" — Meta-Report") else _t
+    _t = report.get("title", "")           # the default title ends in " — Report"; custom titles show as-is
+    for _suffix in (" — Report", " — Meta-Report"):   # legacy meta-report titles kept resolving
+        if _t.endswith(_suffix):
+            _t = _t[:-len(_suffix)]
+            break
+    project_title = _t
 
     if report.get("scope") != "project":
         # a convergence synthesis, rendered in the unified report shell.
@@ -149,7 +153,7 @@ def render_meta_report(report: dict, store) -> str:
     ])
 
     cover = h("header", {"class_": "rp-cover"},
-              h("div", {"class_": "rp-eyebrow"}, t("meta_report")),
+              h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind")),
               h("h1", {"class_": "rp-title"}, project_title),
               h("div", {"class_": "rp-metaline"}, meta_line),
               (h("p", {"class_": "rp-lead"}, raw(_md(report["lead"])))
@@ -197,7 +201,7 @@ register_css(r"""
   border-left:3px solid var(--accent);padding-left:18px}
 .rp-lead p{margin:0}
 /* table of contents */
-.rp-toc{margin:0 0 34px;padding:16px 18px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+.rp-toc{margin:0 0 34px;padding:16px 18px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius)}
 .rp-toc-h{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:8px}
 .rp-toc ol{margin:0;padding:0;list-style:none;counter-reset:toc}
 .rp-toc li{counter-increment:toc;padding:3px 0}
@@ -214,7 +218,7 @@ register_css(r"""
   font-size:18px;line-height:1.55;color:var(--muted);font-style:italic}
 .report blockquote p{margin:0}
 /* callouts */
-.rp-call{display:flex;gap:12px;margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-left-width:3px;border-radius:10px;background:var(--panel-2)}
+.rp-call{display:flex;gap:12px;margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-left-width:3px;border-radius:var(--radius);background:var(--panel-2)}
 .rp-call-ic{flex:none;line-height:0;margin-top:2px}.rp-call-ic svg{width:18px;height:18px}
 .rp-call-body{min-width:0}.rp-call-body>:first-child{margin-top:0}.rp-call-body>:last-child{margin-bottom:0}
 .rp-insight{border-left-color:var(--accent)}.rp-insight .rp-call-ic{color:var(--accent)}
@@ -236,7 +240,7 @@ register_css(r"""
 .report-syn .block{max-width:none}
 /* figures (Phase 2) — prototype screenshots, images, charts */
 .rp-fig{margin:22px 0}
-.rp-fig img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.rp-fig img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .rp-fig figcaption{margin-top:9px;font-size:var(--t-sm);color:var(--muted);text-align:center}
 /* print: drop the app chrome, give the report the page (foundation for the Chromium PDF, Phase 3) */
 @media print{
