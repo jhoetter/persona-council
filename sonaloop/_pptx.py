@@ -12,9 +12,16 @@ Slide model (list of dicts):
      "chart": {...} | None,                         # see below
      "image": "/abs/path.png" | None,               # a figure image (prototype shot / avatar / asset)
      "footnote": str}
-Chart shapes:
+Chart shapes (one per design-system chart `of`):
   {"type": "bar",  "categories": [str], "values": [num]}
   {"type": "pie",  "categories": [str], "values": [num]}
+  {"type": "stacked_bar", "rows": [{"label": str, "segments": [{"label": str, "value": num}]}]}
+  {"type": "diverging_bar", "rows": [{"label": str, "positive": num, "negative": num}],
+     "positive_label": str, "negative_label": str}
+  {"type": "gauge", "items": [{"label": str, "value": num, "max": num}]}
+  {"type": "dot_plot", "rows": [{"label": str, "values": [num]}], "min": num, "max": num}
+  {"type": "heatmap", "columns": [str], "rows": [{"label": str, "values": [num]}]}
+  {"type": "line", "series": [{"label": str, "points": [num]}], "labels": [str]}
   {"type": "scatter", "points": [{"x":num,"y":num,"label":str}], "x_label": str, "y_label": str}
 """
 from __future__ import annotations
@@ -50,6 +57,15 @@ def _leverage_color(x: float, y: float) -> str:
     balanced → accent; costly → amber/red."""
     d = y - x
     return _GREEN if d >= 2 else _ACCENT if d >= 1 else _RED if d <= -1 else _AMBER
+
+
+def _mix(a: str, b: str, t: float) -> str:
+    """Blend hex colours a→b by t∈[0,1] (t=0 → a, t=1 → b). Used for the heatmap tint, mirroring the
+    DS `color-mix(in srgb, accent p%, surface-2)` — pass _mix(_SURFACE2, _ACCENT, value_fraction)."""
+    t = max(0.0, min(1.0, t))
+    ca = (int(a[0:2], 16), int(a[2:4], 16), int(a[4:6], 16))
+    cb = (int(b[0:2], 16), int(b[2:4], 16), int(b[4:6], 16))
+    return "".join(f"{round(ca[i] + (cb[i] - ca[i]) * t):02X}" for i in range(3))
 
 
 def render(slides: list[dict], *, title: str = "Report") -> bytes:
@@ -349,6 +365,192 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             _text(slide, bx + 0.3, ry, bw - 1.0, 0.23, pt.get("label", ""), size=10, color=_INK)
             _text(slide, bx + bw - 0.7, ry, 0.7, 0.23, f"{xlab[:1]}{_num(px)}·{ylab[:1]}{_num(py)}", size=9, color=_MUTED, align=PP_ALIGN.RIGHT)
 
+    def _legend_row(slide, items, lx, ly, lw):
+        """A horizontal swatch+label legend (matches the DS .sl-legend--row). items: [(label, color)]."""
+        x = lx
+        for lbl, col in items:
+            if x - lx > lw - 0.6:
+                break
+            _rrect(slide, x, ly + 0.03, 0.13, 0.13, col, radius=0.28)
+            _text(slide, x + 0.19, ly, min(1.7, 0.085 * len(str(lbl)) + 0.2), 0.2, str(lbl), size=9, color=_MUTED)
+            x += 0.19 + min(1.7, 0.085 * len(str(lbl)) + 0.2) + 0.18
+
+    def _stacked_bar_chart(slide, ch, bx, by, bw, bh):
+        rows = ch.get("rows") or []
+        keys = []
+        for r in rows:
+            for seg in r.get("segments") or []:
+                if seg.get("label") not in keys:
+                    keys.append(seg.get("label"))
+        col_of = lambda lbl: _SERIES[(keys.index(lbl) if lbl in keys else 0) % len(_SERIES)]
+        totals = [sum(float(s.get("value") or 0) for s in (r.get("segments") or [])) for r in rows]
+        n = max(len(rows), 1); mx = max(totals + [1]) or 1
+        label_w = min(1.5, bw * 0.30); value_w = 0.42
+        tx = bx + label_w; tw = max(0.5, bw - label_w - value_w)
+        legend_h = 0.34; avail = bh - legend_h
+        row_h = min(avail / n, 0.5); bar_h = min(0.18, row_h * 0.4)
+        y0 = by + (avail - row_h * n) / 2
+        for i, (r, total) in enumerate(zip(rows, totals)):
+            ry = y0 + i * row_h; cy0 = ry + (row_h - bar_h) / 2
+            _text(slide, bx, ry, label_w - 0.08, row_h, r.get("label", ""), size=11)
+            _rrect(slide, tx, cy0, tw, bar_h, _SURFACE2)
+            sx = tx; full = max(bar_h, tw * total / mx)
+            for seg in r.get("segments") or []:
+                v = float(seg.get("value") or 0)
+                if v <= 0:
+                    continue
+                w = full * (v / total) if total else 0
+                _rrect(slide, sx, cy0, max(0.02, w), bar_h, col_of(seg.get("label")), radius=0)
+                sx += w
+            _text(slide, tx + tw + 0.05, ry, value_w, row_h, _num(total), size=10, color=_MUTED)
+        _legend_row(slide, [(k, col_of(k)) for k in keys], tx, by + bh - legend_h + 0.04, tw)
+
+    def _diverging_chart(slide, ch, bx, by, bw, bh):
+        rows = ch.get("rows") or []
+        pos_l, neg_l = ch.get("positive_label", "Positive"), ch.get("negative_label", "Negative")
+        mx = max([max(abs(float(r.get("positive") or 0)), abs(float(r.get("negative") or 0))) for r in rows] + [1]) or 1
+        n = max(len(rows), 1)
+        label_w = min(1.4, bw * 0.24); value_w = 0.95
+        tx = bx + label_w; tw = max(0.6, bw - label_w - value_w); half = tw / 2; cx = tx + half
+        legend_h = 0.34; avail = bh - legend_h
+        row_h = min(avail / n, 0.5); bar_h = min(0.18, row_h * 0.4)
+        y0 = by + (avail - row_h * n) / 2
+        for i, r in enumerate(rows):
+            ry = y0 + i * row_h; cy0 = ry + (row_h - bar_h) / 2
+            pos = max(0.0, float(r.get("positive") or 0)); neg = max(0.0, float(r.get("negative") or 0))
+            _text(slide, bx, ry, label_w - 0.06, row_h, r.get("label", ""), size=11)
+            _rrect(slide, tx, cy0, tw, bar_h, _SURFACE2)
+            negw = half * neg / mx; posw = half * pos / mx
+            if negw > 0:
+                _rrect(slide, cx - negw, cy0, negw, bar_h, _RED, radius=0)
+            if posw > 0:
+                _rrect(slide, cx, cy0, posw, bar_h, _GREEN, radius=0)
+            _text(slide, tx + tw + 0.05, ry, value_w, row_h, f"+{_num(pos)} · −{_num(neg)}", size=9, color=_MUTED)
+        _connector(slide, cx, y0, cx, y0 + row_h * n, _LINE, width=1)
+        _legend_row(slide, [(pos_l, _GREEN), (neg_l, _RED)], tx, by + bh - legend_h + 0.04, tw)
+
+    def _gauge_chart(slide, ch, bx, by, bw, bh):
+        from pptx.chart.data import CategoryChartData
+        from pptx.enum.chart import XL_CHART_TYPE
+        items = ch.get("items") or []
+        n = max(len(items), 1); gap = 0.3
+        size = max(0.8, min((bw - gap * (n - 1)) / n, bh - 0.5, 2.2))
+        x0 = bx + (bw - (size * n + gap * (n - 1))) / 2
+        for i, it in enumerate(items):
+            m = float(it.get("max") or 100) or 1
+            v = max(0.0, min(m, float(it.get("value") or 0))); pct = v / m * 100
+            gx = x0 + i * (size + gap)
+            cd = CategoryChartData(); cd.categories = ["v", "rest"]; cd.add_series("", (v, max(0.0, m - v)))
+            chart = slide.shapes.add_chart(XL_CHART_TYPE.DOUGHNUT, Inches(gx), Inches(by),
+                                           Inches(size), Inches(size), cd).chart
+            chart.has_title = False; chart.has_legend = False
+            _clean_area(chart)
+            plot = chart.plots[0]; plot.has_data_labels = False
+            try:
+                pts = plot.series[0].points
+                for idx, col in ((0, _SERIES[i % len(_SERIES)]), (1, _SURFACE2)):
+                    pts[idx].format.fill.solid(); pts[idx].format.fill.fore_color.rgb = rgb(col)
+                    pts[idx].format.line.fill.background()
+                plot._element.append(plot._element.makeelement(qn("c:holeSize"), {"val": "70"}))
+            except Exception:
+                pass
+            _text(slide, gx, by + size / 2 - 0.2, size, 0.4, f"{round(pct)}%", size=16, bold=True,
+                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+            _text(slide, gx - 0.1, by + size + 0.04, size + 0.2, 0.3, it.get("label", ""), size=10, align=PP_ALIGN.CENTER)
+
+    def _dot_plot_chart(slide, ch, bx, by, bw, bh):
+        rows = ch.get("rows") or []
+        mn = float(ch.get("min", 1)); mx = float(ch.get("max", 5)); span = (mx - mn) or 1
+        n = max(len(rows), 1)
+        label_w = min(1.6, bw * 0.32); value_w = 0.42; scale_h = 0.3
+        tx = bx + label_w; tw = max(0.5, bw - label_w - value_w)
+        avail = bh - scale_h; row_h = min(avail / n, 0.5)
+        y0 = by + (avail - row_h * n) / 2
+        xof = lambda v: tx + max(0.0, min(1.0, (v - mn) / span)) * tw
+        for i, r in enumerate(rows):
+            ry = y0 + i * row_h; cyc = ry + row_h / 2
+            vals = [float(v) for v in (r.get("values") or []) if isinstance(v, (int, float))]
+            if not vals:
+                continue
+            mean = round(sum(vals) / len(vals) * 10) / 10; col = _SERIES[i % len(_SERIES)]
+            _text(slide, bx, ry, label_w - 0.08, row_h, r.get("label", ""), size=11)
+            _connector(slide, tx, cyc, tx + tw, cyc, _LINE, width=0.75)
+            d = 0.13; tint = _mix(col, _BG, 0.45)
+            for v in vals:
+                ov = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(xof(v) - d / 2), Inches(cyc - d / 2), Inches(d), Inches(d))
+                ov.fill.solid(); ov.fill.fore_color.rgb = rgb(tint); ov.line.fill.background(); _noshadow(ov)
+            mh = 0.22
+            _rrect(slide, xof(mean) - 0.025, cyc - mh / 2, 0.05, mh, col, radius=0.3)
+            _text(slide, tx + tw + 0.05, ry, value_w, row_h, _num(mean), size=10, color=_MUTED)
+        _text(slide, tx, by + bh - scale_h + 0.02, 0.6, scale_h, _num(mn), size=9, color=_FAINT)
+        _text(slide, tx + tw - 0.6, by + bh - scale_h + 0.02, 0.6, scale_h, _num(mx), size=9, color=_FAINT, align=PP_ALIGN.RIGHT)
+
+    def _heatmap_chart(slide, ch, bx, by, bw, bh):
+        cols = [str(c) for c in (ch.get("columns") or [])]
+        rows = ch.get("rows") or []
+        if not cols or not rows:
+            return
+        allv = [float(v) for r in rows for v in (r.get("values") or []) if isinstance(v, (int, float))]
+        mn = min(allv + [0]); mx = max(allv + [1])
+        ncols, nrows = len(cols), len(rows); gap = 0.05
+        label_w = min(1.6, bw * 0.28); header_h = 0.3
+        cell_w = (bw - label_w - gap * ncols) / ncols
+        cell_h = min((bh - header_h - gap * nrows) / max(nrows, 1), 0.6)
+        for j, c in enumerate(cols):
+            _text(slide, bx + label_w + j * (cell_w + gap), by, cell_w, header_h, c, size=9, color=_MUTED, align=PP_ALIGN.CENTER)
+        y0 = by + header_h
+        for i, r in enumerate(rows):
+            ry = y0 + i * (cell_h + gap)
+            _text(slide, bx, ry, label_w - 0.08, cell_h, r.get("label", ""), size=10, anchor=MSO_ANCHOR.MIDDLE)
+            vals = r.get("values") or []
+            for j in range(ncols):
+                cxp = bx + label_w + j * (cell_w + gap)
+                v = vals[j] if j < len(vals) and isinstance(vals[j], (int, float)) else None
+                if v is None:
+                    _rrect(slide, cxp, ry, cell_w, cell_h, _SURFACE2, radius=0.12)
+                else:
+                    t = 0.0 if mx == mn else max(0.0, min(1.0, (float(v) - mn) / (mx - mn)))
+                    _rrect(slide, cxp, ry, cell_w, cell_h, _mix(_SURFACE2, _ACCENT, t), radius=0.12)
+                    _text(slide, cxp, ry, cell_w, cell_h, _num(v), size=10, color=_INK,
+                          align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+
+    def _line_chart(slide, ch, bx, by, bw, bh):
+        from pptx.chart.data import CategoryChartData
+        from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+        lines = [s for s in (ch.get("series") or []) if (s.get("points") or [])]
+        if not lines:
+            return
+        maxlen = max(len(s.get("points") or []) for s in lines)
+        labels = ch.get("labels") or []
+        cats = [str(x) for x in labels] if len(labels) == maxlen else [str(i + 1) for i in range(maxlen)]
+        cd = CategoryChartData(); cd.categories = cats
+        for s in lines:
+            pts = [float(p) if isinstance(p, (int, float)) else None for p in (s.get("points") or [])]
+            cd.add_series(s.get("label", ""), tuple(pts + [None] * (maxlen - len(pts))))
+        multi = len(lines) > 1; legend_h = 0.0
+        chart = slide.shapes.add_chart(XL_CHART_TYPE.LINE_MARKERS, Inches(bx), Inches(by),
+                                       Inches(bw), Inches(bh - legend_h), cd).chart
+        chart.has_title = False; chart.has_legend = multi
+        if multi:
+            chart.legend.position = XL_LEGEND_POSITION.BOTTOM; chart.legend.include_in_layout = False
+            chart.legend.font.size = Pt(9); chart.legend.font.name = "Geist"; chart.legend.font.color.rgb = rgb(_MUTED)
+        _clean_area(chart)
+        for i, ser in enumerate(chart.series):
+            col = _SERIES[i % len(_SERIES)]
+            try:
+                ser.format.line.color.rgb = rgb(col); ser.format.line.width = Pt(2)
+                ser.smooth = False
+            except Exception:
+                pass
+        try:
+            for ax in (chart.category_axis, chart.value_axis):
+                ax.tick_labels.font.size = Pt(9); ax.tick_labels.font.name = "Geist"
+                ax.tick_labels.font.color.rgb = rgb(_MUTED)
+                ax.format.line.color.rgb = rgb(_LINE)
+            chart.value_axis.has_major_gridlines = False
+        except Exception:
+            pass
+
     def _chart(slide, ch, x, y, cx, cy):
         bx, by, bw, bh = x.inches, y.inches, cx.inches, cy.inches
         kind = ch.get("type")
@@ -357,6 +559,18 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
                 _bar_chart(slide, ch, bx, by, bw, bh)
             elif kind == "pie" and ch.get("categories"):
                 _donut_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "stacked_bar" and ch.get("rows"):
+                _stacked_bar_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "diverging_bar" and ch.get("rows"):
+                _diverging_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "gauge" and ch.get("items"):
+                _gauge_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "dot_plot" and ch.get("rows"):
+                _dot_plot_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "heatmap" and ch.get("columns") and ch.get("rows"):
+                _heatmap_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "line" and ch.get("series"):
+                _line_chart(slide, ch, bx, by, bw, bh)
             elif kind == "scatter" and ch.get("points"):
                 _effort_chart(slide, ch, bx, by, bw, bh)
         except Exception:

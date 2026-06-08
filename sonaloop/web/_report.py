@@ -58,14 +58,15 @@ def _resolve_figure(f: dict, store) -> dict | None:
         if p and p.get("avatar", {}).get("path"):
             return {"url": "/" + p["avatar"]["path"], "caption": cap or p.get("display_name", "")}
     if kind == "chart":
-        # Design-system chart components (sonaloop._charts, vendored from sonaloop-design):
-        #   of="bar"|"pie"  → author-supplied `series` [{label, value, color?}]
-        #   of="effort_impact" → a synthesis's structured 2×2 (the payoff of unifying synthesis + report)
+        # Author-supplied charts dispatch through the modular registry (charts_catalogue), which is
+        # the single source of truth for which `of` exists, how to call its design-system renderer,
+        # and the agent-facing `suggest_chart_kinds` catalogue. effort_impact is the one exception:
+        # it is source-driven (derived from a synthesis), handled below.
         of = f.get("of", "effort_impact")
-        if of in ("bar", "pie"):
-            from .._charts import bar_chart, pie_chart
-            series = [s for s in (f.get("series") or []) if isinstance(s, dict)]
-            chart = (pie_chart(series) if of == "pie" else bar_chart(series))
+        series = [s for s in (f.get("series") or []) if isinstance(s, dict)]
+        if of != "effort_impact":
+            from ..charts_catalogue import render_chart
+            chart = render_chart(of, f, series)
             return {"html": chart, "caption": cap} if chart else None
         sid = f.get("source_id") or f.get("id")
         syn = store.get_synthesis(sid) if sid else None

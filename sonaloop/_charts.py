@@ -10,9 +10,15 @@ The React side is ../../src/charts.tsx; the styling source of truth is ../../sty
 self-contained, static, print-safe HTML strings (no JS, no hover-only data) so a chart renders
 identically in the Python-SSR app, on the website, and in headless-Chromium PDF/PPTX export.
 
-    from sonaloop_icons.charts import bar_chart, pie_chart, effort_impact
+    from sonaloop_icons.charts import (bar_chart, stacked_bar_chart, pie_chart, gauge_chart, effort_impact)
     bar_chart([{"label": "Plan", "value": 8}, {"label": "Cook", "value": 3}])
+    stacked_bar_chart([{"label": "Pricing", "segments": [{"label": "For", "value": 6}, {"label": "Against", "value": 2}]}])
     pie_chart([{"label": "Support", "value": 12}, {"label": "Oppose", "value": 4}])
+    gauge_chart([{"label": "Confidence", "value": 72}])  # ring fills value/max; centre shows the %
+    diverging_bar_chart([{"label": "Pricing", "positive": 6, "negative": 2}])  # net for↔against
+    heatmap_chart(["Cost", "Reach"], [{"label": "Plan A", "values": [2, 5]}])  # option × criteria
+    dot_plot_chart([{"label": "Trust the AI", "values": [2, 3, 3, 4, 5]}])  # spread of voices on 1..5
+    line_chart([{"label": "Confidence", "points": [2, 3, 5, 4, 6]}], labels=["R1", "R2", "R3", "R4", "R5"])
     effort_impact([{"label": "Auto shopping list", "x": 2, "y": 5}])  # x=effort, y=value (1..5)
 
 All text is rendered as-is (already-resolved/translated by the caller — this layer is i18n-agnostic).
@@ -97,6 +103,210 @@ def pie_chart(items: Sequence[dict], *, title: str = "", donut: bool = True,
     return (f'<figure class="sl-chart">{_title(title)}<div class="sl-pie-wrap">'
             f'<div class="{cls}" style="--slices:{grad}" role="img"></div>'
             f'<div class="sl-legend">{"".join(legend)}</div></div></figure>')
+
+
+def stacked_bar_chart(items: Sequence[dict], *, title: str = "", max_value: float | None = None,
+                      show_values: bool = True) -> str:
+    """Horizontal stacked bars + a shared series legend. items: [{label, segments: [{label, value, color?}]}].
+    Series colour is keyed by segment label (first-seen order) so a series reads the same in every bar. "" if empty."""
+    rows = [it for it in items
+            if any(_num(s.get("value")) is not None for s in (it.get("segments") or []))]
+    if not rows:
+        return ""
+    keys: list[str] = []
+    for it in rows:
+        for s in it["segments"]:
+            if s.get("label") not in keys:
+                keys.append(s.get("label"))
+
+    def seg_color(s: dict) -> str:
+        return str(s.get("color") or _SERIES[max(0, keys.index(s.get("label"))) % len(_SERIES)])
+
+    totals = [sum(max(0.0, _num(s.get("value")) or 0) for s in it["segments"]) for it in rows]
+    mx = max_value if max_value else max(totals) or 1
+    bars = []
+    for it, total in zip(rows, totals):
+        segs = "".join(
+            f'<span class="sl-bar__seg" title="{_esc(s.get("label"))}: {_fmt(_num(s.get("value")) or 0)}" '
+            f'style="flex-grow:{_num(s.get("value")) or 0:g};--c:{seg_color(s)}"></span>'
+            for s in it["segments"] if (_num(s.get("value")) or 0) > 0)
+        pct = min(100.0, total / mx * 100) if mx else 0
+        val = f'<span class="sl-bar__val">{_fmt(total)}</span>' if show_values else ""
+        bars.append(
+            f'<div class="sl-bar">'
+            f'<span class="sl-bar__label" title="{_esc(it.get("label"))}">{_md(it.get("label"))}</span>'
+            f'<span class="sl-bar__track"><span class="sl-bar__fill sl-bar__fill--stack" '
+            f'style="--v:{pct:.1f}%">{segs}</span></span>{val}</div>')
+    # Legend colour comes from each series' first occurrence across the rows.
+    first = {s.get("label"): s for it in reversed(rows) for s in it["segments"]}
+    legend = "".join(
+        f'<span class="sl-legend__item"><span class="sl-legend__sw" style="--c:{seg_color(first[k])}"></span>'
+        f'<span class="sl-legend__label">{_md(k)}</span></span>' for k in keys)
+    return (f'<figure class="sl-chart">{_title(title)}<div class="sl-bars">{"".join(bars)}</div>'
+            f'<div class="sl-legend sl-legend--row" style="margin-top:.9em">{legend}</div></figure>')
+
+
+def gauge_chart(items: Sequence[dict], *, title: str = "", max_value: float = 100,
+                show_values: bool = True) -> str:
+    """Radial progress rings (one per item) — a KPI / % complete. items: [{label, value, max?, color?}].
+    The ring fills value/max; the centre shows the percentage. "" when nothing is scored."""
+    rows = [it for it in items if _num(it.get("value")) is not None]
+    if not rows:
+        return ""
+    gauges = []
+    for i, it in enumerate(rows):
+        m = _num(it.get("max")) or max_value or 1
+        v = _num(it["value"]) or 0
+        pct = max(0.0, min(100.0, v / m * 100)) if m else 0
+        sub = (f'<span class="sl-gauge__sub">{_fmt(v)} / {_fmt(m)}</span>'
+               if show_values and m != 100 else "")
+        gauges.append(
+            f'<div class="sl-gauge-item">'
+            f'<div class="sl-gauge" role="img" style="--p:{pct:.1f};--c:{_color(it, i)}">'
+            f'<span class="sl-gauge__val">{round(pct)}%</span></div>'
+            f'<span class="sl-gauge__label">{_md(it.get("label"))}</span>{sub}</div>')
+    return (f'<figure class="sl-chart">{_title(title)}'
+            f'<div class="sl-gauges">{"".join(gauges)}</div></figure>')
+
+
+def diverging_bar_chart(items: Sequence[dict], *, title: str = "", positive_label: str = "Positive",
+                        negative_label: str = "Negative", positive_color: str = "var(--sl-green)",
+                        negative_color: str = "var(--sl-red)", max_value: float | None = None,
+                        show_values: bool = True) -> str:
+    """Net sentiment / for↔against bars around a centre axis. items: [{label, positive, negative}].
+    Negative grows left, positive grows right; both share one magnitude scale. "" when empty."""
+    rows = [it for it in items
+            if _num(it.get("positive")) is not None or _num(it.get("negative")) is not None]
+    if not rows:
+        return ""
+    mx = max_value if max_value else max(
+        max(abs(_num(it.get("positive")) or 0), abs(_num(it.get("negative")) or 0)) for it in rows) or 1
+    bars = []
+    for it in rows:
+        pos = max(0.0, _num(it.get("positive")) or 0)
+        neg = max(0.0, _num(it.get("negative")) or 0)
+        val = f'<span class="sl-dbar__val">+{_fmt(pos)} · −{_fmt(neg)}</span>' if show_values else ""
+        bars.append(
+            f'<div class="sl-dbar">'
+            f'<span class="sl-dbar__label" title="{_esc(it.get("label"))}">{_md(it.get("label"))}</span>'
+            f'<span class="sl-dbar__neg"><span class="sl-dbar__fill" '
+            f'style="--v:{neg / mx * 100:.1f}%;--c:{negative_color}"></span></span>'
+            f'<span class="sl-dbar__pos"><span class="sl-dbar__fill" '
+            f'style="--v:{pos / mx * 100:.1f}%;--c:{positive_color}"></span></span>{val}</div>')
+    legend = (
+        f'<span class="sl-legend__item"><span class="sl-legend__sw" style="--c:{positive_color}"></span>'
+        f'<span class="sl-legend__label">{_md(positive_label)}</span></span>'
+        f'<span class="sl-legend__item"><span class="sl-legend__sw" style="--c:{negative_color}"></span>'
+        f'<span class="sl-legend__label">{_md(negative_label)}</span></span>')
+    return (f'<figure class="sl-chart">{_title(title)}<div class="sl-dbars">{"".join(bars)}</div>'
+            f'<div class="sl-legend sl-legend--row" style="margin-top:.9em">{legend}</div></figure>')
+
+
+def heatmap_chart(columns: Sequence[str], rows: Sequence[dict], *, title: str = "",
+                  min_value: float | None = None, max_value: float | None = None,
+                  color: str = "var(--sl-accent)", show_values: bool = True) -> str:
+    """Option × criteria (or persona × theme) matrix; cells tinted by value via color-mix.
+    columns: [str]; rows: [{label, values: [num]}] (values aligned to columns). "" when empty."""
+    data = [r for r in rows if isinstance(r.get("values"), (list, tuple))]
+    cols = list(columns)
+    if not data or not cols:
+        return ""
+    allv = [v for r in data for v in (_num(x) for x in r["values"]) if v is not None]
+    mn = min_value if min_value is not None else min(allv + [0])
+    mx = max_value if max_value is not None else max(allv + [1])
+
+    def tint(v: float) -> str:
+        p = 0.0 if mx == mn else max(0.0, min(100.0, (v - mn) / (mx - mn) * 100))
+        return f"color-mix(in srgb, {color} {p:.0f}%, var(--sl-surface-2))"
+
+    head = '<span class="sl-heat__corner"></span>' + "".join(
+        f'<span class="sl-heat__col">{_md(c)}</span>' for c in cols)
+    body = []
+    for r in data:
+        body.append(f'<span class="sl-heat__row" title="{_esc(r.get("label"))}">{_md(r.get("label"))}</span>')
+        vals = list(r["values"])
+        for ci in range(len(cols)):
+            v = _num(vals[ci]) if ci < len(vals) else None
+            if v is None:
+                body.append('<span class="sl-heat__cell"></span>')
+            else:
+                body.append(f'<span class="sl-heat__cell" style="background:{tint(v)}">'
+                            f'{_fmt(v) if show_values else ""}</span>')
+    grid = f"minmax(4.5em, auto) repeat({len(cols)}, minmax(2em, 1fr))"
+    return (f'<figure class="sl-chart">{_title(title)}'
+            f'<div class="sl-heat" style="grid-template-columns:{grid}">{head}{"".join(body)}</div></figure>')
+
+
+def dot_plot_chart(items: Sequence[dict], *, title: str = "", min_value: float = 1, max_value: float = 5,
+                   show_mean: bool = True) -> str:
+    """Where N voices land on a scale (spread/disagreement). items: [{label, values: [num], color?}].
+    Each value is a dot; the taller marker is the mean. "" when nothing is scored."""
+    rows = [it for it in items if isinstance(it.get("values"), (list, tuple))
+            and any(_num(v) is not None for v in it["values"])]
+    if not rows:
+        return ""
+    span = (max_value - min_value) or 1
+
+    def x_of(v: float) -> float:
+        return max(0.0, min(100.0, (v - min_value) / span * 100))
+
+    out = []
+    for i, it in enumerate(rows):
+        vals = [_num(v) for v in it["values"] if _num(v) is not None]
+        mean = round(sum(vals) / len(vals) * 10) / 10
+        c = it.get("color") or _SERIES[i % len(_SERIES)]
+        dots = "".join(f'<span class="sl-dot-pt" style="left:{x_of(v):.1f}%;--c:{c}"></span>' for v in vals)
+        meanm = (f'<span class="sl-dot-mean" style="left:{x_of(mean):.1f}%;--c:{c}" title="mean {_fmt(mean)}"></span>'
+                 if show_mean else "")
+        out.append(
+            f'<div class="sl-dot-row">'
+            f'<span class="sl-dot-label" title="{_esc(it.get("label"))}">{_md(it.get("label"))}</span>'
+            f'<span class="sl-dot-track">{dots}{meanm}</span>'
+            f'<span class="sl-dot-val">{_fmt(mean)}</span></div>')
+    scale = ('<div class="sl-dot-scale"><span></span>'
+             f'<span class="sl-dot-scale__axis"><span>{_fmt(min_value)}</span><span>{_fmt(max_value)}</span></span>'
+             '<span></span></div>')
+    return f'<figure class="sl-chart">{_title(title)}<div class="sl-dots">{"".join(out)}</div>{scale}</figure>'
+
+
+def line_chart(series: Sequence[dict], *, title: str = "", labels: Sequence[str] | None = None,
+               min_value: float | None = None, max_value: float | None = None,
+               show_dots: bool = True) -> str:
+    """Trend over time — a static inline-SVG polyline per series. series: [{label, points: [num], color?}];
+    optional `labels` for the x axis. The one chart that needs SVG (still print-safe). "" when empty."""
+    lines = [s for s in series if isinstance(s.get("points"), (list, tuple))
+             and len([p for p in s["points"] if _num(p) is not None]) > 1]
+    if not lines:
+        return ""
+    allv = [_num(p) for s in lines for p in s["points"] if _num(p) is not None]
+    mn = min_value if min_value is not None else min(allv)
+    mx = max_value if max_value is not None else max(allv)
+    span = (mx - mn) or 1
+    w, h = 100, 40
+
+    def xy(pts: list[float]) -> list[tuple[float, float]]:
+        return [((i / (len(pts) - 1)) * w, h - (v - mn) / span * h) for i, v in enumerate(pts)]
+
+    paths = []
+    for i, s in enumerate(lines):
+        pts = xy([_num(p) for p in s["points"] if _num(p) is not None])
+        c = s.get("color") or _SERIES[i % len(_SERIES)]
+        poly = " ".join(f"{x:.2f},{y:.2f}" for x, y in pts)
+        dots = ("".join(f'<circle class="sl-line__dot" cx="{x:.2f}" cy="{y:.2f}" r="1.4"></circle>'
+                        for x, y in pts) if show_dots else "")
+        paths.append(f'<g style="--c:{c}"><polyline class="sl-line__path" points="{poly}"></polyline>{dots}</g>')
+    svg = (f'<svg viewBox="0 0 {w} {h}" role="img">'
+           f'<line class="sl-line__axis" x1="0" y1="{h}" x2="{w}" y2="{h}"></line>{"".join(paths)}</svg>')
+    labs = ('<div class="sl-line__labels">'
+            + "".join(f"<span>{_esc(lab)}</span>" for lab in labels) + "</div>") if labels else ""
+    legend = ""
+    if len(lines) > 1:
+        legend = ('<div class="sl-legend sl-legend--row" style="margin-top:.6em">' + "".join(
+            f'<span class="sl-legend__item"><span class="sl-legend__sw" '
+            f'style="--c:{s.get("color") or _SERIES[i % len(_SERIES)]}"></span>'
+            f'<span class="sl-legend__label">{_md(s.get("label"))}</span></span>'
+            for i, s in enumerate(lines)) + "</div>")
+    return f'<figure class="sl-chart">{_title(title)}<div class="sl-line">{svg}{labs}</div>{legend}</figure>'
 
 
 # Effort·impact leverage tint: high value vs effort → green; balanced → accent; costly → amber/red.

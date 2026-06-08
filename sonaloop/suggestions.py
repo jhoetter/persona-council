@@ -42,6 +42,13 @@ def suggest_section_kinds() -> dict[str, Any]:
     return _load("section_kinds")
 
 
+def suggest_chart_kinds() -> dict[str, Any]:
+    """Suggested report chart kinds — which `of` to use when, + each one's author payload shape.
+    The single source of truth is charts_catalogue.py (also drives the report renderer)."""
+    from .charts_catalogue import chart_kinds
+    return chart_kinds()
+
+
 def suggest_methodologies(store: Store | None = None) -> dict[str, Any]:
     """Full constellation templates to start from — the registered methodologies themselves,
     plus any extra templates under suggestions/methodologies/*.json."""
