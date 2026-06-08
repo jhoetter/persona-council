@@ -226,12 +226,22 @@ def _docs_page() -> str:
         h("h2", {"class_": "bh"}, ("So funktioniert's" if de else "How it works")),
         h("div", {"class_": "hiw"}, fragment(*how_steps)),
         h("div", {"class_": "es-prose sm hiw-contract"}, raw(_md(HOWITWORKS_CONTRACT["de" if de else "en"]))))
+    # MCP tool catalogue — the live, auto-generated index (every @mcp.tool, by domain). Sonaloop is
+    # MCP-first, so the API surface is part of the docs. Drop the catalogue's own H1 (the page has one).
+    from ..mcp_server._catalogue import catalogue_md
+    _cat = catalogue_md().split("\n")
+    if _cat and _cat[0].startswith("# "):
+        _cat = _cat[1:]
+    catalogue = h("div", {"class_": "block", "style": "margin-top:38px"},
+        h("h2", {"class_": "bh"}, "MCP-Tools" if de else "MCP tools"),
+        h("div", {"class_": "es-prose sm doc-catalogue"}, raw(_md("\n".join(_cat).strip()))))
     body = h("section", {},
              h("div", {"class_": "hero"}, h("h1", {}, raw(_icon("overview")), t("documentation")),
                h("div", {"class_": "es-prose sm", "style": "margin-top:6px"}, raw(_md(DOCS_INTRO["de" if de else "en"])))),
              howitworks,
              h("h2", {"class_": "bh", "style": "margin-top:38px"}, ("Artefakte" if de else "Artefacts")),
-             h("div", {"class_": "docgrid", "style": "margin-top:14px"}, fragment(*cards)), primitives)
+             h("div", {"class_": "docgrid", "style": "margin-top:14px"}, fragment(*cards)), primitives,
+             catalogue)
     return _layout(t("documentation"), body, store, crumbs=[(t("documentation"), None)], active="docs")
 
 
