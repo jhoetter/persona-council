@@ -26,7 +26,7 @@ PALETTE = ["#6b7cff", "#34a853", "#f29900", "#a142f4", "#ea4335", "#00897b", "#5
 FAN_GLYPH, WAIST_GLYPH = "◇", "◆"  # ◇ hollow (fan) / ◆ filled (waist)
 
 # Maps the (open-ended) Unicode notation glyphs used in suggestions/*.json and the
-# fan/waist structural defaults onto sonaloop-icons icon names, so the research graph
+# fan/waist structural defaults onto sonaloop-design icon names, so the research graph
 # and overview render real icons instead of text glyphs. Unmapped glyphs fall back
 # to "square" (a neutral marker) rather than leaking raw Unicode.
 GLYPH_ICON: dict[str, str] = {
@@ -39,7 +39,7 @@ GLYPH_ICON: dict[str, str] = {
 
 
 def glyph_icon(glyph: str | None) -> str:
-    """Resolve a notation glyph to a sonaloop-icons name. "" for no glyph; an
+    """Resolve a notation glyph to a sonaloop-design name. "" for no glyph; an
     unknown non-empty glyph maps to the neutral 'square' so nothing renders raw."""
     if not glyph:
         return ""

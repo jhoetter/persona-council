@@ -1,6 +1,6 @@
-"""sonaloop._icons — VENDORED COPY of the sonaloop-icons Python module.
+"""sonaloop._icons — VENDORED COPY of the sonaloop-design icon module.
 
-Do not edit by hand. Single source of truth: ../sonaloop-icons (icons.data.mjs ->
+Do not edit by hand. Single source of truth: ../sonaloop-design (icons.data.mjs ->
 scripts/gen.mjs). Refresh this vendored copy with `make icons` / scripts/sync_icons.sh.
 Vendored so the PyPI package has no local-path dependency.
 

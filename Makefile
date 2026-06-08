@@ -5,7 +5,7 @@ UV ?= uv
 
 .PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons
 
-# Refresh the vendored icon module (sonaloop/_icons.py) from ../sonaloop-icons.
+# Refresh the vendored icon module (sonaloop/_icons.py) from ../sonaloop-design.
 # Run after editing icons.data.mjs + `node scripts/gen.mjs` in that repo.
 icons:
 	bash scripts/sync_icons.sh

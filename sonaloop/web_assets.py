@@ -1,7 +1,7 @@
 """Web UI asset strings (CSS + inline JS) extracted from web.py (spec/refactor-plan.md target 1). Pure constants — no behaviour, imported back into web.py."""
 
 CSS = """
-/* Cursor-leaning brand system — master: sonaloop-website/BRANDING.md. Token-driven — one rewrite
+/* Cursor-leaning brand system — master: sonaloop-design/BRANDING.md. Token-driven — one rewrite
    re-skins the whole app. Light = near-white with only a faint warm tint (paper #faf8f3 / ink #1a1815);
    dark already matches the brand exactly. Geist (body) + Geist Mono (--mono). Indigo accent #5e6ad2,
    used sparingly (primary buttons are ink-black, Cursor-style). Surface deviation vs. the site: panels
@@ -366,7 +366,7 @@ _RGRAPH_JS = """<script>
   var NS='http://www.w3.org/2000/svg', NW=320, NH=64, MIN=0.25, MAX=2.6;
   var tx=0, ty=0, scale=1, KEY='rgstate:'+(D.key||'x');
   function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a) e.setAttribute(k,a[k]); return e; }
-  // Render a sonaloop-icons glyph (icon name -> path body from D.iconpaths) as a nested
+  // Render a sonaloop-design glyph (icon name -> path body from D.iconpaths) as a nested
   // <svg> at (x,y,size). color drives both stroke (currentColor) and any inline fill.
   function iconEl(name,x,y,size,color){
     var body=(D.iconpaths||{})[name]; if(!body) return null;

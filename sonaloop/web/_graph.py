@@ -395,7 +395,7 @@ def _graph_interactive(graph: dict) -> str:
     jrounds = (ml.get("round_lanes") if ml else None) or []
     # Icon path bodies for the notation/markers the graph JS renders inline (glyph icon
     # names arrive on nodes/sections; the renderer looks each up here). Single source of
-    # truth: sonaloop-icons. Small fixed set, sent once per graph.
+    # truth: sonaloop-design. Small fixed set, sent once per graph.
     from .._icons import REGULAR as _ICON_REGULAR
     _GRAPH_ICON_NAMES = ("diamond", "diamondFilled", "square", "squareSplit", "squareRows",
                          "squareCols", "squareGrid", "rectangle", "exchange", "wave",
@@ -496,7 +496,7 @@ def _plan_html(plan: dict, store) -> str:
     done = sum(1 for tk in tasks if tk["status"] == "done")
     complete = bool(tasks) and done == len(tasks)
     by_title = {tk["id"]: tk.get("title", tk["id"]) for tk in tasks}
-    # Status marks are sonaloop-icons (single source of truth); colour drives currentColor.
+    # Status marks are sonaloop-design (single source of truth); colour drives currentColor.
     STATUS = {"done": ("check", "var(--green)"), "active": ("half", "var(--accent)"),
               "todo": ("circle", "var(--muted)"), "blocked": ("alert", "var(--red)")}
     # Resolve evidence links by IDENTITY (which collection the ref lives in), not by a kind

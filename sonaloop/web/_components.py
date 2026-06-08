@@ -39,8 +39,8 @@ def _display_title(text: str, n: int = 90) -> str:
 
 
 def _icon(name: str, animate: bool = False) -> str:
-    # Chrome icons come from the shared sonaloop-icons library (single source of
-    # truth in ../sonaloop-icons; geometry authored in icons.data.mjs). Returns
+    # Chrome icons come from the shared sonaloop-design library (single source of
+    # truth in ../sonaloop-design; geometry authored in icons.data.mjs). Returns
     # "" for unknown names, same as the old inline ICONS lookup. animate=True adds
     # .pi-animate (opt-in hover micro-interaction; needs _ICON_ANIM_CSS, registered below).
     return _persona_icon(name, animate=animate)
