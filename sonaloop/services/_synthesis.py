@@ -230,6 +230,7 @@ _SYNTHESIS_EXPORT_LABELS = {
         "stop_reason": "Abschlussgrund", "start": "Ausgangspunkt", "arc": "Bogen / Verlauf",
         "big_picture": "Gesamtbild", "recommendations": "Handlungsempfehlungen",
         "effort": "Aufwand", "value": "Nutzen", "positioning": "Positionierung",
+        "q_quick": "Quick Wins", "q_big": "Big Bets", "q_fill": "Lückenfüller", "q_sink": "Zeitfresser",
         "pain_solvers": "Validierte Pain-Solver / Delight-Engines", "segments": "Segmente",
         "key_problems": "Kernprobleme", "clusters": "Affinity-Cluster",
         "ranking": "Ranking", "shortlist": "Shortlist",
@@ -244,6 +245,7 @@ _SYNTHESIS_EXPORT_LABELS = {
         "stop_reason": "Stop reason", "start": "Starting point", "arc": "Arc / trajectory",
         "big_picture": "Overall picture", "recommendations": "Recommendations",
         "effort": "Effort", "value": "Value", "positioning": "Positioning",
+        "q_quick": "Quick wins", "q_big": "Big bets", "q_fill": "Fill-ins", "q_sink": "Time sinks",
         "pain_solvers": "Validated pain-solvers / delight-engines", "segments": "Segments",
         "key_problems": "Key problems", "clusters": "Affinity clusters",
         "ranking": "Ranking", "shortlist": "Shortlist",
@@ -578,7 +580,8 @@ def _effort_impact_chart(syn: dict) -> dict | None:
     if not pts:
         return None
     L = _SYNTHESIS_EXPORT_LABELS[content_language()]
-    return {"type": "scatter", "points": pts, "x_label": L["effort"], "y_label": L["value"]}
+    return {"type": "scatter", "points": pts, "x_label": L["effort"], "y_label": L["value"],
+            "quadrants": [L["q_quick"], L["q_big"], L["q_fill"], L["q_sink"]]}
 
 
 def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> bytes:

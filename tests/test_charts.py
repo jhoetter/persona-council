@@ -72,8 +72,9 @@ def test_pptx_export_convergence_synthesis(store):
     data = services.export_synthesis_pptx(syn["id"], store=store)
     assert data[:2] == b"PK"
     prs = Presentation(io.BytesIO(data))
-    assert len(prs.slides) >= 4  # title + big picture + positioning + key problems + recommendations + open Qs
-    assert any(_has_chart(sh) for sl in prs.slides for sh in sl.shapes)  # the effort·impact scatter
+    assert len(prs.slides) >= 5  # title + big picture + positioning + key problems + recommendations + open Qs
+    # the effort·impact 2×2 is drawn from native shapes (frame, dashed cross, numbered dots, legend)
+    assert sum(len(sl.shapes) for sl in prs.slides) > 20
 
 
 def test_pptx_export_project_report_with_chart(store):
