@@ -88,3 +88,12 @@ def test_catalogue_covers_every_tool_grouped_by_domain():
     assert "## Councils & syntheses" in md and "- **record_council**" in md
     uris = {str(r.uri) for r in asyncio.run(srv.list_resources())}
     assert "sonaloop://guide/catalogue" in uris
+
+
+def test_every_tool_documented():
+    """Every registered MCP tool carries a docstring → a non-empty description for clients and a real
+    one-line entry in the auto-generated catalogue (no `— —` placeholders)."""
+    server = build_server()
+    tools = asyncio.run(server.list_tools())
+    undocumented = sorted(t.name for t in tools if not (t.description or "").strip())
+    assert not undocumented, f"MCP tools missing a docstring: {undocumented}"

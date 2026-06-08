@@ -50,11 +50,13 @@ def register_council(mcp):
 
     @mcp.tool()
     def get_council(session_id: str) -> dict[str, Any]:
+        """Fetch one council session by id (prompt, turns/statements, votes, summary)."""
         t = time.perf_counter()
         return _env("get_council", services.get_council(session_id), t)
 
     @mcp.tool()
     def list_councils() -> dict[str, Any]:
+        """List all council sessions (id, prompt, persona count, date) for browsing."""
         t = time.perf_counter()
         return _env("list_councils", services.list_councils(), t)
 
@@ -64,6 +66,7 @@ def register_council(mcp):
 
     @mcp.tool()
     def export_council_session(session_id: str, format: str = "json") -> dict[str, Any]:
+        """Export one council session as a document (md|json) for sharing."""
         t = time.perf_counter()
         return _env("export_council_session", services.export_council_session(session_id, format), t)
 
@@ -87,11 +90,13 @@ def register_council(mcp):
 
     @mcp.tool()
     def get_synthesis(synthesis_id: str) -> dict[str, Any]:
+        """Fetch one report (synthesis) by id — its findings/sections/scope and metadata."""
         t = time.perf_counter()
         return _env("get_synthesis", services.get_synthesis(synthesis_id), t)
 
     @mcp.tool()
     def list_syntheses() -> dict[str, Any]:
+        """List all reports (syntheses) — id, title, scope, date — for browsing."""
         t = time.perf_counter()
         return _env("list_syntheses", services.list_syntheses(), t)
 

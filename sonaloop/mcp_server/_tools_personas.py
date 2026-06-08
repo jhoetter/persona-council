@@ -53,16 +53,19 @@ def register_personas(mcp):
 
     @mcp.tool()
     def update_persona(persona_id: str, patch: dict[str, Any], reason: str) -> dict[str, Any]:
+        """Apply a host-authored patch to a persona's profile; records a revision with the reason."""
         t = time.perf_counter()
         return _env("update_persona", services.update_persona(persona_id, patch, reason), t)
 
     @mcp.tool()
     def refresh_persona_from_source(persona_id: str) -> dict[str, Any]:
+        """Re-derive a persona's rendered SOUL/profile artifacts from its stored source record."""
         t = time.perf_counter()
         return _env("refresh_persona_from_source", services.refresh_persona_from_source(persona_id), t)
 
     @mcp.tool()
     def generate_avatar(persona_id: str, style: str | None = None) -> dict[str, Any]:
+        """Generate (or regenerate) the persona's avatar image — needs OPENAI_API_KEY."""
         t = time.perf_counter()
         return _env("generate_avatar", generate_persona_avatar(persona_id, style), t)
 

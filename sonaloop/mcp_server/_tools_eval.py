@@ -17,6 +17,7 @@ def register_eval(mcp):
 
     @mcp.tool()
     def get_world_context(as_of: str | None = None) -> dict[str, Any]:
+        """The shared world context (macro facts personas live in) valid at a given date."""
         t = time.perf_counter()
         return _env("get_world_context", services.get_world_context(as_of), t)
 
@@ -54,11 +55,13 @@ def register_eval(mcp):
 
     @mcp.tool()
     def list_persona_revisions(persona_id: str) -> dict[str, Any]:
+        """The history of evidence-backed identity revisions for a persona."""
         t = time.perf_counter()
         return _env("list_persona_revisions", services.list_persona_revisions(persona_id), t)
 
     @mcp.tool()
     def list_memory_anomalies(persona_id: str | None = None) -> dict[str, Any]:
+        """Flagged memory anomalies (contradictions / integrity issues), optionally per persona."""
         t = time.perf_counter()
         return _env("list_memory_anomalies", services.list_memory_anomalies(persona_id), t)
 

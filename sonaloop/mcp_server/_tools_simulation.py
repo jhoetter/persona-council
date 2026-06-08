@@ -34,6 +34,7 @@ def register_simulation(mcp):
 
     @mcp.tool()
     def get_day_plan(persona_id: str, date: str) -> dict[str, Any]:
+        """Fetch the stored day plan for a persona on a given date."""
         t = time.perf_counter()
         return _env("get_day_plan", services.get_day_plan(persona_id, date), t)
 
@@ -53,11 +54,13 @@ def register_simulation(mcp):
 
     @mcp.tool()
     def get_period_plan(persona_id: str, scope: str, date: str) -> dict[str, Any]:
+        """Fetch a stored period plan (week|month|quarter|year) for a persona."""
         t = time.perf_counter()
         return _env("get_period_plan", services.get_period_plan(persona_id, scope, date), t)
 
     @mcp.tool()
     def list_period_plans(persona_id: str, scope: str | None = None) -> dict[str, Any]:
+        """List a persona's period plans (optionally filtered by scope)."""
         t = time.perf_counter()
         return _env("list_period_plans", services.list_period_plans(persona_id, scope), t)
 
@@ -99,6 +102,7 @@ def register_simulation(mcp):
 
     @mcp.tool()
     def list_digests(persona_id: str, scope: str | None = None) -> dict[str, Any]:
+        """List a persona's consolidated digests (optionally filtered by scope)."""
         t = time.perf_counter()
         return _env("list_digests", services.list_digests(persona_id, scope), t)
 
@@ -131,16 +135,19 @@ def register_simulation(mcp):
 
     @mcp.tool()
     def get_timeline(persona_id: str, start: str | None = None, end: str | None = None, entity_id: str | None = None) -> dict[str, Any]:
+        """Chronological experience events for a persona over a date range (optionally one entity)."""
         t = time.perf_counter()
         return _env("get_timeline", services.get_timeline(persona_id, start, end, entity_id), t)
 
     @mcp.tool()
     def search_entities(persona_id: str, kind: str | None = None, name: str | None = None) -> dict[str, Any]:
+        """Find a persona's memory entities by kind and/or name substring."""
         t = time.perf_counter()
         return _env("search_entities", services.search_entities(persona_id, kind, name), t)
 
     @mcp.tool()
     def get_open_loops(persona_id: str, status: str | None = "open") -> dict[str, Any]:
+        """A persona's unresolved threads / open loops (filter by status)."""
         t = time.perf_counter()
         return _env("get_open_loops", services.get_open_loops(persona_id, status), t)
 
@@ -174,30 +181,36 @@ def register_simulation(mcp):
     # ----- Persona timeline / activity reads — relocated here (M3) -----
     @mcp.tool()
     def get_current_state(persona_id: str, at_time: str | None = None) -> dict[str, Any]:
+        """A persona's live state — what they're doing now / at a given time."""
         t = time.perf_counter()
         return _env("get_current_state", services.get_current_state(persona_id, at_time), t)
 
     @mcp.tool()
     def get_calendar(persona_id: str, date: str | None = None) -> dict[str, Any]:
+        """A persona's calendar events for one day."""
         t = time.perf_counter()
         return _env("get_calendar", services.get_calendar(persona_id, date), t)
 
     @mcp.tool()
     def get_calendar_period(persona_id: str, date: str | None = None, view: str = "day") -> dict[str, Any]:
+        """A persona's calendar for a day|week|month view."""
         t = time.perf_counter()
         return _env("get_calendar_period", services.get_calendar_period(persona_id, date, view), t)
 
     @mcp.tool()
     def get_activity(activity_id: str) -> dict[str, Any]:
+        """Fetch one simulated activity (block) by id."""
         t = time.perf_counter()
         return _env("get_activity", services.get_activity(activity_id), t)
 
     @mcp.tool()
     def summarize_persona_period(persona_id: str, start_date: str | None = None, end_date: str | None = None, lens: str | None = None) -> dict[str, Any]:
+        """Gather a persona's experience over a date range (optional lens) for summarisation."""
         t = time.perf_counter()
         return _env("summarize_persona_period", services.summarize_persona_period(persona_id, start_date, end_date, lens), t)
 
     @mcp.tool()
     def extract_pain_points(persona_id: str, start_date: str | None = None, end_date: str | None = None) -> dict[str, Any]:
+        """Surface a persona's pain-point observations over a date range."""
         t = time.perf_counter()
         return _env("extract_pain_points", services.extract_pain_points(persona_id, start_date, end_date), t)
