@@ -421,10 +421,13 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     # too — same __PLACEHOLDER__ -> t() pattern used for the voices chart).
     app_js = (APP_JS.replace("__FAV_ICONS__", _FAV_ICONS_JSON)
               .replace("__UNSTAR__", json.dumps(t("unstar"))))
-    # Brand wordmark: set a trailing "loop" in Sona Pixel (the shared .sl-logo treatment).
+    # Brand wordmark: set the "loop" of "Sona·loop" in Sona Pixel (the shared .sl-logo
+    # treatment). Match the first "loop" anywhere so product brands like "Sonaloop Cloud"
+    # / "Sonaloop Research" get the pixel treatment too, not just the bare "Sonaloop".
     _bn = brand_name()
-    _brand_word = (f'{_esc(_bn[:-4])}<span class="sl-logo__loop">{_esc(_bn[-4:])}</span>'
-                   if _bn[-4:].lower() == "loop" else _esc(_bn))
+    _i = _bn.lower().find("loop")
+    _brand_word = (f'{_esc(_bn[:_i])}<span class="sl-logo__loop">{_esc(_bn[_i:_i+4])}</span>{_esc(_bn[_i+4:])}'
+                   if _i != -1 else _esc(_bn))
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_esc(title)} · {_esc(brand_name())}</title>
