@@ -330,14 +330,18 @@ def validate_synthesis_section_payload(payload: dict[str, Any]) -> dict[str, Any
                               "council_id": str(c.get("council_id", "")).strip()[:80],
                               "quote": str(c.get("quote", "")).strip()[:600]})
     # figures (spec/meta-report-presentation-and-pdf §2): typed refs the renderer resolves to visuals —
-    # {kind: asset|prototype|chart|avatar|graph, id|of|source_id, caption}. A chart figure may carry an
-    # author-supplied `series` ([{label, value, color?}]) for of="bar"|"pie"|"gauge" (gauge adds an
-    # optional per-item `max`); of="stacked_bar" carries nested `segments` ([{label, value, color?}]);
-    # of="effort_impact" derives from source_id's synthesis. Charts render via the design-system chart
-    # components (sonaloop._charts).
+    # {kind: asset|prototype|chart|avatar|graph, id|of|source_id, caption}. A chart figure carries an
+    # author-supplied `series` whose per-item shape depends on `of` (see web/_report.py): value+color
+    # (bar/pie), +max (gauge), nested segments (stacked_bar), positive/negative (diverging_bar), a
+    # numeric `values` list (dot_plot, heatmap rows), or a `points` list (line). of="line"/"heatmap" also
+    # read figure-level `labels`/`columns`. of="effort_impact" derives from source_id's synthesis.
     def _series_item(s: dict) -> dict:
         return {"label": str(s.get("label", "")).strip()[:120], "value": s.get("value"),
                 "color": str(s.get("color", "")).strip()[:40]}
+
+    def _num_list(xs: Any, cap: int) -> list:
+        return [(v if isinstance(v, (int, float)) and not isinstance(v, bool) else None)
+                for v in (xs[:cap] if isinstance(xs, (list, tuple)) else [])]
     figures = []
     for f in payload.get("figures", []) or []:
         if isinstance(f, dict) and str(f.get("kind", "")).strip():
@@ -347,13 +351,26 @@ def validate_synthesis_section_payload(payload: dict[str, Any]) -> dict[str, Any
                     item = _series_item(s)
                     if s.get("max") is not None:  # gauge scale
                         item["max"] = s.get("max")
+                    if s.get("positive") is not None or s.get("negative") is not None:  # diverging_bar
+                        item["positive"], item["negative"] = s.get("positive"), s.get("negative")
                     if isinstance(s.get("segments"), list):  # stacked-bar composition
                         item["segments"] = [_series_item(g) for g in s["segments"][:12]
                                             if isinstance(g, dict) and str(g.get("label", "")).strip() != ""]
+                    if isinstance(s.get("values"), list):  # dot_plot points / heatmap row
+                        item["values"] = _num_list(s["values"], 40)
+                    if isinstance(s.get("points"), list):  # line trend
+                        item["points"] = _num_list(s["points"], 60)
                     series.append(item)
-            figures.append({"kind": str(f["kind"]).strip()[:24], "id": str(f.get("id", "")).strip()[:160],
-                            "of": str(f.get("of", "")).strip()[:40], "source_id": str(f.get("source_id", "")).strip()[:120],
-                            "caption": str(f.get("caption", "")).strip()[:300], "series": series})
+            fig = {"kind": str(f["kind"]).strip()[:24], "id": str(f.get("id", "")).strip()[:160],
+                   "of": str(f.get("of", "")).strip()[:40], "source_id": str(f.get("source_id", "")).strip()[:120],
+                   "caption": str(f.get("caption", "")).strip()[:300], "series": series}
+            cols = [str(c).strip()[:60] for c in (f.get("columns") or [])[:20] if str(c).strip()]
+            if cols:  # heatmap column headers
+                fig["columns"] = cols
+            labs = [str(x).strip()[:40] for x in (f.get("labels") or [])[:60]]
+            if labs:  # line x-axis labels
+                fig["labels"] = labs
+            figures.append(fig)
     return {"markdown": str(payload.get("markdown", "")).strip()[:20000],
             "citations": citations[:50], "figures": figures[:20]}
 

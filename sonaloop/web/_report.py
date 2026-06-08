@@ -58,17 +58,34 @@ def _resolve_figure(f: dict, store) -> dict | None:
         if p and p.get("avatar", {}).get("path"):
             return {"url": "/" + p["avatar"]["path"], "caption": cap or p.get("display_name", "")}
     if kind == "chart":
-        # Design-system chart components (sonaloop._charts, vendored from sonaloop-design):
-        #   of="bar"|"pie"   → author-supplied `series` [{label, value, color?}]
-        #   of="stacked_bar" → `series` [{label, segments:[{label, value, color?}]}] (composition)
-        #   of="gauge"       → `series` [{label, value, max?, color?}] (radial progress / KPI)
-        #   of="effort_impact" → a synthesis's structured 2×2 (the payoff of unifying synthesis + report)
+        # Design-system chart components (sonaloop._charts, vendored from sonaloop-design). All but
+        # effort_impact are author-supplied via `series`:
+        #   of="bar"|"pie"      → [{label, value, color?}]
+        #   of="stacked_bar"    → [{label, segments:[{label, value, color?}]}] (composition)
+        #   of="gauge"          → [{label, value, max?, color?}] (radial progress / KPI)
+        #   of="diverging_bar"  → [{label, positive, negative}] (net for↔against sentiment)
+        #   of="dot_plot"       → [{label, values:[num], color?}] (spread of voices on a scale)
+        #   of="line"           → [{label, points:[num], color?}] + figure `labels` (trend)
+        #   of="heatmap"        → figure `columns` [str] + `series` rows [{label, values:[num]}]
+        #   of="effort_impact"  → a synthesis's structured 2×2 (the payoff of unifying synthesis + report)
         of = f.get("of", "effort_impact")
-        if of in ("bar", "pie", "stacked_bar", "gauge"):
-            from .._charts import bar_chart, gauge_chart, pie_chart, stacked_bar_chart
-            series = [s for s in (f.get("series") or []) if isinstance(s, dict)]
-            render = {"pie": pie_chart, "stacked_bar": stacked_bar_chart, "gauge": gauge_chart}.get(of, bar_chart)
+        series = [s for s in (f.get("series") or []) if isinstance(s, dict)]
+        if of in ("bar", "pie", "stacked_bar", "gauge", "diverging_bar", "dot_plot"):
+            from .._charts import (bar_chart, diverging_bar_chart, dot_plot_chart, gauge_chart,
+                                   pie_chart, stacked_bar_chart)
+            render = {"pie": pie_chart, "stacked_bar": stacked_bar_chart, "gauge": gauge_chart,
+                      "diverging_bar": diverging_bar_chart, "dot_plot": dot_plot_chart}.get(of, bar_chart)
             chart = render(series)
+            return {"html": chart, "caption": cap} if chart else None
+        if of == "line":
+            from .._charts import line_chart
+            labels = [str(x) for x in (f.get("labels") or [])]
+            chart = line_chart(series, labels=labels or None)
+            return {"html": chart, "caption": cap} if chart else None
+        if of == "heatmap":
+            from .._charts import heatmap_chart
+            columns = [str(x) for x in (f.get("columns") or [])]
+            chart = heatmap_chart(columns, series)
             return {"html": chart, "caption": cap} if chart else None
         sid = f.get("source_id") or f.get("id")
         syn = store.get_synthesis(sid) if sid else None

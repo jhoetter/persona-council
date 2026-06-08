@@ -24,10 +24,21 @@ def test_chart_components_render_and_are_empty_safe():
     gauge = _charts.gauge_chart([{"label": "Confidence", "value": 72}, {"label": "Done", "value": 9, "max": 12}])
     assert "sl-gauge" in gauge and "--p:72.0" in gauge and "72%" in gauge and "75%" in gauge  # 9/12
     assert "9 / 12" in gauge  # non-100 max shows the raw ratio
+    diverging = _charts.diverging_bar_chart(
+        [{"label": "Pricing", "positive": 6, "negative": 2}], positive_label="For", negative_label="Against")
+    assert "sl-dbar__pos" in diverging and "sl-dbar__neg" in diverging and "+6 · −2" in diverging
+    heat = _charts.heatmap_chart(["Cost", "Reach"], [{"label": "Plan A", "values": [2, 5]}])
+    assert "sl-heat" in heat and "color-mix(in srgb" in heat and "grid-template-columns" in heat
+    dots = _charts.dot_plot_chart([{"label": "Trust", "values": [2, 3, 3, 4, 5]}])
+    assert dots.count("sl-dot-pt") == 5 and "sl-dot-mean" in dots and "3.4" in dots  # mean of values
+    line = _charts.line_chart([{"label": "Conf", "points": [2, 3, 5, 4, 6]}], labels=["R1", "R2", "R3", "R4", "R5"])
+    assert "<svg" in line and "sl-line__path" in line and "<polyline" in line and "sl-line__labels" in line
     # empty / unscored inputs never fabricate a chart
     assert _charts.bar_chart([]) == "" and _charts.pie_chart([{"label": "x", "value": 0}]) == ""
     assert _charts.effort_impact([{"label": "no score", "x": None, "y": 2}]) == ""
     assert _charts.stacked_bar_chart([]) == "" and _charts.gauge_chart([]) == ""
+    assert _charts.diverging_bar_chart([]) == "" and _charts.heatmap_chart([], []) == ""
+    assert _charts.dot_plot_chart([]) == "" and _charts.line_chart([{"label": "x", "points": [1]}]) == ""
 
 
 def test_chart_escapes_labels():
@@ -71,6 +82,37 @@ def test_section_validator_preserves_gauge_max_and_stacked_segments():
     assert gauge["series"][0]["max"] == 100  # gauge scale survives sanitization
     segs = stacked["series"][0]["segments"]
     assert [s["label"] for s in segs] == ["For", "Against"] and segs[0]["value"] == 6
+
+
+def test_report_embeds_diverging_heatmap_dotplot_line(store):
+    html = render_report(_report_with_figures([
+        {"kind": "chart", "of": "diverging_bar", "series": [{"label": "Pricing", "positive": 6, "negative": 2}]},
+        {"kind": "chart", "of": "heatmap", "columns": ["Cost", "Reach"],
+         "series": [{"label": "Plan A", "values": [2, 5]}]},
+        {"kind": "chart", "of": "dot_plot", "series": [{"label": "Trust", "values": [2, 3, 4, 5]}]},
+        {"kind": "chart", "of": "line", "labels": ["R1", "R2", "R3"],
+         "series": [{"label": "Conf", "points": [2, 4, 6]}]},
+    ]), store)
+    assert "sl-dbar__pos" in html  # diverging
+    assert "sl-heat" in html and "color-mix(in srgb" in html  # heatmap
+    assert "sl-dot-track" in html  # dot plot
+    assert "sl-line__path" in html and "<svg" in html  # line
+
+
+def test_section_validator_preserves_new_chart_fields():
+    from sonaloop.llm_simulation._validators import validate_synthesis_section_payload
+    out = validate_synthesis_section_payload({"markdown": "Body.", "figures": [
+        {"kind": "chart", "of": "diverging_bar", "series": [{"label": "Pricing", "positive": 6, "negative": 2}]},
+        {"kind": "chart", "of": "heatmap", "columns": ["Cost", "Reach"],
+         "series": [{"label": "Plan A", "values": [2, 5]}]},
+        {"kind": "chart", "of": "dot_plot", "series": [{"label": "Trust", "values": [2, 3, 4, 5]}]},
+        {"kind": "chart", "of": "line", "labels": ["R1", "R2"], "series": [{"label": "Conf", "points": [2, 4]}]},
+    ]})
+    diverging, heat, dots, line = out["figures"]
+    assert diverging["series"][0]["positive"] == 6 and diverging["series"][0]["negative"] == 2
+    assert heat["columns"] == ["Cost", "Reach"] and heat["series"][0]["values"] == [2, 5]
+    assert dots["series"][0]["values"] == [2, 3, 4, 5]
+    assert line["labels"] == ["R1", "R2"] and line["series"][0]["points"] == [2, 4]
 
 
 def test_report_embeds_synthesis_effort_impact_2x2(store):
