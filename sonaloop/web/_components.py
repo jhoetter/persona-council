@@ -64,13 +64,13 @@ _AV_COLORS = ["#3d7b5f", "#2f6f9f", "#a66b1f", "#7a5ea6", "#b3493f", "#4a7d7d", 
 
 def _avatar(p: dict, size: int = 36) -> str:
     if (p.get("avatar") or {}).get("path"):
-        return h("img", {"class_": "av", "style": f"width:{size}px;height:{size}px",
+        return h("img", {"class_": "sl-avatar", "style": f"width:{size}px;height:{size}px",
                          "src": f'/{p["avatar"]["path"]}', "alt": ""})
     name = p.get("display_name", "?")
     ini = "".join(w[0] for w in name.split()[:2]).upper() or "?"
     c = _AV_COLORS[sum(map(ord, p.get("id", "x"))) % len(_AV_COLORS)]
     fs = max(10, size // 3)
-    return h("span", {"class_": "av", "style": f"width:{size}px;height:{size}px;background:{c};font-size:{fs}px"}, ini)
+    return h("span", {"class_": "sl-avatar", "style": f"width:{size}px;height:{size}px;background:{c};font-size:{fs}px"}, ini)
 
 
 def _stance_color(s: str) -> str:
@@ -87,7 +87,7 @@ def _stance_color(s: str) -> str:
 
 
 def _label(text: str, color: str | None = None, variant: str = "soft", dot: bool = True) -> str:
-    d = h("span", {"class_": "ld", "style": f"background:{color or 'var(--muted)'}"}) if dot else None
+    d = h("span", {"class_": "sl-dot", "style": f"background:{color or 'var(--muted)'}"}) if dot else None
     return h("span", {"class_": f"lbl lbl-{variant}"}, d, text)
 
 
@@ -96,12 +96,12 @@ def _crumbs_html(crumbs: list) -> str:
     for i, (label, href) in enumerate(crumbs):
         last = i == len(crumbs) - 1
         if href and not last:
-            parts.append(h("a", {"class_": "bc-link", "href": href, "title": label}, label))
+            parts.append(h("a", {"class_": "sl-breadcrumb__link", "href": href, "title": label}, label))
         else:
-            parts.append(h("span", {"class_": "bc-cur", "title": label}, label))
+            parts.append(h("span", {"class_": "sl-breadcrumb__current", "title": label}, label))
         if not last:
-            parts.append(h("span", {"class_": "bc-sep", "aria-hidden": "true"}, "›"))
-    return h("nav", {"class_": "breadcrumb", "aria-label": t("breadcrumb_aria")}, parts)
+            parts.append(h("span", {"class_": "sl-breadcrumb__sep", "aria-hidden": "true"}, "›"))
+    return h("nav", {"class_": "sl-breadcrumb", "aria-label": t("breadcrumb_aria")}, parts)
 
 
 
@@ -120,7 +120,7 @@ APP_JS = """
   var um=document.getElementById('usermenu'),umb=document.getElementById('umbtn'),ump=document.getElementById('umpop');
   function curTheme(){ try{return localStorage.getItem('theme')||'system';}catch(e){return 'system';} }
   function markTheme(v){ document.querySelectorAll('[data-theme-set]').forEach(function(b){
-    b.classList.toggle('on', b.getAttribute('data-theme-set')===v); }); }
+    b.classList.toggle('is-active', b.getAttribute('data-theme-set')===v); }); }
   function applyTheme(v){
     if(v==='light'||v==='dark') document.documentElement.dataset.theme=v;
     else delete document.documentElement.dataset.theme;
@@ -359,19 +359,19 @@ def _user_menu() -> str:
     cur = _lang()
     themes = [("light", "sun", t("theme_light")), ("system", "monitor", t("theme_system")),
               ("dark", "moon", t("theme_dark"))]
-    theme_opts = [h("button", {"type": "button", "class_": "segbtn", "data-theme-set": val,
+    theme_opts = [h("button", {"type": "button", "class_": "sl-segmented__item", "data-theme-set": val,
                                 "title": label, "aria-label": label}, raw(_icon(icon)), h("span", {}, label))
                   for val, icon, label in themes]
     langs = [("de", "Deutsch", "DE"), ("en", "English", "EN")]
-    lang_opts = [h("a", {"class_": f'segbtn{" on" if code == cur else ""}', "href": f"?lang={code}",
+    lang_opts = [h("a", {"class_": f'sl-segmented__item{" is-active" if code == cur else ""}', "href": f"?lang={code}",
                          "title": full, "aria-label": full}, h("span", {}, short))
                  for code, full, short in langs]
     return h("div", {"class_": "usermenu", "id": "usermenu"},
              h("div", {"class_": "um-pop", "id": "umpop", "hidden": True},
                h("div", {"class_": "um-sec"}, h("div", {"class_": "um-lbl"}, t("theme")),
-                 h("div", {"class_": "seg seg-theme"}, theme_opts)),
+                 h("div", {"class_": "sl-segmented sl-segmented--fill sl-segmented--stacked"}, theme_opts)),
                h("div", {"class_": "um-sec"}, h("div", {"class_": "um-lbl"}, t("language")),
-                 h("div", {"class_": "seg"}, lang_opts))),
+                 h("div", {"class_": "sl-segmented sl-segmented--fill"}, lang_opts))),
              h("button", {"type": "button", "class_": "um-trigger pi-hover", "id": "umbtn",
                           "aria-haspopup": "true", "aria-expanded": "false"},
                h("span", {"class_": "um-ava"}, raw(_icon("settings", animate=True))),
@@ -471,8 +471,8 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
     """One index-page shell — title + count + lead + rows (or an empty state). Every list page
     (projects, personas, councils, syntheses, prototypes, concepts) renders identically through this."""
     rows_html = (raw("".join(str(r) for r in rows)) if rows else
-                 h("div", {"class_": "empty"}, h("div", {"class_": "empty-ic"}, raw(_hifi(empty_icon, 44))),
-                   h("p", {"class_": "empty-msg"}, empty_msg)))
+                 h("div", {"class_": "sl-empty"}, h("div", {"class_": "sl-empty__icon"}, raw(_hifi(empty_icon, 44))),
+                   h("p", {"class_": "sl-empty__body"}, empty_msg)))
     cnt = h("span", {"class_": "h1cnt"}, str(len(rows))) if rows else ""
     body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, title, cnt),
              h("p", {"class_": "lead"}, lead), h("div", {"class_": "rows"}, rows_html))
@@ -483,10 +483,10 @@ def _empty_state(title: str, message: str, *, icon: str = "overview", action: tu
     """A calm, centered empty/not-found state (Linear-style): a hi-fi product glyph as the small
     'illustration', a title, one explanatory line, and a single CTA. `action` = (label, href, icon)."""
     label, href, ic = action or (t("projects"), "/projects", "back")
-    return h("div", {"class_": "page"}, h("div", {"class_": "empty"},
-             h("div", {"class_": "empty-ic"}, raw(_hifi(icon, 44))),
-             h("h2", {"class_": "empty-h"}, title),
-             h("p", {"class_": "empty-msg"}, message),
+    return h("div", {"class_": "page"}, h("div", {"class_": "sl-empty"},
+             h("div", {"class_": "sl-empty__icon"}, raw(_hifi(icon, 44))),
+             h("h2", {"class_": "sl-empty__title"}, title),
+             h("p", {"class_": "sl-empty__body"}, message),
              h("a", {"class_": "sl-btn", "href": href}, raw(_icon(ic)), " ", label)))
 
 
@@ -582,7 +582,7 @@ def _md(text: str) -> str:
                     rows.append(_cells(lines[j])); j += 1
                 th = "".join(f"<th>{_md_inline(c)}</th>" for c in header)
                 trs = "".join("<tr>" + "".join(f"<td>{_md_inline(c)}</td>" for c in r) + "</tr>" for r in rows)
-                out.append(f'<table class="mdtable"><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>')
+                out.append(f'<table class="sl-table sl-table--bordered sl-table--zebra"><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>')
                 i = j; continue
         if not stripped:
             _close(); i += 1; continue
@@ -732,9 +732,8 @@ register_css(r"""
 .lbl{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-sm);border-radius:6px;padding:2px 8px;white-space:nowrap}
 .lbl-soft{background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
 .lbl-outline{border:1px solid var(--line);color:var(--muted)}
-.lbl .ld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.av{border-radius:50%;object-fit:cover;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:var(--t-xs);font-weight:600;color:#fff;border:1px solid var(--line)}
-.avs{display:inline-flex}.avs .av{margin-left:-6px;box-shadow:0 0 0 2px var(--panel)}.avs .av:first-child{margin-left:0}
+/* label dot (.sl-dot) and avatars (.sl-avatar) come from the shared COMPONENTS_CSS layer;
+   _avatar() still sets per-instance size/colour inline. */
 /* ---- stat strip + persona cards (G2) ---- */
 .stats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
 .stat{display:flex;align-items:baseline;gap:7px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px 12px}
@@ -764,11 +763,10 @@ register_css(r"""
 .turn-src{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:var(--t-sm);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .turn-src:hover{color:var(--accent)}.turn-src svg{width:13px;height:13px;flex:none;opacity:.8}
 /* empty / not-found state — a calm centered card with a hi-fi product glyph (Linear-style) */
-.empty{max-width:404px;margin:8vh auto 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:9px;border:1px solid var(--line);border-radius:12px;padding:34px 30px;background:var(--panel)}
-.empty-ic{color:var(--muted);line-height:0;margin-bottom:3px}.empty-ic svg{width:44px;height:44px;opacity:.92}
-.empty-h{font-size:var(--t-md);font-weight:600;margin:0;color:var(--ink)}
-.empty-msg{color:var(--muted);font-size:var(--t-body);margin:0;line-height:1.55;max-width:312px}
-.empty .sl-btn{margin-top:9px}
+/* Empty / not-found state = the shared .sl-empty (+__icon/__title/__body) from COMPONENTS_CSS.
+   Only the page-positioning (centre, push down from the top) is inspector-local. */
+.sl-empty{margin:8vh auto 0}
+.sl-empty .sl-btn{margin-top:9px}
 /* a persona's multiple answers stack in one card, separated by a hairline */
 .turn-ans+.turn-ans{margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)}
 .turn-ans>p{margin:0}

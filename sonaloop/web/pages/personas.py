@@ -178,7 +178,7 @@ def register_personas(app) -> None:
             ("personas", t("role"), p["role"]["title"]),
             ("projects", t("industry"), p["company_context"]["industry"]),
             ("dot", t("size"), p["company_context"].get("size", "")),
-            ("memory", t("memory"), h("a", {"class_": "bc-link", "href": f'/personas/{p["id"]}/memory'}, raw(_icon("memory")), " ", t("open"))),
+            ("memory", t("memory"), h("a", {"class_": "sl-breadcrumb__link", "href": f'/personas/{p["id"]}/memory'}, raw(_icon("memory")), " ", t("open"))),
         ], aside=True)
         prail = [("cal", t("calendar")),
                  ("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
@@ -217,7 +217,7 @@ def register_personas(app) -> None:
               h("div", {"class_": "card"}, h("h3", {}, t("artifacts")), raw(_pills(a.get("artifacts_touched", [])) or "—")),
               h("div", {"class_": "card"}, h("h3", {}, t("open_loops")), raw(_pills(a.get("open_loops", [])) or "—"))))
         props = _properties_html([
-            ("personas", t("persona"), h("a", {"class_": "bc-link", "href": f'/personas/{p["id"]}'}, p["display_name"])),
+            ("personas", t("persona"), h("a", {"class_": "sl-breadcrumb__link", "href": f'/personas/{p["id"]}'}, p["display_name"])),
             ("square", t("tool"), a["tool"]),
             ("dot", t("mood"), a["impact"]["mood"]),
             ("personas", t("participants"), _pills(a.get("participants", []) or [alone_label])),

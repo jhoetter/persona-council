@@ -56,13 +56,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .um-pop[hidden]{display:none}
 .um-sec{margin-bottom:10px}
 .um-lbl{font-size:var(--t-xs);letter-spacing:.02em;color:var(--faint);font-weight:600;margin:0 2px 6px}
-.seg{display:flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:3px}
-.segbtn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 4px;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--t-xs);font-weight:500;text-decoration:none;font-family:inherit}
-.segbtn .ic{width:17px;height:17px}
-.segbtn:hover{color:var(--ink);background:var(--hover)}
-.segbtn.on{background:var(--panel);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.10)}
-.segbtn.on .ic{color:var(--accent)}
-.seg:not(.seg-theme) .segbtn{padding:8px 4px;font-size:var(--t-sm);font-weight:600}
+/* Theme + language switchers use the shared .sl-segmented (--fill --stacked) from
+   COMPONENTS_CSS. Only the icon size is bridged here (the design-system control leaves
+   icon sizing to the host). See the design-system docs (Components › Segmented · Tabs). */
+.sl-segmented .ic{width:17px;height:17px}
 .rgwrap{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
 #rg{display:block;touch-action:none;cursor:grab}
 #rg.grabbing{cursor:grabbing}
@@ -219,11 +216,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .iconbtn:hover{background:var(--hover);color:var(--ink)}
 .spacer{flex:1}
 .tb-actions{display:flex;align-items:center;gap:8px}
-.breadcrumb{display:flex;align-items:center;gap:6px;font-size:var(--t-body);min-width:0;overflow:hidden}
-.bc-link{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bc-link:hover{color:var(--accent)}
-.bc-cur{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bc-sep{color:var(--line);flex-shrink:0;user-select:none}
+/* Breadcrumb = the shared .sl-breadcrumb (+__link / __current / __sep) from COMPONENTS_CSS.
+   Bridge the inspector's denser type size + bolder current crumb. */
+.sl-breadcrumb{font-size:var(--t-body)}
+.sl-breadcrumb__current{font-weight:600}
 section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .page{max-width:1200px;margin:0 auto}
 .page.wide{max-width:none}
@@ -269,11 +265,10 @@ h1,h2,h3,h4{color:var(--ink)}
 .rail h4 svg{width:13px;height:13px;color:var(--faint)}
 .rail h4:not(:first-child){border-top:1px solid var(--line-2);margin-top:4px;padding-top:13px}
 /* .hero h1/.sub now co-located with the _hero component (component-SSR C3) */
-.mdtable{border-collapse:collapse;width:100%;margin:16px 0;font-size:var(--t-body);line-height:1.4}
-.mdtable th,.mdtable td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
-.mdtable th{background:var(--panel-2);font-weight:650;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
-.mdtable tbody tr:nth-child(even) td{background:var(--panel-2)}
-.es-prose .mdtable td,.es-prose .mdtable th{max-width:none}
+/* Markdown tables render with the shared .sl-table (--bordered --zebra) from COMPONENTS_CSS.
+   Bridge only the prose spacing + let cells grow inside prose. See docs (Components › Table). */
+.es-prose .sl-table{margin:16px 0}
+.es-prose .sl-table td,.es-prose .sl-table th{max-width:none}
 #favs .favic{display:inline-flex}#favs .favic svg{width:14px;height:14px}
 .sec{margin:26px 0 0;padding-top:18px;border-top:1px solid var(--line)}
 .sec>h2,.sec>summary{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600}
@@ -282,7 +277,7 @@ details.sec>summary{cursor:pointer;list-style:none;display:flex;align-items:cent
 details.sec>summary::-webkit-details-marker,details.block>summary.bh::-webkit-details-marker{display:none}
 details.sec>summary::before,details.block>summary.bh::before{content:"\\25b8";color:var(--muted);transition:transform 150ms;font-size:var(--t-xs)}
 details.sec[open]>summary::before,details.block[open]>summary.bh::before{transform:rotate(90deg)}
-.doc-main p{max-width:74ch}.es-prose,.detail{overflow-wrap:break-word}.es-prose pre,pre{overflow-x:auto;max-width:100%}.es-prose img,.detail img{max-width:100%;height:auto}.es-prose .mdtable{display:block;overflow-x:auto}
+.doc-main p{max-width:74ch}.es-prose,.detail{overflow-wrap:break-word}.es-prose pre,pre{overflow-x:auto;max-width:100%}.es-prose img,.detail img{max-width:100%;height:auto}.es-prose .sl-table{display:block;overflow-x:auto}
 /* .es-prose typography is shared by many pages (note/section/synthesis prose) — stays global.
    .es/.eyebrow/.qa-q now live co-located with _study_lead (component-SSR C2/C3). */
 .es-prose{font-size:var(--t-prose);line-height:1.62;color:var(--ink)}.es-prose.sm{font-size:var(--t-md);line-height:1.6}
