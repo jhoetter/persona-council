@@ -29,3 +29,14 @@ Vendored so the PyPI package has no local-path dependency.
 } > "$dst"
 
 echo "synced $src -> $dst ($(wc -c < "$dst") bytes)"
+
+# Design tokens — generated CSS module, copied verbatim (it carries its own vendoring
+# note). web_assets.py imports TOKENS_CSS from it. Single source: ../sonaloop-design.
+tsrc="$here/../sonaloop-design/py/sonaloop_icons/tokens.py"
+tdst="$here/sonaloop/_tokens.py"
+if [[ -f "$tsrc" ]]; then
+  cp "$tsrc" "$tdst"
+  echo "synced $tsrc -> $tdst ($(wc -c < "$tdst") bytes)"
+else
+  echo "warn: tokens module not found at $tsrc (run 'node scripts/gen-tokens.mjs' in ../sonaloop-design)" >&2
+fi

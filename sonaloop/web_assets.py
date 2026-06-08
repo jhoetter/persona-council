@@ -1,34 +1,14 @@
-"""Web UI asset strings (CSS + inline JS) extracted from web.py (spec/refactor-plan.md target 1). Pure constants — no behaviour, imported back into web.py."""
+"""Web UI asset strings (CSS + inline JS) extracted from web.py (spec/refactor-plan.md target 1). Pure constants — no behaviour, imported back into web.py.
 
-CSS = """
-/* Cursor-leaning brand system — master: sonaloop-design/BRANDING.md. Token-driven — one rewrite
-   re-skins the whole app. Light = near-white with only a faint warm tint (paper #faf8f3 / ink #1a1815);
-   dark already matches the brand exactly. Geist (body) + Geist Mono (--mono). Indigo accent #5e6ad2,
-   used sparingly (primary buttons are ink-black, Cursor-style). Surface deviation vs. the site: panels
-   are lifted to crisp white (#fff) so they read above the faintly-warm page in a dense tool. Dark via
-   prefers-color-scheme + [data-theme]. */
-:root{
-  --bg:#faf8f3;--sidebar:#f6f4ef;--panel:#ffffff;--panel-2:#f1efe8;--overlay:#ffffff;
-  --line:#e9e5db;--line-2:#f0ede5;--ink:#1a1815;--muted:#635e56;--faint:#8c857a;
-  --accent:#5e6ad2;--accent-ink:#ffffff;--accent-weak:#ecebf8;--hover:#f4f1ea;--sel:#ece9df;
-  --green:#3d9b6b;--amber:#b87a25;--red:#cf4d5f;--violet:#7a5ed1;--skep:#c2683f;--blue:#3d7fc4;
-  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  --radius:8px;--radius-sm:6px;--row-h:48px;--ease:cubic-bezier(.4,0,.2,1);
-  --shadow-sm:0 1px 2px rgba(26,24,21,.05);
-  --shadow-lg:0 8px 28px rgba(26,24,21,.12),0 1px 2px rgba(26,24,21,.07);
-  /* design-system scales (spec/design-system.md §2) — adopt incrementally; additive, no pixel change */
-  --t-xs:11px;--t-sm:12px;--t-body:13px;--t-md:15px;--t-prose:16px;--t-lg:18px;--t-xl:24px;
-  --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-8:32px;
-}
-@media (prefers-color-scheme: dark){:root{
-  --bg:#101113;--sidebar:#0d0e10;--panel:#16171a;--panel-2:#1c1d21;--overlay:#1a1b1e;
-  --line:#23252a;--line-2:#1b1d21;--ink:#e6e7ea;--muted:#8a8f98;--faint:#6b7076;
-  --accent:#7c84e8;--accent-ink:#ffffff;--accent-weak:#1d2030;--hover:#1a1b1f;--sel:#1f2128;
-  --green:#4cb782;--amber:#d9a23b;--red:#e0566a;--violet:#9a8cff;--skep:#d98a63;--blue:#5e9fe0;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow-lg:0 8px 28px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.3);
-}}
-:root[data-theme="light"]{--bg:#faf8f3;--sidebar:#f6f4ef;--panel:#ffffff;--panel-2:#f1efe8;--overlay:#ffffff;--line:#e9e5db;--line-2:#f0ede5;--ink:#1a1815;--muted:#635e56;--faint:#8c857a;--accent:#5e6ad2;--accent-ink:#fff;--accent-weak:#ecebf8;--hover:#f4f1ea;--sel:#ece9df;--green:#3d9b6b;--amber:#b87a25;--red:#cf4d5f;--violet:#7a5ed1;--skep:#c2683f;--blue:#3d7fc4;}
-:root[data-theme="dark"]{--bg:#101113;--sidebar:#0d0e10;--panel:#16171a;--panel-2:#1c1d21;--overlay:#1a1b1e;--line:#23252a;--line-2:#1b1d21;--ink:#e6e7ea;--muted:#8a8f98;--faint:#6b7076;--accent:#7c84e8;--accent-ink:#fff;--accent-weak:#1d2030;--hover:#1a1b1f;--sel:#1f2128;--green:#4cb782;--amber:#d9a23b;--red:#e0566a;--violet:#9a8cff;--skep:#d98a63;--blue:#5e9fe0;}
+Colour tokens (the :root / dark / [data-theme] blocks) live in the design system, NOT here.
+Single source: ../sonaloop-design/tokens.data.mjs → vendored as sonaloop/_tokens.py and
+prepended below as TOKENS_CSS. Cursor-leaning brand: near-white warm light + cool dark
+(#101113), Geist + Geist Mono, indigo accent used sparingly; panels lifted to crisp white.
+Refresh the vendored tokens with `make icons`. See sonaloop-design/BRANDING.md."""
+
+from ._tokens import TOKENS_CSS  # generated design tokens — single source: ../sonaloop-design
+
+CSS = TOKENS_CSS + """
 
 *{box-sizing:border-box}
 html,body{height:100%}
