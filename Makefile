@@ -3,12 +3,20 @@ FORWARDED_WEB_PORT ?= 18787
 
 UV ?= uv
 
-.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons
+.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons check-icons
 
-# Refresh the vendored icon module (sonaloop/_icons.py) from ../sonaloop-design.
-# Run after editing icons.data.mjs + `node scripts/gen.mjs` in that repo.
+# Refresh the vendored design-system modules (sonaloop/_icons.py + sonaloop/_tokens.py)
+# from ../sonaloop-design. Run after editing icons.data.mjs / tokens.data.mjs + `npm run gen`.
 icons:
 	bash scripts/sync_icons.sh
+
+# Drift guard: re-vendor and fail if sonaloop/_icons.py or _tokens.py differ from the
+# design system — i.e. a token/icon change in ../sonaloop-design wasn't synced here. (CI / pre-push.)
+check-icons:
+	bash scripts/sync_icons.sh
+	@git diff --exit-code -- sonaloop/_icons.py sonaloop/_tokens.py \
+	  || { echo "✗ vendored design-system files are stale — run 'make icons' and commit"; exit 1; }
+	@echo "✓ sonaloop/_icons.py + _tokens.py are in sync with ../sonaloop-design"
 
 # Symlink version-controlled skills into .claude/skills/ so Claude Code discovers
 # them (.claude/skills is gitignored). Run once after clone.
