@@ -519,3 +519,130 @@ def export_report(project_id: str, report_id: str | None = None, format: str = "
                       ", ".join(_ref_title(x) for x in sec["source_study_ids"]) + "_"]
         lines += [""]
     return "\n".join(lines) + "\n"
+
+
+# ── PPTX export — a native PowerPoint deck of any report (spec/unified-synthesis-report; Phase 2).
+#    Domain logic here (which slides, which data); the slide→.pptx mechanics live in sonaloop/_pptx.py.
+
+import re as _re_pptx
+
+
+def _md_blocks(md: str) -> list[tuple[int, str]]:
+    """Markdown section body → [(level, text)] for slide bullets (level 0 = paragraph, 1 = bullet).
+    Lossy by design: strips emphasis/code/links/figure-refs/callout fences to clean presenter text."""
+    out: list[tuple[int, str]] = []
+    for line in (md or "").split("\n"):
+        s = line.strip()
+        if not s or s.startswith(":::"):
+            continue
+        level = 0
+        if s[:2] in ("- ", "* "):
+            s, level = s[2:], 1
+        elif _re_pptx.match(r"^\d+\.\s", s):
+            s, level = _re_pptx.sub(r"^\d+\.\s", "", s), 1
+        elif s.startswith("#"):
+            s = s.lstrip("# ").strip()
+        s = _re_pptx.sub(r"!\[\[.*?\]\]", "", s)              # figure refs
+        s = _re_pptx.sub(r"\*\*(.+?)\*\*", r"\1", s)
+        s = _re_pptx.sub(r"\*(.+?)\*", r"\1", s)
+        s = _re_pptx.sub(r"`(.+?)`", r"\1", s)
+        s = _re_pptx.sub(r"\[(.+?)\]\(.*?\)", r"\1", s)
+        s = s.strip()
+        if s:
+            out.append((level, s))
+    return out
+
+
+def _figure_to_chart(fig: dict, store: Store) -> dict | None:
+    """A report `chart` figure → the neutral _pptx chart model, or None (non-chart / unresolvable)."""
+    if (fig or {}).get("kind") != "chart":
+        return None
+    of = fig.get("of", "effort_impact")
+    if of in ("bar", "pie"):
+        series = [s for s in (fig.get("series") or []) if isinstance(s, dict) and s.get("value") not in (None, "")]
+        if not series:
+            return None
+        return {"type": of, "categories": [s.get("label", "") for s in series],
+                "values": [s.get("value") for s in series]}
+    if of == "effort_impact":
+        sid = fig.get("source_id") or fig.get("id")
+        syn = store.get_synthesis(sid) if sid else None
+        if not syn:
+            return None
+        return _effort_impact_chart(syn)
+    return None
+
+
+def _effort_impact_chart(syn: dict) -> dict | None:
+    pts = [{"x": e, "y": v, "label": txt} for (txt, e, v) in _A.synthesis_recommendations(syn) if e and v]
+    if not pts:
+        return None
+    L = _SYNTHESIS_EXPORT_LABELS[content_language()]
+    return {"type": "scatter", "points": pts, "x_label": L["effort"], "y_label": L["value"]}
+
+
+def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> bytes:
+    """Render ANY report (synthesis) as a native PowerPoint deck: a title slide + one slide per section
+    (project scope) or per analytic layer (convergence scope), with native charts. Raises if the
+    python-pptx package is unavailable (it degrades gracefully at the call sites)."""
+    from .. import _pptx
+    if not _pptx.available():
+        raise RuntimeError("PPTX export needs the python-pptx package (run `uv sync`).")
+    store = store or Store()
+    syn = get_synthesis(synthesis_id, store)
+    de = content_language() == "de"
+    L = _SYNTHESIS_EXPORT_LABELS[content_language()]
+    title = syn.get("title", "")
+    for suffix in (" — Report", " — Meta-Report"):
+        if title.endswith(suffix):
+            title = title[:-len(suffix)]
+            break
+    kind_label = "Report"
+    slides: list[dict] = []
+
+    if syn.get("scope") == "project":
+        secs = syn.get("sections", [])
+        node_title = {n["study_id"]: (n.get("title") or "") for n in (syn.get("graph_snapshot") or {}).get("nodes", [])}
+
+        def ref_title(ref: str) -> str:
+            if node_title.get(ref):
+                return node_title[ref]
+            rid = ref.split(":", 1)[-1]
+            s = store.get_synthesis(rid)
+            if s:
+                return s.get("title", rid)
+            c = store.get_council_session(rid)
+            return (c.get("prompt") or rid)[:60] if c else rid
+
+        subtitle = f"{kind_label} · {len(secs)} {'Abschnitte' if de else 'sections'} · {syn.get('created_at','')[:10]}"
+        slides.append({"kind": "title", "title": title, "subtitle": subtitle, "lead": syn.get("lead", "")})
+        for sec in secs:
+            charts = [c for c in (_figure_to_chart(f, store) for f in (sec.get("figures") or [])) if c]
+            foot = ""
+            if sec.get("source_study_ids"):
+                foot = ("Quellen: " if de else "Sources: ") + ", ".join(ref_title(x) for x in sec["source_study_ids"])
+            slides.append({"kind": "content", "heading": sec.get("heading", ""),
+                           "bullets": _md_blocks(sec.get("markdown", "")),
+                           "chart": charts[0] if charts else None, "footnote": foot})
+            for c in charts[1:]:
+                slides.append({"kind": "content", "heading": sec.get("heading", ""), "bullets": [], "chart": c})
+    else:
+        status = syn.get("status", "done")
+        subtitle = f"{kind_label} · {len(syn.get('council_ids', []))} {'Councils' if de else 'councils'} · {syn.get('created_at','')[:10]}"
+        slides.append({"kind": "title", "title": title, "subtitle": subtitle, "lead": syn.get("goal", "")})
+        for key, heading in (("gesamtbild", L["big_picture"]), ("positionierung", L["positioning"])):
+            if (syn.get(key) or "").strip():
+                slides.append({"kind": "content", "heading": heading, "bullets": _md_blocks(syn[key])})
+        kps = _A.finding_texts(syn, "key_problem")
+        if kps:
+            slides.append({"kind": "content", "heading": L["key_problems"], "bullets": [(1, x) for x in kps]})
+        chart = _effort_impact_chart(syn)
+        if chart:
+            recs = [(txt, e, v) for (txt, e, v) in _A.synthesis_recommendations(syn) if e and v]
+            bullets = [(1, f"{txt} ({L['effort']} {e}/5 · {L['value']} {v}/5)") for (txt, e, v) in recs]
+            slides.append({"kind": "content", "heading": L["recommendations"], "bullets": bullets, "chart": chart})
+        oqs = _A.finding_texts(syn, "open_question")
+        if oqs:
+            slides.append({"kind": "content", "heading": L["open_questions"], "bullets": [(1, x) for x in oqs]})
+
+    return _pptx.render(slides, title=title or kind_label)

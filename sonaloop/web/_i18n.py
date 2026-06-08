@@ -54,7 +54,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "sessions": "Sessions", "no_sessions": "keine Sessions",
         "grounded_yes": "grounded", "grounded_no": "unbestätigt",
         "open_in_new_tab": "In neuem Tab öffnen",
-        "export_pdf": "Export PDF",
+        "export_pdf": "Export PDF", "export_pptx": "Export PPTX",
         # generic / not-found
         "not_found": "Nicht gefunden",
         "no_personas": "Noch keine Personas.",
@@ -196,7 +196,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "sessions": "Sessions", "no_sessions": "no sessions",
         "grounded_yes": "grounded", "grounded_no": "unconfirmed",
         "open_in_new_tab": "Open in new tab",
-        "export_pdf": "Export PDF",
+        "export_pdf": "Export PDF", "export_pptx": "Export PPTX",
         # generic / not-found
         "not_found": "Not found",
         "no_personas": "No personas yet.",

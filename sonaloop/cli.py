@@ -306,7 +306,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("session_id"); p.add_argument("--format", choices=["json", "md"], default="json"); p.add_argument("--out")
     p = sub.add_parser("syntheses")
     p = sub.add_parser("synthesis")
-    p.add_argument("synthesis_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out")
+    p.add_argument("synthesis_id"); p.add_argument("--format", choices=["md", "json", "pptx"], default="md"); p.add_argument("--out")
     # Research graph (Project container + edges + tags) + Report
     p = sub.add_parser("research-create")
     p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--persona", action="append", dest="personas")
@@ -602,8 +602,13 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "syntheses":
             _print(services.list_syntheses())
         elif args.command == "synthesis":
-            content = services.export_synthesis(args.synthesis_id, args.format)
-            _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
+            if args.format == "pptx":
+                out = args.out or f"{args.synthesis_id}.pptx"
+                Path(out).write_bytes(services.export_synthesis_pptx(args.synthesis_id))
+                _print({"path": out})
+            else:
+                content = services.export_synthesis(args.synthesis_id, args.format)
+                _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
         elif args.command == "research-create":
             _print(services.create_research_project(args.title, args.goal, args.personas))
         elif args.command == "research-list":

@@ -68,6 +68,23 @@ def register_syntheses(app) -> None:
         fn = (re.sub(r"[^\w\-]+", "-", syn.get("title", "")).strip("-").lower() or "synthesis") + ".pdf"
         return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{fn}"'})
 
+    @app.get("/syntheses/{synthesis_id}.pptx")
+    def synthesis_pptx(synthesis_id: str):
+        """Native PowerPoint deck — title slide + one slide per section/layer, with native charts
+        (spec/unified-synthesis-report.md; Phase 2). The section/figure model exports to PPTX the same
+        way it exports to PDF."""
+        store = Store()
+        syn = store.get_synthesis(synthesis_id)
+        if not syn:
+            return Response(t("not_found"), status_code=404)
+        try:
+            data = services.export_synthesis_pptx(synthesis_id, store=store)
+        except RuntimeError as e:
+            return Response(str(e), status_code=503)
+        fn = (re.sub(r"[^\w\-]+", "-", syn.get("title", "")).strip("-").lower() or "report") + ".pptx"
+        return Response(data, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:
         store = Store()
@@ -87,5 +104,6 @@ def register_syntheses(app) -> None:
         crumbs.append((short_title, None))
         body = h("div", {"class_": "page"}, raw(render_report(syn, store)))
         actions = fragment(h("a", {"class_": "sl-btn", "href": f"/syntheses/{synthesis_id}.pdf"}, t("export_pdf")),
+                           h("a", {"class_": "sl-btn", "href": f"/syntheses/{synthesis_id}.pptx"}, t("export_pptx")),
                            raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}")))
         return _layout(short_title, body, store, crumbs=crumbs, active="syntheses", actions=actions)

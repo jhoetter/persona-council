@@ -48,3 +48,49 @@ def test_report_embeds_synthesis_effort_impact_2x2(store):
     html = render_report(_report_with_figures(
         [{"kind": "chart", "of": "effort_impact", "source_id": syn["id"], "caption": "Leverage"}]), store)
     assert "sl-quad" in html and "sl-quad__dot" in html and "sl-legend__num" in html
+
+
+def _has_chart(shape):
+    return bool(getattr(shape, "has_chart", False))
+
+
+def test_pptx_export_convergence_synthesis(store):
+    """A structured synthesis exports to a native .pptx deck: title + analytic-layer slides + the
+    effort·impact 2×2 as a native scatter chart."""
+    import io
+    from pptx import Presentation
+    from sonaloop import services
+    syn = services.record_synthesis(
+        "Solutions", "hmw", [], {
+            "gesamtbild": "G" * 80, "positionierung": "P" * 80,
+            "findings": [
+                {"kind": "key_problem", "text": "Evenings are the bottleneck"},
+                {"kind": "recommendation", "text": "Auto shopping list", "score": {"effort": 2, "value": 5}},
+                {"kind": "recommendation", "text": "Hire a coach", "score": {"effort": 4, "value": 2}},
+                {"kind": "open_question", "text": "Does it survive week 3?"}]},
+        store=store)
+    data = services.export_synthesis_pptx(syn["id"], store=store)
+    assert data[:2] == b"PK"
+    prs = Presentation(io.BytesIO(data))
+    assert len(prs.slides) >= 4  # title + big picture + positioning + key problems + recommendations + open Qs
+    assert any(_has_chart(sh) for sl in prs.slides for sh in sl.shapes)  # the effort·impact scatter
+
+
+def test_pptx_export_project_report_with_chart(store):
+    """A project report exports one slide per section + author-supplied charts as native pptx charts."""
+    import io
+    from pptx import Presentation
+    from sonaloop import services
+    rep = {"id": "rep1", "title": "Demo — Report", "scope": "project", "project_id": "",
+           "created_at": "2026-06-08T00:00:00+00:00", "lead": "How the understanding was built.",
+           "council_ids": [], "findings": [], "statements": [], "prompts": [], "graph_snapshot": None,
+           "sections": [{"id": "s1", "heading": "Findings", "markdown": "- Point one\n- Point two",
+                         "citations": [], "source_study_ids": [],
+                         "figures": [{"kind": "chart", "of": "pie",
+                                      "series": [{"label": "A", "value": 3}, {"label": "B", "value": 1}]}]}]}
+    store.upsert_synthesis(rep)
+    data = services.export_synthesis_pptx("rep1", store=store)
+    assert data[:2] == b"PK"
+    prs = Presentation(io.BytesIO(data))
+    assert len(prs.slides) >= 2  # title + section
+    assert any(_has_chart(sh) for sl in prs.slides for sh in sl.shapes)  # the pie
