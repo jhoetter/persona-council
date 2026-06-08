@@ -50,6 +50,35 @@ def _entries_in_file(path: pathlib.Path) -> list[tuple[str, str, str]]:
     return out
 
 
+def catalogue_data() -> dict:
+    """Structured catalogue — the same by-domain index `catalogue_md()` renders, but as data so a UI can
+    lay it out richly (domain cards, per-domain tables) instead of parsing Markdown. Single source: the
+    live `_tools_*.py` modules, AST-parsed at call time. Shape:
+        {total, ndomains, domains:[{key, label, items:[{name, desc}]}], extras:[{name, kind, desc}]}.
+    """
+    base = pathlib.Path(__file__).parent
+    by_domain: dict[str, list[tuple[str, str]]] = {}
+    extras: list[dict] = []
+    for f in sorted(base.glob("_tools_*.py")):
+        domain = f.stem.replace("_tools_", "")
+        for name, kind, first in _entries_in_file(f):
+            if kind == "tool":
+                by_domain.setdefault(domain, []).append((name, first))
+            else:
+                extras.append({"name": name, "kind": kind, "desc": first})
+    ordered = _ORDER + [d for d in sorted(by_domain) if d not in _ORDER]
+    domains = []
+    for d in ordered:
+        items = by_domain.get(d) or []
+        if not items:
+            continue
+        domains.append({"key": d, "label": _DOMAIN_LABELS.get(d, d),
+                        "items": [{"name": n, "desc": desc} for n, desc in sorted(items)]})
+    total = sum(len(x["items"]) for x in domains)
+    return {"total": total, "ndomains": len(domains), "domains": domains,
+            "extras": sorted(extras, key=lambda e: e["name"])}
+
+
 def catalogue_md() -> str:
     base = pathlib.Path(__file__).parent
     by_domain: dict[str, list[tuple[str, str, str]]] = {}
