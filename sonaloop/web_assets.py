@@ -1,16 +1,21 @@
 """Web UI asset strings (CSS + inline JS) extracted from web.py (spec/refactor-plan.md target 1). Pure constants — no behaviour, imported back into web.py."""
 
 CSS = """
-/* Linear-grade design system (spec/linear-design-system.md). Token-driven — one rewrite re-skins
-   the whole app. Light defaults; dark (Linear's signature) via prefers-color-scheme + [data-theme]. */
+/* Cursor-leaning brand system — master: sonaloop-website/BRANDING.md. Token-driven — one rewrite
+   re-skins the whole app. Light = near-white with only a faint warm tint (paper #faf8f3 / ink #1a1815);
+   dark already matches the brand exactly. Geist (body) + Geist Mono (--mono). Indigo accent #5e6ad2,
+   used sparingly (primary buttons are ink-black, Cursor-style). Surface deviation vs. the site: panels
+   are lifted to crisp white (#fff) so they read above the faintly-warm page in a dense tool. Dark via
+   prefers-color-scheme + [data-theme]. */
 :root{
-  --bg:#ffffff;--sidebar:#fbfbfb;--panel:#ffffff;--panel-2:#f6f6f7;--overlay:#ffffff;
-  --line:#ececed;--line-2:#f3f3f4;--ink:#1a1c1f;--muted:#6b7076;--faint:#9098a0;
-  --accent:#5e6ad2;--accent-ink:#ffffff;--accent-weak:#eef0fb;--hover:#f5f5f6;--sel:#f0f1f4;
+  --bg:#faf8f3;--sidebar:#f6f4ef;--panel:#ffffff;--panel-2:#f1efe8;--overlay:#ffffff;
+  --line:#e9e5db;--line-2:#f0ede5;--ink:#1a1815;--muted:#635e56;--faint:#8c857a;
+  --accent:#5e6ad2;--accent-ink:#ffffff;--accent-weak:#ecebf8;--hover:#f4f1ea;--sel:#ece9df;
   --green:#3d9b6b;--amber:#b87a25;--red:#cf4d5f;--violet:#7a5ed1;--skep:#c2683f;--blue:#3d7fc4;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --radius:8px;--radius-sm:6px;--row-h:48px;--ease:cubic-bezier(.4,0,.2,1);
-  --shadow-sm:0 1px 2px rgba(20,22,26,.05);
-  --shadow-lg:0 8px 28px rgba(20,22,26,.14),0 1px 2px rgba(20,22,26,.08);
+  --shadow-sm:0 1px 2px rgba(26,24,21,.05);
+  --shadow-lg:0 8px 28px rgba(26,24,21,.12),0 1px 2px rgba(26,24,21,.07);
   /* design-system scales (spec/design-system.md §2) — adopt incrementally; additive, no pixel change */
   --t-xs:11px;--t-sm:12px;--t-body:13px;--t-md:15px;--t-prose:16px;--t-lg:18px;--t-xl:24px;
   --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-8:32px;
@@ -22,13 +27,13 @@ CSS = """
   --green:#4cb782;--amber:#d9a23b;--red:#e0566a;--violet:#9a8cff;--skep:#d98a63;--blue:#5e9fe0;
   --shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow-lg:0 8px 28px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.3);
 }}
-:root[data-theme="light"]{--bg:#ffffff;--sidebar:#fbfbfb;--panel:#fff;--panel-2:#f6f6f7;--overlay:#fff;--line:#ececed;--line-2:#f3f3f4;--ink:#1a1c1f;--muted:#6b7076;--faint:#9098a0;--accent:#5e6ad2;--accent-ink:#fff;--accent-weak:#eef0fb;--hover:#f5f5f6;--sel:#f0f1f4;--green:#3d9b6b;--amber:#b87a25;--red:#cf4d5f;--violet:#7a5ed1;--skep:#c2683f;--blue:#3d7fc4;}
+:root[data-theme="light"]{--bg:#faf8f3;--sidebar:#f6f4ef;--panel:#ffffff;--panel-2:#f1efe8;--overlay:#ffffff;--line:#e9e5db;--line-2:#f0ede5;--ink:#1a1815;--muted:#635e56;--faint:#8c857a;--accent:#5e6ad2;--accent-ink:#fff;--accent-weak:#ecebf8;--hover:#f4f1ea;--sel:#ece9df;--green:#3d9b6b;--amber:#b87a25;--red:#cf4d5f;--violet:#7a5ed1;--skep:#c2683f;--blue:#3d7fc4;}
 :root[data-theme="dark"]{--bg:#101113;--sidebar:#0d0e10;--panel:#16171a;--panel-2:#1c1d21;--overlay:#1a1b1e;--line:#23252a;--line-2:#1b1d21;--ink:#e6e7ea;--muted:#8a8f98;--faint:#6b7076;--accent:#7c84e8;--accent-ink:#fff;--accent-weak:#1d2030;--hover:#1a1b1f;--sel:#1f2128;--green:#4cb782;--amber:#d9a23b;--red:#e0566a;--violet:#9a8cff;--skep:#d98a63;--blue:#5e9fe0;}
 
 *{box-sizing:border-box}
 html,body{height:100%}
 body.spa-loading{cursor:progress}
-body{margin:0;font:13px/1.5 "Inter","Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;letter-spacing:-0.003em}
+body{margin:0;font:13px/1.5 "Geist","Geist Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;letter-spacing:-0.003em}
 a{color:inherit;text-decoration:none}
 .muted{color:var(--muted)}.small{font-size:var(--t-sm)}.faint{color:var(--faint)}
 svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
@@ -261,8 +266,8 @@ h1,h2,h3,h4{color:var(--ink)}
 .btn:hover{background:var(--hover)}
 .btn.active{background:var(--sel);color:var(--ink);border-color:var(--line)}
 .btn.disabled{color:var(--faint);cursor:default;opacity:.65}.btn.disabled:hover{background:var(--panel)}.btn.disabled svg{opacity:.7}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
-.btn.primary:hover{filter:brightness(1.06)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:transparent}
+.btn.primary:hover{opacity:.88}
 :focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
 .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:15px 16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
 .card h3{margin:0 0 8px;font-size:var(--t-body)}
@@ -307,7 +312,7 @@ details.sec[open]>summary::before,details.block[open]>summary.bh::before{transfo
 .es-prose h4{font-size:var(--t-body);margin:18px 0 6px;font-weight:680}
 .es-prose em{font-style:italic}.es-prose del{color:var(--muted)}
 .es-prose a{color:var(--accent);text-decoration:none}.es-prose a:hover{text-decoration:underline}
-.es-prose code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.es-prose code{font-family:var(--mono);font-size:.88em;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
 .es-prose pre{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;overflow-x:auto;margin:0 0 15px}.es-prose pre code{background:none;border:0;padding:0;font-size:var(--t-sm)}
 .es-prose blockquote{margin:0 0 15px;padding:8px 14px;border-left:3px solid var(--accent);background:var(--accent-weak);border-radius:0 var(--radius-sm) var(--radius-sm) 0}.es-prose blockquote p{margin:0;max-width:none}
 .es-prose hr{border:0;border-top:1px solid var(--line);margin:22px 0}

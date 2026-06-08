@@ -39,7 +39,7 @@ PALETTE_CSS = r"""
 .cmdk-t{flex:1;min-width:0;font-size:var(--t-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-sub{flex:none;max-width:40%;color:var(--muted);font-size:var(--t-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-foot{display:flex;gap:18px;padding:8px 16px;border-top:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:var(--t-sm)}
-.cmdk-foot kbd{font-family:inherit;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px;color:var(--ink);font-size:var(--t-xs)}
+.cmdk-foot kbd{font-family:var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px;color:var(--ink);font-size:var(--t-xs)}
 """
 
 
