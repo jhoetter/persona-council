@@ -79,6 +79,7 @@ from ..suggestions import (  # noqa: E402
     suggest_roles,
     suggest_artifact_types,
     suggest_section_kinds,
+    suggest_chart_kinds,
     suggest_methodologies,
 )
 from .. import plan as _plan  # noqa: E402

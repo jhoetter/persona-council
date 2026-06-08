@@ -127,7 +127,7 @@ _REGISTRY["record_judgment"] = _engines.record_judgment
 for _eng_name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
     "set_project_methodology",
-    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_methodologies",
+    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser",
@@ -154,7 +154,7 @@ for _name, _value in _REGISTRY.items():
 for _name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
     "set_project_methodology",
-    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_methodologies",
+    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser",

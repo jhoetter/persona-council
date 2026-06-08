@@ -115,6 +115,31 @@ def test_section_validator_preserves_new_chart_fields():
     assert line["labels"] == ["R1", "R2"] and line["series"][0]["points"] == [2, 4]
 
 
+def test_chart_catalogue_is_the_single_source_of_truth():
+    """The agent-facing catalogue, the renderer registry, and the report dispatch never drift:
+    every author-renderable `of` is documented, and every documented `of` actually renders."""
+    from sonaloop import services
+    from sonaloop.charts_catalogue import _RENDER, render_chart
+    cat = services.suggest_chart_kinds()
+    kinds = {k["of"] for k in cat["items"]}
+    # catalogue = the renderable kinds + the source-driven effort_impact, and nothing else
+    assert kinds == set(_RENDER) | {"effort_impact"}
+    # each documented entry carries the agent's "when to use" guidance
+    assert all(k.get("when_to_use") for k in cat["items"])
+    # every renderable kind produces a chart from a minimal series; unknown/source-driven → ""
+    sample = {
+        "bar": [{"label": "A", "value": 3}], "pie": [{"label": "A", "value": 3}],
+        "stacked_bar": [{"label": "A", "segments": [{"label": "x", "value": 2}]}],
+        "diverging_bar": [{"label": "A", "positive": 2, "negative": 1}],
+        "gauge": [{"label": "A", "value": 50}], "dot_plot": [{"label": "A", "values": [1, 2, 3]}],
+        "heatmap": [{"label": "A", "values": [2]}], "line": [{"label": "A", "points": [1, 2, 3]}],
+    }
+    for of in _RENDER:
+        fig = {"columns": ["c"]} if of == "heatmap" else {"labels": ["a", "b", "c"]} if of == "line" else {}
+        assert render_chart(of, fig, sample[of]).startswith('<figure class="sl-chart">'), of
+    assert render_chart("effort_impact", {}, []) == "" and render_chart("bogus", {}, []) == ""
+
+
 def test_report_embeds_synthesis_effort_impact_2x2(store):
     from sonaloop import services
     syn = services.record_synthesis(

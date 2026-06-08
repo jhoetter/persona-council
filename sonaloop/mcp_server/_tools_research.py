@@ -70,8 +70,18 @@ def register_research(mcp):
         return _env("brief_synthesis_section", services.brief_synthesis_section(project_id, section_id, report_id), t)
 
     @mcp.tool()
+    def suggest_chart_kinds() -> dict[str, Any]:
+        """Which report CHART to use when (bar, pie, stacked_bar, diverging_bar, gauge, dot_plot,
+        heatmap, line, effort_impact) + each one's author payload shape — so you can pick the chart
+        that fits the point before attaching it as a section figure. Recommendations, not constraints."""
+        t = time.perf_counter()
+        return _env("suggest_chart_kinds", services.suggest_chart_kinds(), t)
+
+    @mcp.tool()
     def record_synthesis_section(project_id: str, section_id: str, content: dict[str, Any], report_id: str | None = None) -> dict[str, Any]:
-        """Persist one authored report section (markdown + citations: study_id/council_id)."""
+        """Persist one authored report section. `content`: {markdown, citations:[{study_id|council_id}],
+        figures:[…]}. Figures can embed a chart — {kind:'chart', of:'<of>', series:[…], caption?} — to
+        visualize the point; call suggest_chart_kinds for which `of` fits and its series shape."""
         t = time.perf_counter()
         return _env("record_synthesis_section", services.record_synthesis_section(project_id, section_id, content, report_id), t)
 
