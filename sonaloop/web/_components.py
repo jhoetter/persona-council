@@ -729,23 +729,23 @@ def _doc(main: str, toc: str = "", rail: str = "") -> str:
 # Co-located CSS (spec/roadmap.md R3): labels/avatars, stat strip, stars/favorites.
 register_css(r"""
 /* ---- labels / avatars (G5) ---- */
-.lbl{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-sm);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.lbl{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-sm);border-radius:var(--radius-sm);padding:2px 8px;white-space:nowrap}
 .lbl-soft{background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
 .lbl-outline{border:1px solid var(--line);color:var(--muted)}
 /* label dot (.sl-dot) and avatars (.sl-avatar) come from the shared COMPONENTS_CSS layer;
    _avatar() still sets per-instance size/colour inline. */
 /* ---- stat strip + persona cards (G2) ---- */
 .stats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
-.stat{display:flex;align-items:baseline;gap:7px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px 12px}
+.stat{display:flex;align-items:baseline;gap:7px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:8px 12px}
 .stat b{font-size:var(--t-lg);font-weight:700}.stat span{color:var(--muted);font-size:var(--t-sm)}
 /* ---- stars / favorites ---- */
-.starbtn{border:0;background:none;cursor:pointer;color:var(--muted);padding:2px;line-height:0;border-radius:6px;display:inline-flex}
+.starbtn{border:0;background:none;cursor:pointer;color:var(--muted);padding:2px;line-height:0;border-radius:var(--radius-sm);display:inline-flex}
 .starbtn:hover{color:#e3a008;background:var(--hover)}
 .starbtn .star{fill:none}
 .starbtn.on{color:#e3a008}.starbtn.on .star{fill:#e3a008;stroke:#e3a008}
 #favs a{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .favrow{display:flex;align-items:center;gap:2px}
-.favx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:var(--t-prose);line-height:1;padding:1px 7px;border-radius:6px;opacity:0;transition:opacity 120ms}
+.favx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:var(--t-prose);line-height:1;padding:1px 7px;border-radius:var(--radius-sm);opacity:0;transition:opacity 120ms}
 .favrow:hover .favx{opacity:1}.favx:hover{color:#e3a008;background:var(--hover)}
 """)
 
@@ -778,12 +778,12 @@ register_css(r"""
 .qround-q p{margin:2px 0 0;font-weight:600;font-size:var(--t-md);line-height:1.35}
 .qround-n{font-size:var(--t-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
 .qround-a{display:flex;flex-direction:column;gap:10px}
-.turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
+.turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--bg)}
 .turn-input summary{cursor:pointer}
 /* prototype-session fields, inside the shared .turn statement card — labelled like the es-prose eyebrows */
 .sfield{margin:10px 0 0}.sfield:first-child{margin-top:2px}.sfield .eyebrow{margin:0 0 3px}.sfield .es-prose{margin:0}.sfield .es-prose p{margin:0}
-.detail{max-width:980px}.thought{font-size:var(--t-md);padding:9px 12px;background:var(--panel-2);border-radius:8px}
-.quote{padding:8px 12px;background:var(--panel-2);margin:6px 0;border-radius:8px}
+.detail{max-width:980px}.thought{font-size:var(--t-md);padding:9px 12px;background:var(--panel-2);border-radius:var(--radius)}
+.quote{padding:8px 12px;background:var(--panel-2);margin:6px 0;border-radius:var(--radius)}
 .identity{display:grid;grid-template-columns:160px 1fr;gap:20px;align-items:start}
-.identity .avatar{width:160px;height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.identity .avatar{width:160px;height:200px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--line)}
 """)

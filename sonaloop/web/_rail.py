@@ -15,7 +15,7 @@ _RAIL_CSS = """<style>
 .pgrail .tk-bar{width:18px;height:2px;border-radius:2px;background:var(--ink);opacity:.30;transition:width .14s,opacity .14s,background .14s}
 .pgrail .tick:hover .tk-bar{opacity:.75;width:28px}
 .pgrail .tick.active .tk-bar{opacity:1;width:28px;background:var(--accent)}
-.pgrail .tk-label{font-size:var(--t-sm);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 10px;white-space:nowrap;opacity:0;transform:translateX(8px);transition:opacity .14s,transform .14s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.12)}
+.pgrail .tk-label{font-size:var(--t-sm);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px 10px;white-space:nowrap;opacity:0;transform:translateX(8px);transition:opacity .14s,transform .14s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.12)}
 .pgrail .tick:hover .tk-label{opacity:1;transform:none}
 .pgrail .tick.active .tk-label{color:var(--accent);border-color:var(--accent)}
 @media(max-width:1560px){.pgrail{display:none}}/* show the minimap only once there's margin beside the right aside */

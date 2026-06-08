@@ -177,22 +177,22 @@ def _period_calendar_html(persona_id: str, selected_date: str, view: str, period
 register_css(r"""
 .cal-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0}
 .cal-nav-l{display:flex;align-items:center;gap:7px}
-.cal-arrow{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:7px;color:var(--muted);font-size:17px;line-height:1;background:var(--panel)}
+.cal-arrow{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:var(--radius-sm);color:var(--muted);font-size:17px;line-height:1;background:var(--panel)}
 .cal-arrow:hover{background:var(--hover);color:var(--ink)}
-.cal-today{border:1px solid var(--line);border-radius:7px;padding:5px 12px;font-size:var(--t-sm);color:var(--ink);background:var(--panel)}
+.cal-today{border:1px solid var(--line);border-radius:var(--radius-sm);padding:5px 12px;font-size:var(--t-sm);color:var(--ink);background:var(--panel)}
 .cal-today:hover{background:var(--hover)}
 .cal-title{font-size:var(--t-md);font-weight:600;color:var(--ink);margin-left:8px}
-.cal-tabs{display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:2px}
-.cal-tabs a{border-radius:6px;padding:4px 13px;font-size:var(--t-sm);color:var(--muted);font-weight:500}
+.cal-tabs{display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:2px}
+.cal-tabs a{border-radius:var(--radius-sm);padding:4px 13px;font-size:var(--t-sm);color:var(--muted);font-weight:500}
 .cal-tabs a:hover{color:var(--ink)}
 .cal-tabs a.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
 /* event chip (week + month) — soft fill, leading type-coloured rule */
-.cev{display:flex;align-items:baseline;gap:6px;border-left:2.5px solid var(--accent);background:var(--panel-2);border-radius:4px;padding:2px 7px;font-size:var(--t-xs);color:var(--ink);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cev{display:flex;align-items:baseline;gap:6px;border-left:2.5px solid var(--accent);background:var(--panel-2);border-radius:var(--radius-sm);padding:2px 7px;font-size:var(--t-xs);color:var(--ink);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cev .cev-t{color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
 .cev.focus{border-left-color:var(--green)}.cev.admin{border-left-color:var(--amber)}.cev.interruption{border-left-color:var(--red)}.cev.meeting{border-left-color:var(--accent)}
 .cev:hover{background:var(--hover)}
 /* ---- WEEK: 7 agenda columns ---- */
-.cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
 .cw-col{background:var(--panel);min-height:300px}.cw-col.we{background:var(--panel-2)}
 .cw-h{padding:8px 6px 9px;text-align:center;border-bottom:1px solid var(--line);position:relative}
 .cw-wd{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
@@ -203,7 +203,7 @@ register_css(r"""
 .cw-body{padding:8px;display:flex;flex-direction:column;gap:5px}
 .cw-empty{color:var(--faint);font-size:var(--t-sm);text-align:center;padding-top:10px}
 /* ---- MONTH: weekday grid ---- */
-.cal-month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cal-month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
 .cm-wd{background:var(--panel);padding:7px 8px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
 .cm-wd.we{color:var(--faint)}
 .cm-cell{background:var(--panel);min-height:108px;padding:6px 7px 9px;position:relative;display:flex;flex-direction:column;gap:3px}

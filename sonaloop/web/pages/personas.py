@@ -10,7 +10,7 @@ from ... import artifacts as _artifacts
 # Memory panel — a temporal knowledge graph (entities + fact timelines, superseded facts struck).
 register_css(r"""
 .mem-bar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 22px}
-.mem-tool{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--panel)}
+.mem-tool{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--panel)}
 .mem-tool svg{width:15px;height:15px;color:var(--muted);flex:none}
 .mem-tool input{border:0;background:transparent;padding:2px 0;font-size:var(--t-body);color:var(--ink)}
 .mem-tool input:focus{outline:none}.mem-tool input[type=text]{min-width:236px}
@@ -18,10 +18,10 @@ register_css(r"""
 .mem-group-h{display:flex;align-items:center;gap:7px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin:0 0 10px}
 .mem-n{color:var(--faint);font-weight:550}
 .mem-ents{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
-.mem-ent{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:13px 15px}
+.mem-ent{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:13px 15px}
 .mem-ent-h{display:flex;align-items:center;gap:8px;margin:0 0 11px}
 .mem-ent-h svg{width:15px;height:15px;color:var(--muted);flex:none}.mem-ent-h b{font-size:var(--t-body)}
-.mem-status{margin-left:auto;font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);border-radius:99px;padding:1px 9px;font-weight:500;white-space:nowrap}
+.mem-status{margin-left:auto;font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);border-radius:var(--radius-full);padding:1px 9px;font-weight:500;white-space:nowrap}
 .mem-tl{display:flex;flex-direction:column;gap:8px;position:relative;padding-left:15px}
 .mem-tl::before{content:"";position:absolute;left:3px;top:5px;bottom:5px;border-left:1.5px solid var(--line-2)}
 .mem-fact{display:flex;gap:9px;font-size:var(--t-sm);position:relative}
@@ -30,11 +30,11 @@ register_css(r"""
 .mem-date{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;min-width:74px}
 .mem-fx{color:var(--ink)}
 .mem-fact.sup .mem-fx{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--line-2)}
-.mem-loops{border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.mem-loops{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
 .mem-loop{display:flex;align-items:center;gap:9px;padding:9px 13px;font-size:var(--t-body)}
 .mem-loop+.mem-loop{border-top:1px solid var(--line)}
 .mem-loop-dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--amber)}
-.mem-pane{border:1px solid var(--line);border-radius:10px;background:var(--panel-2);padding:12px 15px;margin:0 0 16px}
+.mem-pane{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);padding:12px 15px;margin:0 0 16px}
 .mem-pane-h{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin:0 0 8px}
 .mem-hit{padding:7px 0;font-size:var(--t-sm)}.mem-hit+.mem-hit{border-top:1px solid var(--line-2)}
 """)

@@ -21,14 +21,14 @@ PALETTE_CSS = r"""
 .cmdk[hidden]{display:none}
 .cmdk{position:fixed;inset:0;z-index:200;display:flex;align-items:flex-start;justify-content:center}
 .cmdk-bd{position:absolute;inset:0;background:rgba(0,0,0,.5)}
-.cmdk-panel{position:relative;margin-top:12vh;width:min(600px,92vw);max-height:74vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden}
+.cmdk-panel{position:relative;margin-top:12vh;width:min(600px,92vw);max-height:74vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden}
 .cmdk-in{width:100%;border:0;border-radius:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:var(--t-md);padding:14px 16px;font-family:inherit}
 .cmdk-in:focus,.cmdk-in:focus-visible{outline:none;box-shadow:none}
 .cmdk-in::placeholder{color:var(--faint)}
 .cmdk-list{flex:1;overflow:auto;padding:6px}
 .cmdk-empty{color:var(--muted);font-size:var(--t-body);padding:26px;text-align:center}
 .cmdk-sec{font-size:var(--t-xs);color:var(--faint);font-weight:600;letter-spacing:.04em;padding:10px 10px 4px}
-.cmdk-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;text-decoration:none;color:var(--ink);cursor:pointer}
+.cmdk-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius);text-decoration:none;color:var(--ink);cursor:pointer}
 .cmdk-item.sel{background:var(--hover)}
 .cmdk-ic{flex:none;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
 .cmdk-ic svg{width:16px;height:16px}
@@ -39,7 +39,7 @@ PALETTE_CSS = r"""
 .cmdk-t{flex:1;min-width:0;font-size:var(--t-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-sub{flex:none;max-width:40%;color:var(--muted);font-size:var(--t-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-foot{display:flex;gap:18px;padding:8px 16px;border-top:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:var(--t-sm)}
-.cmdk-foot kbd{font-family:var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px;color:var(--ink);font-size:var(--t-xs)}
+.cmdk-foot kbd{font-family:var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:0 5px;margin-right:6px;color:var(--ink);font-size:var(--t-xs)}
 """
 
 
