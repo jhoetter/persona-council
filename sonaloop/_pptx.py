@@ -31,6 +31,16 @@ _BG = "FAF8F3"
 _PANEL = "FFFFFF"
 # Series palette (accent · violet · blue · green · amber · red · skep).
 _SERIES = ["5E6AD2", "7A5ED1", "3D7FC4", "3D9B6B", "B87A25", "CF4D5F", "C2683F"]
+_LINE = "E9E5DB"
+_SURFACE2 = "F1EFE8"
+_GREEN, _AMBER, _RED = "3D9B6B", "B87A25", "CF4D5F"
+
+
+def _leverage_color(x: float, y: float) -> str:
+    """Effort·impact dot tint — mirrors sonaloop-design _charts: high value vs effort → green;
+    balanced → accent; costly → amber/red."""
+    d = y - x
+    return _GREEN if d >= 2 else _ACCENT if d >= 1 else _RED if d <= -1 else _AMBER
 
 
 def render(slides: list[dict], *, title: str = "Report") -> bytes:
@@ -122,47 +132,135 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             ftf = _box(slide, Inches(0.7), H - Inches(0.7), W - Inches(1.4), Inches(0.5))
             _run(ftf.paragraphs[0], s["footnote"], size=10, color=_FAINT, italic=True)
 
-    def _style_points(plot):
-        # colour each category point from the brand series palette
+    from pptx.oxml.ns import qn
+
+    def _clean_area(chart):
+        """Transparent chart + plot area (blend into the slide) + brand default font — the DS charts
+        sit on the page with no frame."""
         try:
-            pts = plot.series[0].points
-            for i, pt in enumerate(pts):
-                pt.format.fill.solid()
-                pt.format.fill.fore_color.rgb = rgb(_SERIES[i % len(_SERIES)])
+            chart.font.name = "Geist"; chart.font.size = Pt(10); chart.font.color.rgb = rgb(_MUTED)
+        except Exception:
+            pass
+        try:
+            cs = chart._chartSpace
+            ce = cs.find(qn("c:chart"))
+            spPr = cs.makeelement(qn("c:spPr"), {})
+            ce.addnext(spPr)
+            spPr.append(spPr.makeelement(qn("a:noFill"), {}))
+            ln = spPr.makeelement(qn("a:ln"), {}); spPr.append(ln)
+            ln.append(ln.makeelement(qn("a:noFill"), {}))
+        except Exception:
+            pass
+
+    def _axis(axis, *, line=True, grid=False, labels=True):
+        from pptx.enum.chart import XL_TICK_MARK
+        try:
+            axis.has_major_gridlines = grid
+            if grid:
+                gl = axis.major_gridlines.format.line
+                gl.color.rgb = rgb(_LINE); gl.width = Pt(0.5)
+            axis.major_tick_mark = XL_TICK_MARK.NONE
+            axis.minor_tick_mark = XL_TICK_MARK.NONE
+            if line:
+                axis.format.line.color.rgb = rgb(_LINE); axis.format.line.width = Pt(0.75)
+            else:
+                axis.format.line.fill.background()
+            tl = axis.tick_labels.font
+            tl.size = Pt(10); tl.name = "Geist"; tl.color.rgb = rgb(_MUTED)
+            if not labels:
+                axis.visible = False
         except Exception:
             pass
 
     def _chart(slide, ch, x, y, cx, cy):
         from pptx.chart.data import CategoryChartData, XyChartData
-        from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+        from pptx.enum.chart import (XL_CHART_TYPE, XL_LEGEND_POSITION, XL_LABEL_POSITION, XL_MARKER_STYLE)
         kind = ch.get("type")
         if kind in ("bar", "pie") and ch.get("categories"):
+            cats = [str(c) for c in ch["categories"]]
+            vals = [float(v or 0) for v in ch["values"]]
+            n = len(cats)
             cd = CategoryChartData()
-            cd.categories = [str(c) for c in ch["categories"]]
-            cd.add_series("", tuple(float(v or 0) for v in ch["values"]))
+            if kind == "bar":   # BAR_CLUSTERED stacks bottom→top; reverse so the first row reads at top
+                cd.categories = cats[::-1]
+                cd.add_series("", tuple(vals[::-1]))
+            else:
+                cd.categories = cats
+                cd.add_series("", tuple(vals))
             xl = XL_CHART_TYPE.BAR_CLUSTERED if kind == "bar" else XL_CHART_TYPE.DOUGHNUT
-            gf = slide.shapes.add_chart(xl, x, y, cx, cy, cd)
-            chart = gf.chart
+            chart = slide.shapes.add_chart(xl, x, y, cx, cy, cd).chart
             chart.has_title = False
-            if kind == "pie":
+            _clean_area(chart)
+            plot = chart.plots[0]
+            # per-slice/bar colours from the brand series palette (bar reversed → map back to row order)
+            try:
+                for j, pt in enumerate(plot.series[0].points):
+                    idx = (n - 1 - j) if kind == "bar" else j
+                    pt.format.fill.solid(); pt.format.fill.fore_color.rgb = rgb(_SERIES[idx % len(_SERIES)])
+                    pt.format.line.fill.background()
+            except Exception:
+                pass
+            if kind == "bar":
+                chart.has_legend = False
+                plot.gap_width = 70
+                plot.has_data_labels = True
+                dl = plot.data_labels
+                dl.number_format = "0"; dl.number_format_is_linked = False
+                dl.position = XL_LABEL_POSITION.OUTSIDE_END
+                dl.font.size = Pt(10); dl.font.name = "Geist"; dl.font.color.rgb = rgb(_MUTED)
+                _axis(chart.category_axis, line=False, grid=False, labels=True)
+                _axis(chart.value_axis, line=False, grid=False, labels=False)
+            else:
                 chart.has_legend = True
                 chart.legend.position = XL_LEGEND_POSITION.RIGHT
                 chart.legend.include_in_layout = False
-                chart.plots[0].has_data_labels = True
-                chart.plots[0].data_labels.number_format = "0%"
-                chart.plots[0].data_labels.number_format_is_linked = False
-            else:
-                chart.has_legend = False
-            _style_points(chart.plots[0])
+                chart.legend.font.size = Pt(10); chart.legend.font.name = "Geist"; chart.legend.font.color.rgb = rgb(_INK)
+                plot.has_data_labels = True
+                dl = plot.data_labels
+                dl.show_percentage = True; dl.show_value = False
+                dl.number_format = "0%"; dl.number_format_is_linked = False
+                dl.font.size = Pt(9); dl.font.name = "Geist"; dl.font.color.rgb = rgb("FFFFFF")
+                try:    # donut hole ≈ the DS .sl-pie--donut ring
+                    plot._element.append(plot._element.makeelement(qn("c:holeSize"), {"val": "58"}))
+                except Exception:
+                    pass
         elif kind == "scatter" and ch.get("points"):
+            pts = ch["points"]
+            # one series per leverage colour — series-level marker colours render in every viewer
+            # (per-POINT scatter colours are PowerPoint-only), so dots stay tinted by leverage everywhere.
+            groups: dict[str, list] = {}
+            for pt in pts:
+                px, py = float(pt.get("x", 0)), float(pt.get("y", 0))
+                groups.setdefault(_leverage_color(px, py), []).append((px, py))
             xy = XyChartData()
-            ser = xy.add_series("")
-            for pt in ch["points"]:
-                ser.add_data_point(float(pt.get("x", 0)), float(pt.get("y", 0)))
-            gf = slide.shapes.add_chart(XL_CHART_TYPE.XY_SCATTER, x, y, cx, cy, xy)
-            chart = gf.chart
+            for col, gpts in groups.items():
+                ser = xy.add_series(col)
+                for px, py in gpts:
+                    ser.add_data_point(px, py)
+            chart = slide.shapes.add_chart(XL_CHART_TYPE.XY_SCATTER, x, y, cx, cy, xy).chart
             chart.has_title = False
             chart.has_legend = False
+            _clean_area(chart)
+            for col, ser in zip(groups.keys(), chart.plots[0].series):
+                try:
+                    ser.marker.style = XL_MARKER_STYLE.CIRCLE
+                    ser.marker.size = 11
+                    ser.marker.format.fill.solid(); ser.marker.format.fill.fore_color.rgb = rgb(col)
+                    ser.marker.format.line.fill.background()
+                except Exception:
+                    pass
+            for ax, label in ((chart.category_axis, ch.get("x_label", "Effort")),
+                              (chart.value_axis, ch.get("y_label", "Value"))):
+                _axis(ax, line=True, grid=True, labels=True)
+                try:
+                    ax.minimum_scale = 0.5; ax.maximum_scale = 5.5; ax.major_unit = 1
+                    ax.has_title = True
+                    ax.axis_title.text_frame.text = label
+                    ax.axis_title.text_frame.paragraphs[0].font.size = Pt(11)
+                    ax.axis_title.text_frame.paragraphs[0].font.name = "Geist"
+                    ax.axis_title.text_frame.paragraphs[0].font.color.rgb = rgb(_INK)
+                except Exception:
+                    pass
 
     for s in slides:
         if s.get("kind") == "title":
