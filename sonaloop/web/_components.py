@@ -334,10 +334,10 @@ from . import _nav_seed  # noqa: F401,E402  (seeds the core sidebar via the publ
 
 
 def _nav(active: str, store: Store) -> str:
-    # Text-only nav (no leading icons) — a quieter, Linear/Vercel-style sidebar.
+    # .pi-hover makes the row the animation trigger — the icon plays its micro-interaction on row hover.
     render = lambda items: fragment(*(
-        h("a", {"href": it["href"], "class_": "active" if it["key"] == active else None},
-          h("span", {}, resolve_label(it["label"])))
+        h("a", {"href": it["href"], "class_": "pi-hover active" if it["key"] == active else "pi-hover"},
+          raw(_icon(it["icon"], animate=True)), h("span", {}, resolve_label(it["label"])))
         for it in items))
     blocks: list = []
     for sec, items in nav_model():
