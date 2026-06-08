@@ -647,76 +647,16 @@ def _rec_row_n(i: int, text: str, a, n) -> str:
              h("div", {}, raw(_prose(text)), ax))
 
 
-_EI_LEV = {"g": ("var(--green)", "ei_high_leverage"), "a": ("var(--accent)", "ei_worthwhile"),
-           "m": ("var(--amber)", "ei_neutral"), "r": ("var(--red)", "ei_critical")}
-_EI_OFFSETS = {
-    1: [(0, 0)], 2: [(-17, 0), (17, 0)], 3: [(0, -18), (-17, 13), (17, 13)],
-    4: [(-16, -16), (16, -16), (-16, 16), (16, 16)],
-    5: [(0, -20), (-19, -5), (19, -5), (-12, 18), (12, 18)],
-    6: [(0, -21), (18, -11), (18, 11), (0, 21), (-18, 11), (-18, -11)],
-}
-
-
 def _effort_impact(recs: list) -> str:
-    """recs: [(text, aufwand, nutzen)] (1-based order = label). HTML Aufwand×Nutzen matrix
-    with hover popovers — no list needed. Returns '' when nothing is scored."""
-    scored = [(i, txt, a, n) for i, (txt, a, n) in enumerate(recs, 1) if a and n]
-    if not scored:
-        return ""
-    W, H = 560, 420
-    padL, padR, padT, padB = 50, 24, 22, 46
-    def X(a): return padL + (a - 1) / 4 * (W - padL - padR)
-    def Y(n): return (H - padB) - (n - 1) / 4 * (H - padT - padB)
-    def lev(a, n):
-        d = n - a
-        return "g" if d >= 2 else "a" if d >= 1 else "r" if d <= -1 else "m"
-    mx, my = X(3), Y(3)
-    q = 'font-size="11" fill="var(--muted)" opacity="0.85"'
-    bg = [
-        f'<rect x="{padL}" y="{padT}" width="{mx-padL:.0f}" height="{my-padT:.0f}" fill="var(--green)" opacity="0.06"/>',
-        f'<line x1="{mx:.0f}" y1="{padT}" x2="{mx:.0f}" y2="{H-padB}" stroke="var(--line)" stroke-dasharray="3 4"/>',
-        f'<line x1="{padL}" y1="{my:.0f}" x2="{W-padR}" y2="{my:.0f}" stroke="var(--line)" stroke-dasharray="3 4"/>',
-        f'<line x1="{padL}" y1="{padT}" x2="{padL}" y2="{H-padB}" stroke="var(--line)"/>',
-        f'<line x1="{padL}" y1="{H-padB}" x2="{W-padR}" y2="{H-padB}" stroke="var(--line)"/>',
-        f'<text x="{padL+8}" y="{padT+15}" {q}>{t("ei_quick_wins")}</text>',
-        f'<text x="{W-padR-6}" y="{padT+15}" text-anchor="end" {q}>{t("ei_big_bets")}</text>',
-        f'<text x="{padL+8}" y="{H-padB-9}" {q}>{t("ei_fill_ins")}</text>',
-        f'<text x="{W-padR-6}" y="{H-padB-9}" text-anchor="end" {q}>{t("ei_time_sinks")}</text>',
-        f'<text x="{(padL+W-padR)/2:.0f}" y="{H-9}" text-anchor="middle" font-size="12" fill="var(--ink)">{t("ei_effort_axis")}</text>',
-        f'<text transform="translate(15,{(padT+H-padB)/2:.0f}) rotate(-90)" text-anchor="middle" font-size="12" fill="var(--ink)">{t("ei_value_axis")}</text>',
-    ]
-    svg = f'<svg class="ei-bg" viewBox="0 0 {W} {H}" aria-hidden="true">{"".join(bg)}</svg>'
-    groups: dict = {}
-    for it in scored:
-        groups.setdefault((it[2], it[3]), []).append(it)
-    dots = []
-    for (a, n), items in groups.items():
-        offs = _EI_OFFSETS.get(len(items), [(0, 0)] * len(items))
-        cx, cy = X(a), Y(n)
-        for off, (i, txt, a2, n2) in zip(offs, items):
-            color, levkey = _EI_LEV[lev(a2, n2)]
-            levlabel = t(levkey)
-            lp = (cx + off[0]) / W * 100
-            tp = (cy + off[1]) / H * 100
-            cls = "ei-dot"
-            if tp <= 24:
-                cls += " below"
-            if lp >= 70:
-                cls += " algn-r"
-            elif lp <= 24:
-                cls += " algn-l"
-            pop = h("span", {"class_": "ei-pop"},
-                    h("span", {"class_": "ei-pop-h", "style": f"color:{color}"}, f"#{i} · {levlabel}"),
-                    h("span", {"class_": "ei-pop-t"}, raw(_prose(txt))),
-                    h("span", {"class_": "ei-pop-m"}, t("effort_value", a=a2, n=n2)))
-            dots.append(h("span", {"class_": cls, "tabindex": "0", "style": f"left:{lp:.2f}%;top:{tp:.2f}%;--c:{color}"},
-                          h("span", {"class_": "ei-num"}, str(i)), pop))
-    leg = h("div", {"class_": "ei-leg"},
-            h("span", {}, h("i", {"style": "background:var(--green)"}), t("ei_high_leverage")),
-            h("span", {}, h("i", {"style": "background:var(--accent)"}), t("ei_worthwhile")),
-            h("span", {}, h("i", {"style": "background:var(--amber)"}), t("ei_neutral")),
-            h("span", {}, h("i", {"style": "background:var(--red)"}), t("ei_critical")))
-    return h("div", {"class_": "ei-wrap"}, h("div", {"class_": "ei-plot"}, raw(svg), fragment(*dots)), leg)
+    """recs: [(text, effort, value)] (1-based order = the dot/legend number). Renders the design-system
+    effort·impact chart (sonaloop._charts → .sl-quad/.sl-legend, vendored from sonaloop-design), with
+    i18n axis + quadrant labels. Returns '' when nothing is scored."""
+    from .._charts import effort_impact as _ds_effort_impact
+    items = [{"label": txt, "x": a, "y": n} for (txt, a, n) in recs if a and n]
+    return _ds_effort_impact(
+        items, x_label=t("ei_effort_axis").replace("→", "").strip(),
+        y_label=t("ei_value_axis").replace("→", "").strip(),
+        quadrants=(t("ei_quick_wins"), t("ei_big_bets"), t("ei_fill_ins"), t("ei_time_sinks")))
 
 
 def _doc(main: str, toc: str = "", rail: str = "") -> str:

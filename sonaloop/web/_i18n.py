@@ -68,8 +68,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "favorite": "Favorit", "mark_as_favorite": "Als Favorit markieren", "unstar": "Stern entfernen",
         # recommendations / effort-impact
         "effort_value": "Aufwand {a}/5 · Nutzen {n}/5",
-        "ei_high_leverage": "hoher Hebel", "ei_worthwhile": "lohnend",
-        "ei_neutral": "neutral", "ei_critical": "kritisch prüfen",
         "ei_quick_wins": "Quick Wins", "ei_big_bets": "Big Bets",
         "ei_fill_ins": "Lückenfüller", "ei_time_sinks": "Zeitfresser",
         "ei_effort_axis": "Aufwand →", "ei_value_axis": "Nutzen →",
@@ -212,8 +210,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "favorite": "Favorite", "mark_as_favorite": "Mark as favorite", "unstar": "Unstar",
         # recommendations / effort-impact
         "effort_value": "Effort {a}/5 · Value {n}/5",
-        "ei_high_leverage": "high leverage", "ei_worthwhile": "worthwhile",
-        "ei_neutral": "neutral", "ei_critical": "review critically",
         "ei_quick_wins": "Quick Wins", "ei_big_bets": "Big Bets",
         "ei_fill_ins": "Fill-ins", "ei_time_sinks": "Time sinks",
         "ei_effort_axis": "Effort →", "ei_value_axis": "Value →",

@@ -14,7 +14,7 @@ icons:
 # design system — i.e. a token/icon change in ../sonaloop-design wasn't synced here. (CI / pre-push.)
 check-icons:
 	bash scripts/sync_icons.sh
-	@git diff --exit-code -- sonaloop/_icons.py sonaloop/_tokens.py sonaloop/_components_css.py \
+	@git diff --exit-code -- sonaloop/_icons.py sonaloop/_tokens.py sonaloop/_components_css.py sonaloop/_charts.py \
 	  || { echo "✗ vendored design-system files are stale — run 'make icons' and commit"; exit 1; }
 	@echo "✓ vendored design-system files are in sync with ../sonaloop-design"
 

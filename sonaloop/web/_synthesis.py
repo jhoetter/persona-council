@@ -91,22 +91,8 @@ register_css(r"""
 .cc-es p{margin:0 0 7px}.cc-es ul{margin:0 0 7px;padding-left:18px}
 .cc-jump{font-weight:600;color:var(--accent);font-size:var(--t-body)}
 .syn-main [id]{scroll-margin-top:26px}
-.ei-wrap{margin:6px 0 22px}
-.ei-plot{position:relative;width:100%;max-width:600px;aspect-ratio:560/420;margin:0 auto 10px}
-.ei-bg{position:absolute;inset:0;width:100%;height:100%}
-.ei-dot{position:absolute;transform:translate(-50%,-50%);width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--t-sm);font-weight:700;color:var(--c);background:var(--panel);border:1.8px solid var(--c);box-shadow:0 0 0 3px var(--bg);cursor:default;transition:transform .12s}
-.ei-dot:hover,.ei-dot:focus{transform:translate(-50%,-50%) scale(1.25);z-index:20;outline:none}
-.ei-num{pointer-events:none}
-.ei-pop{position:absolute;left:50%;bottom:140%;transform:translateX(-50%);width:264px;max-width:72vw;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;box-shadow:0 12px 34px rgba(0,0,0,.18);opacity:0;visibility:hidden;transition:opacity .12s;z-index:30;pointer-events:none;display:flex;flex-direction:column;gap:6px;text-align:left;font-weight:400}
-.ei-dot:hover .ei-pop,.ei-dot:focus .ei-pop{opacity:1;visibility:visible}
-.ei-dot.below .ei-pop{bottom:auto;top:140%}
-.ei-dot.algn-l .ei-pop{left:-6px;transform:none}
-.ei-dot.algn-r .ei-pop{left:auto;right:-6px;transform:none}
-.ei-pop-h{font-size:var(--t-xs);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.ei-pop-t{font-size:var(--t-sm);line-height:1.46;color:var(--ink)}
-.ei-pop-m{font-size:var(--t-xs);color:var(--muted)}
-.ei-leg{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:var(--t-sm);color:var(--muted)}
-.ei-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+/* effort·impact chart is a design-system component now (.sl-quad/.sl-legend, vendored from
+   sonaloop-design via _components_css.py) — no local chart CSS here. */
 .reclist .rec{display:flex;gap:11px;padding:10px 8px;border-bottom:1px solid var(--line-2);scroll-margin-top:72px}
 .reclist .rec:last-child{border-bottom:none}
 .recnum{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--accent-weak);color:var(--accent);font-size:var(--t-sm);font-weight:700;display:flex;align-items:center;justify-content:center}

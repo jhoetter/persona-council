@@ -58,11 +58,18 @@ def _resolve_figure(f: dict, store) -> dict | None:
         if p and p.get("avatar", {}).get("path"):
             return {"url": "/" + p["avatar"]["path"], "caption": cap or p.get("display_name", "")}
     if kind == "chart":
-        # the analytical 2×2 of a (convergence) synthesis, embedded inline — the payoff of unifying
-        # synthesis + report: a report shows a synthesis's structured findings (spec/unified-synthesis-report).
+        # Design-system chart components (sonaloop._charts, vendored from sonaloop-design):
+        #   of="bar"|"pie"  → author-supplied `series` [{label, value, color?}]
+        #   of="effort_impact" → a synthesis's structured 2×2 (the payoff of unifying synthesis + report)
+        of = f.get("of", "effort_impact")
+        if of in ("bar", "pie"):
+            from .._charts import bar_chart, pie_chart
+            series = [s for s in (f.get("series") or []) if isinstance(s, dict)]
+            chart = (pie_chart(series) if of == "pie" else bar_chart(series))
+            return {"html": chart, "caption": cap} if chart else None
         sid = f.get("source_id") or f.get("id")
         syn = store.get_synthesis(sid) if sid else None
-        if syn and f.get("of", "effort_impact") == "effort_impact":
+        if syn and of == "effort_impact":
             from ._components import _effort_impact
             from .. import artifacts as _A
             recs = _A.synthesis_recommendations(syn)

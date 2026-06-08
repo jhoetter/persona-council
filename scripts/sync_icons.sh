@@ -50,3 +50,23 @@ if [[ -f "$csrc" ]]; then
 else
   echo "warn: components module not found at $csrc (run 'node scripts/gen-tokens.mjs' in ../sonaloop-design)" >&2
 fi
+
+# Chart components (.sl-chart/.sl-bar/.sl-pie/.sl-quad renderers), hand-authored in the design system.
+# Vendored so the report renderer can embed charts (bar/pie/effort·impact). web/_report.py imports it.
+chsrc="$here/../sonaloop-design/py/sonaloop_icons/charts.py"
+chdst="$here/sonaloop/_charts.py"
+if [[ -f "$chsrc" ]]; then
+  note='"""sonaloop._charts — VENDORED COPY of the sonaloop-design chart components.
+
+Do not edit by hand. Single source of truth: ../sonaloop-design (py/sonaloop_icons/charts.py +
+styles/components.css `.sl-chart*`). Refresh with `make icons` / scripts/sync_icons.sh.
+Vendored so the PyPI package has no local-path dependency.
+'
+  {
+    printf '%s\n' "$note"
+    tail -n +2 "$chsrc"
+  } > "$chdst"
+  echo "synced $chsrc -> $chdst ($(wc -c < "$chdst") bytes)"
+else
+  echo "warn: charts module not found at $chsrc" >&2
+fi

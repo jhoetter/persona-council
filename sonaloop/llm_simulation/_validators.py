@@ -330,13 +330,20 @@ def validate_synthesis_section_payload(payload: dict[str, Any]) -> dict[str, Any
                               "council_id": str(c.get("council_id", "")).strip()[:80],
                               "quote": str(c.get("quote", "")).strip()[:600]})
     # figures (spec/meta-report-presentation-and-pdf §2): typed refs the renderer resolves to visuals —
-    # {kind: asset|prototype|chart|avatar|graph, id|of|source_id, caption}.
+    # {kind: asset|prototype|chart|avatar|graph, id|of|source_id, caption}. A chart figure may carry an
+    # author-supplied `series` ([{label, value, color?}]) for of="bar"|"pie" (of="effort_impact" derives
+    # from source_id's synthesis). Charts render via the design-system chart components (sonaloop._charts).
     figures = []
     for f in payload.get("figures", []) or []:
         if isinstance(f, dict) and str(f.get("kind", "")).strip():
+            series = []
+            for s in (f.get("series") or [])[:24]:
+                if isinstance(s, dict) and str(s.get("label", "")).strip() != "":
+                    series.append({"label": str(s["label"]).strip()[:120], "value": s.get("value"),
+                                   "color": str(s.get("color", "")).strip()[:40]})
             figures.append({"kind": str(f["kind"]).strip()[:24], "id": str(f.get("id", "")).strip()[:160],
                             "of": str(f.get("of", "")).strip()[:40], "source_id": str(f.get("source_id", "")).strip()[:120],
-                            "caption": str(f.get("caption", "")).strip()[:300]})
+                            "caption": str(f.get("caption", "")).strip()[:300], "series": series})
     return {"markdown": str(payload.get("markdown", "")).strip()[:20000],
             "citations": citations[:50], "figures": figures[:20]}
 
