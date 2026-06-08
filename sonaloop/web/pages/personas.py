@@ -95,7 +95,7 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
           h("input", {"type": "text", "name": "q", "value": q or "", "placeholder": t("recall_placeholder")})),
         h("form", {"method": "get", "class_": "mem-tool"}, raw(_icon("clock")),
           h("input", {"type": "date", "name": "as_of", "value": as_of or ""}),
-          h("button", {"class_": "btn btn-sm"}, t("show_state"))))
+          h("button", {"class_": "sl-btn sl-btn--sm"}, t("show_state"))))
     panes = []
     if as_of:
         sa = services.get_state_at(pid, as_of, store=store)

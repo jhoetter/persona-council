@@ -487,7 +487,7 @@ def _empty_state(title: str, message: str, *, icon: str = "overview", action: tu
              h("div", {"class_": "empty-ic"}, raw(_hifi(icon, 44))),
              h("h2", {"class_": "empty-h"}, title),
              h("p", {"class_": "empty-msg"}, message),
-             h("a", {"class_": "btn", "href": href}, raw(_icon(ic)), " ", label)))
+             h("a", {"class_": "sl-btn", "href": href}, raw(_icon(ic)), " ", label)))
 
 
 # Edge-type → color is DATA (suggestions/edge_types.json via presentation.edge_colors); no edge color
@@ -768,8 +768,7 @@ register_css(r"""
 .empty-ic{color:var(--muted);line-height:0;margin-bottom:3px}.empty-ic svg{width:44px;height:44px;opacity:.92}
 .empty-h{font-size:var(--t-md);font-weight:600;margin:0;color:var(--ink)}
 .empty-msg{color:var(--muted);font-size:var(--t-body);margin:0;line-height:1.55;max-width:312px}
-.empty .btn{margin-top:9px}
-.btn-sm{padding:3px 10px;font-size:var(--t-sm)}
+.empty .sl-btn{margin-top:9px}
 /* a persona's multiple answers stack in one card, separated by a hairline */
 .turn-ans+.turn-ans{margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)}
 .turn-ans>p{margin:0}

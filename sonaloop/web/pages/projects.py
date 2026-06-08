@@ -34,7 +34,7 @@ def register_projects(app) -> None:
         top_btn = ""
         if services.get_plan(proj["id"], store=store):
             plan_url = f'/projects/{proj["id"]}/plan'
-            top_btn = h("a", {"class_": "btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
+            top_btn = h("a", {"class_": "sl-btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
                         raw(_icon("plan")), " Plan")
         protos = graph.get("prototypes") or []
         # Q4: a TYPE filter row (also the LEGEND) — every node KIND present is a colored, glyph'd,
@@ -64,7 +64,7 @@ def register_projects(app) -> None:
         left = (fragment(h("span", {"class_": "ptlabel"}, raw(_icon("search")), " ", t("type_h")), type_chips,
                          (fragment(h("span", {"class_": "ptlabel ptlabel-2"}, t("tags_h")), tag_chips) if tag_chips else ""),
                          h("a", {"class_": "rgclear", "style": "display:none"}, t("clear_filter"))) if type_chips else "")
-        oqbtn = h("button", {"class_": "btn", "id": "oqbtn"}, f'{t("legend")} · {t("open_questions_h")} ({len(oqs)})')
+        oqbtn = h("button", {"class_": "sl-btn", "id": "oqbtn"}, f'{t("legend")} · {t("open_questions_h")} ({len(oqs)})')
         toolbar = h("div", {"class_": "ptoolbar"}, left, h("span", {"class_": "spacer"}), oqbtn)  # Plan/Meta now in topbar
         # Artifact viewer: artifacts + recorded persona sessions (read-only).
         proto_html = ""
@@ -86,7 +86,7 @@ def register_projects(app) -> None:
                 rows.append(h("div", {"class_": "strow"},
                               h("a", {"href": f'/prototypes/{p["slug"]}'}, raw(_icon("projects")), h("b", {}, p["name"])), " ",
                               h("span", {"class_": "pill"}, pill), " ", h("span", {"class_": "muted small"}, p.get("version", "")), " ",
-                              h("a", {"class_": "btn", "style": "padding:2px 8px", "href": f'/prototypes/{p["slug"]}'},
+                              h("a", {"class_": "sl-btn", "style": "padding:2px 8px", "href": f'/prototypes/{p["slug"]}'},
                                 "ansehen ", raw(_icon("external"))), sl_html))
             proto_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("prototypes_h")} ({len(protos)})'),
                                   fragment(*rows))

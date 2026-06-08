@@ -243,12 +243,10 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 h1,h2,h3,h4{color:var(--ink)}
 .h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;margin:0 0 4px;font-weight:650}
 .lead{color:var(--muted);font-size:var(--t-body);margin:0 0 16px;max-width:74ch;line-height:1.5}
-.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 11px;font-size:var(--t-body);font-weight:500;color:var(--ink);cursor:pointer;min-height:30px;transition:background 120ms,border-color 120ms}
-.btn:hover{background:var(--hover)}
-.btn.active{background:var(--sel);color:var(--ink);border-color:var(--line)}
-.btn.disabled{color:var(--faint);cursor:default;opacity:.65}.btn.disabled:hover{background:var(--panel)}.btn.disabled svg{opacity:.7}
-.btn.primary{background:var(--ink);color:var(--bg);border-color:transparent}
-.btn.primary:hover{opacity:.88}
+/* Buttons come from the shared design-system layer: .sl-btn (+ --primary / --sm / .is-active /
+   [disabled]) in COMPONENTS_CSS (vendored from sonaloop-design/styles/components.css). Em-based,
+   so they render dense at the inspector's 13px base. See the design-system docs (Components ›
+   Button). The old hand-rolled .btn block lived here. */
 :focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
 .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:15px 16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
 .card h3{margin:0 0 8px;font-size:var(--t-body)}

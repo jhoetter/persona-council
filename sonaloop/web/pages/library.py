@@ -87,7 +87,7 @@ def register_library(app) -> None:
         proto_title = fragment(p["name"], " ", fid)
         body = fragment(
             h("p", {"style": "margin:8px 0 16px"},
-              h("a", {"class_": "btn", "href": src, "target": "_blank"},
+              h("a", {"class_": "sl-btn", "href": src, "target": "_blank"},
                 raw(_icon("projects")), " ", t("open_in_new_tab"), " ", raw(_icon("external")))),
             h("div", {"class_": "protoframe"}, h("iframe", {"src": src, "title": p["name"], "loading": "lazy"})),
             h("div", {"class_": "sec", "id": "sec-sessions", "style": "margin-top:22px"},

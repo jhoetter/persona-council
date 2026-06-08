@@ -85,6 +85,6 @@ def register_syntheses(app) -> None:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
         body = h("div", {"class_": "page"}, raw(render_meta_report(syn, store)))
-        actions = fragment(h("a", {"class_": "btn", "href": f"/syntheses/{synthesis_id}.pdf"}, t("export_pdf")),
+        actions = fragment(h("a", {"class_": "sl-btn", "href": f"/syntheses/{synthesis_id}.pdf"}, t("export_pdf")),
                            raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}")))
         return _layout(short_title, body, store, crumbs=crumbs, active="syntheses", actions=actions)
