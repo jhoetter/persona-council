@@ -1,0 +1,21 @@
+name: design-sync
+# Drift guard: fail if the vendored design-system files (sonaloop/_icons.py, _tokens.py,
+# _components_css.py) are stale vs ../sonaloop-design. Re-vendor with `make icons` and commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  vendored-fresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: sonaloop
+      - uses: actions/checkout@v4
+        with:
+          repository: jhoetter/sonaloop-design
+          path: sonaloop-design
+      - name: Vendored design-system files are in sync with sonaloop-design
+        run: cd sonaloop && make check-icons

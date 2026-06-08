@@ -7,8 +7,9 @@ prepended below as TOKENS_CSS. Cursor-leaning brand: near-white warm light + coo
 Refresh the vendored tokens with `make icons`. See sonaloop-design/BRANDING.md."""
 
 from ._tokens import TOKENS_CSS  # generated design tokens — single source: ../sonaloop-design
+from ._components_css import COMPONENTS_CSS  # shared .sl-* component layer — same single source
 
-CSS = TOKENS_CSS + """
+CSS = TOKENS_CSS + COMPONENTS_CSS + """
 
 *{box-sizing:border-box}
 html,body{height:100%}

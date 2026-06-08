@@ -40,3 +40,13 @@ if [[ -f "$tsrc" ]]; then
 else
   echo "warn: tokens module not found at $tsrc (run 'node scripts/gen-tokens.mjs' in ../sonaloop-design)" >&2
 fi
+
+# Shared component layer (.sl-* classes), same generate→vendor path. web_assets.py prepends it.
+csrc="$here/../sonaloop-design/py/sonaloop_icons/components_css.py"
+cdst="$here/sonaloop/_components_css.py"
+if [[ -f "$csrc" ]]; then
+  cp "$csrc" "$cdst"
+  echo "synced $csrc -> $cdst ($(wc -c < "$cdst") bytes)"
+else
+  echo "warn: components module not found at $csrc (run 'node scripts/gen-tokens.mjs' in ../sonaloop-design)" >&2
+fi
