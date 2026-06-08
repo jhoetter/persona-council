@@ -8,8 +8,9 @@ Refresh the vendored tokens with `make icons`. See sonaloop-design/BRANDING.md."
 
 from ._tokens import TOKENS_CSS  # generated design tokens — single source: ../sonaloop-design
 from ._components_css import COMPONENTS_CSS  # shared .sl-* component layer — same single source
+from ._pixel_font import PIXEL_FONT_CSS  # Sona Pixel (base64) — powers the .sl-logo "loop"
 
-CSS = TOKENS_CSS + COMPONENTS_CSS + """
+CSS = PIXEL_FONT_CSS + TOKENS_CSS + COMPONENTS_CSS + """
 
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -24,9 +25,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .app{display:flex;height:100vh;overflow:hidden;--sidebar-w:248px}
 .sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width 200ms var(--ease),min-width 200ms var(--ease),border-right-width 200ms}
 .app.collapsed .sidebar{width:0;min-width:0;border-right-width:0}
-.brand{height:var(--row-h);flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 14px;font-weight:680;font-size:var(--t-body);border-bottom:1px solid var(--line);white-space:nowrap}
-.brand .mark{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
-.brand .mark svg{width:22px;height:22px;overflow:visible}
+/* Sidebar-row chrome only; the logo lockup itself is the shared .sl-logo (COMPONENTS_CSS). */
+.brand{height:var(--row-h);flex-shrink:0;display:flex;align-items:center;padding:0 14px;font-size:var(--t-body);border-bottom:1px solid var(--line)}
 .sb-scroll{overflow:auto;padding:10px 8px;flex:1;min-height:0}
 .nav{display:flex;flex-direction:column;gap:1px}
 .nav a{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:var(--radius-sm);color:var(--ink);font-weight:500;position:relative;min-height:30px}

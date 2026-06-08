@@ -421,6 +421,10 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     # too — same __PLACEHOLDER__ -> t() pattern used for the voices chart).
     app_js = (APP_JS.replace("__FAV_ICONS__", _FAV_ICONS_JSON)
               .replace("__UNSTAR__", json.dumps(t("unstar"))))
+    # Brand wordmark: set a trailing "loop" in Sona Pixel (the shared .sl-logo treatment).
+    _bn = brand_name()
+    _brand_word = (f'{_esc(_bn[:-4])}<span class="sl-logo__loop">{_esc(_bn[-4:])}</span>'
+                   if _bn[-4:].lower() == "loop" else _esc(_bn))
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_esc(title)} · {_esc(brand_name())}</title>
@@ -430,7 +434,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 {HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
 <body><div class="app" id="app">
   <aside class="sidebar">
-    <div class="brand"><span class="mark">{_icon("sonaloop")}</span><a href="/">{_esc(brand_name())}</a></div>
+    <div class="brand"><a class="sl-logo" href="/"><span class="sl-logo__mark">{_icon("sonaloop")}</span><span class="sl-logo__word">{_brand_word}</span></a></div>
     <div class="sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
     {_user_menu()}
   </aside>
