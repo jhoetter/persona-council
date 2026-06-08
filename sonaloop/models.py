@@ -162,11 +162,12 @@ class CouncilSession:
 
 @dataclass
 class Synthesis:
-    """A synthesizing report node — folds inputs into a big picture, at some SCOPE
-    (spec/unified-synthesis-report.md). scope="convergence" = a methodology graph node over councils
-    (the structured layer: findings → 2×2); scope="project" = a cross-graph hand-off document (the
-    narrative layer: sections + figures — the former MetaReport). The two layers compose; one renderer
-    and one export (md/pdf) serve every scope."""
+    """A Report — folds inputs into a structured, presentation-grade document (spec/unified-synthesis-
+    report.md). ONE concept; `scope` is an internal property, never a separate identity.
+    scope="convergence" = a methodology graph node over councils (the structured layer: findings → 2×2);
+    scope="project" = a cross-graph hand-off document (the narrative layer: sections + figures). The two
+    layers compose; one renderer and one export (md/pdf) serve every scope. (Named `Synthesis` in
+    code/storage; shown as "Report" in the UI.)"""
     id: str
     title: str
     start_input: str
@@ -193,10 +194,10 @@ class Synthesis:
     statements: list = field(default_factory=list)
     findings: list = field(default_factory=list)
     prompts: list = field(default_factory=list)
-    # --- scope + narrative document layer (spec/unified-synthesis-report.md; absorbs MetaReport) ---
+    # --- scope + narrative document layer (spec/unified-synthesis-report.md) ---
     scope: str = "convergence"           # convergence (graph node) | project (report) | custom
     project_id: str = ""                 # set for scope=project reports (which project they summarise)
-    lead: str = ""                       # the report lead paragraph (was MetaReport.build_order_narrative)
+    lead: str = ""                       # the report lead paragraph
     sections: list = field(default_factory=list)   # [{id, heading, markdown, citations, figures,
     #                                                   theme_tags, source_study_ids, intent}]
     graph_snapshot: Json = None          # project-scope keeps the graph it summarised

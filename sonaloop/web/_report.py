@@ -121,11 +121,7 @@ def render_report(report: dict, store) -> str:
     (findings → 2×2, voices) in the SAME report shell (cover + report typography)."""
     de = content_language() == "de"
     _t = report.get("title", "")           # the default title ends in " — Report"; custom titles show as-is
-    for _suffix in (" — Report", " — Meta-Report"):   # legacy meta-report titles kept resolving
-        if _t.endswith(_suffix):
-            _t = _t[:-len(_suffix)]
-            break
-    project_title = _t
+    project_title = _t[:-len(" — Report")] if _t.endswith(" — Report") else _t
 
     if report.get("scope") != "project":
         # a convergence synthesis, rendered in the unified report shell.
