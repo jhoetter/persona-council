@@ -245,3 +245,58 @@ def test_pptx_export_project_report_with_chart(store):
     prs = Presentation(io.BytesIO(data))
     assert len(prs.slides) >= 2  # title + section
     assert any(_has_chart(sh) for sl in prs.slides for sh in sl.shapes)  # the pie
+
+
+def test_figure_to_chart_maps_every_design_system_kind(store):
+    """The PPTX bridge mirrors the design-system chart of-kinds (charts_catalogue), so a deck shows
+    the same chart the report/PDF does — one neutral _pptx model per author-supplied `of`."""
+    from sonaloop.services._synthesis_pptx import _figure_to_chart
+    from sonaloop.charts_catalogue import _RENDER
+    figs = {
+        "bar": {"of": "bar", "series": [{"label": "A", "value": 3}]},
+        "pie": {"of": "pie", "series": [{"label": "A", "value": 3}]},
+        "stacked_bar": {"of": "stacked_bar", "series": [{"label": "A", "segments": [{"label": "x", "value": 2}]}]},
+        "diverging_bar": {"of": "diverging_bar", "series": [{"label": "A", "positive": 2, "negative": 1}]},
+        "gauge": {"of": "gauge", "series": [{"label": "A", "value": 50, "max": 100}]},
+        "dot_plot": {"of": "dot_plot", "series": [{"label": "A", "values": [1, 2, 3]}]},
+        "heatmap": {"of": "heatmap", "columns": ["c"], "series": [{"label": "A", "values": [2]}]},
+        "line": {"of": "line", "labels": ["a", "b", "c"], "series": [{"label": "A", "points": [1, 2, 3]}]},
+    }
+    # every author-renderable design-system kind has a PPTX bridge mapping (parity with the HTML side)
+    assert set(figs) == set(_RENDER)
+    for of, fig in figs.items():
+        model = _figure_to_chart({"kind": "chart", **fig}, store)
+        assert model and model["type"] == of, of
+    assert _figure_to_chart({"kind": "asset", "id": "x"}, store) is None  # non-chart
+    assert _figure_to_chart({"kind": "chart", "of": "line",  # a 1-point "line" can't be drawn
+                             "series": [{"label": "A", "points": [1]}]}, store) is None
+
+
+def test_pptx_export_renders_all_new_chart_kinds(store):
+    """Every new chart kind exports into the deck — native charts (gauge/line) and shape-drawn charts
+    (stacked/diverging/dot/heatmap) — without error and as real shapes."""
+    import io
+    from pptx import Presentation
+    from sonaloop import services
+    figures = [
+        {"kind": "chart", "of": "stacked_bar", "series": [
+            {"label": "Pricing", "segments": [{"label": "For", "value": 6}, {"label": "Against", "value": 2}]}]},
+        {"kind": "chart", "of": "diverging_bar", "series": [{"label": "Pricing", "positive": 6, "negative": 2}]},
+        {"kind": "chart", "of": "gauge", "series": [{"label": "Confidence", "value": 72}]},
+        {"kind": "chart", "of": "dot_plot", "series": [{"label": "Trust", "values": [2, 3, 4, 5]}]},
+        {"kind": "chart", "of": "heatmap", "columns": ["Cost", "Reach"],
+         "series": [{"label": "Plan A", "values": [2, 5]}]},
+        {"kind": "chart", "of": "line", "labels": ["R1", "R2", "R3"], "series": [{"label": "Conf", "points": [2, 4, 6]}]},
+    ]
+    rep = {"id": "repall", "title": "Demo — Report", "scope": "project", "project_id": "",
+           "created_at": "2026-06-08T00:00:00+00:00", "lead": "", "council_ids": [],
+           "findings": [], "statements": [], "prompts": [], "graph_snapshot": None,
+           "sections": [{"id": f"s{i}", "heading": f"Section {i}", "markdown": "Body.", "citations": [],
+                         "source_study_ids": [], "figures": [fig]} for i, fig in enumerate(figures)]}
+    store.upsert_synthesis(rep)
+    data = services.export_synthesis_pptx("repall", store=store)
+    assert data[:2] == b"PK"
+    prs = Presentation(io.BytesIO(data))
+    assert len(prs.slides) >= len(figures) + 1  # title + one slide per section
+    assert sum(_has_chart(sh) for sl in prs.slides for sh in sl.shapes) >= 2  # native gauge + line
+    assert sum(len(sl.shapes) for sl in prs.slides) > 30  # the shape-drawn charts add many shapes
