@@ -50,7 +50,7 @@ def register_library(app) -> None:
             store, title=ntitle, active="note",
             crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (ntitle, None)],
             icon="panel", sub=klabel, hid="sec-content",
-            body=h("div", {"class_": "es-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))),
+            body=h("div", {"class_": "sl-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))),
             prop_rows=[("dot", t("created"), note.get("created_at", "")[:10]),
                        ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]))],
             rel_study_id=f"note:{note_id}", rel_proj_id=proj["id"],

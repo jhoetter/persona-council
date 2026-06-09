@@ -475,7 +475,7 @@ def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
     return h("div", {"class_": "es", "id": qid},
              h("p", {"class_": "qa-q", "data_label": qlabel}, question) if question else None,
              h("div", {"class_": "eyebrow"}, answer_label),
-             h("div", {"class_": "es-prose"}, raw(answer_html)))
+             h("div", {"class_": "sl-prose"}, raw(answer_html)))
 
 
 def _list_page(store: Store, *, title: str, lead: str, rows: list,
@@ -732,8 +732,8 @@ register_css(r"""
 .qround-a{display:flex;flex-direction:column;gap:10px}
 .turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--bg)}
 .turn-input summary{cursor:pointer}
-/* prototype-session fields, inside the shared .turn statement card — labelled like the es-prose eyebrows */
-.sfield{margin:10px 0 0}.sfield:first-child{margin-top:2px}.sfield .eyebrow{margin:0 0 3px}.sfield .es-prose{margin:0}.sfield .es-prose p{margin:0}
+/* prototype-session fields, inside the shared .turn statement card — labelled like the sl-prose eyebrows */
+.sfield{margin:10px 0 0}.sfield:first-child{margin-top:2px}.sfield .eyebrow{margin:0 0 3px}.sfield .sl-prose{margin:0}.sfield .sl-prose p{margin:0}
 .detail{max-width:980px}.thought{font-size:var(--t-md);padding:9px 12px;background:var(--panel-2);border-radius:var(--radius)}
 .quote{padding:8px 12px;background:var(--panel-2);margin:6px 0;border-radius:var(--radius)}
 .identity{display:grid;grid-template-columns:160px 1fr;gap:20px;align-items:start}

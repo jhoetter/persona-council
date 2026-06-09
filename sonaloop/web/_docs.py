@@ -154,7 +154,7 @@ def _doc_datamodel_body(de: bool, li: int) -> str:
         h("div", {"class_": "dl-layer-n"}, str(n + 1)),
         h("div", {"class_": "dl-layer-main"},
           h("div", {"class_": "dl-layer-t"}, ti[li]),
-          h("div", {"class_": "es-prose sm dl-layer-b"}, raw(_md(body[li])))))
+          h("div", {"class_": "sl-prose sm dl-layer-b"}, raw(_md(body[li])))))
         for n, (ti, body) in enumerate(layers)]
     prim_cards = [h("div", {"class_": "prim-card"},
         h("div", {"class_": "prim-card-h"}, h("code", {"class_": "prim-card-n"}, nm)),
@@ -211,7 +211,7 @@ def _doc_overview() -> str:
         h("div", {"class_": "navgrid"}, fragment(*cards)))
 
     body = fragment(
-        h("div", {"class_": "es-prose", "style": "margin:2px 0 8px;max-width:74ch"},
+        h("div", {"class_": "sl-prose", "style": "margin:2px 0 8px;max-width:74ch"},
           raw(_md(DOCS_INTRO["de" if de else "en"]))),
         explore)
     lead = ("Was Sonaloop ist und wie du damit arbeitest." if de
@@ -226,7 +226,7 @@ def _doc_principles_page() -> str:
     tiles = [h("div", {"class_": "ptile"},
         h("span", {"class_": "ptile-ic"}, raw(_icon(ic))),
         h("div", {"class_": "ptile-t"}, ti[li]),
-        h("div", {"class_": "es-prose sm ptile-b"}, raw(_md(body[li]))))
+        h("div", {"class_": "sl-prose sm ptile-b"}, raw(_md(body[li]))))
         for ic, ti, body in PRINCIPLES]
     body = h("div", {"class_": "principles", "style": "margin-top:6px"}, fragment(*tiles))
     lead = ("Fünf Prinzipien, die bestimmen, warum man den Ergebnissen trauen kann." if de
@@ -268,7 +268,7 @@ def _doc_concepts() -> str:
               h("span", {"class_": "doc-gtag"},
                 h("span", {"class_": "doc-gdot", "style": f"background:{gcolor}"}),
                 glabel_de if de else glabel_en)),
-            h("div", {"class_": "es-prose sm doc-what"}, raw(_md(d["what"][li]))),
+            h("div", {"class_": "sl-prose sm doc-what"}, raw(_md(d["what"][li]))),
             h("div", {"class_": "doc-why"},
               h("span", {"class_": "doc-why-lbl"}, "Wofür" if de else "Why it matters"),
               h("span", {}, raw(_md_inline(d["why"][li])))),
@@ -284,7 +284,7 @@ def _doc_concepts() -> str:
           h("span", {"class_": "doc-gtag"},
             h("span", {"class_": "doc-gdot", "style": "background:var(--ink)"}),
             "Format")),
-        h("div", {"class_": "es-prose sm doc-what"}, raw(_md(
+        h("div", {"class_": "sl-prose sm doc-what"}, raw(_md(
           ("Wie alles als JSON gespeichert wird: drei Schichten und die fünf gemeinsamen Primitive, aus "
            "denen jedes Artefakt besteht.") if de else
           ("How everything is stored as JSON: three layers and the five shared primitives every artefact "
@@ -394,7 +394,7 @@ def _doc_methodology() -> str:
     phase_cards = [h("div", {"class_": f"ddphase {rhythm}"},
         h("div", {"class_": "dd-rhythm"}, RHYTHM[rhythm][li]),
         h("div", {"class_": "dd-name"}, name),
-        h("div", {"class_": "es-prose sm dd-intent"}, raw(_md(intent[li]))))
+        h("div", {"class_": "sl-prose sm dd-intent"}, raw(_md(intent[li]))))
         for name, rhythm, intent in DD_PHASES]
     anatomy = _anchor_block("anatomy",
         _sub_h("Der Rhythmus — am Beispiel Double Diamond" if de else "The rhythm — via Double Diamond"),
@@ -452,7 +452,7 @@ def _doc_mcp() -> str:
               h("span", {"class_": "mcp-kind"}, kind) if kind else None,
               (" " if kind else "") + (desc or "—")))
 
-    intro = h("div", {"class_": "es-prose sm", "style": "max-width:78ch"},
+    intro = h("div", {"class_": "sl-prose sm", "style": "max-width:78ch"},
         raw(_md(
           (f"Sonaloop ist **MCP-first** — die Tools *sind* die API ({data['total']} Tools, automatisch aus "
            "den Live-Modulen generiert). Konvention: `brief_*` sammelt Kontext, dann autort der Agent, dann "

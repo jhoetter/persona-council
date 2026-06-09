@@ -361,7 +361,7 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
     if syn.get("positionierung"):
         sec.append(("positionierung", t("positioning"),
                     _block("positionierung", t("positioning"),
-                           h("div", {"class_": "es-prose sm"}, raw(_md(syn["positionierung"]))))))
+                           h("div", {"class_": "sl-prose sm"}, raw(_md(syn["positionierung"]))))))
     # Structured convergence blocks (GAP-3): a methodology's key problems / affinity clusters /
     # down-select ranking + shortlist render as first-class answer content when present (data-driven —
     # labels via i18n, content free-text; no methodology value hardcoded).
@@ -395,7 +395,7 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
         sec.append(("bogen", t("course"),
                     h("details", {"class_": "block", "id": "bogen"},
                       h("summary", {"class_": "bh", "style": "cursor:pointer"}, t("arc_course")),
-                      h("div", {"class_": "es-prose sm"}, raw(_md(_srcchips(syn["arc_narrative"])))))))
+                      h("div", {"class_": "sl-prose sm"}, raw(_md(_srcchips(syn["arc_narrative"])))))))
 
     # ---- slim meta strip (replaces the old Eigenschaften rail) — omitted when embedded in the report shell
     head = ""

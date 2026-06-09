@@ -232,8 +232,8 @@ h1,h2,h3,h4{color:var(--ink)}
 /* .hero h1/.sub now co-located with the _hero component (component-SSR C3) */
 /* Markdown tables render with the shared .sl-table (--bordered --zebra) from COMPONENTS_CSS.
    Bridge only the prose spacing + let cells grow inside prose. See docs (Components › Table). */
-.es-prose .sl-table{margin:16px 0}
-.es-prose .sl-table td,.es-prose .sl-table th{max-width:none}
+.sl-prose .sl-table{margin:16px 0}
+.sl-prose .sl-table td,.sl-prose .sl-table th{max-width:none}
 #favs .favic{display:inline-flex}#favs .favic svg{width:14px;height:14px}
 .sec{margin:26px 0 0;padding-top:18px;border-top:1px solid var(--line)}
 .sec>h2,.sec>summary{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600}
@@ -242,21 +242,19 @@ details.sec>summary{cursor:pointer;list-style:none;display:flex;align-items:cent
 details.sec>summary::-webkit-details-marker,details.block>summary.bh::-webkit-details-marker{display:none}
 details.sec>summary::before,details.block>summary.bh::before{content:"\\25b8";color:var(--muted);transition:transform 150ms;font-size:var(--t-xs)}
 details.sec[open]>summary::before,details.block[open]>summary.bh::before{transform:rotate(90deg)}
-.doc-main p{max-width:74ch}.es-prose,.detail{overflow-wrap:break-word}.es-prose pre,pre{overflow-x:auto;max-width:100%}.es-prose img,.detail img{max-width:100%;height:auto}.es-prose .sl-table{display:block;overflow-x:auto}
-/* .es-prose typography is shared by many pages (note/section/synthesis prose) — stays global.
+.doc-main p{max-width:74ch}.detail{overflow-wrap:break-word}pre{overflow-x:auto;max-width:100%}.detail img{max-width:100%;height:auto}
+/* Prose typography is shared by many pages (note/section/synthesis prose) — stays global.
    .es/.eyebrow/.qa-q now live co-located with _study_lead (component-SSR C2/C3). */
-.es-prose{font-size:var(--t-prose);line-height:1.62;color:var(--ink)}.es-prose.sm{font-size:var(--t-md);line-height:1.6}
-.es-prose p{margin:0 0 15px;max-width:74ch}.es-prose strong{font-weight:680}.es-prose h3{font-size:var(--t-md);margin:22px 0 8px;font-weight:680}
-.es-prose ul,.es-prose ol{margin:0 0 15px;padding-left:22px;max-width:74ch}.es-prose li{margin:0 0 6px}.es-prose li>ul,.es-prose li>ol{margin:6px 0 0}
-.es-prose h4{font-size:var(--t-body);margin:18px 0 6px;font-weight:680}
-.es-prose em{font-style:italic}.es-prose del{color:var(--muted)}
-.es-prose a{color:var(--accent);text-decoration:none}.es-prose a:hover{text-decoration:underline}
-.es-prose code{font-family:var(--mono);font-size:.88em;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 5px}
-.es-prose pre{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;overflow-x:auto;margin:0 0 15px}.es-prose pre code{background:none;border:0;padding:0;font-size:var(--t-sm)}
-.es-prose blockquote{margin:0 0 15px;padding:8px 14px;border-left:3px solid var(--accent);background:var(--accent-weak);border-radius:0 var(--radius-sm) var(--radius-sm) 0}.es-prose blockquote p{margin:0;max-width:none}
-.es-prose hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+/* .sl-prose (the shared design-system prose layer, from COMPONENTS_CSS) + this app's dense
+   theme: the --t-* scale, tighter subheadings and the 74ch measure. The base elements
+   (paragraphs, strong/em/del, links, code, blockquote, hr, lists) come from the shared layer
+   so they can't drift; only the density deviations live here. */
+.sl-prose{font-size:var(--t-prose)}.sl-prose.sm{font-size:var(--t-md);line-height:1.6}
+.sl-prose p,.sl-prose ul,.sl-prose ol{max-width:74ch}.sl-prose ul,.sl-prose ol{padding-left:22px}
+.sl-prose h3{font-size:var(--t-md);margin:22px 0 8px}.sl-prose h4{font-size:var(--t-body);margin:18px 0 6px}
+.sl-prose pre code{font-size:var(--t-sm)}
 .rec{display:grid;grid-template-columns:74px 1fr;gap:13px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line-2);max-width:74ch}
-.rec:last-child{border-bottom:0}.rec .es-prose,.rec p{max-width:none}
+.rec:last-child{border-bottom:0}.rec .sl-prose,.rec p{max-width:none}
 .prio{display:inline-block;font-size:var(--t-xs);font-weight:700;letter-spacing:.03em;color:#fff;border-radius:var(--radius-sm);padding:3px 7px;text-align:center;white-space:nowrap}
 .prio-1{background:#b3493f}.prio-2{background:#a66b1f}.prio-3{background:#2f6f9f}.prio-4{background:#3d7b5f}.prio-5{background:#6d7378}
 .srcchip{display:inline-block;font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 6px;margin-left:6px;background:var(--panel-2);white-space:nowrap}
@@ -268,7 +266,7 @@ a.srcchip{text-decoration:none}a.srcchip:hover{border-color:var(--accent);color:
 @keyframes xreflash{0%,40%{background:var(--accent-weak);box-shadow:0 0 0 6px var(--accent-weak)}100%{background:transparent;box-shadow:none}}
 [id]{scroll-margin-top:70px}
 .psolve{padding:9px 0;border-bottom:1px solid var(--line-2);max-width:74ch}.psolve:last-child{border-bottom:0}
-.psolve .es-prose,.psolve p{max-width:none}.psolve p{margin:0}
+.psolve .sl-prose,.psolve p{max-width:none}.psolve p{margin:0}
 /* unified finding row (every finding section: key_problem/pain_solver/cluster/segment/ranking/…) */
 .fitem{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:9px 0;border-bottom:1px solid var(--line-2);max-width:74ch}
 .fitem:last-child{border-bottom:0}.fitem .fbody{min-width:0;flex:1}.fitem .fbody p{margin:0}
