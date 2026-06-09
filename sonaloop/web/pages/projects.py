@@ -90,6 +90,27 @@ def register_projects(app) -> None:
                                 "ansehen ", raw(_icon("external"))), sl_html))
             proto_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("prototypes_h")} ({len(protos)})'),
                                   fragment(*rows))
+        # Artifacts in the council pool: real URLs / prototype links / A/B variants, each with its
+        # captured-at + grounded snapshot status (ticket artifacts-into-council). Read-only.
+        arts = graph.get("artifacts") or []
+        arts_html = ""
+        if arts:
+            arows = []
+            for a in arts:
+                snap = a.get("snapshot") or {}
+                captured = bool(snap.get("ok"))
+                cap_icon = _icon("check") if captured else _icon("circle")
+                cap_txt = (f'{t("artifact_captured")} · {(a.get("captured_at") or "")[:16]}' if captured
+                           else t("artifact_capture_failed"))
+                kind_label = t("artifact_kind_" + (a.get("kind") or "url"))
+                arows.append(h("div", {"class_": "strow"},
+                               h("span", {"class_": "pill"}, a.get("label", "?")), " ",
+                               h("a", {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"},
+                                 raw(_icon("external")), h("b", {}, a.get("title") or a.get("url", ""))), " ",
+                               h("span", {"class_": "pill"}, kind_label), " ",
+                               h("span", {"class_": "muted small"}, raw(cap_icon), " ", cap_txt)))
+            arts_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("artifacts_h")} ({len(arts)})'),
+                                 fragment(*arows))
         # Sections outline (methodology-independent groupings) — a navigable list in the panel.
         from ... import presentation as _pres
         secs = sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0))
@@ -125,7 +146,7 @@ def register_projects(app) -> None:
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("build_order_h")} (edges)'),
                   h("div", {"class_": "pills", "style": "margin:6px 0 14px"}, edge_leg), sec_html,
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("open_questions_h")),
-                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html)
+                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html, arts_html)
         oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"
                  "p=document.getElementById('oqpanel');if(!b||!p)return;"
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"

@@ -76,6 +76,7 @@ from . import _memory
 from . import _evaluation
 from . import _snapshots
 from . import _councils
+from . import _artifacts_service
 from . import _synthesis
 from . import _synthesis_pptx
 from . import _research
@@ -84,7 +85,7 @@ from . import _sections
 
 _SUBMODULES = (
     _common, _personas, _simulation, _consolidation, _memory, _evaluation,
-    _snapshots, _councils, _synthesis, _synthesis_pptx, _research, _engines, _sections,
+    _snapshots, _councils, _artifacts_service, _synthesis, _synthesis_pptx, _research, _engines, _sections,
 )
 
 
