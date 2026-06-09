@@ -395,21 +395,21 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     # too — same __PLACEHOLDER__ -> t() pattern used for the voices chart).
     app_js = (APP_JS.replace("__FAV_ICONS__", _FAV_ICONS_JSON)
               .replace("__UNSTAR__", json.dumps(t("unstar"))))
-    # Brand wordmark: set the "loop" of "Sona·loop" in Sona Pixel (the shared .sl-logo
-    # treatment). Match the first "loop" anywhere so product brands like "Sonaloop Cloud"
-    # / "Sonaloop Research" get the pixel treatment too, not just the bare "Sonaloop".
+    # Brand lockup: the wordmark sets the "loop" of "Sona·loop" in Sona Pixel (the shared
+    # .sl-logo treatment). For a product brand ("Sonaloop Cloud" / "Sonaloop Research") the
+    # trailing word becomes a muted .sl-logo__sub label beside the wordmark — matching the
+    # product apps (data/tracker/design); the bare core ("Sonaloop") renders just the wordmark.
     _bn = brand_name()
     _i = _bn.lower().find("loop")
     if _i != -1:
-        # .sl-logo__word is an inline-flex box, which collapses whitespace *between* flex
-        # items — so the space after the pixel "loop" in a multi-word brand ("Sonaloop
-        # Cloud") would vanish. Pin it with a non-breaking space.
-        _post = _bn[_i + 4:]
-        _post = "\u00a0" + _post.lstrip() if _post[:1].isspace() else _post
-        _brand_word = (f'{_esc(_bn[:_i])}<span class="sl-logo__loop">{_esc(_bn[_i:_i+4])}</span>'
-                       f'{_esc(_post)}')
+        _word = f'{_esc(_bn[:_i])}<span class="sl-logo__loop">{_esc(_bn[_i:_i+4])}</span>'
+        _sub = _bn[_i + 4:].strip()
     else:
-        _brand_word = _esc(_bn)
+        _word = _esc(_bn)
+        _sub = ""
+    _brand_word = f'<span class="sl-logo__word">{_word}</span>'
+    if _sub:
+        _brand_word += f'<span class="sl-logo__sub">{_esc(_sub)}</span>'
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_esc(title_brand() + (" · " + title if title and title.strip() else ""))}</title>
@@ -419,7 +419,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 {HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
 <body><div class="sl-app-shell" id="app">
   <aside class="sl-sidebar">
-    <div class="sl-brand"><a class="sl-logo" href="/"><span class="sl-logo__mark">{_icon("sonaloop")}</span><span class="sl-logo__word">{_brand_word}</span></a></div>
+    <div class="sl-brand"><a class="sl-logo" href="/"><span class="sl-logo__mark">{_icon("sonaloop")}</span>{_brand_word}</a></div>
     <div class="sl-sb-search"><button type="button" class="sl-cmdk-trigger" data-cmdk-open aria-label="{t("search")}">{_icon("search")}<span>{t("search")}</span><kbd class="sl-kbd">⌘K</kbd></button></div>
     <div class="sl-sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
     {_user_menu()}
