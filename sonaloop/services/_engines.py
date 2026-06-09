@@ -227,6 +227,11 @@ def complete_task(project_id, task_id, store: Store | None = None) -> dict[str, 
 
 
 
+def iterate_task(project_id, task_id, note="", store: Store | None = None) -> dict[str, Any]:
+    return _plan.iterate_task(project_id, task_id, note, store=store)
+
+
+
 def assess_progress(project_id, task_id, rationale, evidence_refs, delta="",
                     store: Store | None = None) -> dict[str, Any]:
     return _plan.assess_progress(project_id, task_id, rationale, evidence_refs, delta, store=store)

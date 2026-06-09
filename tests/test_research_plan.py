@@ -328,6 +328,99 @@ def test_brief_next_dispatches_to_plan(store):
     assert b["task"] == "frame__root" and b["bucket"] == "analyze" and not b["complete"]
 
 
+# --------------------------------------------------- R4b: host-driven iteration rounds (loop_back)
+
+def _seed_dschool_done_through_test(store, pid="loop_proj"):
+    """A seeded dschool_micro plan with every task done — the state right after the looping verify
+    (verify__prototype_test, loop_back → frame__ideate) completed its first round."""
+    spec = M._load_builtin_specs()["dschool_micro"]
+    plan = P.seed_plan_from_methodology(pid, "hmw loop?", spec)
+    for t in plan["tasks"]:
+        t["status"] = "done"
+    P.save_plan(plan, store=store)
+    return plan
+
+
+def test_iterate_task_opens_a_coherent_second_round(store):
+    _seed_dschool_done_through_test(store)
+    rec = P.iterate_task("loop_proj", "verify__prototype_test", note="probands rejected the flow", store=store)
+    assert rec["round"] == 2 and rec["entry"] == "frame__ideate__r2"
+    assert rec["tasks"] == ["frame__ideate__r2", "verify__prototype_test__r2"]
+    plan = P.get_plan("loop_proj", store=store)            # re-validates: still a DAG
+    by = {t["id"]: t for t in plan["tasks"]}
+    # ordering preserved: the round's entry consumes the DONE looping verify (plus the original edge)
+    assert by["frame__ideate__r2"]["consumes"] == ["verify__define_pov", "verify__prototype_test"]
+    assert by["verify__prototype_test__r2"]["consumes"] == ["frame__ideate__r2"]
+    # the cloned verify loops back at the CLONED target, so the next iteration works too
+    assert by["verify__prototype_test__r2"]["loop_back"] == "frame__ideate__r2"
+    # statuses reset, evidence/frames not carried over, gates preserved, note on the entry
+    for tid in rec["tasks"]:
+        assert by[tid]["status"] == "todo" and by[tid]["produces"] == [] and by[tid]["frame"] is None
+    assert by["verify__prototype_test__r2"]["requires"]["min_inputs"] == 2
+    assert by["verify__prototype_test__r2"]["requires"]["session_of_tags"] == ["prototype"]
+    assert by["frame__ideate__r2"]["plan_note"] == "probands rejected the flow"
+    # the original looping verify stays done (history); the new round becomes ready in order
+    assert by["verify__prototype_test"]["status"] == "done"
+    assert {t["id"] for t in P.ready_tasks(plan)} == {"frame__ideate__r2"}
+    P.record_frame("loop_proj", "frame__ideate__r2", ["q?"], memory_refs=["m1"], store=store)
+    plan = P.get_plan("loop_proj", store=store)
+    assert {t["id"] for t in P.ready_tasks(plan)} == {"verify__prototype_test__r2"}
+
+
+def test_iterate_task_without_loop_back_raises_stable_code(store):
+    _seed_dschool_done_through_test(store, pid="loop_proj2")
+    with pytest.raises(P.PlanError) as e:
+        P.iterate_task("loop_proj2", "frame__ideate", store=store)
+    assert e.value.code == "NO_LOOP_BACK"
+    with pytest.raises(P.PlanError) as e2:                  # unknown task keeps its existing code
+        P.iterate_task("loop_proj2", "ghost", store=store)
+    assert e2.value.code == "BAD_TASK"
+
+
+def test_iterate_task_requires_done_or_ready(store):
+    spec = M._load_builtin_specs()["dschool_micro"]
+    P.save_plan(P.seed_plan_from_methodology("loop_proj3", "g", spec), store=store)
+    with pytest.raises(P.PlanError) as e:                   # blocked deep in a fresh plan
+        P.iterate_task("loop_proj3", "verify__prototype_test", store=store)
+    assert e.value.code == "TASK_NOT_READY"
+
+
+def test_repeated_iteration_yields_r3_and_stays_acyclic(store):
+    _seed_dschool_done_through_test(store, pid="loop_proj4")
+    P.iterate_task("loop_proj4", "verify__prototype_test", store=store)
+    plan = P.get_plan("loop_proj4", store=store)
+    for tid in ("frame__ideate__r2", "verify__prototype_test__r2"):
+        P.task(plan, tid)["status"] = "done"
+    P.save_plan(plan, store=store)
+    rec = P.iterate_task("loop_proj4", "verify__prototype_test__r2", store=store)
+    assert rec["round"] == 3 and rec["tasks"] == ["frame__ideate__r3", "verify__prototype_test__r3"]
+    plan = P.get_plan("loop_proj4", store=store)            # validate_plan would raise on a cycle
+    by = {t["id"]: t for t in plan["tasks"]}
+    assert by["frame__ideate__r3"]["consumes"] == ["verify__define_pov", "verify__prototype_test__r2"]
+    assert by["verify__prototype_test__r3"]["loop_back"] == "frame__ideate__r3"
+    assert {t["id"] for t in P.ready_tasks(plan)} == {"frame__ideate__r3"}
+
+
+def test_render_plan_md_renders_a_looped_plan(store):
+    _seed_dschool_done_through_test(store, pid="loop_proj5")
+    P.iterate_task("loop_proj5", "verify__prototype_test", note="loop", store=store)
+    md = P.render_plan_md(P.get_plan("loop_proj5", store=store))
+    assert "frame__ideate__r2" in md and "verify__prototype_test__r2" in md
+
+
+def test_brief_next_surfaces_iterate_option_on_loop_back_verify(store):
+    spec = M._load_builtin_specs()["dschool_micro"]
+    plan = P.seed_plan_from_methodology("loop_proj6", "g", spec)
+    for t in plan["tasks"]:
+        if t["id"] != "verify__prototype_test":
+            t["status"] = "done"
+    P.save_plan(plan, store=store)
+    b = services.brief_next("loop_proj6", store=store)
+    assert b["task"] == "verify__prototype_test" and "iterate_task" in b["instructions"]
+    n = services.next_action("loop_proj6", store=store)
+    assert "iterate_task" in n["verify"]["guidance"]
+
+
 # --------------------------------------------------------------------------- R5: evidence graph
 
 def _council(store, cid):

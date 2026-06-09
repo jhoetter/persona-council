@@ -348,7 +348,8 @@ def _grounding_verifiable() -> bool:
 
 def complete_task(project_id: str, task_id: str, store: Store | None = None) -> dict[str, Any]:
     """Mark a ready task done. Verify tasks are gate-checked (breadth + gate judgment + artifacts/
-    sessions) and rejected until satisfied. Handles loop_back on verify tasks."""
+    sessions) and rejected until satisfied. Completion never loops: a task's `loop_back` is honored
+    by the HOST calling iterate_task (plan_iterate.py) when it judges another round is needed."""
     store = store or Store()
     plan = get_plan(project_id, store=store)
     if plan is None:
@@ -441,6 +442,9 @@ def brief_next(project_id: str, store: Store | None = None) -> dict[str, Any]:
         unmet = verify_unmet(plan, primary, store)
         instr = (f"VERIFY/{primary['capability']}: consolidate the fan into a {primary['capability']} "
                  f"(record_synthesis / record_decision), record the gate judgment, then complete_task.")
+        if primary["loop_back"]:
+            instr += (f" If the outcome says iterate, iterate_task('{primary['id']}') opens the next "
+                      f"round from '{primary['loop_back']}' (host-judged, never automatic).")
     else:
         instr = (f"ACT/{primary['capability']}: do the work (run-council on a framed question / "
                  f"scaffold_artifact / record_artifact_session), link_evidence, then complete_task. "
@@ -734,6 +738,9 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
                 "Consolidate the fan into a synthesis (record_synthesis — councils are OPTIONAL/decoupled), "
                 "record the gate judgment, assess_progress, complete_task."),
         }
+        if t["loop_back"]:
+            out["verify"]["guidance"] += (f" Iteration is host-judged: iterate_task('{t['id']}') opens "
+                                          f"the next round from '{t['loop_back']}' when the evidence says loop.")
         # If the fan is still short of min_inputs, the real next move is ACT work for this diamond:
         # surface the consuming frames' questions + diverse participants so the host adds act tasks.
         if short:
@@ -756,5 +763,7 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
     return out
 
 
-# plan.md render lives in plan_render.py (kept under the LOC bar); re-exported for back-compat.
+# plan.md render lives in plan_render.py, iteration rounds in plan_iterate.py (kept under the
+# LOC bar); re-exported for cohesion.
 from .plan_render import render_plan_md  # noqa: E402,F401
+from .plan_iterate import iterate_task  # noqa: E402,F401
