@@ -61,16 +61,16 @@ def _relations_html(store, study_id: str, proj_id: str | None,
 def _properties_html(rows, aside: bool = False) -> str:
     """Linear-style Properties panel: an icon + label + value per row (skips empty values).
     aside=True renders a bare section (h4 + rows) to sit inside the _doc right rail."""
-    proprows = [h("div", {"class_": "prop"},
-                  h("span", {"class_": "prop-k"}, raw(_icon(ic)), lbl),
-                  h("span", {"class_": "prop-v"}, val))                # text auto-escaped; h-built links (Safe) kept
+    proprows = [h("div", {"class_": "sl-prop"},
+                  h("span", {"class_": "sl-prop__k"}, raw(_icon(ic)), lbl),
+                  h("span", {"class_": "sl-prop__v"}, val))            # text auto-escaped; h-built links (Safe) kept
                 for ic, lbl, val in rows if val not in (None, "", "—")]
     if not proprows:
         return ""
     inner = fragment(*proprows)
     if aside:
         return fragment(h("h4", {"id": "sec-properties"}, t("properties")), inner)
-    return h("div", {"class_": "card propcard", "id": "sec-properties"},
+    return h("div", {"class_": "sl-props sl-props--card", "id": "sec-properties", "style": "margin-top:16px"},
              h("div", {"class_": "relh"}, t("properties")), inner)
 
 

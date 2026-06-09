@@ -367,12 +367,7 @@ SUPER_GROUPS = [
 
 # ============================ Co-located CSS ============================ #
 register_css(r"""
-/* ==== Documentation hub: secondary tab nav + header ==== */
-.doctabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:2px 0 22px}
-.doctab{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;font-size:var(--t-sm);font-weight:500;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 110ms,border-color 110ms}
-.doctab:hover{color:var(--ink)}
-.doctab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
-.doctab-ic{display:inline-flex}.doctab-ic svg{width:15px;height:15px}
+/* ==== Documentation hub: header (secondary tab nav uses the shared .sl-tabs) ==== */
 .doc-head{margin-bottom:6px}
 .doc-head h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650;display:flex;align-items:center;gap:9px}
 .doc-head h1 svg{width:22px;height:22px;color:var(--accent)}

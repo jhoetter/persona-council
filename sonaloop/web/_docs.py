@@ -34,11 +34,11 @@ from ._docs_content import (
 # ============================ The shared shell ============================ #
 def _doc_tabbar(active: str, li: int) -> str:
     """The secondary tab nav shared by every doc page (and concept-detail sub-pages)."""
-    tabs = [h("a", {"class_": "doctab" + (" on" if s == active else ""),
+    tabs = [h("a", {"class_": "sl-tab" + (" is-active" if s == active else ""),
                     "href": "/documentation" + (f"/{s}" if s else "")},
-              h("span", {"class_": "doctab-ic"}, raw(_icon(ic))), lab[li])
+              raw(_icon(ic)), lab[li])
             for s, ic, lab in DOC_PAGES]
-    return h("nav", {"class_": "doctabs"}, fragment(*tabs))
+    return h("nav", {"class_": "sl-tabs", "style": "margin:2px 0 22px"}, fragment(*tabs))
 
 
 def _docs_shell(slug: str, lead: str, body: str, subnav: list | None = None) -> str:

@@ -150,11 +150,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .relrow{display:flex;align-items:center;gap:9px;padding:6px 14px;color:var(--ink);text-decoration:none;font-size:var(--t-body)}
 .relrow:hover{background:var(--hover)}
 .relrow .relt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.propcard{margin-top:16px}
-.prop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 14px;font-size:var(--t-sm)}
-.prop-k{display:inline-flex;align-items:center;gap:8px;color:var(--muted);flex-shrink:0}.prop-k svg{width:14px;height:14px;color:var(--faint)}
-.prop-v{color:var(--ink);font-weight:500;text-align:right;min-width:0;overflow-wrap:anywhere}
-.prop-v a{color:var(--accent);text-decoration:none}.prop-v a:hover{text-decoration:underline}
+/* Properties panel uses the shared .sl-props / .sl-prop; only the value-link tint is app-local */
+.sl-prop__v a{color:var(--accent);text-decoration:none}.sl-prop__v a:hover{text-decoration:underline}
 /* view toggle (Outline / Graph) */
 .rgsection-theme{fill-opacity:0;stroke-opacity:.6;stroke-width:1.6;stroke-dasharray:6 5}
 .rgseclab-bg{fill:var(--panel);fill-opacity:.92;stroke-opacity:.55;stroke-width:1.2}

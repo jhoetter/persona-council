@@ -193,7 +193,7 @@ APP_JS = """
   // After an SPA content swap (sidebar persists), re-apply star states to the new page's buttons.
   document.addEventListener('spa:load', renderStars);
   // Long hero titles/subs clamp to 3 lines; mark the truncated ones clickable to expand inline.
-  function initClamp(){ document.querySelectorAll('.hero h1,.syn-head h1,.hero .sub').forEach(function(el){
+  function initClamp(){ document.querySelectorAll('.sl-page-header__title,.syn-head h1,.sl-page-header__sub').forEach(function(el){
     if(!el.classList.contains('expanded')) el.classList.toggle('is-clamped', el.scrollHeight-el.clientHeight>2); }); }
   document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('.is-clamped'); if(t) t.classList.toggle('expanded'); });
   initClamp(); document.addEventListener('spa:load',initClamp);
@@ -261,39 +261,31 @@ SPA_JS = """
 """
 
 
-# Reusable right slide-over drawer. Any element with data-drawer="<url>" opens that page's content in a
-# peek panel (fetched + script-reexec via the same approach as SPA nav), without leaving the current page.
-# The trigger keeps its href as a graceful fallback (deep-linkable full page when JS is off).
-DRAWER_CSS = register_css(
-    ".drawer-wrap{position:fixed;inset:0;z-index:120;pointer-events:none}"
-    ".drawer-wrap.open{pointer-events:auto}"
-    ".drawer-bd{position:absolute;inset:0;background:rgba(10,12,16,.32);opacity:0;transition:opacity .2s var(--ease)}"
-    ".drawer-wrap.open .drawer-bd{opacity:1}"
-    ".drawer-panel{position:absolute;top:0;right:0;height:100%;width:min(620px,94vw);background:var(--panel);"
-    "border-left:1px solid var(--line);transform:translateX(100%);"
-    "transition:transform .24s var(--ease);overflow-y:auto;display:flex;flex-direction:column}"
-    ".drawer-wrap.open .drawer-panel{transform:none;box-shadow:var(--shadow-lg)}"
-    ".drawer-head{height:var(--row-h);flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 16px;"
-    "border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:1}"
-    ".drawer-title{font-weight:600;font-size:var(--t-md);flex:1;min-width:0}"
-    ".drawer-x{border:0;background:none;cursor:pointer;color:var(--muted);border-radius:var(--radius-sm);"
-    "padding:4px;line-height:0;display:inline-flex}.drawer-x:hover{background:var(--hover);color:var(--ink)}"
-    ".drawer-body{padding:18px 22px;min-height:0}.drawer-body .page{padding:0;max-width:none}")
+# Reusable right slide-over drawer — the shared design-system overlay (.sl-drawer*; styling lives in
+# sonaloop-design styles/components.css, vendored via _components_css.py). Any element with
+# data-drawer="<url>" opens that page's content in a peek panel (fetched + script-reexec via the same
+# approach as SPA nav), without leaving the current page. We keep a persistent root and toggle the
+# `hidden` attribute (.sl-drawer[hidden] hides it; the enter animation replays on un-hide). The trigger
+# keeps its href as a graceful fallback (deep-linkable full page when JS is off).
+# Only the in-drawer .page reset is app-local; the panel/scrim/header chrome is the shared component.
+DRAWER_CSS = register_css(".sl-drawer__body .page{padding:0;max-width:none}")
 
 DRAWER_MARKUP = (
-    '<div class="drawer-wrap" id="drawer">'
-    '<div class="drawer-bd" data-drawer-close></div>'
-    '<aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">'
-    '<header class="drawer-head"><span class="drawer-title" id="drawer-title"></span>'
-    '<button class="drawer-x" type="button" data-drawer-close aria-label="Close">✕</button></header>'
-    '<div class="drawer-body"></div></aside></div>')
+    '<div class="sl-drawer" id="drawer" hidden>'
+    '<div class="sl-drawer__scrim" data-drawer-close></div>'
+    '<aside class="sl-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">'
+    '<header class="sl-drawer__head"><span class="sl-drawer__title" id="drawer-title"></span>'
+    '<button class="sl-overlay-close" type="button" data-drawer-close aria-label="Close">'
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">'
+    '<path d="M6 6l12 12M18 6L6 18"/></svg></button></header>'
+    '<div class="sl-drawer__body"></div></aside></div>')
 
 DRAWER_JS = """
 <script>
 (function(){
   var wrap=document.getElementById('drawer'); if(!wrap || !window.fetch) return;
-  var body=wrap.querySelector('.drawer-body'), titleEl=wrap.querySelector('.drawer-title'), lastFocus=null;
-  function close(){ wrap.classList.remove('open'); if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
+  var body=wrap.querySelector('.sl-drawer__body'), titleEl=wrap.querySelector('.sl-drawer__title'), lastFocus=null;
+  function close(){ wrap.hidden=true; if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
   function runScripts(root){
     root.querySelectorAll('script').forEach(function(old){ var s=document.createElement('script');
       for(var i=0;i<old.attributes.length;i++){ s.setAttribute(old.attributes[i].name, old.attributes[i].value); }
@@ -303,7 +295,7 @@ DRAWER_JS = """
     lastFocus=trigger||document.activeElement;
     titleEl.textContent=title||'';
     body.innerHTML='<p class="muted small">\\u2026</p>';
-    wrap.classList.add('open');
+    wrap.hidden=false;
     fetch(url, {headers:{'X-Requested-With':'drawer'}, credentials:'same-origin'}).then(function(r){
       if(!r.ok) throw 0; return r.text();
     }).then(function(html){
@@ -311,7 +303,7 @@ DRAWER_JS = """
       var sec=doc.querySelector('#main section') || doc.getElementById('main');
       body.innerHTML='';
       if(sec){ var imp=document.importNode(sec, true); body.appendChild(imp); runScripts(body); }
-      var sp=wrap.querySelector('.drawer-panel'); if(sp) sp.scrollTop=0;
+      body.scrollTop=0;
       document.dispatchEvent(new CustomEvent('spa:load'));   // re-apply star states inside the drawer
     }).catch(function(){ location.href=url; });               // any failure -> just open the real page
   }
@@ -320,7 +312,7 @@ DRAWER_JS = """
     if(t){ e.preventDefault(); e.stopPropagation(); open(t.getAttribute('data-drawer'), t.getAttribute('data-drawer-title')||(t.textContent||'').trim(), t); return; }
     if(e.target.closest && e.target.closest('[data-drawer-close]')){ e.preventDefault(); close(); }
   });
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && wrap.classList.contains('open')) close(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !wrap.hidden) close(); });
 })();
 </script>
 """
@@ -443,29 +435,36 @@ _STUDY_LEAD_CSS = register_css(
 
 # Long titles/subs (e.g. a council's full question-prompt) are clamped to a few lines + ellipsis — the
 # header stays scannable (Linear-style) and the full text is available on hover (title=) and in the body.
+# The hero uses the shared design-system .sl-page-header* (component chrome + spacing). Only the
+# app-specific bits live here: the title's accent leading icon, and the 3-line clamp + click-to-expand
+# affordance (set by initClamp() in SHELL_JS only when the text actually overflows).
 _HERO_CSS = register_css(
-    ".hero h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650;"
+    ".sl-page-header__title{font-size:var(--t-xl);font-weight:650;letter-spacing:-.02em;line-height:1.2;"
     "display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}"
-    ".hero h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}"
-    ".hero .sub{color:var(--muted);font-size:var(--t-body);margin:0 0 4px;max-width:74ch;"
+    ".sl-page-header__title svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}"
+    ".sl-page-header__sub{max-width:74ch;"
     "display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}"
     ".is-clamped{cursor:pointer}"                                  # only set by JS when actually truncated
-    "h1.expanded,.sub.expanded{-webkit-line-clamp:unset;display:block;overflow:visible}")
+    "h1.expanded,.sl-page-header__title.expanded,.sl-page-header__sub.expanded{"
+    "-webkit-line-clamp:unset;display:block;overflow:visible}")
 
 
 def _hero(title, *, sub=None, icon: str | None = None, hid: str | None = None, top=None) -> str:
-    """The page hero used by every detail page: optional `top` slot (a pill, trusted HTML), a title
-    (text → escaped, or Safe HTML kept) with an optional leading `icon`, and an optional `sub`
-    (text → escaped, or Safe HTML like a chip line). Title/sub are line-clamped (see _HERO_CSS); plain
-    text gets a full-text title= tooltip."""
-    h1_attrs = {"title": title} if type(title) is str else {}      # full text on hover (clamped display)
-    sub_attrs = {"class_": "sub"}
+    """The page hero used by every detail page — the shared .sl-page-header: optional `top` slot (a pill,
+    trusted HTML), a title (text → escaped, or Safe HTML kept) with an optional leading `icon`, and an
+    optional `sub` (text → escaped, or Safe HTML like a chip line). Title/sub are line-clamped (see
+    _HERO_CSS); plain text gets a full-text title= tooltip."""
+    h1_attrs = {"class_": "sl-page-header__title"}
+    if type(title) is str:
+        h1_attrs["title"] = title                                  # full text on hover (clamped display)
+    sub_attrs = {"class_": "sl-page-header__sub"}
     if type(sub) is str:
         sub_attrs["title"] = sub
-    return h("div", {"class_": "hero", "id": hid},
-             raw(top) if top else None,
-             h("h1", h1_attrs, raw(_icon(icon)) if icon else None, title),
-             h("p", sub_attrs, sub) if sub else None)
+    return h("div", {"class_": "sl-page-header", "id": hid},
+             h("div", {"class_": "sl-page-header__main"},
+               h("div", {"class_": "sl-page-header__top"}, raw(top)) if top else None,
+               h("h1", h1_attrs, raw(_icon(icon)) if icon else None, title),
+               h("p", sub_attrs, sub) if sub else None))
 
 
 def _study_lead(answer_html: str, answer_label: str, *, question: str = "",

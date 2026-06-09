@@ -68,7 +68,7 @@ def _calendar_tabs(persona_id: str, selected_date: str, view: str, period: dict)
     def go(d: str) -> str:
         return f"/personas/{persona_id}?date={d}&view={view}"
     labels = {"week": t("tab_week"), "month": t("tab_month"), "year": t("tab_year")}
-    tabs = [h("a", {"class_": "active" if view == tab else "",
+    tabs = [h("a", {"class_": "sl-tab" + (" is-active" if view == tab else ""),
                     "href": f"/personas/{persona_id}?date={selected_date}&view={tab}"}, labels[tab])
             for tab in ["week", "month", "year"]]
     return h("div", {"class_": "cal-nav"},
@@ -77,7 +77,7 @@ def _calendar_tabs(persona_id: str, selected_date: str, view: str, period: dict)
                h("a", {"class_": "cal-arrow", "href": go(nxt), "aria-label": "next"}, "›"),
                h("a", {"class_": "cal-today", "href": go(_today())}, t("today")),
                h("span", {"class_": "cal-title"}, _period_title(view, period))),
-             h("div", {"class_": "cal-tabs"}, *tabs))
+             h("div", {"class_": "sl-tabs sl-tabs--pill"}, *tabs))
 
 
 def _event_chip(event: dict) -> str:                          # used in week + month cells
@@ -182,10 +182,7 @@ register_css(r"""
 .cal-today{border:1px solid var(--line);border-radius:var(--radius-sm);padding:5px 12px;font-size:var(--t-sm);color:var(--ink);background:var(--panel)}
 .cal-today:hover{background:var(--hover)}
 .cal-title{font-size:var(--t-md);font-weight:600;color:var(--ink);margin-left:8px}
-.cal-tabs{display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:2px}
-.cal-tabs a{border-radius:var(--radius-sm);padding:4px 13px;font-size:var(--t-sm);color:var(--muted);font-weight:500}
-.cal-tabs a:hover{color:var(--ink)}
-.cal-tabs a.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+/* the week/month/year switch uses the shared .sl-tabs--pill */
 /* event chip (week + month) — soft fill, leading type-coloured rule */
 .cev{display:flex;align-items:baseline;gap:6px;border-left:2.5px solid var(--accent);background:var(--panel-2);border-radius:var(--radius-sm);padding:2px 7px;font-size:var(--t-xs);color:var(--ink);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cev .cev-t{color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
