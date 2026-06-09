@@ -48,7 +48,7 @@ def test_expected_tools_registered():
         "delete_research_project",
         "delete_synthesis", "delete_council", "delete_persona",
         # methodologies = plan SEEDS (the single runtime engine is the plan; HX3):
-        "list_methodologies", "get_methodology",
+        "list_methodologies", "get_methodology", "register_methodology",
         "list_frameworks", "describe_framework",
         "set_project_methodology", "brief_next", "record_judgment",
         # research-plan engine (analyze/act/verify):
@@ -89,6 +89,59 @@ def test_catalogue_covers_every_tool_grouped_by_domain():
     assert "## Councils & syntheses" in md and "- **record_council**" in md
     uris = {str(r.uri) for r in asyncio.run(srv.list_resources())}
     assert "sonaloop://guide/catalogue" in uris
+
+
+def _call(server, name: str, args: dict):
+    """Call a tool through the live server; FastMCP returns (content, structured) — the
+    structured result is the `_env` envelope the host agent sees."""
+    _, structured = asyncio.run(server.call_tool(name, args))
+    return structured
+
+
+def test_register_methodology_roundtrip_over_mcp():
+    """The 'author a Design Sprint' story, entirely over MCP: register a custom NON-alternating
+    constellation (fan→fan, no decide in between), read it back, and immediately seed a study's
+    plan with it — the fan→fan edge survives seeding (ordering preserved)."""
+    server = build_server()
+    spec = {
+        "key": "design_sprint_lite", "name": "Design Sprint (lite)", "description": "d",
+        "when_to_use": "w",
+        "steps": [
+            {"id": "map", "name": "Map", "tags": ["explore"], "intent": "map the problem"},
+            {"id": "sketch", "name": "Sketch", "tags": ["explore", "build"], "consumes": ["map"],
+             "intent": "sketch solutions"},                       # fan→fan, no decide between
+            {"id": "decide", "name": "Decide", "tags": ["decide"], "consumes": ["sketch"],
+             "requires": {"min_inputs": 2, "gate_tag": "divergence_complete"},
+             "produces": {"role": "pov"}},
+        ],
+    }
+    env = _call(server, "register_methodology", {"spec": spec})
+    assert env["ok"] and env["data"]["key"] == "design_sprint_lite"
+    assert env["next_recommended_tool"]["name"] == "start_project"
+    got = _call(server, "get_methodology", {"key": "design_sprint_lite"})["data"]
+    assert [s["id"] for s in got["steps"]] == ["map", "sketch", "decide"]
+    proj = _call(server, "start_project",
+                 {"title": "DS", "goal": "g", "methodology": "design_sprint_lite"})["data"]
+    plan = _call(server, "get_plan", {"project_id": proj["id"]})["data"]
+    tasks = {t["id"]: t for t in plan["tasks"]}
+    assert tasks["frame__sketch"]["consumes"] == ["frame__map"]   # fan→fan edge kept
+    assert tasks["verify__decide"]["consumes"] == ["frame__sketch"]
+    assert tasks["verify__decide"]["requires"]["gate_tag"] == "divergence_complete"
+
+
+def test_register_methodology_errors_carry_stable_code_over_mcp():
+    """Bad specs and built-in shadowing fail with the stable MethodologyError code in the tool
+    error text, so an agent can match the code, fix the spec, and retry."""
+    import pytest
+    from mcp.server.fastmcp.exceptions import ToolError
+    server = build_server()
+    with pytest.raises(ToolError, match="BAD_SPEC"):              # missing steps
+        asyncio.run(server.call_tool("register_methodology", {"spec": {
+            "key": "x", "name": "X", "description": "d", "when_to_use": "w"}}))
+    with pytest.raises(ToolError, match="RESERVED_KEY"):          # built-in keys are reserved
+        asyncio.run(server.call_tool("register_methodology", {"spec": {
+            "key": "double_diamond", "name": "Shadow", "description": "d", "when_to_use": "w",
+            "steps": [{"id": "a", "name": "A"}, {"id": "b", "name": "B", "consumes": ["a"]}]}}))
 
 
 def test_every_tool_documented():

@@ -36,6 +36,11 @@ class MethodologyError(Exception):
         self.code = code
         self.message = message
 
+    def __str__(self) -> str:
+        # The stable code rides str(exc) so it survives any boundary that stringifies the
+        # exception (FastMCP's ToolError does) — an agent can match the code and fix the spec.
+        return f"{self.code}: {self.message}"
+
 
 # ----------------------------------------------------------------- spec normalization
 
@@ -226,6 +231,11 @@ def get_methodology(key: str, store: Store | None = None) -> dict[str, Any]:
 def register_methodology(spec: dict[str, Any], store: Store | None = None) -> dict[str, Any]:
     store = store or Store()
     validate_methodology_spec(spec)
+    # Built-in keys are RESERVED: user specs overlay built-ins by key, so accepting one here
+    # would silently shadow the packaged spec. Reject with a stable code instead.
+    if spec["key"] in _load_builtin_specs():
+        raise MethodologyError(
+            "RESERVED_KEY", f"'{spec['key']}' is a built-in methodology; register under a new key")
     spec = dict(spec)
     spec.setdefault("created_at", utc_now_iso())
     store.upsert_methodology(spec)

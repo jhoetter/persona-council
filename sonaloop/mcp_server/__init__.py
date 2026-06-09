@@ -11,7 +11,7 @@ from ._tools_personas import register_personas
 from ._tools_simulation import register_simulation
 from ._tools_eval import register_eval
 from ._tools_research import register_research
-from ._tools_methodology import register_methodology
+from ._tools_methodology import register_methodologies
 from ._tools_jobs import register_jobs
 from ._tools_plan import register_plan
 from ._tools_prototypes import register_prototypes
@@ -31,7 +31,7 @@ def build_server():
     register_simulation(mcp)
     register_eval(mcp)
     register_research(mcp)
-    register_methodology(mcp)
+    register_methodologies(mcp)
     register_jobs(mcp)
     register_plan(mcp)
     register_prototypes(mcp)
