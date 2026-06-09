@@ -265,13 +265,13 @@ SPA_JS = """
 # sonaloop-design styles/components.css, vendored via _components_css.py). Any element with
 # data-drawer="<url>" opens that page's content in a peek panel (fetched + script-reexec via the same
 # approach as SPA nav), without leaving the current page. We keep a persistent root and toggle the
-# `hidden` attribute (.sl-drawer[hidden] hides it; the enter animation replays on un-hide). The trigger
-# keeps its href as a graceful fallback (deep-linkable full page when JS is off).
+# `.is-open` class (the panel/scrim transition in AND out — see .sl-drawer in COMPONENTS_CSS). The
+# trigger keeps its href as a graceful fallback (deep-linkable full page when JS is off).
 # Only the in-drawer .page reset is app-local; the panel/scrim/header chrome is the shared component.
 DRAWER_CSS = register_css(".sl-drawer__body .page{padding:0;max-width:none}")
 
 DRAWER_MARKUP = (
-    '<div class="sl-drawer" id="drawer" hidden>'
+    '<div class="sl-drawer" id="drawer">'
     '<div class="sl-drawer__scrim" data-drawer-close></div>'
     '<aside class="sl-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">'
     '<header class="sl-drawer__head"><span class="sl-drawer__title" id="drawer-title"></span>'
@@ -285,7 +285,7 @@ DRAWER_JS = """
 (function(){
   var wrap=document.getElementById('drawer'); if(!wrap || !window.fetch) return;
   var body=wrap.querySelector('.sl-drawer__body'), titleEl=wrap.querySelector('.sl-drawer__title'), lastFocus=null;
-  function close(){ wrap.hidden=true; if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
+  function close(){ wrap.classList.remove('is-open'); if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
   function runScripts(root){
     root.querySelectorAll('script').forEach(function(old){ var s=document.createElement('script');
       for(var i=0;i<old.attributes.length;i++){ s.setAttribute(old.attributes[i].name, old.attributes[i].value); }
@@ -295,7 +295,7 @@ DRAWER_JS = """
     lastFocus=trigger||document.activeElement;
     titleEl.textContent=title||'';
     body.innerHTML='<p class="muted small">\\u2026</p>';
-    wrap.hidden=false;
+    wrap.classList.add('is-open');
     fetch(url, {headers:{'X-Requested-With':'drawer'}, credentials:'same-origin'}).then(function(r){
       if(!r.ok) throw 0; return r.text();
     }).then(function(html){
@@ -312,7 +312,7 @@ DRAWER_JS = """
     if(t){ e.preventDefault(); e.stopPropagation(); open(t.getAttribute('data-drawer'), t.getAttribute('data-drawer-title')||(t.textContent||'').trim(), t); return; }
     if(e.target.closest && e.target.closest('[data-drawer-close]')){ e.preventDefault(); close(); }
   });
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !wrap.hidden) close(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && wrap.classList.contains('is-open')) close(); });
 })();
 </script>
 """
