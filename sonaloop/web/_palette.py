@@ -110,6 +110,8 @@ list.addEventListener('click',function(e){ if(e.target.closest&&e.target.closest
 list.addEventListener('mousemove',function(e){ var a=e.target.closest&&e.target.closest('.cmdk-item'); if(!a) return;
   var i=+a.getAttribute('data-i'); if(i!==sel){ var els=list.querySelectorAll('.cmdk-item'); if(els[sel]) els[sel].classList.remove('sel'); sel=i; a.classList.add('sel'); } });
 ov.addEventListener('click',function(e){ if(e.target.hasAttribute('data-cmdk-close')) close(); });
+// the sidebar search trigger (under the logo) opens the palette; delegated so it survives SPA swaps
+document.addEventListener('click',function(e){ if(e.target.closest&&e.target.closest('[data-cmdk-open]')){ e.preventDefault(); open(); } });
 window.addEventListener('keydown',function(e){
   if((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K')){ e.preventDefault(); if(ov.hidden) open(); else close(); }
   else if(e.key==='Escape'&&!ov.hidden){ close(); } });

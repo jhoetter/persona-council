@@ -420,6 +420,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 <body><div class="sl-app-shell" id="app">
   <aside class="sl-sidebar">
     <div class="sl-brand"><a class="sl-logo" href="/"><span class="sl-logo__mark">{_icon("sonaloop")}</span><span class="sl-logo__word">{_brand_word}</span></a></div>
+    <div class="sl-sb-search"><button type="button" class="sl-cmdk-trigger" data-cmdk-open aria-label="{t("search")}">{_icon("search")}<span>{t("search")}</span><kbd class="sl-kbd">⌘K</kbd></button></div>
     <div class="sl-sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
     {_user_menu()}
   </aside>
