@@ -88,6 +88,43 @@ def register_council(mcp):
         t = time.perf_counter()
         return _env("get_council", services.get_council(session_id), t)
 
+    # ================= Head-to-Head (X vs Y Format) =================
+    @mcp.tool()
+    def brief_head_to_head(project_id: str, prompt: str, options: list[Any], persona_ids: list[str] | None = None,
+                           filters: dict[str, Any] | None = None, count: int = 4, context: str | None = None) -> dict[str, Any]:
+        """Gather a HEAD-TO-HEAD (X vs Y) — run the panel on a DIRECT comparison of two (or more) concrete
+        options and get a reasoned, segmented preference, NOT two separate yes/no councils. `options` are
+        the things compared: an ARTIFACT already ingested via add_artifact (pass its id or A/B label — e.g.
+        two captured variants) OR a plain TEXT option (a string, or {label?, title?, text} for "$29/mo" vs
+        "$49/mo"). They are labelled A/B/… and folded into each participant's context side-by-side. Without
+        persona_ids: returns a segment-diverse candidate panel. With persona_ids: returns each participant's
+        loaded context + the labelled options to author per-option stances and a per-persona preference
+        against; then call record_head_to_head. Build the two options first (add_artifact, or pass text)."""
+        t = time.perf_counter()
+        return _env("brief_head_to_head", services.brief_head_to_head(project_id, prompt, options, persona_ids, filters, count, context), t)
+
+    @mcp.tool()
+    def record_head_to_head(project_id: str, prompt: str, options: list[Any], preferences: list[dict[str, Any]] | None = None,
+                            persona_ids: list[str] | None = None, statements: list[dict[str, Any]] | None = None,
+                            summary: str = "", exec_summary: str = "", selection_reason: str = "",
+                            findings: list[dict[str, Any]] | None = None, key: str | None = None) -> dict[str, Any]:
+        """Persist a host-authored HEAD-TO-HEAD (stored as a CouncilSession with a `head_to_head` block).
+        Pass the labelled `options`, each persona's `preferences` ([{persona_id, choice (an option label
+        'A'|'B'|…), reason}]), the authored `statements` (one per persona+option, stance:{value -2..2},
+        about={kind:'prompt', id:'opt:A'|'opt:B'}), and the prose verdict in exec_summary/summary. The
+        SERVER deterministically tallies overall preference + margin (how decisive) + segment-splits (who
+        prefers what, by persona segment) — you author the qualitative synthesis. Returns the session incl.
+        head_to_head.result. Pass a stable `key` for a deterministic id (idempotent upsert)."""
+        t = time.perf_counter()
+        return _env("record_head_to_head", services.record_head_to_head(project_id, prompt, options, preferences, persona_ids, statements, summary, exec_summary, selection_reason, findings, key), t)
+
+    @mcp.tool()
+    def get_head_to_head(session_id: str) -> dict[str, Any]:
+        """Fetch one head-to-head result by session id — its options, per-persona preferences and the
+        deterministic aggregate (preference + margin + segment-splits)."""
+        t = time.perf_counter()
+        return _env("get_head_to_head", services.get_head_to_head(session_id), t)
+
     @mcp.tool()
     def list_councils() -> dict[str, Any]:
         """List all council sessions (id, prompt, persona count, date) for browsing."""
