@@ -10,6 +10,7 @@ from ._components import (
     _RGRAPH_JS,
 )
 from ._html import h, raw, fragment
+from ._plan_fw import _framework_strip
 
 
 def _graph_layout(graph: dict) -> dict:
@@ -572,8 +573,10 @@ def _plan_html(plan: dict, store) -> str:
 
     pct = round(100 * done / len(tasks)) if tasks else 0
     status_txt = ("Plan komplett" if complete else f"{done} von {len(tasks)} erledigt")
+    fw_strip = _framework_strip(plan, tasks)
     head = h("div", {"class_": "plan-hd"},
              h("div", {"class_": "plan-goal"}, plan.get("goal", "")),
+             fw_strip,
              h("div", {"class_": "plan-prog-row"},
                h("div", {"class_": "plan-prog" + (" full" if complete else "")},
                  h("i", {"style": f"width:{pct}%"})),

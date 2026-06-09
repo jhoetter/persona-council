@@ -54,6 +54,48 @@ def get_job(job_id: str) -> dict[str, Any]:
     raise KeyError(f"No taxonomy job '{job_id}'")
 
 
+def framework_descriptions(store: Any | None = None) -> list[dict[str, Any]]:
+    """The plain-language description of every Framework, as ONE clean shape the website
+    "how it works" page and the job presets both consume:
+
+        {id, name, what, when, stages: [{id, name, what}]}
+
+    `what` is the one-line "what shape it is", `when` is the "when to use it", and `stages` is the
+    ordered diverge→converge shape. The data is read from the methodology specs (the live source —
+    `sonaloop/methodologies/*.json`) and the framework's display `name` is taken from the canonical
+    taxonomy so ids/labels stay in lock-step. Only the Frameworks named in the taxonomy are returned,
+    in taxonomy order, so downstream consumers get a stable, deduplicated list."""
+    from . import methodology as _meth  # local import to avoid an import cycle at module load
+
+    registry = _meth.registry(store)
+    out: list[dict[str, Any]] = []
+    for fw in frameworks():
+        spec = registry.get(fw["methodology_key"])
+        if not spec:
+            continue
+        stages = [
+            {"id": st["id"], "name": st.get("name", st["id"]), "what": st.get("intent", "")}
+            for st in spec.get("steps", [])
+        ]
+        out.append({
+            "id": fw["id"],
+            "name": fw.get("name", spec.get("name", fw["id"])),
+            "what": spec.get("description", ""),
+            "when": spec.get("when_to_use", ""),
+            "stages": stages,
+        })
+    return out
+
+
+def get_framework_description(framework_id: str, store: Any | None = None) -> dict[str, Any]:
+    """One Framework's plain-language description by stable id (e.g. 'double_diamond').
+    Raises KeyError if the id is unknown. See `framework_descriptions` for the shape."""
+    for fw in framework_descriptions(store):
+        if fw["id"] == framework_id:
+            return fw
+    raise KeyError(f"No taxonomy framework '{framework_id}'")
+
+
 def framework_keys() -> set[str]:
     """The methodology keys referenced by the taxonomy — for cross-checking against the registry."""
     return {fw["methodology_key"] for fw in frameworks()}

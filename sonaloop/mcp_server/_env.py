@@ -40,6 +40,8 @@ _NEXT: dict[str, dict[str, Any]] = {
     "brief_council": {"name": "record_council", "reason": "author the turns + synthesis, then persist the council"},
     "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
     # --- methodologies = plan SEEDS; the runtime engine is the plan (spec/hx3-engine-collapse.md) ---
+    "list_frameworks": {"name": "describe_framework", "reason": "read one Framework's plain-language shape before choosing it"},
+    "describe_framework": {"name": "start_project", "reason": "start_project(methodology=<id>) runs the study through this Framework"},
     "list_methodologies": {"name": "get_methodology", "reason": "inspect a constellation's steps before starting"},
     "get_methodology": {"name": "start_project", "reason": "start_project(methodology=<key>) seeds the plan"},
     "set_project_methodology": {"name": "next_action", "reason": "load the next ready plan step fully"},

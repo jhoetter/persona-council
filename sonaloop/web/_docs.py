@@ -374,11 +374,15 @@ def _doc_methodology() -> str:
         steps = [st.get("name", "") for st in s.get("steps", [])]
         pills = h("div", {"class_": "step-pills"},
                   fragment(*(h("span", {"class_": "step-pill"}, nm) for nm in steps if nm)))
+        when = s.get("when_to_use", "")
+        when_html = (h("div", {"class_": "methcard-when"},
+                       h("b", {}, ("Wann" if de else "When") + ": "), when) if when else "")
         meth_cards.append(h("div", {"class_": "methcard"},
             h("div", {"class_": "methcard-h"},
               h("span", {"class_": "methcard-n"}, s.get("name", s.get("key", ""))),
               h("span", {"class_": "methcard-c"}, f'{len(steps)} ' + ("Phasen" if de else "phases"))),
             h("div", {"class_": "methcard-d"}, s.get("description", "")),
+            when_html,
             pills))
     available = _anchor_block("available",
         _sub_h("Verfügbare Methodiken" if de else "Available methodologies"),

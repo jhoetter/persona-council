@@ -49,3 +49,30 @@ def test_planned_formats_referenced_by_stable_id():
 
 def test_get_job_round_trips():
     assert T.get_job("positioning")["default_framework"] == "double_diamond"
+
+
+def test_framework_descriptions_are_structured_and_complete(store):
+    """The website 'how it works' page + the job presets consume ONE clean shape:
+    {id, name, what, when, stages:[{id, name, what}]} — every Framework must fill all fields."""
+    descs = T.framework_descriptions(store=store)
+    ids = [d["id"] for d in descs]
+    # every taxonomy Framework with a real methodology spec is described, in taxonomy order
+    assert ids == [fw["id"] for fw in T.frameworks() if fw["methodology_key"] in {m["key"] for m in M.list_methodologies(store=store)}]
+    assert {"double_diamond", "double_diamond_deep", "dschool_micro", "lean_jtbd"} <= set(ids)
+    for d in descs:
+        assert d["id"] and d["name"] and d["what"] and d["when"], d["id"]
+        assert d["stages"], d["id"]
+        for st in d["stages"]:
+            assert st["id"] and st["name"] and st["what"], (d["id"], st)
+
+
+def test_get_framework_description_round_trips(store):
+    dd = T.get_framework_description("double_diamond", store=store)
+    assert dd["name"] == "Double Diamond"
+    assert [s["id"] for s in dd["stages"]] == ["discover", "define", "develop", "deliver"]
+
+
+def test_get_framework_description_unknown_raises(store):
+    import pytest
+    with pytest.raises(KeyError):
+        T.get_framework_description("nope", store=store)
