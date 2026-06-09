@@ -65,6 +65,7 @@ REGULAR: dict[str, dict[str, str | None]] = {
     "check": {"body": "<path d=\"M5 12.5l4.5 4.5L19 7\"/>", "cls": None},
     "circle": {"body": "<circle cx=\"12\" cy=\"12\" r=\"7.5\"/>", "cls": None},
     "half": {"body": "<circle cx=\"12\" cy=\"12\" r=\"7.5\"/><path d=\"M12 4.5a7.5 7.5 0 0 1 0 15z\" fill=\"currentColor\" stroke=\"none\"/>", "cls": None},
+    "threeQuarter": {"body": "<circle cx=\"12\" cy=\"12\" r=\"7.5\"/><path d=\"M12 12L12 4.5A7.5 7.5 0 1 1 4.5 12Z\" fill=\"currentColor\" stroke=\"none\"/>", "cls": None},
     "alert": {"body": "<path d=\"M12 4.5v8.5\"/><circle cx=\"12\" cy=\"17.6\" r=\"0.7\" fill=\"currentColor\" stroke=\"none\"/>", "cls": None},
     "close": {"body": "<path d=\"M6 6l12 12M18 6L6 18\"/>", "cls": None},
     "plus": {"body": "<path d=\"M12 5v14M5 12h14\"/>", "cls": None},
