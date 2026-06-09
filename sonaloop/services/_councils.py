@@ -73,18 +73,28 @@ from ._common import *  # noqa: F401,F403  (shared helpers + constants)
 
 def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = None,
                   filters: dict[str, Any] | None = None, count: int = 3, context: str | None = None,
-                  store: Store | None = None) -> dict[str, Any]:
+                  artifact_ids: list[str] | None = None, store: Store | None = None) -> dict[str, Any]:
     """Gather everything needed to run a host-authored council and persist it with
     record_council. A council is scoped to a research project, so `project_id` is required
     and validated up front (create one with create_research_project first; personas are
     global and need no project). Returns candidate personas (to select from) OR, when
     persona_ids are given, each participant's loaded agent context to author turns against.
 
+    Point the council at REAL artifacts with `artifact_ids` (or omit it to include every artifact
+    ingested into the project): each participant's context is grounded in the CAPTURED artifact(s) —
+    a live URL/website, a prototype link, or two A/B variants — so reactions are about what is actually
+    there, not a description. Two+ variants are present and labelled A/B/… for side-by-side comparison.
+    Add artifacts first via add_artifact(project_id, url, kind=...).
+
     Methodology lives in the run-council skill: load each persona's SOUL + memory,
     react in character (support/skepticism/indifference/rejection all valid), then
     author proposal/votes/exec_summary and call record_council."""
     store = store or Store()
     project = _require_research_project(store, project_id)  # fail fast if no/unknown project
+    # Artifacts in the room: the captured copy of every selected artifact, labelled A/B/… so personas
+    # react to the REAL thing (this is the heart of the artifacts-into-council ticket).
+    artifact_briefs = council_artifact_briefs(project["id"], artifact_ids, store=store)
+    artifacts_context = render_artifacts_context(artifact_briefs)
     language = ensure_content_language(" ".join(filter(None, [prompt, context])))
     if not persona_ids:
         personas = list_personas(filters, store)
@@ -99,7 +109,7 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
         return {
             "schema": "council_selection", "language": language, "project_id": project["id"], "prompt": prompt,
             "count": min(max(1, count), len(candidates)) if candidates else 0,
-            "candidate_personas": candidates,
+            "candidate_personas": candidates, "artifacts": artifact_briefs,
             "instructions": (
                 "Select the personas whose lived contexts produce useful, honest contrast on this "
                 "prompt (never bias toward support; do not invent IDs). Then call brief_council again "
@@ -107,21 +117,32 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
                 if candidates else "No personas exist yet. Create some via brief_persona/record_persona first."
             ),
         }
+    # The artifact block rides along with the external context so a persona's loaded context is grounded
+    # in the captured artifact(s) — it sits in the keyed memory recall AND in agent_context below.
+    artifact_task = "\n\n".join(filter(None, [context or "", artifacts_context])) or None
     participants = []
     for pid in persona_ids:
         p = store.get_persona(pid)
         if not p:
             continue
         ctx = prepare_persona_agent_context(
-            p["id"], f"Council prompt: {prompt}\nExternal context: {context or 'none'}", store=store)
+            p["id"], f"Council prompt: {prompt}\nExternal context: {artifact_task or 'none'}", store=store)
+        agent_context = ctx["agent_context"]
+        if artifacts_context:
+            agent_context = f"{agent_context}\n\n=== ARTIFACTS ===\n{artifacts_context}"
         participants.append({
             "persona_id": p["id"], "display_name": p["display_name"],
-            "soul_path": ctx["soul_path"], "agent_context": ctx["agent_context"],
+            "soul_path": ctx["soul_path"], "agent_context": agent_context,
         })
     return {
         "schema": "council", "language": language, "project_id": project["id"], "prompt": prompt,
         "external_context": context, "participants": participants,
+        "artifacts": artifact_briefs, "artifacts_context": artifacts_context,
         "instructions": (
+            ("ARTIFACTS ARE IN THE ROOM: each participant's agent_context ends with the CAPTURED "
+             "artifact(s) (a live URL/website, a prototype link, or labelled A/B variants). Ground every "
+             "statement in what is ACTUALLY there — quote the captured copy, don't invent unseen content; "
+             "with two+ variants, name which wins for whom and why.\n" if artifacts_context else "") +
             "Run this council in the shape the task calls for (the UI derives the mode):\n"
             "• DISCOVERY (default for early research): pass `questions` = the OPEN, conversational "
             "user-research questions you ask. Author ONE `statement` per (persona, question) — that "

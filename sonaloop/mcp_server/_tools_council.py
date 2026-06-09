@@ -12,18 +12,52 @@ def register_council(mcp):
     # M3 — persona timeline/activity reads (get_current_state/get_calendar/get_calendar_period/
     # get_activity/summarize_persona_period/extract_pain_points) moved to _tools_simulation (memory).
 
+    # ================= Artifacts (bring a REAL artifact into a council) =================
+    @mcp.tool()
+    def add_artifact(project_id: str, url: str, kind: str = "url", title: str = "",
+                     label: str | None = None, capture: bool = True, key: str | None = None) -> dict[str, Any]:
+        """Bring a REAL artifact into a project's council pool so personas react to what is ACTUALLY
+        there — a live URL/website, a prototype link (kind='prototype', e.g. Figma), or one side of an
+        A/B comparison (kind='variant'). The page is CAPTURED to a grounded text snapshot (title,
+        meta, headings, visible copy) + a captured-at timestamp + content hash, so the run is
+        reproducible. Capture degrades gracefully (a dead link still stores the ref). Add TWO+ variants
+        to compare them in one council (the head_to_head plumbing). Then run brief_council with
+        artifact_ids=[...] (or omit it to include all). Pass `capture=False` to store the ref only."""
+        t = time.perf_counter()
+        return _env("add_artifact", services.add_artifact(project_id, url, kind, title, label, capture, key), t)
+
+    @mcp.tool()
+    def list_artifacts(project_id: str) -> dict[str, Any]:
+        """List every artifact ingested into a project (id, label A/B/…, kind, url, capture status)."""
+        t = time.perf_counter()
+        return _env("list_artifacts", services.list_artifacts(project_id), t)
+
+    @mcp.tool()
+    def get_artifact(project_id: str, artifact_id: str) -> dict[str, Any]:
+        """One artifact (by id or A/B label) with its full captured snapshot."""
+        t = time.perf_counter()
+        return _env("get_artifact", services.get_artifact(project_id, artifact_id), t)
+
+    @mcp.tool()
+    def delete_artifact(project_id: str, artifact_id: str) -> dict[str, Any]:
+        """Remove an artifact (by id or label) from a project's pool."""
+        t = time.perf_counter()
+        return _env("delete_artifact", services.delete_artifact(project_id, artifact_id), t)
+
     # ================= Council =================
     @mcp.tool()
     def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None,
-                      count: int = 3, context: str | None = None) -> dict[str, Any]:
+                      count: int = 3, context: str | None = None, artifact_ids: list[str] | None = None) -> dict[str, Any]:
         """Gather a council. A council is scoped to a research project, so `project_id` is
         REQUIRED (create one first with create_research_project; personas are global and need
         no project). Without persona_ids: returns candidate personas to select from. With
         persona_ids: returns each participant's loaded agent context (SOUL + memory) to author
-        turns against. Then author proposal/votes/exec_summary and call record_council. See the
-        run-council skill."""
+        turns against. Pass `artifact_ids` (or omit to include every project artifact) to ground
+        the council in the CAPTURED artifact(s) — a URL/website, a prototype link, or A/B variants
+        present side-by-side. Then author proposal/votes/exec_summary and call record_council. See
+        the run-council skill."""
         t = time.perf_counter()
-        return _env("brief_council", services.brief_council(project_id, prompt, persona_ids, filters, count, context), t)
+        return _env("brief_council", services.brief_council(project_id, prompt, persona_ids, filters, count, context, artifact_ids), t)
 
     @mcp.tool()
     def brief_ask(persona_id: str, question: str, context: str | None = None) -> dict[str, Any]:
