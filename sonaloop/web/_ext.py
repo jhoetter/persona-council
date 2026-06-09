@@ -135,10 +135,10 @@ def theme_override_css() -> str:
 # ---------------------------------------------------------------------------
 # Brand / product identity
 # ---------------------------------------------------------------------------
-# A per-process wordmark shown in the page <title> suffix and the sidebar. Defaults to
-# "Sonaloop" (the public core); an extension calls set_brand() in setup() to distinguish
-# e.g. "Sonaloop Cloud" / "Sonaloop Research". Process-global, not per-request: each app
-# runs in its own process, so this is set once at startup.
+# A per-process wordmark shown in the sidebar and (via title_brand()) the page <title>.
+# Defaults to "Sonaloop" (the public core); an extension calls set_brand() in setup() to
+# distinguish e.g. "Sonaloop Cloud" / "Sonaloop Research". Process-global, not per-request:
+# each app runs in its own process, so this is set once at startup.
 
 _BRAND = "Sonaloop"
 
@@ -152,6 +152,19 @@ def set_brand(name: str) -> None:
 
 def brand_name() -> str:
     return _BRAND
+
+
+def title_brand() -> str:
+    """The page-<title> form of the brand, for quick tab disambiguation across the
+    sonaloop repos. The core is bare lowercase "sonaloop"; every product leads with
+    its short name: "Sonaloop Cloud" -> "Cloud | sonaloop", "Sonaloop Research" ->
+    "Research | sonaloop". The visual sidebar wordmark still uses brand_name()."""
+    bn = _BRAND.strip()
+    if bn.lower() == "sonaloop":
+        return "sonaloop"
+    if bn.lower().startswith("sonaloop "):
+        return f"{bn[len('sonaloop '):].strip()} | sonaloop"
+    return bn
 
 
 # ---------------------------------------------------------------------------

@@ -18,7 +18,7 @@ from ._html import h, raw, fragment, register_css, collect_css  # noqa: F401  (c
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
 from ._ext import (  # noqa: F401  (extension seams; public surface re-exported by web/__init__)
     register_nav_section, register_nav_item, resolve_label, nav_model,
-    render_slot, theme_override_css, brand_name,
+    render_slot, theme_override_css, brand_name, title_brand,
 )
 
 
@@ -412,7 +412,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
         _brand_word = _esc(_bn)
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{_esc(title)} · {_esc(brand_name())}</title>
+<title>{_esc(title_brand() + (" · " + title if title and title.strip() else ""))}</title>
 <link rel="icon" type="image/svg+xml" href="{_FAVICON_HREF}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
