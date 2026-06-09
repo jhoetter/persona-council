@@ -103,7 +103,10 @@ job_taxonomy.format_ids()          # {"council", "prototype_test", "head_to_head
 Downstream tickets reference this artifact directly:
 
 - **Website IA** — Jobs are the products sold; the `sells_as` field is the navigation label.
-- **`sharpen-question-helper` presets** — seed each preset from a Job's framework + formats + coverage.
+- **Job presets + sharpen-the-question** — shipped in `sonaloop/job_presets.py`: one preset per Job
+  (framework + formats + coverage, derived live from this taxonomy) plus the deterministic
+  `sharpen_question` helper that turns a fuzzy goal into a well-formed study spec. MCP surface:
+  `list_job_presets` / `get_job_preset` / `sharpen_question` / `start_job_study`.
 - **Methodology surface** — Frameworks here are the real `key`s already in `sonaloop/methodologies/`.
 
 ## Naming + stable ids

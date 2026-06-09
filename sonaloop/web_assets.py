@@ -101,6 +101,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .plan-sub{display:flex;align-items:center;gap:8px;margin-top:12px}
 .plan-sub>span:last-child{font-size:var(--t-sm);color:var(--faint)}
 .plan-fw{margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+.plan-fw-job{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--muted);font-weight:550;margin-bottom:7px}
 .plan-fw-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .plan-fw-name{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:var(--t-md);color:var(--ink)}
 .plan-fw-cur{font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);padding:1px 8px;border-radius:var(--radius-full);font-weight:550;white-space:nowrap}

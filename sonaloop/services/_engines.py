@@ -139,6 +139,61 @@ def describe_framework(framework_id: str, store: Store | None = None) -> dict[st
     return get_framework_description(framework_id, store)
 
 
+# --- Job presets + the "sharpen the question" helper (the taxonomy's JOB layer; sonaloop/job_presets.py) ---
+
+def list_job_presets(store: Store | None = None) -> dict[str, Any]:
+    """One recipe card per taxonomy Job (positioning, pricing, …) — each seeds a plan: default
+    Framework + suggested Formats (with their brief/record tools) + declared persona coverage.
+    Derived from the canonical taxonomy at call time; never enforced."""
+    from .. import job_presets as _presets
+    return {"presets": _presets.job_presets(store)}
+
+
+def get_job_preset(job_id: str, store: Store | None = None) -> dict[str, Any]:
+    """One Job preset by stable taxonomy id. Raises KeyError for an unknown id."""
+    from .. import job_presets as _presets
+    return _presets.get_job_preset(job_id, store)
+
+
+def sharpen_question(goal: str, answers: dict[str, str] | None = None, job: str | None = None,
+                     store: Store | None = None) -> dict[str, Any]:
+    """The deterministic "sharpen the question" helper: fuzzy goal → checklist + clarifying
+    questions + likely Job-preset matches + a structured study spec (sonaloop/job_presets.py)."""
+    from .. import job_presets as _presets
+    return _presets.sharpen_question(goal, answers=answers, job=job, store=store)
+
+
+def start_job_study(job_id: str, title: str, goal: str, framework: str | None = None,
+                    persona_ids: list[str] | None = None, store: Store | None = None) -> dict[str, Any]:
+    """Start a study FROM a Job preset: seed the plan through the preset's default Framework
+    (or any `framework` override — presets are swappable, never enforced) and stamp the Job id
+    on the project + plan so downstream surfaces (assess_coverage, the inspector) know which
+    declared coverage applies. Just a convenience over start_project — the general engine still
+    runs anything off-menu."""
+    store = store or Store()
+    from .. import job_presets as _presets
+    try:
+        preset = _presets.get_job_preset(job_id, store=store)
+    except KeyError as exc:
+        raise ValueError(f"unknown job '{job_id}' — list_job_presets() names the valid ids") from exc
+    fw = framework or preset["framework"]["id"]
+    project = start_project(title, goal, methodology=fw, persona_ids=persona_ids, store=store)
+    project["job"] = job_id
+    project["updated_at"] = utc_now_iso()
+    store.upsert_research_project(project)
+    plan = _plan.get_plan(project["id"], store=store)
+    if plan:
+        plan["job"] = job_id
+        _plan.save_plan(plan, store=store)
+    out = {"project": store.get_research_project(project["id"]), "preset": preset, "framework": fw,
+           "suggested_formats": [f["id"] for f in preset["formats"]],
+           "coverage": preset["coverage"]}
+    if fw not in preset["framework_options"]:
+        out["note"] = (f"Framework '{fw}' is off the preset's menu {preset['framework_options']} — "
+                       "allowed; presets seed, never constrain.")
+    return out
+
+
 def get_plan(project_id: str, store: Store | None = None) -> dict[str, Any] | None:
     return _plan.get_plan(project_id, store=store)
 
