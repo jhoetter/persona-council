@@ -209,8 +209,8 @@ h1,h2,h3,h4{color:var(--ink)}
    so they render dense at the inspector's 13px base. See the design-system docs (Components ›
    Button). The old hand-rolled .btn block lived here. */
 :focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
-.card{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:15px 16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-.card h3{margin:0 0 8px;font-size:var(--t-body)}
+/* cards use the shared .sl-card; this app only sizes the bare <h3> inside them */
+.sl-card h3{margin:0 0 8px;font-size:var(--t-body)}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.two{grid-template-columns:1.1fr 1fr}
 .pill{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:var(--radius-sm);padding:2px 8px;margin:2px;background:var(--panel-2);color:var(--muted);font-size:var(--t-sm);font-weight:500}
 

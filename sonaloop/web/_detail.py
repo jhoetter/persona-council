@@ -53,7 +53,7 @@ def _relations_html(store, study_id: str, proj_id: str | None,
         return ""
     if aside:                                                  # plain uppercase header, uniform with Properties
         return fragment(h("h4", {"id": "sec-relations"}, t("relations")), blocks)
-    return h("div", {"class_": "card relcard", "id": "sec-relations"},
+    return h("div", {"class_": "sl-card relcard", "id": "sec-relations"},
              h("div", {"class_": "relh"}, raw(_icon("link")), " ", t("relations")), blocks)
 
 

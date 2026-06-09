@@ -155,7 +155,7 @@ def register_personas(app) -> None:
         main = fragment(
             _hero(p["display_name"], sub=f'{p["role"]["title"]} · {p["company_context"]["industry"]}'),
             h("div", {"class_": "identity"}, h("div", {}, avatar), h("div", {},
-              h("div", {"class_": "card"}, h("h3", {}, t("current_state")),
+              h("div", {"class_": "sl-card"}, h("h3", {}, t("current_state")),
                 h("p", {}, h("strong", {}, state["current_activity"])),
                 h("p", {"class_": "muted small"}, " · ".join(x for x in [
                     state.get("current_tool"), state.get("collaboration_mode"),
@@ -208,14 +208,14 @@ def register_personas(app) -> None:
         main = fragment(
             _hero(a["task"], sub=f'{a["timestamp"]} · {a["event_type"]} · {a.get("collaboration_mode","unknown")}'),
             h("div", {"class_": "grid two"},
-              h("div", {"class_": "card"}, h("h3", {}, t("what_happened")), h("p", {}, a.get("what_happened", a["summary"]))),
-              h("div", {"class_": "card"}, h("h3", {}, t("thought")), h("p", {"class_": "thought"}, a.get("persona_thought", "—")))),
+              h("div", {"class_": "sl-card"}, h("h3", {}, t("what_happened")), h("p", {}, a.get("what_happened", a["summary"]))),
+              h("div", {"class_": "sl-card"}, h("h3", {}, t("thought")), h("p", {"class_": "thought"}, a.get("persona_thought", "—")))),
             h("div", {"class_": "sec"}, h("h2", {}, t("conversation")),
               fragment(*conv) if conv else h("p", {"class_": "muted"}, t("none_f"))),
             h("div", {"class_": "grid"},
-              h("div", {"class_": "card"}, h("h3", {}, t("actions")), raw(_pills(a.get("actions_done", [])) or "—")),
-              h("div", {"class_": "card"}, h("h3", {}, t("artifacts")), raw(_pills(a.get("artifacts_touched", [])) or "—")),
-              h("div", {"class_": "card"}, h("h3", {}, t("open_loops")), raw(_pills(a.get("open_loops", [])) or "—"))))
+              h("div", {"class_": "sl-card"}, h("h3", {}, t("actions")), raw(_pills(a.get("actions_done", [])) or "—")),
+              h("div", {"class_": "sl-card"}, h("h3", {}, t("artifacts")), raw(_pills(a.get("artifacts_touched", [])) or "—")),
+              h("div", {"class_": "sl-card"}, h("h3", {}, t("open_loops")), raw(_pills(a.get("open_loops", [])) or "—"))))
         props = _properties_html([
             ("personas", t("persona"), h("a", {"class_": "sl-breadcrumb__link", "href": f'/personas/{p["id"]}'}, p["display_name"])),
             ("square", t("tool"), a["tool"]),
