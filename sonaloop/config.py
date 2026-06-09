@@ -91,6 +91,12 @@ def suggestions_dir() -> Path:
     return PACKAGE_DIR / "suggestions"
 
 
+def taxonomy_path() -> Path:
+    """The canonical Job/Framework/Format taxonomy (docs/job-framework-format.md is its
+    human-readable companion). Read-only package data; loaded via sonaloop.job_taxonomy."""
+    return PACKAGE_DIR / "taxonomy.json"
+
+
 def prototypes_dir() -> Path:
     """Where generated/registered prototype apps live (writable runtime).
 

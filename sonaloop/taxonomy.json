@@ -1,0 +1,126 @@
+{
+  "kind": "job_framework_format_taxonomy",
+  "version": 1,
+  "note": "CANONICAL source-of-truth for the three-layer taxonomy the whole Sonaloop product aligns on (core app, website IA, tracker). The human-readable companion is docs/job-framework-format.md — read that first. Jobs reference REAL methodology keys under sonaloop/methodologies/*.json and format ids that are implemented or planned. Stable ids/labels here are what every repo and ticket tags itself with.",
+  "layers": {
+    "job": {
+      "id": "job",
+      "name": "Job",
+      "one_liner": "What the user wants — the use case / solution they buy.",
+      "definition": "The outcome a customer walks in for (\"how is my positioning?\", \"what should I charge?\"). It is the thing sold and the thing measured. The core has no first-class concept of it today — the host (Claude) improvises it from a free-text goal; this taxonomy gives Jobs stable ids so presets, the website, and the plan engine can name them.",
+      "doctor_analogy": "The Job is WHY you walked in: \"why does my stomach hurt?\""
+    },
+    "framework": {
+      "id": "framework",
+      "name": "Framework",
+      "one_liner": "The process the run follows end-to-end.",
+      "definition": "A constellation of steps (a DAG) that takes a run from ambiguity to a buildable answer — Double Diamond, Double Diamond Deep, d.school Micro-Cycle, Lean/JTBD. Frameworks already exist in core as sonaloop/methodologies/*.json (keyed by the `key` field) and seed the plan engine.",
+      "doctor_analogy": "The Framework is the doctor's PROCESS: history -> exam -> tests -> diagnose."
+    },
+    "format": {
+      "id": "format",
+      "name": "Format",
+      "one_liner": "A single move inside a run.",
+      "definition": "One concrete research move executed at a plan step: a council, a prototype test, a head-to-head, a red-team. Formats are orthogonal to Jobs and Frameworks — the same Format appears inside many Frameworks serving many Jobs.",
+      "doctor_analogy": "The Format is ONE test: a blood test, an X-ray. The doctor reaches for Formats inside the process."
+    }
+  },
+  "frameworks": [
+    {"id": "double_diamond", "methodology_key": "double_diamond", "name": "Double Diamond"},
+    {"id": "double_diamond_deep", "methodology_key": "double_diamond_deep", "name": "Double Diamond (Deep)"},
+    {"id": "dschool_micro", "methodology_key": "dschool_micro", "name": "d.school Micro-Cycle"},
+    {"id": "lean_jtbd", "methodology_key": "lean_jtbd", "name": "Lean / Jobs-to-be-Done"}
+  ],
+  "formats": [
+    {"id": "council", "name": "Council", "status": "implemented", "definition": "Several segment-diverse personas react to a prompt and to each other in one session — the core diverge move."},
+    {"id": "prototype_test", "name": "Prototype Test", "status": "implemented", "definition": "Personas actually USE a prototype (a real Playwright-harness session) and react, grounding the convergence."},
+    {"id": "head_to_head", "name": "Head-to-Head", "status": "planned", "definition": "Personas compare two or more concrete options side-by-side and force a preference with reasons. Built in a sibling ticket; referenced by stable id."},
+    {"id": "red_team", "name": "Red-Team", "status": "planned", "definition": "Personas (or an adversarial council) attack a claim/positioning/price to surface where it breaks. Built in a sibling ticket; referenced by stable id."}
+  ],
+  "jobs": [
+    {
+      "id": "positioning",
+      "name": "Positioning",
+      "sells_as": "Positioning",
+      "user_question": "How is my positioning — does my value land, and against whom?",
+      "frameworks": ["double_diamond"],
+      "default_framework": "double_diamond",
+      "formats": ["council", "head_to_head", "red_team"],
+      "coverage": {
+        "min_personas": 4,
+        "persona_axes": ["segment", "buying-stage", "current-alternative"],
+        "note": "Cover both your target segment and the segments you are NOT for, plus at least one user of the incumbent alternative, so the positioning is tested against real competition."
+      }
+    },
+    {
+      "id": "pricing",
+      "name": "Pricing / Price-Sensitivity",
+      "sells_as": "Pricing",
+      "user_question": "What should I charge, and where does price sensitivity break?",
+      "frameworks": ["lean_jtbd"],
+      "default_framework": "lean_jtbd",
+      "formats": ["council", "head_to_head", "red_team"],
+      "coverage": {
+        "min_personas": 4,
+        "persona_axes": ["willingness-to-pay", "budget-authority", "current-alternative"],
+        "note": "Span low-to-high willingness-to-pay and include the budget holder; a head-to-head on price points plus a red-team of the value story exposes the sensitivity curve."
+      }
+    },
+    {
+      "id": "jtbd_demand",
+      "name": "Demand / Jobs-to-be-Done",
+      "sells_as": "Demand/JTBD",
+      "user_question": "What job are customers hiring this for, and is there real demand?",
+      "frameworks": ["lean_jtbd"],
+      "default_framework": "lean_jtbd",
+      "formats": ["council", "prototype_test"],
+      "coverage": {
+        "min_personas": 5,
+        "persona_axes": ["segment", "trigger-moment", "current-alternative"],
+        "note": "\"JTBD\" is a JOB whose core engine is the lean_jtbd FRAMEWORK of the same name — keep the two layers distinct. Cover distinct trigger moments and the alternatives customers hire today."
+      }
+    },
+    {
+      "id": "ideation_hmw",
+      "name": "Ideation (How-Might-We)",
+      "sells_as": "Ideation (HMW)",
+      "user_question": "Given this How-Might-We, what could we build?",
+      "frameworks": ["dschool_micro", "double_diamond_deep"],
+      "default_framework": "dschool_micro",
+      "formats": ["council", "prototype_test", "head_to_head"],
+      "coverage": {
+        "min_personas": 4,
+        "persona_axes": ["segment", "expertise-level", "extreme-user"],
+        "note": "How-Might-We is really a FORMAT-shaped move often mis-sold as a Job; here it is the ideation Job. Include at least one extreme user to push non-obvious concepts."
+      }
+    },
+    {
+      "id": "continuous_discovery",
+      "name": "Continuous Discovery",
+      "sells_as": "Continuous discovery",
+      "user_question": "What should we learn next, on a steady cadence?",
+      "frameworks": ["dschool_micro"],
+      "default_framework": "dschool_micro",
+      "formats": ["council", "prototype_test"],
+      "coverage": {
+        "min_personas": 3,
+        "persona_axes": ["segment", "lifecycle-stage", "recency-of-use"],
+        "note": "A light, repeatable loop rather than a one-off. Keep a small standing panel that spans lifecycle stages so signal is comparable cadence-over-cadence."
+      }
+    },
+    {
+      "id": "churn_reasons",
+      "name": "Churn Reasons",
+      "sells_as": "Continuous discovery",
+      "user_question": "Why are customers leaving, and which reasons are addressable?",
+      "frameworks": ["lean_jtbd"],
+      "default_framework": "lean_jtbd",
+      "formats": ["council", "red_team"],
+      "coverage": {
+        "min_personas": 4,
+        "persona_axes": ["churn-reason", "tenure", "current-alternative"],
+        "note": "Fits naturally as a focused continuous-discovery Job. Cover distinct churn reasons and where they switched to; red-team your retention story against them."
+      }
+    }
+  ]
+}
