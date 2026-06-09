@@ -111,7 +111,7 @@
     {
       "id": "churn_reasons",
       "name": "Churn Reasons",
-      "sells_as": "Continuous discovery",
+      "sells_as": "Churn reasons",
       "user_question": "Why are customers leaving, and which reasons are addressable?",
       "frameworks": ["lean_jtbd"],
       "default_framework": "lean_jtbd",
