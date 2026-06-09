@@ -1,0 +1,18 @@
+#!/bin/sh
+# pre-push: block the push if the vendored design-system files (sonaloop/_icons.py,
+# _tokens.py, _components_css.py, _charts.py) have drifted from ../sonaloop-design —
+# the same guard as the design-sync CI, caught locally before CI goes red.
+#
+# Skipped automatically when the design sibling isn't checked out (a standalone clone
+# or a contributor without ../sonaloop-design), so it never blocks those pushes.
+# Installed by `make hooks` (sets core.hooksPath=.githooks); `make install` runs it too.
+set -e
+
+if [ ! -f ../sonaloop-design/py/sonaloop_icons/__init__.py ]; then
+  echo "pre-push: ../sonaloop-design not found — skipping vendored design-system drift check."
+  exit 0
+fi
+
+# check-icons re-vendors from ../sonaloop-design and fails on any diff. If it fails it
+# leaves the freshly-vendored files in the tree — commit them and push again.
+make check-icons

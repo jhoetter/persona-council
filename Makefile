@@ -3,7 +3,13 @@ FORWARDED_WEB_PORT ?= 18787
 
 UV ?= uv
 
-.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons check-icons
+.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons check-icons hooks
+
+# Install the repo's git hooks (pre-push runs `check-icons`, so a stale vendored
+# copy is caught locally before the design-sync CI goes red). Idempotent; `make
+# install` runs it too. Skips on machines without ../sonaloop-design (see the hook).
+hooks:
+	@git config core.hooksPath .githooks && echo "git hooks installed (.githooks)"
 
 # Refresh the vendored design-system modules (sonaloop/_icons.py + sonaloop/_tokens.py)
 # from ../sonaloop-design. Run after editing icons.data.mjs / tokens.data.mjs + `npm run gen`.
@@ -36,6 +42,7 @@ restore:
 install:
 	$(UV) sync
 	$(UV) run playwright install chromium   # headless browser for prototype screenshots + meta-report PDF
+	@$(MAKE) hooks
 	@echo "installed - run 'make dev' for :$(WEB_PORT) or 'make dev-forwarded' for :$(FORWARDED_WEB_PORT)"
 
 # --reload is scoped to the Python source: without --reload-dir the stat-poller
