@@ -125,7 +125,10 @@ New / changed (old names kept as aliases where sensible):
 - `record_synthesis(...)` → verify consolidation over chosen councils (existing; now optional + task-linked).
 - `record_judgment(project_id, task_id, gate_tag, decided, rationale, evidence_refs)` → gate (existing).
 - `assess_progress(project_id, task_id, rationale, evidence_refs, delta)` → HMW-progress verify.
-- `complete_task(project_id, task_id)` → mark done; recompute frontier; handle loop_back.
+- `complete_task(project_id, task_id)` → mark done; recompute frontier (never loops on its own).
+- `iterate_task(project_id, task_id, note?)` → HOST-judged `loop_back` round: clone the loop
+  subgraph as fresh `__r<n>` tasks (todo, no carried evidence/frames, gates preserved), the new
+  entry consuming the looping task.
 - `get_plan(project_id)` / `export_plan_md(project_id)` → DB plan + rendered md.
 - `suggest_*` extended with bucket/kind presentation. Legacy `record_node`/`record_decision`/
   `advance` map onto act/verify task ops for back-compat.

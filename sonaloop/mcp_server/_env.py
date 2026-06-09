@@ -53,6 +53,7 @@ _NEXT: dict[str, dict[str, Any]] = {
     "brief_next": {"name": "next_action", "reason": "load the ready task fully (grounding + participants + gate)"},
     "next_action": {"name": "complete_task", "reason": "author the step (frame/council/synthesis), persist, then complete"},
     "record_judgment": {"name": "complete_task", "reason": "complete the verify once its gate judgment is recorded"},
+    "iterate_task": {"name": "next_action", "reason": "load the new round's first ready task fully"},
     "suggest_capabilities": {"name": "suggest_methodologies", "reason": "browse suggested step/whole-methodology templates"},
     # --- prototypes + harness ---
     "scaffold_prototype": {"name": "run_prototype", "reason": "start the generated app locally"},

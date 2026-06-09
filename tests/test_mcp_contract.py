@@ -53,7 +53,7 @@ def test_expected_tools_registered():
         "set_project_methodology", "brief_next", "record_judgment",
         # research-plan engine (analyze/act/verify):
         "start_project", "get_plan", "add_task", "record_frame", "link_evidence",
-        "complete_task", "next_action", "assess_project", "assess_progress",
+        "complete_task", "iterate_task", "next_action", "assess_project", "assess_progress",
         # prototypes + Playwright harness:
         "scaffold_prototype", "register_prototype", "list_prototypes", "get_prototype",
         "run_prototype", "stop_prototype", "delete_prototype",

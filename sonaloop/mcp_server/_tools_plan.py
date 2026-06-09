@@ -66,6 +66,15 @@ def register_plan(mcp):
         return _env("complete_task", services.complete_task(project_id, task_id), t)
 
     @mcp.tool()
+    def iterate_task(project_id: str, task_id: str, note: str = "") -> dict[str, Any]:
+        """Open the NEXT iteration round on a done-or-ready task with a `loop_back` target (HOST-judged
+        — the engine never loops on its own): clones the loop-back subgraph as fresh `__r<n>` tasks
+        (statuses todo, evidence/frames not carried over, gates preserved), with the new round's entry
+        consuming the looping task so ordering holds. Returns the iteration record + cloned tasks."""
+        t = time.perf_counter()
+        return _env("iterate_task", services.iterate_task(project_id, task_id, note), t)
+
+    @mcp.tool()
     def assess_progress(project_id: str, task_id: str, rationale: str, evidence_refs: list[str],
                         delta: str = "") -> dict[str, Any]:
         """Record an evidence-backed assessment of progress toward the HMW goal. `delta` is a free
