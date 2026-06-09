@@ -56,11 +56,14 @@ the job presets draw on one source.
 |-----------|------|--------|
 | `council` | Council | implemented |
 | `prototype_test` | Prototype Test | implemented |
-| `head_to_head` | Head-to-Head | planned (sibling ticket) |
+| `head_to_head` | Head-to-Head | implemented |
 | `red_team` | Red-Team | planned (sibling ticket) |
 
-`head_to_head` and `red_team` are being built in sibling tickets; they are referenced by stable
-id here even though not yet implemented, so consumers can wire them ahead of time.
+`head_to_head` ships as a Format on top of the artifacts/variant plumbing: it compares two (or more)
+concrete options (captured A/B variants or plain text options) side-by-side and the server tallies a
+reasoned, *segmented* preference (preference + margin + segment-splits). Drive it via
+`brief_head_to_head` / `record_head_to_head` (MCP) — Job presets compose it. `red_team` is still being
+built in a sibling ticket; it is referenced by stable id here so consumers can wire it ahead of time.
 
 ## The mapping table — Job → Framework(s) → Formats → coverage
 

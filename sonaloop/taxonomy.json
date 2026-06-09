@@ -34,7 +34,7 @@
   "formats": [
     {"id": "council", "name": "Council", "status": "implemented", "definition": "Several segment-diverse personas react to a prompt and to each other in one session — the core diverge move."},
     {"id": "prototype_test", "name": "Prototype Test", "status": "implemented", "definition": "Personas actually USE a prototype (a real Playwright-harness session) and react, grounding the convergence."},
-    {"id": "head_to_head", "name": "Head-to-Head", "status": "planned", "definition": "Personas compare two or more concrete options side-by-side and force a preference with reasons. Built in a sibling ticket; referenced by stable id."},
+    {"id": "head_to_head", "name": "Head-to-Head", "status": "implemented", "definition": "Personas compare two or more concrete options (captured A/B variants or plain text options) side-by-side and force a preference; the server tallies a reasoned, segmented preference (preference + margin + segment-splits). Run via the head_to_head Format (brief_head_to_head / record_head_to_head)."},
     {"id": "red_team", "name": "Red-Team", "status": "planned", "definition": "Personas (or an adversarial council) attack a claim/positioning/price to surface where it breaks. Built in a sibling ticket; referenced by stable id."}
   ],
   "jobs": [

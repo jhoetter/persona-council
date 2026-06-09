@@ -43,7 +43,8 @@ def test_seed_jobs_present_and_resolve():
 def test_planned_formats_referenced_by_stable_id():
     by_id = {f["id"]: f for f in T.formats()}
     assert {"council", "prototype_test", "head_to_head", "red_team"} <= set(by_id)
-    assert by_id["head_to_head"]["status"] == "planned"
+    # head_to_head is now implemented (its Format ships); red_team is still planned (sibling ticket).
+    assert by_id["head_to_head"]["status"] == "implemented"
     assert by_id["red_team"]["status"] == "planned"
 
 
