@@ -57,13 +57,20 @@ the job presets draw on one source.
 | `council` | Council | implemented |
 | `prototype_test` | Prototype Test | implemented |
 | `head_to_head` | Head-to-Head | implemented |
-| `red_team` | Red-Team | planned (sibling ticket) |
+| `red_team` | Red-Team | implemented |
 
 `head_to_head` ships as a Format on top of the artifacts/variant plumbing: it compares two (or more)
 concrete options (captured A/B variants or plain text options) side-by-side and the server tallies a
 reasoned, *segmented* preference (preference + margin + segment-splits). Drive it via
-`brief_head_to_head` / `record_head_to_head` (MCP) — Job presets compose it. `red_team` is still being
-built in a sibling ticket; it is referenced by stable id here so consumers can wire it ahead of time.
+`brief_head_to_head` / `record_head_to_head` (MCP) — Job presets compose it.
+
+`red_team` ships as a **falsification** Format on top of the council plumbing: it deliberately argues the
+NEGATIVE case — *why would this segment NOT adopt / NOT pay / churn?* — to stress-test an idea instead of
+flattering it. It re-frames a normal council toward disconfirmation and assigns each persona an explicit
+adversarial lens (skeptic / blocker / switching-cost / status-quo / risk); the server groups their
+concrete objections by theme into a structured **case-against** (how many personas raise each blocker +
+worst severity), optionally beside the **case-for** when run with `stance="both"` (the same question in
+both directions). Drive it via `brief_red_team` / `record_red_team` (MCP) — Job presets compose it.
 
 ## The mapping table — Job → Framework(s) → Formats → coverage
 
