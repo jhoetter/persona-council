@@ -40,6 +40,14 @@ def test_seed_jobs_present_and_resolve():
         assert cov["min_personas"] >= 1 and cov["persona_axes"], job["id"]
 
 
+def test_sells_as_labels_are_unique():
+    """`sells_as` is the buyer-facing label (website nav) — two Jobs sharing one label
+    would collapse into a single ambiguous menu entry. Kinship between Jobs belongs in
+    the coverage note, not in `sells_as`."""
+    labels = [j["sells_as"] for j in T.jobs()]
+    assert len(labels) == len(set(labels)), labels
+
+
 def test_planned_formats_referenced_by_stable_id():
     by_id = {f["id"]: f for f in T.formats()}
     assert {"council", "prototype_test", "head_to_head", "red_team"} <= set(by_id)

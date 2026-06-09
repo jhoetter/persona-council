@@ -84,7 +84,7 @@ Each named Job resolves to a concrete default Framework, a set of Formats, and t
 | **Demand / Jobs-to-be-Done** (`jtbd_demand`) | Demand/JTBD | `lean_jtbd` | `lean_jtbd` | `council`, `prototype_test` | 5 · segment, trigger-moment, current-alternative |
 | **Ideation (How-Might-We)** (`ideation_hmw`) | Ideation (HMW) | `dschool_micro` | `dschool_micro`, `double_diamond_deep` | `council`, `prototype_test`, `head_to_head` | 4 · segment, expertise-level, extreme-user |
 | **Continuous Discovery** (`continuous_discovery`) | Continuous discovery | `dschool_micro` | `dschool_micro` | `council`, `prototype_test` | 3 · segment, lifecycle-stage, recency-of-use |
-| **Churn Reasons** (`churn_reasons`) | Continuous discovery | `lean_jtbd` | `lean_jtbd` | `council`, `red_team` | 4 · churn-reason, tenure, current-alternative |
+| **Churn Reasons** (`churn_reasons`) | Churn reasons | `lean_jtbd` | `lean_jtbd` | `council`, `red_team` | 4 · churn-reason, tenure, current-alternative |
 
 The **coverage** column is the persona spread a Job needs to be trustworthy: a minimum count
 plus the axes the panel must span. The full notes (one per Job) live in `taxonomy.json`.
