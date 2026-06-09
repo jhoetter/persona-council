@@ -248,7 +248,7 @@ register_css(r"""
 .rp-fig figcaption{margin-top:9px;font-size:var(--t-sm);color:var(--muted);text-align:center}
 /* print: drop the app chrome, give the report the page (foundation for the Chromium PDF, Phase 3) */
 @media print{
-  .sidebar,.topbar,.cmdk,.drawer-wrap,.toc,.rail,.actions,.crumbs{display:none!important}
+  .sl-sidebar,.sl-topbar,.cmdk,.drawer-wrap,.toc,.rail,.actions,.crumbs{display:none!important}
   .shell,.content,.page,main{margin:0!important;padding:0!important;max-width:none!important}
   body{background:#fff}
   .report{max-width:none}

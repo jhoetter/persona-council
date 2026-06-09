@@ -21,42 +21,16 @@ a{color:inherit;text-decoration:none}
 svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
 ::selection{background:var(--accent-weak)}
 
-/* ---- app shell ---- */
-.app{display:flex;height:100vh;overflow:hidden;--sidebar-w:248px}
-.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width 200ms var(--ease),min-width 200ms var(--ease),border-right-width 200ms}
-.app.collapsed .sidebar{width:0;min-width:0;border-right-width:0}
-/* Sidebar-row chrome only; the logo lockup itself is the shared .sl-logo (COMPONENTS_CSS). */
-.brand{height:var(--row-h);flex-shrink:0;display:flex;align-items:center;padding:0 14px;font-size:var(--t-body);border-bottom:1px solid var(--line)}
-.sb-scroll{overflow:auto;padding:10px 8px;flex:1;min-height:0}
-.nav{display:flex;flex-direction:column;gap:1px}
-.nav a{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:var(--radius-sm);color:var(--ink);font-weight:500;position:relative;min-height:30px}
-.nav a .ic{color:var(--faint)}
-.nav a:hover{background:var(--hover)}
-.nav a.active{background:var(--sel);color:var(--ink);font-weight:600}
-.nav a.active::before{content:'';position:absolute;left:-8px;top:7px;bottom:7px;width:2.5px;border-radius:0 3px 3px 0;background:var(--accent)}
-.nav a.active .ic{color:var(--accent)}
-.navhead{font-size:var(--t-xs);letter-spacing:.05em;text-transform:uppercase;color:var(--faint);margin:18px 9px 6px;font-weight:650}
+/* ---- app shell ---- The chrome (.sl-app-shell · .sl-sidebar · .sl-nav · .sl-resize ·
+   .sl-topbar · .sl-usermenu) is the shared design-system layer (COMPONENTS_CSS); its
+   behaviour is _shell.SHELL_JS. Only the app-specific favorites/footer rows live here. */
 .sb-quick{display:flex;flex-direction:column;gap:1px}
 .sb-quick a{display:block;padding:5px 9px;border-radius:var(--radius-sm);color:var(--muted);font-size:var(--t-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sb-quick a:hover{background:var(--hover);color:var(--ink)}
 .sb-foot{padding:10px 14px;border-top:1px solid var(--line);font-size:var(--t-sm)}
 .sb-foot a{color:var(--muted)}.sb-foot a:hover{color:var(--accent)}
-/* ---- sidebar user / settings menu ---- */
-.usermenu{position:relative;flex-shrink:0;border-top:1px solid var(--line);padding:8px}
-.um-trigger{width:100%;display:flex;align-items:center;gap:9px;padding:6px 8px;border:1px solid transparent;border-radius:var(--radius);background:transparent;cursor:pointer;color:var(--ink);font-size:var(--t-body);font-weight:500;font-family:inherit}
-.um-trigger:hover{background:var(--hover)}
-.usermenu.open .um-trigger{background:var(--hover)}
-.um-ava{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;color:var(--muted)}
-.um-ava svg{width:18px;height:18px}
-.um-name{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.um-caret{color:var(--muted);display:inline-flex;transition:transform .15s var(--ease)}
-.um-caret .ic{width:16px;height:16px}
-.usermenu.open .um-caret{transform:rotate(180deg)}
-.um-pop{position:absolute;left:8px;right:8px;bottom:calc(100% + 4px);background:var(--overlay);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:0 16px 44px rgba(0,0,0,.22);padding:10px;z-index:60}
-.um-pop[hidden]{display:none}
-.um-sec{margin-bottom:10px}
-.um-lbl{font-size:var(--t-xs);letter-spacing:.02em;color:var(--faint);font-weight:600;margin:0 2px 6px}
-/* Theme + language switchers use the shared .sl-segmented (--fill --stacked) from
+/* The sidebar user/settings menu is the shared .sl-usermenu / .sl-um-* layer (COMPONENTS_CSS).
+   Theme + language switchers use the shared .sl-segmented (--fill --stacked) from
    COMPONENTS_CSS. Only the icon size is bridged here (the design-system control leaves
    icon sizing to the host). See the design-system docs (Components › Segmented · Tabs). */
 .sl-segmented .ic{width:17px;height:17px}
@@ -205,17 +179,11 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .oqd>summary::-webkit-details-marker{display:none}
 .oqd[open]>summary{border-bottom:1px solid var(--line)}
 .oqd>div{padding:10px 14px}
-.resize{width:8px;margin:0 -4px;flex-shrink:0;cursor:col-resize;position:relative;z-index:10}
-.app.collapsed .resize{display:none}
-.resize::after{content:"";position:absolute;inset:0 50%;width:2px;transform:translateX(-50%);background:var(--accent);opacity:0;transition:opacity 150ms}
-.resize:hover::after{opacity:.4}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.topbar{height:var(--row-h);flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel)}
-.iconbtn{border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-sm);width:28px;height:28px;cursor:pointer;color:var(--muted);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
-#sbt{display:none}.app.collapsed #sbt{display:inline-flex}   /* the show-sidebar toggle appears only when collapsed */
-.iconbtn:hover{background:var(--hover);color:var(--ink)}
-.spacer{flex:1}
-.tb-actions{display:flex;align-items:center;gap:8px}
+/* .sl-resize · .sl-main · .sl-topbar · .sl-iconbtn · .sl-spacer · .sl-tb-actions are the shared
+   shell layer (COMPONENTS_CSS). Bridge only the inspector's collapse-only topbar toggle: the
+   show-sidebar button appears once the sidebar is collapsed (you collapse via the handle or `[`). */
+.sl-topbar .sl-iconbtn[data-sidebar-toggle]{display:none}
+.sl-app-shell.is-collapsed .sl-topbar .sl-iconbtn[data-sidebar-toggle]{display:inline-flex}
 /* Breadcrumb = the shared .sl-breadcrumb (+__link / __current / __sep) from COMPONENTS_CSS.
    Bridge the inspector's denser type size + bolder current crumb. */
 .sl-breadcrumb{font-size:var(--t-body)}
@@ -224,7 +192,7 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .page{max-width:1200px;margin:0 auto}
 .page.wide{max-width:none}
 /* Project detail = full-bleed graph hero */
-.main>section:has(.proj){flex:1;min-height:0;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.sl-main>section:has(.proj){flex:1;min-height:0;padding:0;display:flex;flex-direction:column;overflow:hidden}
 .proj{flex:1;min-height:0;display:flex;flex-direction:column}
 .proj-head{flex-shrink:0;width:100%;max-width:900px;margin:0 auto;padding:22px 24px 12px}
 .proj-head .stats{margin:0 0 14px}
@@ -317,13 +285,13 @@ a.srcchip{text-decoration:none}a.srcchip:hover{border-color:var(--accent);color:
 
 @media (max-width:1040px){.doc.d3{grid-template-columns:minmax(0,1fr)}.doc.d2{grid-template-columns:minmax(0,1fr)}.toc,.rail{position:static;display:none}}
 @media (max-width:760px){
-  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:100;width:280px!important;min-width:280px!important;transform:translateX(-100%);transition:transform 220ms var(--ease)}
-  .app:not(.collapsed) .sidebar{transform:translateX(0);box-shadow:var(--shadow-lg)}
-  .resize{display:none}.grid,.two{grid-template-columns:1fr}
+  /* .sl-sidebar / .sl-resize mobile behaviour ships in the shared shell layer (COMPONENTS_CSS);
+     only the app's content grids collapse here. */
+  .grid,.two{grid-template-columns:1fr}
 }
 @media print{
-  .sidebar,.resize,.topbar,.toc,.rail,.tb-actions{display:none!important}
-  .app{display:block;height:auto;overflow:visible}.main{overflow:visible}
+  .sl-sidebar,.sl-resize,.sl-topbar,.toc,.rail,.sl-tb-actions{display:none!important}
+  .sl-app-shell{display:block;height:auto;overflow:visible}.sl-main{overflow:visible}
   section{overflow:visible;padding:0}.doc{display:block}.doc-main{max-width:100%}
   body{background:#fff;color:#000}.sec{break-inside:avoid}
 }

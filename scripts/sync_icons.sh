@@ -70,3 +70,23 @@ Vendored so the PyPI package has no local-path dependency.
 else
   echo "warn: charts module not found at $chsrc" >&2
 fi
+
+# App-shell behaviour (SHELL_JS) — the SSR counterpart of the React <AppShell>, hand-authored
+# in the design system. web/_components.py emits it in the layout to drive the .sl-app-shell chrome.
+shsrc="$here/../sonaloop-design/py/sonaloop_icons/shell.py"
+shdst="$here/sonaloop/_shell.py"
+if [[ -f "$shsrc" ]]; then
+  note='"""sonaloop._shell — VENDORED COPY of the sonaloop-design app-shell behaviour.
+
+Do not edit by hand. Single source of truth: ../sonaloop-design (py/sonaloop_icons/shell.py +
+styles/components.css `.sl-app-shell`). Refresh with `make icons` / scripts/sync_icons.sh.
+Vendored so the PyPI package has no local-path dependency.
+'
+  {
+    printf '%s\n' "$note"
+    tail -n +2 "$shsrc"
+  } > "$shdst"
+  echo "synced $shsrc -> $shdst ($(wc -c < "$shdst") bytes)"
+else
+  echo "warn: shell module not found at $shsrc" >&2
+fi

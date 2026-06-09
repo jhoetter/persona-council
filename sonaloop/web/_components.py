@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 from urllib.parse import quote as _urlquote
 
 from .._icons import icon as _persona_icon, hifi as _persona_hifi, HIFI_ANIM_CSS as _ICON_ANIM_CSS
+from .._shell import SHELL_JS  # app-shell behaviour (resize/collapse/user-menu) — vendored from sonaloop-design
 
 from .. import services
 from .. import presentation as _pres
@@ -130,16 +131,9 @@ def _crumbs_html(crumbs: list) -> str:
 APP_JS = """
 <script>
 (function(){
-  var MIN=180,MAX=480,HIDE=32;
-  var app=document.getElementById('app'),rz=document.getElementById('rz');
-  try{ if(localStorage.getItem('sidebar-open')==='false') app.classList.add('collapsed');
-       var w=localStorage.getItem('sidebar-width'); if(w) app.style.setProperty('--sidebar-w',w+'px'); }catch(e){}
-  function toggle(){ app.classList.toggle('collapsed');
-    try{localStorage.setItem('sidebar-open',String(!app.classList.contains('collapsed')));}catch(e){} }
-  // delegated so it keeps working after an SPA swap of #main (where #sbt lives)
-  document.addEventListener('click',function(e){ if(e.target.closest&&e.target.closest('#sbt')){ e.preventDefault(); toggle(); } });
-  // ---- theme (sun / system / moon) + sidebar user menu ----
-  var um=document.getElementById('usermenu'),umb=document.getElementById('umbtn'),ump=document.getElementById('umpop');
+  // Sidebar collapse/resize + the bottom user-menu popover are driven by the shared SHELL_JS
+  // (sonaloop-design); this file owns the app-specific behaviour below.
+  // ---- theme (sun / system / moon) — the switch lives in the sidebar user menu ----
   function curTheme(){ try{return localStorage.getItem('theme')||'system';}catch(e){return 'system';} }
   function markTheme(v){ document.querySelectorAll('[data-theme-set]').forEach(function(b){
     b.classList.toggle('is-active', b.getAttribute('data-theme-set')===v); }); }
@@ -150,33 +144,13 @@ APP_JS = """
   document.querySelectorAll('[data-theme-set]').forEach(function(b){
     b.addEventListener('click',function(){ applyTheme(b.getAttribute('data-theme-set')); }); });
   markTheme(curTheme());
-  function setMenu(open){ if(!um) return; um.classList.toggle('open',open);
-    if(ump) ump.hidden=!open; if(umb) umb.setAttribute('aria-expanded',String(open)); }
-  if(umb) umb.addEventListener('click',function(e){ e.stopPropagation();
-    setMenu(!um.classList.contains('open')); });
-  document.addEventListener('click',function(e){
-    if(um && um.classList.contains('open') && !um.contains(e.target)) setMenu(false); });
-  document.addEventListener('keydown',function(e){ if(e.key==='Escape') setMenu(false); });
+  // ---- quick "g then o/p" jump nav ----
   var gmode=false,gt;
   document.addEventListener('keydown',function(e){
     var tag=(e.target.tagName||'').toLowerCase(); if(tag==='input'||tag==='textarea'||tag==='select') return;
-    if(e.key==='['){ toggle(); return; }
     if(e.key==='g'){ gmode=true; clearTimeout(gt); gt=setTimeout(function(){gmode=false;},800); return; }
     if(gmode){ var m={o:'/projects',p:'/personas',r:'/projects'}; if(m[e.key]) location.href=m[e.key]; gmode=false; }
   });
-  if(rz){
-    var sx=0,sw=248,resizing=false,last=248;
-    rz.addEventListener('pointerdown',function(e){ e.preventDefault(); resizing=true; sx=e.clientX;
-      sw=parseInt(getComputedStyle(app).getPropertyValue('--sidebar-w'))||248;
-      document.body.style.cursor='col-resize'; document.body.style.userSelect='none'; rz.setPointerCapture(e.pointerId); });
-    rz.addEventListener('pointermove',function(e){ if(!resizing) return; var next=sw+(e.clientX-sx);
-      if(next<=HIDE){ app.classList.add('collapsed'); try{localStorage.setItem('sidebar-open','false');}catch(e){} }
-      else { var c=Math.max(MIN,Math.min(MAX,next)); last=c; app.style.setProperty('--sidebar-w',c+'px');
-             app.classList.remove('collapsed'); try{localStorage.setItem('sidebar-open','true');}catch(e){} } });
-    rz.addEventListener('pointerup',function(e){ if(!resizing) return; resizing=false;
-      document.body.style.cursor=''; document.body.style.userSelect='';
-      try{localStorage.setItem('sidebar-width',String(last));}catch(e){} });
-  }
   var sc=document.querySelector('section'); var tocLinks=[].slice.call(document.querySelectorAll('.toc a'));
   if(sc && tocLinks.length){
     var map={}; tocLinks.forEach(function(a){ map[a.getAttribute('href').slice(1)]=a; });
@@ -244,8 +218,8 @@ SPA_JS = """
     });
   }
   function syncActive(doc){             // mirror the fetched page's sidebar active-state onto the live nav
-    var on={}; doc.querySelectorAll('.sidebar .nav a.active').forEach(function(a){ on[a.getAttribute('href')]=1; });
-    document.querySelectorAll('.sidebar .nav a').forEach(function(a){ a.classList.toggle('active', !!on[a.getAttribute('href')]); });
+    var on={}; doc.querySelectorAll('.sl-sidebar .sl-nav a.is-active').forEach(function(a){ on[a.getAttribute('href')]=1; });
+    document.querySelectorAll('.sl-sidebar .sl-nav a').forEach(function(a){ a.classList.toggle('is-active', !!on[a.getAttribute('href')]); });
   }
   function swap(html, url, push){
     var doc=new DOMParser().parseFromString(html, 'text/html');
@@ -358,19 +332,19 @@ from . import _nav_seed  # noqa: F401,E402  (seeds the core sidebar via the publ
 def _nav(active: str, store: Store) -> str:
     # .pi-hover makes the row the animation trigger — the icon plays its micro-interaction on row hover.
     render = lambda items: fragment(*(
-        h("a", {"href": it["href"], "class_": "pi-hover active" if it["key"] == active else "pi-hover"},
+        h("a", {"href": it["href"], "class_": "pi-hover is-active" if it["key"] == active else "pi-hover"},
           raw(_icon(it["icon"], animate=True)), h("span", {}, resolve_label(it["label"])))
         for it in items))
     blocks: list = []
     for sec, items in nav_model():
         head = resolve_label(sec["label"])
         if head:
-            blocks.append(h("div", {"class_": "navhead"}, head))
-        blocks.append(h("nav", {"class_": "nav"}, render(items)))
+            blocks.append(h("div", {"class_": "sl-navhead"}, head))
+        blocks.append(h("nav", {"class_": "sl-nav"}, render(items)))
     # Favorites are stored client-side (localStorage); the section is filled AND shown/hidden by JS
     # (renderStars) — it only appears once something is starred, so an empty sidebar stays clean.
     blocks.append(h("div", {"id": "favsec", "hidden": True},
-                    h("div", {"class_": "navhead"}, t("favorites")),
+                    h("div", {"class_": "sl-navhead"}, t("favorites")),
                     h("div", {"class_": "sb-quick", "id": "favs"})))
     return fragment(*blocks)
 
@@ -388,17 +362,17 @@ def _user_menu() -> str:
     lang_opts = [h("a", {"class_": f'sl-segmented__item{" is-active" if code == cur else ""}', "href": f"?lang={code}",
                          "title": full, "aria-label": full}, h("span", {}, short))
                  for code, full, short in langs]
-    return h("div", {"class_": "usermenu", "id": "usermenu"},
-             h("div", {"class_": "um-pop", "id": "umpop", "hidden": True},
-               h("div", {"class_": "um-sec"}, h("div", {"class_": "um-lbl"}, t("theme")),
+    return h("div", {"class_": "sl-usermenu"},
+             h("div", {"class_": "sl-um-pop", "hidden": True},
+               h("div", {"class_": "sl-um-sec"}, h("div", {"class_": "sl-um-lbl"}, t("theme")),
                  h("div", {"class_": "sl-segmented sl-segmented--fill sl-segmented--stacked"}, theme_opts)),
-               h("div", {"class_": "um-sec"}, h("div", {"class_": "um-lbl"}, t("language")),
+               h("div", {"class_": "sl-um-sec"}, h("div", {"class_": "sl-um-lbl"}, t("language")),
                  h("div", {"class_": "sl-segmented sl-segmented--fill"}, lang_opts))),
-             h("button", {"type": "button", "class_": "um-trigger pi-hover", "id": "umbtn",
+             h("button", {"type": "button", "class_": "sl-um-trigger pi-hover",
                           "aria-haspopup": "true", "aria-expanded": "false"},
-               h("span", {"class_": "um-ava"}, raw(_icon("settings", animate=True))),
-               h("span", {"class_": "um-name"}, t("settings")),
-               h("span", {"class_": "um-caret"}, raw(_icon("chevron")))))
+               h("span", {"class_": "sl-um-ava"}, raw(_icon("settings", animate=True))),
+               h("span", {"class_": "sl-um-name"}, t("settings")),
+               h("span", {"class_": "sl-um-caret"}, raw(_icon("chevron")))))
 
 
 def _star(kind: str, ident: str, label: str, href: str) -> str:
@@ -443,19 +417,19 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 {HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
-<body><div class="app" id="app">
-  <aside class="sidebar">
-    <div class="brand"><a class="sl-logo" href="/"><span class="sl-logo__mark">{_icon("sonaloop")}</span><span class="sl-logo__word">{_brand_word}</span></a></div>
-    <div class="sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
+<body><div class="sl-app-shell" id="app">
+  <aside class="sl-sidebar">
+    <div class="sl-brand"><a class="sl-logo" href="/"><span class="sl-logo__mark">{_icon("sonaloop")}</span><span class="sl-logo__word">{_brand_word}</span></a></div>
+    <div class="sl-sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
     {_user_menu()}
   </aside>
-  <div class="resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
-  <div class="main" id="main">
-    <header class="topbar"><button class="iconbtn" id="sbt" title="{t("sidebar")} ([)" aria-label="Sidebar">{_icon("panel")}</button>
-      {_crumbs_html(crumbs)}<span class="spacer"></span><span class="tb-actions">{actions}</span></header>
+  <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
+  <div class="sl-main" id="main">
+    <header class="sl-topbar"><button class="sl-iconbtn" id="sbt" data-sidebar-toggle title="{t("sidebar")} ([)" aria-label="Sidebar">{_icon("panel")}</button>
+      {_crumbs_html(crumbs)}<span class="sl-spacer"></span><span class="sl-tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
+</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
 
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.

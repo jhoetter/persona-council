@@ -22,7 +22,7 @@ _RAIL_CSS = """<style>
 </style>"""
 
 _RAIL_JS = """<script>(function(){
-var sc=document.querySelector('.main');
+var sc=document.querySelector('.sl-main');
 var ticks=[].slice.call(document.querySelectorAll('.pgrail .tick'));
 if(!ticks.length)return;
 var map={};ticks.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
