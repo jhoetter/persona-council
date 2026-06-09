@@ -156,12 +156,14 @@ def brand_name() -> str:
 
 def title_brand() -> str:
     """The page-<title> form of the brand, for quick tab disambiguation across the
-    sonaloop repos. The core is bare lowercase "sonaloop"; every product leads with
-    its short name: "Sonaloop Cloud" -> "Cloud | sonaloop", "Sonaloop Research" ->
-    "Research | sonaloop". The visual sidebar wordmark still uses brand_name()."""
+    sonaloop repos. Every surface leads with a short "Name | sonaloop": the core app
+    is "App | sonaloop", and products map their wordmark — "Sonaloop Cloud" ->
+    "Cloud | sonaloop", "Sonaloop Research" -> "Research | sonaloop". (The marketing
+    website keeps bare "Sonaloop" branding, as the customer-facing face.) The visual
+    sidebar wordmark still uses brand_name()."""
     bn = _BRAND.strip()
     if bn.lower() == "sonaloop":
-        return "sonaloop"
+        return "App | sonaloop"
     if bn.lower().startswith("sonaloop "):
         return f"{bn[len('sonaloop '):].strip()} | sonaloop"
     return bn
