@@ -61,6 +61,46 @@ def _h2h_result_html(result: dict) -> str:
     return str(fragment(headline, opt_table, seg_html))
 
 
+def _red_team_result_html(rt: dict) -> str:
+    """The deterministic red-team verdict: the case-against headline (blocker themes + worst severity), the
+    per-theme blocker table (how many personas raise each blocker + severity), and — when the run captured
+    both directions — a compact case-for table beside it. The server computes these; the prose verdict lives
+    in the exec_summary above. UI language is German by default (match the surrounding UI)."""
+    against = rt.get("case_against") or {}
+    themes = against.get("themes", [])
+    top = against.get("top_blocker")
+    worst = against.get("worst_severity")
+    if themes:
+        headline = h("div", {"class_": "h2h-pref"},
+                     h("strong", {}, f"{t('rt_case_against')}: {against.get('theme_count', 0)} {t('rt_blockers')}"),
+                     h("span", {"class_": "muted small"},
+                       f" · {against.get('voices', 0)} {t('rt_voices')}"
+                       + (f" · {t('rt_top_blocker')}: {top}" if top else "")
+                       + (f" · {t('rt_severity')} {t('rt_sev_' + worst)}" if worst else "")))
+    else:
+        headline = h("div", {"class_": "h2h-pref"}, h("strong", {}, t("rt_no_objections")))
+
+    rows = [h("tr", {}, h("th", {}, t("rt_blocker")), h("th", {}, t("rt_personas")), h("th", {}, t("rt_severity")))]
+    for th in themes:
+        sev = th.get("severity")
+        rows.append(h("tr", {},
+                      h("td", {}, th.get("theme", "")),
+                      h("td", {}, str(th.get("count", 0))),
+                      h("td", {}, t("rt_sev_" + sev) if sev else "")))
+    against_table = h("table", {"class_": "h2h-table"}, *rows)
+
+    # The optional case FOR, beside the case against (both-directions run).
+    for_html = ""
+    case_for = rt.get("case_for")
+    if case_for and case_for.get("themes"):
+        fr = [h("tr", {}, h("th", {}, t("rt_pull")), h("th", {}, t("rt_personas")))]
+        for th in case_for["themes"]:
+            fr.append(h("tr", {}, h("td", {}, th.get("theme", "")), h("td", {}, str(th.get("count", 0)))))
+        for_html = fragment(h("h3", {"style": "margin:14px 0 6px"}, t("rt_case_for")),
+                            h("table", {"class_": "h2h-table"}, *fr))
+    return str(fragment(headline, against_table, for_html))
+
+
 def register_councils(app) -> None:
     @app.get("/councils", response_class=HTMLResponse)
     def councils() -> str:
@@ -109,6 +149,10 @@ def register_councils(app) -> None:
         # segment-splits). When present we surface the verdict block above the voices.
         is_h2h = services.is_head_to_head(session)
         h2h_html = (_h2h_result_html(session["head_to_head"]["result"]) if is_h2h else "")
+        # Red-Team Format: a council carrying a deterministic case-against (blocker themes + severity). When
+        # present we surface the verdict block above the voices.
+        is_rt = services.is_red_team(session)
+        rt_html = (_red_team_result_html(session["red_team"]) if is_rt else "")
         # The Voices section carries the framing for EVERY mode: each persona card is grouped under the
         # prompt it answers — the discovery QUESTIONS or the evaluation/decision PROPOSAL (rendered as
         # Markdown via render_prompt) — so "what was asked" always sits right above the cards. One
@@ -127,7 +171,8 @@ def register_councils(app) -> None:
         voices_html = (render_statements(statements, store, group_by="prompt", prompts=group_prompts, backlinks=backlinks)
                        if group_prompts else render_statements(statements, store, group_by="persona", backlinks=backlinks))
         sentiment = "" if mode == "discovery" else (_sentiment_section(store, [session], title=sentiment_title) or "")
-        kicker = (t("h2h_kicker", n=n_voices) if is_h2h else t("council_kicker_" + mode, n=n_voices))
+        kicker = (t("rt_kicker", n=n_voices) if is_rt else t("h2h_kicker", n=n_voices) if is_h2h
+                  else t("council_kicker_" + mode, n=n_voices))
         council_sub = f'{kicker} · {session["selection_reason"]}'
         short_title = _display_title(session["prompt"])        # short form for breadcrumb / tab / favourite only
         # Executive Summary (the short TL;DR) sits at the TOP — same block/name as the synthesis.
@@ -137,8 +182,11 @@ def register_councils(app) -> None:
         h2h_block = (h("div", {"class_": "sec", "id": "h2h"}, h("h2", {}, t("h2h_title")),
                        h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, t("h2h_lead")),
                        raw(h2h_html)) if is_h2h else "")
+        rt_block = (h("div", {"class_": "sec", "id": "red-team"}, h("h2", {}, t("rt_title")),
+                      h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, t("rt_lead")),
+                      raw(rt_html)) if is_rt else "")
         body = fragment(
-            summary_lead, raw(_study_lead(exec_html, vm["answer_label"])), h2h_block, raw(sentiment),
+            summary_lead, raw(_study_lead(exec_html, vm["answer_label"])), h2h_block, rt_block, raw(sentiment),
             h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices")), intro, raw(voices_html)))
         prop_rows = [("councils", t("type_h"), t("council_mode_" + mode)), ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
@@ -163,5 +211,6 @@ def register_councils(app) -> None:
             rail_sections=([("sec-question", t("question"))]
                            + ([("sec-summary", t("answer_exec_summary"))] if has_summary else [])
                            + ([("h2h", t("h2h_title"))] if is_h2h else [])
+                           + ([("red-team", t("rt_title"))] if is_rt else [])
                            + [("stimmen", t("voices"))]),
             star=("council", session_id, short_title, f"/councils/{session_id}"))

@@ -125,6 +125,47 @@ def register_council(mcp):
         t = time.perf_counter()
         return _env("get_head_to_head", services.get_head_to_head(session_id), t)
 
+    # ================= Red-Team (falsification Format) =================
+    @mcp.tool()
+    def brief_red_team(project_id: str, prompt: str, persona_ids: list[str] | None = None,
+                       filters: dict[str, Any] | None = None, count: int = 4, context: str | None = None,
+                       stance: str = "against", artifact_ids: list[str] | None = None) -> dict[str, Any]:
+        """Gather a RED-TEAM (falsification) — run the panel to ATTACK the idea instead of flattering it
+        ("why would this segment NOT adopt / NOT pay / churn?"), so the output stress-tests it. It REFRAMES a
+        normal council toward DISCONFIRMATION and assigns each persona an explicit, deterministic adversarial
+        lens (skeptic / blocker / switching-cost / status-quo / risk). Ground it in a REAL artifact with
+        `artifact_ids` (a captured URL/price page/prototype). `stance` runs the SAME question in both
+        directions: 'against' (default — case against), 'for' (confirming), or 'both'. Without persona_ids:
+        returns a segment-diverse candidate panel. With persona_ids: returns each participant's loaded
+        context (with its adversarial role stamped in) to author concrete objections, then call
+        record_red_team."""
+        t = time.perf_counter()
+        return _env("brief_red_team", services.brief_red_team(project_id, prompt, persona_ids, filters, count, context, stance, artifact_ids), t)
+
+    @mcp.tool()
+    def record_red_team(project_id: str, prompt: str, objections: list[dict[str, Any]] | None = None,
+                        endorsements: list[dict[str, Any]] | None = None, stance: str = "against",
+                        persona_ids: list[str] | None = None, statements: list[dict[str, Any]] | None = None,
+                        summary: str = "", exec_summary: str = "", selection_reason: str = "",
+                        findings: list[dict[str, Any]] | None = None, key: str | None = None) -> dict[str, Any]:
+        """Persist a host-authored RED-TEAM (stored as a CouncilSession with a `red_team` block). Pass the
+        per-persona `objections` ([{persona_id, theme (a short blocker label), text (the objection in voice),
+        severity 'low'|'medium'|'high'|'critical'}]) — the case AGAINST — plus the authored `statements`
+        (about={kind:'prompt', id:'red_team'}) and the prose verdict in exec_summary/summary. The SERVER
+        deterministically groups objections by theme into the structured case-against (how many personas
+        raise each blocker + worst severity) — you author the qualitative synthesis. With stance='both', pass
+        `endorsements` ([{persona_id, theme, text}]) to also store the case FOR side by side. Returns the
+        session incl. red_team.case_against. Pass a stable `key` for a deterministic id (idempotent upsert)."""
+        t = time.perf_counter()
+        return _env("record_red_team", services.record_red_team(project_id, prompt, objections, endorsements, stance, persona_ids, statements, summary, exec_summary, selection_reason, findings, key), t)
+
+    @mcp.tool()
+    def get_red_team(session_id: str) -> dict[str, Any]:
+        """Fetch one red-team result by session id — its stance, adversarial roles, per-persona objections
+        and the deterministic case-against (themes grouped by blocker, count + worst severity)."""
+        t = time.perf_counter()
+        return _env("get_red_team", services.get_red_team(session_id), t)
+
     @mcp.tool()
     def list_councils() -> dict[str, Any]:
         """List all council sessions (id, prompt, persona count, date) for browsing."""
