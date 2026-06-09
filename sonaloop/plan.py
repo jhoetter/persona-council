@@ -125,15 +125,18 @@ def seed_plan_from_methodology(project_id: str, goal: str, spec: dict[str, Any])
     for s in steps:
         sid = s["id"]
         cap = s["tags"][0] if s.get("tags") else ""
+        # EVERY constellation edge maps 1:1 onto a seeded edge — including same-type ones
+        # (fan→fan, decide→decide), so a non-alternating DAG keeps its ordering. The breadth
+        # gate stays honest: frame tasks only ever produce `frame` refs and verify siblings are
+        # excluded by bucket, so neither counts as act evidence in verify_unmet/_fan_tasks.
+        cons = [map_target(c) for c in s["consumes"]]
         if M._is_decide(s):
-            cons = [fan_frame[c] for c in s["consumes"] if c in fan_frame]
             tasks.append({
                 "id": decide_verify[sid], "title": f"Decide · {s['name']}", "bucket": "verify",
                 "capability": cap or "decide", "step": sid, "intent": s["intent"], "consumes": cons,
                 "requires": s["requires"], "loop_back": map_target(s.get("loop_back", "")),
                 "produces": [], "presentation": s.get("presentation") or {}})
         else:
-            cons = [decide_verify[c] for c in s["consumes"] if c in decide_verify]
             tasks.append({
                 "id": fan_frame[sid], "title": f"Frame · {s['name']}", "bucket": "analyze",
                 "capability": "frame", "step": sid, "consumes": cons,

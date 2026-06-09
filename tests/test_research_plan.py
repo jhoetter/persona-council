@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from sonaloop import methodology as M
 from sonaloop import plan as P
 from sonaloop import services, web
 
@@ -114,6 +115,146 @@ def test_freeform_seeds_single_root_frame(store):
     t = plan["tasks"][0]
     assert t["bucket"] == "analyze" and t["capability"] == "frame" and t["consumes"] == []
     assert "## Analyze" in services.export_plan_md(proj["id"], store=store)
+
+
+# ------------------------------------------------- R2b: non-alternating constellation shapes
+# The seeder maps EVERY constellation edge 1:1 onto a seeded edge — same-type ones (fan→fan,
+# decide→decide) included, so a non-alternating DAG keeps its ordering instead of silently
+# dropping edges.
+
+def _seed(steps):
+    """Validate + seed a throwaway constellation (no registry needed for shape tests)."""
+    spec = {"key": "shape", "name": "Shape", "description": "d", "when_to_use": "w", "steps": steps}
+    M.validate_methodology_spec(spec)
+    return P.seed_plan_from_methodology("proj", "g", M._normalize_spec(spec))
+
+
+def _edges(plan):
+    return {t["id"]: t["consumes"] for t in plan["tasks"]}
+
+
+def test_builtin_methodologies_seed_exactly_as_before():
+    """Regression pin (id/consumes/loop_back captured from main BEFORE the same-type-edge fix):
+    the four alternating built-ins must seed byte-identically — for them every edge is
+    cross-type, so the 1:1 edge mapping reproduces the old wiring by construction."""
+    pinned = {
+        "double_diamond": [
+            ("frame__discover", [], ""), ("verify__define", ["frame__discover"], ""),
+            ("frame__develop", ["verify__define"], ""),
+            ("verify__deliver", ["frame__develop"], "frame__develop")],
+        "double_diamond_deep": [
+            ("frame__discover", [], ""), ("verify__define", ["frame__discover"], ""),
+            ("frame__ideate", ["verify__define"], ""),
+            ("verify__lofi_select", ["frame__ideate"], ""),
+            ("frame__refine", ["verify__lofi_select"], ""),
+            ("verify__deliver", ["frame__refine"], "frame__refine")],
+        "dschool_micro": [
+            ("frame__understand_observe", [], ""),
+            ("verify__define_pov", ["frame__understand_observe"], ""),
+            ("frame__ideate", ["verify__define_pov"], ""),
+            ("verify__prototype_test", ["frame__ideate"], "frame__ideate")],
+        "lean_jtbd": [
+            ("frame__problem_explore", [], ""),
+            ("verify__problem_pick", ["frame__problem_explore"], ""),
+            ("frame__solution_explore", ["verify__problem_pick"], ""),
+            ("verify__validate", ["frame__solution_explore"], "frame__solution_explore")],
+    }
+    specs = M._load_builtin_specs()
+    assert set(specs) == set(pinned)
+    for key, spec in specs.items():
+        p = P.seed_plan_from_methodology("proj", "g", spec)
+        assert [(t["id"], t["consumes"], t["loop_back"]) for t in p["tasks"]] == pinned[key], key
+
+
+def test_seeder_preserves_fan_to_fan_edge():
+    """Design-Sprint-like Map→Sketch (two consecutive fans): the fan→fan edge survives as
+    frame__sketch consumes frame__map — NOT two parallel roots."""
+    plan = _seed([
+        {"id": "map", "name": "Map", "tags": ["explore"]},
+        {"id": "sketch", "name": "Sketch", "tags": ["explore"], "consumes": ["map"]},
+        {"id": "decide", "name": "Decide", "tags": ["decide"], "consumes": ["sketch"],
+         "requires": {"min_inputs": 2, "gate_tag": "divergence_complete"}},
+    ])
+    assert _edges(plan) == {"frame__map": [], "frame__sketch": ["frame__map"],
+                            "verify__decide": ["frame__sketch"]}
+    assert {t["id"] for t in P.ready_tasks(plan)} == {"frame__map"}   # ordering preserved
+
+
+def test_seeder_preserves_decide_to_decide_edge():
+    """A decide→decide refinement chain: verify__pick consumes verify__shortlist."""
+    plan = _seed([
+        {"id": "scan", "name": "Scan", "tags": ["explore"]},
+        {"id": "shortlist", "name": "Shortlist", "tags": ["decide"], "consumes": ["scan"],
+         "requires": {"min_inputs": 2, "gate_tag": "scanned"}},
+        {"id": "pick", "name": "Pick", "tags": ["decide"], "consumes": ["shortlist"],
+         "requires": {"min_inputs": 1, "gate_tag": "picked"}},
+    ])
+    assert _edges(plan)["verify__pick"] == ["verify__shortlist"]
+    assert {t["id"] for t in P.ready_tasks(plan)} == {"frame__scan"}
+
+
+def _diamond_steps():
+    # users → {pov (decide), sketch (fan)} → converge: one fan→fan edge plus a MIXED
+    # multi-consume list on the join (verify__pov same-type + frame__sketch cross-type).
+    return [
+        {"id": "users", "name": "Users", "tags": ["explore"]},
+        {"id": "pov", "name": "PoV", "tags": ["decide"], "consumes": ["users"],
+         "requires": {"min_inputs": 1, "gate_tag": "pov_clear"}},
+        {"id": "sketch", "name": "Sketch", "tags": ["explore"], "consumes": ["users"]},
+        {"id": "converge", "name": "Converge", "tags": ["decide"], "consumes": ["pov", "sketch"],
+         "requires": {"min_inputs": 1, "gate_tag": "converged"}},
+    ]
+
+
+def test_seeder_preserves_multi_consume_diamond():
+    plan = _seed(_diamond_steps())
+    assert _edges(plan) == {"frame__users": [], "verify__pov": ["frame__users"],
+                            "frame__sketch": ["frame__users"],
+                            "verify__converge": ["verify__pov", "frame__sketch"]}
+
+
+def test_seeder_preserves_multi_root_spec():
+    """Two roots joined by one decide: both roots stay roots, the join keeps both edges."""
+    plan = _seed([
+        {"id": "users", "name": "Users", "tags": ["explore"]},
+        {"id": "market", "name": "Market", "tags": ["explore"]},
+        {"id": "pov", "name": "PoV", "tags": ["decide"], "consumes": ["users", "market"],
+         "requires": {"min_inputs": 2, "gate_tag": "g"}},
+    ])
+    assert _edges(plan) == {"frame__users": [], "frame__market": [],
+                            "verify__pov": ["frame__users", "frame__market"]}
+    assert {t["id"] for t in P.ready_tasks(plan)} == {"frame__users", "frame__market"}
+
+
+def test_same_type_edges_do_not_count_toward_verify_breadth(store):
+    """The new edges must not leak into verify gating: a frame sibling sharing the verify's
+    consumed frame produces only `frame` refs, and an upstream verify is excluded by bucket —
+    neither counts as an act angle toward min_inputs."""
+    plan = _seed(_diamond_steps())
+    plan["project_id"] = "projx"
+    P.save_plan(plan, store=store)
+    # discharge frame__sketch — it shares frame__users with verify__pov's fan
+    P.record_frame("projx", "frame__sketch", ["q?"], memory_refs=["m1"], store=store)
+    # give verify__pov a non-frame produce — verify__converge consumes it but must not count it
+    P.link_evidence("projx", "verify__pov", {"kind": "synthesis", "id": "s1"}, store=store)
+    plan = P.get_plan("projx", store=store)
+    for vid in ("verify__pov", "verify__converge"):
+        unmet = P.verify_unmet(plan, P.task(plan, vid), store)
+        assert any("(have 0)" in u for u in unmet), (vid, unmet)
+
+
+def test_two_verifies_consuming_one_frame_share_the_fan():
+    """Documented `_fan_tasks` behavior: a verify's fan is scoped by SHARED consumed frames, so
+    two verify tasks consuming the same frame each see (and fully count) the same act tasks —
+    the evidence is shared, not split between them."""
+    plan = P.new_plan("proj", tasks=[
+        {"id": "f", "bucket": "analyze", "capability": "frame"},
+        {"id": "a1", "bucket": "act", "consumes": ["f"], "produces": [{"kind": "council", "id": "c1"}]},
+        {"id": "v1", "bucket": "verify", "consumes": ["f"], "requires": {"min_inputs": 1, "gate_tag": "g1"}},
+        {"id": "v2", "bucket": "verify", "consumes": ["f"], "requires": {"min_inputs": 1, "gate_tag": "g2"}},
+    ])
+    for vid in ("v1", "v2"):
+        assert [t["id"] for t in P._fan_tasks(plan, P.task(plan, vid))] == ["a1"]
 
 
 # --------------------------------------------------------------------------- R3: frame
