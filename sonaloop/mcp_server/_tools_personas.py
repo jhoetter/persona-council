@@ -81,3 +81,15 @@ def register_personas(mcp):
         """Export one persona (profile + SOUL/memory) as json/markdown."""
         t = time.perf_counter()
         return _env("export_persona", services.export_persona(persona_id, format), t)
+
+    @mcp.tool()
+    def assess_coverage(project: str, job: str | None = None,
+                        persona_ids: list[str] | None = None) -> dict[str, Any]:
+        """Coverage / diversity check over a study's PERSONA SET — a deterministic analysis that flags when
+        the panel is too narrow to be trustworthy (a homogeneous "council of clones"). `project` is a
+        research-project id (its persona_ids are the panel; override with persona_ids). With a `job` taxonomy
+        id the panel is ALSO checked against that Job's declared coverage (min_personas + persona_axes).
+        Returns an indicator (thin|ok|strong), per-dimension distribution + flags, concrete gaps, and
+        recommended archetypes to add. No prose generation, no persistence."""
+        t = time.perf_counter()
+        return _env("assess_coverage", services.assess_coverage(project, job, persona_ids), t)
