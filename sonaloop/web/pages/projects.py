@@ -141,8 +141,32 @@ def register_projects(app) -> None:
                   h("span", {"class_": "muted small"}, cov_str, f' · {t("saturation")}: {ap["saturation"]["hint"]}'), gap_str))
         except Exception:
             pulse_html = ""
+        # Coverage / diversity check — a deterministic indicator over the study's PERSONA SET (is the panel
+        # too narrow to trust?) with concrete gaps + recommended archetypes. German UI by default.
+        coverage_html = ""
+        try:
+            cv = services.assess_coverage(proj["id"], store=store)
+            ind = cv["indicator"]
+            cgaps = cv.get("gaps") or []
+            cgap_str = (h("div", {"class_": "muted small", "style": "margin-top:4px"},
+                          f'{t("gaps")}: ', "; ".join(g["reason"] for g in cgaps[:3]))
+                        if cgaps else "")
+            recs = cv.get("recommendations") or []
+            rec_str = (h("div", {"class_": "muted small", "style": "margin-top:4px"},
+                         f'{t("coverage_recommend")}: ', "; ".join(r["description"] for r in recs[:2]))
+                       if recs else "")
+            coverage_html = fragment(
+                h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("coverage_h")),
+                h("div", {"class_": "strow"},
+                  h("span", {"class_": "pill"}, t("coverage_level_" + ind["level"])), " ",
+                  h("span", {"class_": "muted small"},
+                    f'{t("coverage_panel")}: {cv["panel_size"]}'
+                    + (f' · {ind["reasons"][0]}' if ind.get("reasons") else "")),
+                  cgap_str, rec_str))
+        except Exception:
+            coverage_html = ""
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
-        panel = h("div", {"class_": "oqpanel", "id": "oqpanel", "hidden": True}, pulse_html,
+        panel = h("div", {"class_": "oqpanel", "id": "oqpanel", "hidden": True}, pulse_html, coverage_html,
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("build_order_h")} (edges)'),
                   h("div", {"class_": "pills", "style": "margin:6px 0 14px"}, edge_leg), sec_html,
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("open_questions_h")),

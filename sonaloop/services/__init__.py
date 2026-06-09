@@ -79,6 +79,7 @@ from . import _councils
 from . import _artifacts_service
 from . import _head_to_head
 from . import _red_team
+from . import _coverage
 from . import _synthesis
 from . import _synthesis_pptx
 from . import _research
@@ -87,7 +88,7 @@ from . import _sections
 
 _SUBMODULES = (
     _common, _personas, _simulation, _consolidation, _memory, _evaluation,
-    _snapshots, _councils, _artifacts_service, _head_to_head, _red_team, _synthesis, _synthesis_pptx, _research, _engines, _sections,
+    _snapshots, _councils, _artifacts_service, _head_to_head, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _sections,
 )
 
 

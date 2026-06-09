@@ -52,6 +52,9 @@ STRINGS: dict[str, dict[str, str]] = {
         # sections / prototype detail
         "section": "Abschnitt", "no_members": "Keine Mitglieder.", "n_nodes": "{n} Knoten",
         "pulse": "Pulse", "gaps": "Gaps", "saturation": "Sättigung",
+        "coverage_h": "Abdeckung", "coverage_panel": "Panel",
+        "coverage_level_thin": "dünn", "coverage_level_ok": "ok", "coverage_level_strong": "stark",
+        "coverage_recommend": "Empfehlung",
         "sessions": "Sessions", "no_sessions": "keine Sessions",
         "grounded_yes": "grounded", "grounded_no": "unbestätigt",
         "open_in_new_tab": "In neuem Tab öffnen",
@@ -225,6 +228,9 @@ STRINGS: dict[str, dict[str, str]] = {
         # sections / prototype detail
         "section": "Section", "no_members": "No members.", "n_nodes": "{n} nodes",
         "pulse": "Pulse", "gaps": "Gaps", "saturation": "Saturation",
+        "coverage_h": "Coverage", "coverage_panel": "Panel",
+        "coverage_level_thin": "thin", "coverage_level_ok": "ok", "coverage_level_strong": "strong",
+        "coverage_recommend": "Recommendation",
         "sessions": "Sessions", "no_sessions": "no sessions",
         "grounded_yes": "grounded", "grounded_no": "unconfirmed",
         "open_in_new_tab": "Open in new tab",
