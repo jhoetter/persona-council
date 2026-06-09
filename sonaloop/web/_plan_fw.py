@@ -46,7 +46,19 @@ def _framework_strip(plan: dict, tasks: list) -> str:
         chips.append(h("span", {"class_": cls, "title": s.get("what", "")}, s.get("name", s["id"])))
     cur_name = stages[cur_idx]["name"] if cur_idx >= 0 else ""
     label = (f"Stufe {cur_idx + 1}/{len(stages)}" if cur_idx >= 0 else "")
+    # The JOB the study was seeded from (a preset; sonaloop/job_presets.py) — shown above the
+    # framework so the Job → Framework chain is visible. Absent for freeform/off-menu studies.
+    job_line = ""
+    job_id = plan.get("job")
+    if job_id:
+        try:
+            jb = _jt.get_job(job_id)
+            job_line = h("div", {"class_": "plan-fw-job", "title": jb.get("user_question", "")},
+                         raw(_icon("briefcase")), " Job · ", jb.get("name", job_id))
+        except KeyError:
+            pass
     return h("div", {"class_": "plan-fw"},
+             job_line,
              h("div", {"class_": "plan-fw-hd"},
                h("span", {"class_": "plan-fw-name"}, raw(_icon("target")), " ", fw.get("name", key)),
                (h("span", {"class_": "plan-fw-cur"}, f"{label} · {cur_name}") if cur_idx >= 0 else "")),

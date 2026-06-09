@@ -39,6 +39,11 @@ _NEXT: dict[str, dict[str, Any]] = {
     "record_synthesis": {"name": "export_synthesis", "reason": "render the stakeholder report"},
     "brief_council": {"name": "record_council", "reason": "author the turns + synthesis, then persist the council"},
     "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
+    # --- jobs = the taxonomy's JOB layer: presets + the sharpen-the-question helper ---
+    "list_job_presets": {"name": "get_job_preset", "reason": "read one Job's full recipe card before seeding from it"},
+    "get_job_preset": {"name": "start_job_study", "reason": "seed a study's plan from the preset (framework + formats + coverage)"},
+    "sharpen_question": {"name": "start_job_study", "reason": "hand the ready study_spec into the matched preset (or start_project for off-menu)"},
+    "start_job_study": {"name": "assess_coverage", "reason": "check the persona panel against the Job's declared coverage before running"},
     # --- methodologies = plan SEEDS; the runtime engine is the plan (spec/hx3-engine-collapse.md) ---
     "list_frameworks": {"name": "describe_framework", "reason": "read one Framework's plain-language shape before choosing it"},
     "describe_framework": {"name": "start_project", "reason": "start_project(methodology=<id>) runs the study through this Framework"},

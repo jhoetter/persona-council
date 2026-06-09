@@ -16,12 +16,13 @@ _DOMAIN_LABELS = {
     "prototypes": "Prototypes & proband sessions",
     "sections": "Sections, notes & organization",
     "research": "Research projects, graph & report",
+    "jobs": "Jobs (presets + sharpen-the-question)",
     "methodology": "Methodologies (plan seeds)",
     "personas": "Personas (profiles + evidence)",
     "simulation": "Simulation & memory (days/months/recall/timeline)",
     "eval": "Evaluation & critics",
 }
-_ORDER = ["plan", "council", "prototypes", "sections", "research", "methodology",
+_ORDER = ["plan", "council", "prototypes", "sections", "research", "jobs", "methodology",
           "personas", "simulation", "eval"]
 
 
