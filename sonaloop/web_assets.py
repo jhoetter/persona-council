@@ -100,6 +100,14 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .plan-prog-txt{font-size:var(--t-sm);color:var(--muted);font-variant-numeric:tabular-nums}
 .plan-sub{display:flex;align-items:center;gap:8px;margin-top:12px}
 .plan-sub>span:last-child{font-size:var(--t-sm);color:var(--faint)}
+.plan-fw{margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+.plan-fw-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.plan-fw-name{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:var(--t-md);color:var(--ink)}
+.plan-fw-cur{font-size:var(--t-xs);color:var(--accent);background:var(--accent-weak);padding:1px 8px;border-radius:var(--radius-full);font-weight:550;white-space:nowrap}
+.plan-fw-stages{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.fw-stage{font-size:var(--t-xs);color:var(--faint);border:1px solid var(--line);padding:1px 8px;border-radius:var(--radius-full);white-space:nowrap}
+.fw-stage.is-past{color:var(--muted)}
+.fw-stage.is-current{color:var(--accent);border-color:var(--accent);font-weight:550}
 .psec{margin-top:26px}
 .psec-h{display:flex;align-items:center;justify-content:space-between;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:0 2px 2px}
 .psec-n{color:var(--faint);font-weight:550;font-variant-numeric:tabular-nums}

@@ -44,6 +44,12 @@ Each Framework id maps 1:1 to a methodology `key` shipped under `sonaloop/method
 | `dschool_micro` | d.school Micro-Cycle |
 | `lean_jtbd` | Lean / Jobs-to-be-Done |
 
+Each Framework is documented in plain language (what it is, when to use it, its diverge→converge
+stages) in [`docs/frameworks.md`](frameworks.md). The structured descriptions
+(`{id, name, what, when, stages}`) are exposed via `sonaloop.job_taxonomy.framework_descriptions()`
+and the `list_frameworks` / `describe_framework` MCP tools, so the website "how it works" page and
+the job presets draw on one source.
+
 ## Formats
 
 | Format id | Name | Status |

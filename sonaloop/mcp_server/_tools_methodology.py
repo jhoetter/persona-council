@@ -52,6 +52,25 @@ def register_methodology(mcp):
         t = time.perf_counter()
         return _env("get_methodology", services.get_methodology(key), t)
 
+    @mcp.tool()
+    def list_frameworks() -> dict[str, Any]:
+        """The Frameworks (the methodologies that seed a study's plan) in PLAIN LANGUAGE, as one clean
+        list the user — and the website / job presets — can read: each {id, name, what (the shape it
+        is), when (when to use it), stages:[{id, name, what}] (the ordered diverge->converge stages)}.
+        Use this to help the user knowingly pick which Framework a study runs through, then bind it with
+        start_project(methodology=<id>) or set_project_methodology. Joined from the canonical taxonomy +
+        the live methodology specs."""
+        t = time.perf_counter()
+        return _env("list_frameworks", services.list_frameworks(), t)
+
+    @mcp.tool()
+    def describe_framework(framework_id: str) -> dict[str, Any]:
+        """One Framework's plain-language description by stable id (e.g. 'double_diamond'):
+        {id, name, what, when, stages:[{id, name, what}]}. The structured companion to get_methodology
+        (which returns the raw constellation graph) for showing/choosing a study's Framework."""
+        t = time.perf_counter()
+        return _env("describe_framework", services.describe_framework(framework_id), t)
+
     # start_methodology_project — RETIRED (a back-compat alias for start_project(methodology=...); M1).
     # Use start_project with methodology=<key>. The service fn remains for back-compat callers.
 

@@ -123,6 +123,22 @@ def start_project(title: str, goal: str, methodology: str | None = None,
 
 
 
+def list_frameworks(store: Store | None = None) -> dict[str, Any]:
+    """The plain-language description of every Framework — one clean, structured list the product,
+    the website 'how it works' page and the job presets all draw from. Each entry is
+    {id, name, what, when, stages:[{id, name, what}]}. Reads the live methodology specs joined with
+    the canonical taxonomy (sonaloop/job_taxonomy.framework_descriptions)."""
+    from ..job_taxonomy import framework_descriptions
+    return {"frameworks": framework_descriptions(store)}
+
+
+def describe_framework(framework_id: str, store: Store | None = None) -> dict[str, Any]:
+    """One Framework's plain-language description by stable id (e.g. 'double_diamond'):
+    {id, name, what, when, stages:[{id, name, what}]}. Raises if the id is unknown."""
+    from ..job_taxonomy import get_framework_description
+    return get_framework_description(framework_id, store)
+
+
 def get_plan(project_id: str, store: Store | None = None) -> dict[str, Any] | None:
     return _plan.get_plan(project_id, store=store)
 

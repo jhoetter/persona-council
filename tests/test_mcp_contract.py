@@ -49,6 +49,7 @@ def test_expected_tools_registered():
         "delete_synthesis", "delete_council", "delete_persona",
         # methodologies = plan SEEDS (the single runtime engine is the plan; HX3):
         "list_methodologies", "get_methodology",
+        "list_frameworks", "describe_framework",
         "set_project_methodology", "brief_next", "record_judgment",
         # research-plan engine (analyze/act/verify):
         "start_project", "get_plan", "add_task", "record_frame", "link_evidence",

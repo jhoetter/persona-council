@@ -467,6 +467,8 @@ register_css(r"""
 .methcard-n{font-weight:650;font-size:var(--t-md);letter-spacing:-.01em}
 .methcard-c{font-size:var(--t-xs,11px);color:var(--faint);font-weight:600;flex-shrink:0}
 .methcard-d{color:var(--muted);font-size:var(--t-sm);line-height:1.5;margin-bottom:10px}
+.methcard-when{color:var(--faint);font-size:var(--t-sm);line-height:1.5;margin-bottom:10px}
+.methcard-when b{color:var(--muted);font-weight:600}
 .step-pills{display:flex;flex-wrap:wrap;gap:5px}
 .step-pill{font-size:var(--t-xs,11px);color:var(--ink);background:var(--panel-2);border:1px solid var(--line-2);border-radius:20px;padding:2px 9px}
 .ddphases{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:6px}
