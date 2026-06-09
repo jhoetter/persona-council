@@ -49,6 +49,7 @@ _NEXT: dict[str, dict[str, Any]] = {
     "describe_framework": {"name": "start_project", "reason": "start_project(methodology=<id>) runs the study through this Framework"},
     "list_methodologies": {"name": "get_methodology", "reason": "inspect a constellation's steps before starting"},
     "get_methodology": {"name": "start_project", "reason": "start_project(methodology=<key>) seeds the plan"},
+    "register_methodology": {"name": "start_project", "reason": "start_project(methodology=<your key>) seeds a study's plan from the new constellation"},
     "set_project_methodology": {"name": "next_action", "reason": "load the next ready plan step fully"},
     "brief_next": {"name": "next_action", "reason": "load the ready task fully (grounding + participants + gate)"},
     "next_action": {"name": "complete_task", "reason": "author the step (frame/council/synthesis), persist, then complete"},

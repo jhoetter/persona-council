@@ -80,6 +80,19 @@ def test_bad_spec_rejected(store):
                                                {"id": "b", "name": "B", "consumes": ["ghost"]}]})
 
 
+def test_builtin_key_reserved_on_register(store):
+    """Registering under a built-in key is rejected (stable code RESERVED_KEY) at the engine layer,
+    so the Python and MCP surfaces behave the same — no silent shadowing of packaged specs."""
+    shadow = {"key": "double_diamond", "name": "Shadow", "description": "d", "when_to_use": "w",
+              "steps": [{"id": "a", "name": "A"}, {"id": "b", "name": "B", "consumes": ["a"]}]}
+    with pytest.raises(M.MethodologyError) as e:
+        M.register_methodology(shadow, store=store)
+    assert e.value.code == "RESERVED_KEY"
+    assert "RESERVED_KEY" in str(e.value)            # the code rides str(exc) across boundaries
+    # the built-in is untouched
+    assert M.get_methodology("double_diamond", store=store)["name"] != "Shadow"
+
+
 def test_cycle_rejected(store):
     with pytest.raises(M.MethodologyError):
         M.validate_methodology_spec({"key": "x", "name": "x", "description": "d", "when_to_use": "w",

@@ -7,7 +7,7 @@ from .. import services
 from ._env import _env
 
 
-def register_methodology(mcp):
+def register_methodologies(mcp):
     # ============ Methodologies: tag-driven constellation SEEDS for the plan engine ============
     # A methodology = a DAG of steps carrying OPEN TAGS. It is purely data: starting one SEEDS the
     # research plan (analyze/act/verify) — the single runtime engine is the plan (see _tools_plan +
@@ -51,6 +51,21 @@ def register_methodology(mcp):
         """The full constellation spec for one methodology (steps, tags, consumes, produces, requires)."""
         t = time.perf_counter()
         return _env("get_methodology", services.get_methodology(key), t)
+
+    @mcp.tool()
+    def register_methodology(spec: dict[str, Any]) -> dict[str, Any]:
+        """Register a USER-DEFINED methodology — author your own constellation and it becomes a
+        Framework any study can run through (start_project(methodology=<key>) seeds the plan).
+        Spec shape: {key, name, description, when_to_use, steps:[{id, name, tags, intent, consumes,
+        strategy, diverge_by, produces:{role, artifact_type, more_tags}, requires:{min_inputs,
+        gate_tag, artifact_tags, session_of_tags}, loop_back}]} — copy a template from
+        suggest_methodologies / get_methodology and pull tag vocabulary from suggest_capabilities /
+        suggest_roles / suggest_artifact_types (all SUGGESTED; tags are free). Legacy `phases`
+        specs auto-translate to `steps`. User specs overlay built-ins by `key`, so re-registering
+        your key updates it — but built-in keys are RESERVED (rejected with code RESERVED_KEY).
+        Invalid specs fail with a stable MethodologyError code (e.g. BAD_SPEC) + message: fix and retry."""
+        t = time.perf_counter()
+        return _env("register_methodology", services.register_methodology(spec), t)
 
     @mcp.tool()
     def list_frameworks() -> dict[str, Any]:
