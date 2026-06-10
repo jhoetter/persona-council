@@ -181,7 +181,13 @@ def test_saturation_converging_once_divergent_work_is_done(store):
     S.link_evidence(pid, t["id"], {"kind": "council", "id": "c1"}, store=store)
     S.complete_task(pid, t["id"], store=store)
     syn = S.record_synthesis("Answer", "frage?", ["c1"], {"gesamtbild": "answer"}, store=store)
-    v = S.add_task(pid, "verify", "consolidate", "Decide", consumes=[t["id"]], store=store)
+    v = S.add_task(pid, "verify", "consolidate", "Decide", consumes=["frame__root"],
+                   requires={"min_inputs": 1, "gate_tag": "decided"}, store=store)
     S.link_evidence(pid, v["id"], {"kind": "synthesis", "id": syn["id"]}, store=store)
     a = S.assess_project(pid, store=store)
     assert a["saturation"]["hint"] == "converging"                      # 1 act ≤ 2·1 syn, nothing divergent open
+    # and once every task is done, the hint is honest about it (a finished freelancer-run read
+    # "still diverging" because 5 act vs 2 syntheses failed the ratio — on a COMPLETE plan)
+    S.record_judgment(pid, v["id"], "decided", True, "done", evidence_refs=["c1"], store=store)
+    S.complete_task(pid, v["id"], store=store)
+    assert S.assess_project(pid, store=store)["saturation"]["hint"] == "complete"

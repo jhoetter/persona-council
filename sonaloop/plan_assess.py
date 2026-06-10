@@ -114,7 +114,9 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
     n_syn = cov["evidence_by_kind"].get("synthesis", 0)
     n_council = cov["evidence_by_kind"].get("council", 0)
     divergent_open = any(t["status"] != "done" and t["bucket"] in ("analyze", "act") for t in tasks)
-    if not n_act:
+    if all(t["status"] == "done" for t in tasks):
+        sat_hint = "complete"               # a finished plan is not "diverging" in any sense
+    elif not n_act:
         sat_hint = "early — no act evidence yet"
     elif divergent_open:
         sat_hint = "still diverging"        # later phases haven't produced their act evidence yet
