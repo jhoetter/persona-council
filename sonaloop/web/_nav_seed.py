@@ -22,6 +22,9 @@ _CORE_NAV = {
     "workspace": [
         ("/projects", "projects", "projects", lambda: t("projects")),
         ("/personas", "personas", "personas", lambda: t("personas")),
+        # The live feed of recorded events (ticket live-event-stream): a workspace
+        # surface (what's happening NOW), not a produced primitive — hence not library.
+        ("/activity", "activity", "clock", lambda: t("activity_h")),
         ("/documentation", "docs", "overview", lambda: t("documentation")),
     ],
     "library": [

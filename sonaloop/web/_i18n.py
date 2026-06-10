@@ -271,6 +271,17 @@ STRINGS: dict[str, dict[str, str]] = {
         "state_at": "Stand am {date}", "nothing_valid": "nichts gültig",
         "open_threads_count": "Offene Fäden: {n}",
         "outdated": "überholt", "since": "seit",
+        # live event stream / activity feed (ticket live-event-stream)
+        "activity_h": "Aktivität",
+        "activity_lead": "Live-Feed der zuletzt erfassten Forschung — jedes Event verlinkt seinen Eintrag.",
+        "no_activity": "Noch keine Aktivität. Sobald der Agent etwas erfasst, erscheint es hier live.",
+        "evt_persona_created": "Persona angelegt", "evt_persona_updated": "Persona aktualisiert",
+        "evt_evidence_attached": "Evidenz angehängt", "evt_persona_grounded": "Persona geerdet",
+        "evt_chat_recorded": "Chat erfasst", "evt_day_recorded": "Tag simuliert",
+        "evt_prediction_scored": "Prognose bewertet", "evt_calibration_round_recorded": "Kalibrierungsrunde erfasst",
+        "evt_asset_attached": "Asset angehängt", "evt_council_recorded": "Council erfasst",
+        "evt_synthesis_recorded": "Report erfasst", "evt_project_created": "Projekt angelegt",
+        "evt_run_finished": "Run beendet",
     },
     "en": {
         "personas": "Personas", "councils": "Councils",
@@ -515,6 +526,17 @@ STRINGS: dict[str, dict[str, str]] = {
         "state_at": "State at {date}", "nothing_valid": "nothing valid",
         "open_threads_count": "Open threads: {n}",
         "outdated": "outdated", "since": "since",
+        # live event stream / activity feed (ticket live-event-stream)
+        "activity_h": "Activity",
+        "activity_lead": "Live feed of recently recorded research — every event links to its record.",
+        "no_activity": "No activity yet. As soon as the agent records something it appears here live.",
+        "evt_persona_created": "Persona created", "evt_persona_updated": "Persona updated",
+        "evt_evidence_attached": "Evidence attached", "evt_persona_grounded": "Persona grounded",
+        "evt_chat_recorded": "Chat recorded", "evt_day_recorded": "Day simulated",
+        "evt_prediction_scored": "Prediction scored", "evt_calibration_round_recorded": "Calibration round recorded",
+        "evt_asset_attached": "Asset attached", "evt_council_recorded": "Council recorded",
+        "evt_synthesis_recorded": "Report recorded", "evt_project_created": "Project created",
+        "evt_run_finished": "Run finished",
     },
 }
 

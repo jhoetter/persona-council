@@ -15,6 +15,7 @@ from .surveys import register_surveys
 from .hypotheses import register_hypotheses
 from .decisions import register_decisions
 from .sessions import register_sessions
+from .activity import register_activity
 from .._routes_lists import _projects_page  # noqa: F401  (re-export preserved)
 
 
@@ -28,3 +29,4 @@ def register_pages(app) -> None:
     register_hypotheses(app)   # the /hypotheses list — after projects' /hypotheses/{id} redirect
     register_decisions(app)    # the /decisions list — after projects' /decisions/{id} redirect
     register_sessions(app)
+    register_activity(app)

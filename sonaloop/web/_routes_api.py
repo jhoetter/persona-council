@@ -1,11 +1,83 @@
 from __future__ import annotations
 
+import asyncio
+import json
+import os
+import time
+
+from fastapi import Request
+
 from .. import services
+
+
+def _events_poll_interval() -> float:
+    """The SSE table-poll cadence. Env-tunable (tests poll fast); ~1s in production —
+    cheap (one indexed read on an at-most-1000-row table) and feels instant."""
+    try:
+        return max(0.02, min(10.0, float(os.getenv("SONALOOP_EVENTS_POLL", 1.0))))
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def _events_heartbeat_every() -> float:
+    """Seconds between SSE heartbeat comments (keeps idle proxies/browsers from
+    timing the stream out). Env-tunable so tests can observe one immediately."""
+    try:
+        return max(0.0, float(os.getenv("SONALOOP_EVENTS_HEARTBEAT", 15.0)))
+    except (TypeError, ValueError):
+        return 15.0
+
+
+async def _event_stream(request, last_id: int | None):
+    """Tail the cross-process `events` table as SSE frames. `id:` carries the bus row
+    id, so EventSource reconnects replay via Last-Event-ID; a fresh connection (no
+    last id) starts at the current high-water mark — live tail, no history dump."""
+    from ..storage import Store
+    if last_id is None:
+        store = Store()
+        cursor = store.latest_event_id()
+        store.close()
+    else:
+        cursor = last_id
+    yield ": connected\n\n"                         # immediate flush → onopen fires
+    last_beat = time.monotonic()
+    while True:
+        if await request.is_disconnected():
+            return
+        store = Store()                              # fresh per poll: never hold a
+        try:                                         # connection across the sleep
+            rows = store.list_events_after(cursor)
+        finally:
+            store.close()
+        for row in rows:
+            cursor = row["id"]
+            payload = {"id": row["id"], "ts": row["ts"], "event": row["event"],
+                       "entity_type": row["entity_type"], "entity_id": row["entity_id"],
+                       "project_id": row["project_id"], **row["data"]}
+            yield f"id: {row['id']}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+            last_beat = time.monotonic()
+        if time.monotonic() - last_beat >= _events_heartbeat_every():
+            yield ": ping\n\n"
+            last_beat = time.monotonic()
+        await asyncio.sleep(_events_poll_interval())
 
 
 def register_api(app) -> None:
     from fastapi import Query
-    from fastapi.responses import JSONResponse
+    from fastapi.responses import JSONResponse, StreamingResponse
+
+    @app.get("/api/events")
+    async def api_events(request: Request):
+        """Live event stream (SSE) for the inspector: new bus rows as they land,
+        Last-Event-ID replay, heartbeat comments. Plain StreamingResponse — no deps."""
+        raw_last = request.headers.get("last-event-id") or request.query_params.get("last_event_id")
+        try:
+            last_id = int(raw_last) if raw_last is not None else None
+        except ValueError:
+            last_id = None
+        return StreamingResponse(
+            _event_stream(request, last_id), media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     @app.get("/api/personas")
     def api_personas():
