@@ -1,0 +1,18 @@
+{
+  "kind": "tech_comfort",
+  "note": "The ONE tech-comfort vocabulary for a persona's capability profile (capabilities.tech_comfort). An ordered 1-5 scale mirroring friction_levels.json/stance_scale.json; resolved via artifacts.resolve_tech_comfort(). Each level carries a behavioral `hint` — how this persona actually moves through an interface — which session briefs weave into the anti-steering context. `aliases` map free tokens (incl. EN/DE display words) onto a canonical level — add an alias, no code change; lookup is case/whitespace-insensitive. Like friction (and unlike stances) an UNKNOWN level is rejected on write instead of bucketed: silently calling a novice 'comfortable' would corrupt every session simulated from the profile.",
+  "items": [
+    {"tag": "novice",      "value": 1, "label_key": "tech_comfort_novice",      "hint": "reads every label before clicking; backs out of anything unfamiliar and gives up rather than guess", "presentation": {"color": "var(--red)"}},
+    {"tag": "cautious",    "value": 2, "label_key": "tech_comfort_cautious",    "hint": "sticks to known paths; hesitates at new patterns and re-reads before risking a click", "presentation": {"color": "var(--amber)"}},
+    {"tag": "comfortable", "value": 3, "label_key": "tech_comfort_comfortable", "hint": "navigates common patterns confidently; slows down and reads only when something surprises", "presentation": {"color": "var(--muted)"}},
+    {"tag": "fluent",      "value": 4, "label_key": "tech_comfort_fluent",      "hint": "skims labels, tries things, recovers from errors without help", "presentation": {"color": "var(--accent)"}},
+    {"tag": "expert",      "value": 5, "label_key": "tech_comfort_expert",      "hint": "skims, clicks the most prominent CTA, uses shortcuts and expects undo", "presentation": {"color": "var(--green)"}}
+  ],
+  "aliases": {
+    "beginner": "novice", "anfänger": "novice", "anfaenger": "novice", "neuling": "novice", "unerfahren": "novice", "very low": "novice",
+    "careful": "cautious", "wary": "cautious", "vorsichtig": "cautious", "zurückhaltend": "cautious", "zurueckhaltend": "cautious", "low": "cautious", "basic": "cautious",
+    "average": "comfortable", "medium": "comfortable", "ok": "comfortable", "solide": "comfortable", "durchschnittlich": "comfortable", "sicher": "comfortable",
+    "confident": "fluent", "versiert": "fluent", "geübt": "fluent", "geuebt": "fluent", "high": "fluent", "fließend": "fluent", "fliessend": "fluent",
+    "power user": "expert", "power_user": "expert", "advanced": "expert", "experte": "expert", "expertin": "expert", "profi": "expert", "very high": "expert"
+  }
+}

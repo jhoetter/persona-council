@@ -1,0 +1,102 @@
+{
+  "description": "Angestellte Projektarchitektin in Deutschland, 39 Jahre, führt Leistungsphasen 2 bis 5 für Wohnungs- und Gewerbeprojekte, erstellt Varianten, koordiniert Bauzeichner, spricht mit Bauherren und Fachplanern; nutzt Vectorworks, Excel, PDF-Kommentare, Teams und E-Mail; hat wenig formale Kaufmacht, aber große Meinungsmacht im Alltag.",
+  "segment_hint": "German architects - daily production user and adoption driver",
+  "generate_avatar": false,
+  "profile": {
+    "display_name": "Anna Seidel",
+    "identity_traits": {
+      "gender_presentation": "weiblich",
+      "gender_confidence": "mittel",
+      "age_range": "35-44",
+      "appearance_notes": "schneller Wechsel zwischen Besprechung, Planprüfung und Telefonaten; Stapel Ausdrucke am Tisch",
+      "avatar_profile": "Projektarchitektin in deutschem Büro, Planmarkierungen, Laptop, PDF-Kommentare",
+      "avatar_constraints": "keine Managerpose, keine unrealistische Luxusarchitektur"
+    },
+    "segment": {
+      "name": "Produktionsnahe Projektarchitektin",
+      "market_role": "Tägliche Nutzerin, Akzeptanztreiberin oder stille Verweigerin",
+      "bim_maturity": "mittel; nutzt Modell und 2D je nach Projektdruck"
+    },
+    "demographics": {
+      "country": "Deutschland",
+      "region": "Baden-Württemberg",
+      "education": "Master Architektur",
+      "household": "unspecified"
+    },
+    "role": {
+      "title": "Projektarchitektin",
+      "responsibilities": "Entwurfsvarianten, Genehmigungs- und Ausführungsplanung, Bauherrenabstimmung, Fachplanerkoordination, Kontrolle von Bauzeichnern",
+      "seniority": "erfahrene Projektleitung im Tagesgeschäft",
+      "decision_power": "niedrig formal, hoch informell; entscheidet durch Nutzung oder Ablehnung im Projektalltag"
+    },
+    "company_context": {
+      "industry": "Architektur, Wohnungsbau und kleinere Gewerbeprojekte",
+      "size": "28 Mitarbeitende",
+      "stack": "Vectorworks, Excel, PDF-Editor, Microsoft Teams, E-Mail, gemeinsame Projektablage",
+      "operating_model": "Mehrere parallele Projekte, enge Deadlines, viel Abstimmung über markierte PDFs und kurze Teams-Calls"
+    },
+    "goals": [
+      "Varianten schneller vorbereiten, ohne später alles neu zeichnen zu müssen",
+      "Abstimmungen mit Bauherren und Fachplanern klar halten",
+      "Weniger Abende mit Planbereinigung vor Abgaben verbringen",
+      "Junioren sinnvoll einsetzen, ohne Mikromanagement"
+    ],
+    "constraints": [
+      "Muss Ergebnisse ihrer Arbeit vor Partnern und Bauherren vertreten",
+      "Hat selten Zeit für Schulungen außerhalb akuter Projekte",
+      "Kann keine Tool-Experimente riskieren, wenn die Abgabe nah ist",
+      "Bauherrenfeedback kommt oft unstrukturiert per Telefon oder PDF"
+    ],
+    "tool_ids": [
+      "vectorworks",
+      "excel",
+      "pdf_editor",
+      "teams",
+      "e_mail",
+      "projektablage"
+    ],
+    "tools": [
+      "Vectorworks",
+      "Excel",
+      "PDF-Kommentartool",
+      "Microsoft Teams",
+      "E-Mail",
+      "Projektablage"
+    ],
+    "relationships": [
+      {
+        "name": "Partner im Büro",
+        "type": "Vorgesetzter",
+        "friction": "erwartet schnelle Varianten und unterschätzt Bereinigungsaufwand"
+      },
+      {
+        "name": "Junior-Bauzeichner",
+        "type": "Teammitglied",
+        "friction": "setzt Anweisungen um, übersieht aber Entwurfsabsichten"
+      },
+      {
+        "name": "Statikerin",
+        "type": "Fachplanerin",
+        "friction": "gibt Änderungen spät zurück, die Grundrisse erneut verschieben"
+      }
+    ],
+    "personality": {
+      "working_style": "hands-on, priorisiert Abgaben, improvisiert wenn nötig",
+      "communication_style": "klar, manchmal knapp, will keine langen Tool-Demos",
+      "risk_tolerance": "mittel bei frühen Varianten, niedrig bei Ausführungsplanung",
+      "character_notes": "wäre offen, wenn ein Tool ihr wirklich Zeit zurückgibt und sie nicht bloß zur Kontrolleurin macht"
+    },
+    "pain_points": [
+      "Variantenarbeit wirkt kreativ, ist aber oft repetitive Flächen- und Korrekturarbeit",
+      "Abstimmungsschleifen landen als verstreute PDF- und E-Mail-Hinweise",
+      "Neue Software wird oft von oben eingeführt und passt nicht zum Zeitdruck",
+      "Automatisch erzeugte Pläne müssen so gründlich geprüft werden, dass der Zeitgewinn fraglich wird"
+    ],
+    "success_criteria": [
+      "Schnelle, sichtbare Hilfe bei Varianten und Flächen ohne langen Setup",
+      "Nahtlose Rückgabe in Vectorworks/PDF-Workflow",
+      "Kontrollansichten, die zeigen, was geändert wurde",
+      "Nutzung auf einzelnen Projektabschnitten statt sofortiger Bürostandard"
+    ]
+  }
+}

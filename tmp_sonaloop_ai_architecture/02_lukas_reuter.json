@@ -1,0 +1,104 @@
+{
+  "description": "BIM-Koordinator in einem mittelgroßen deutschen Architekturbüro mit 65 Mitarbeitenden, arbeitet an Wohnungsbau, Schulen und Wettbewerben; verantwortet Revit/BIM-Standards, Kollisionsprüfung, Vorlagen, Modellqualität und Softwaretests, hat Einfluss auf Tool-Auswahl, aber Einkauf und Partner entscheiden mit.",
+  "segment_hint": "German architects - mid-size BIM/technology influencer",
+  "generate_avatar": false,
+  "profile": {
+    "display_name": "Lukas Reuter",
+    "identity_traits": {
+      "gender_presentation": "männlich",
+      "gender_confidence": "mittel",
+      "age_range": "35-44",
+      "appearance_notes": "ruhig, technisch orientiert, Brille, meist am zweiten Monitor mit Modellauswertungen",
+      "avatar_profile": "BIM-Koordinator in deutschem Architekturbüro, Revit-Modell und Prüfberichte auf Monitoren",
+      "avatar_constraints": "keine Science-Fiction-Darstellung, keine übertriebene KI-Ikonografie"
+    },
+    "segment": {
+      "name": "Mittelgroßes BIM-orientiertes Architekturbüro",
+      "market_role": "Technischer Gatekeeper und interner Multiplikator",
+      "bim_maturity": "hoch, aber uneinheitlich über Projektteams"
+    },
+    "demographics": {
+      "country": "Deutschland",
+      "region": "Hamburg",
+      "education": "Master Architektur, BIM-Zertifikatskurse",
+      "household": "unspecified"
+    },
+    "role": {
+      "title": "BIM-Koordinator",
+      "responsibilities": "BIM-Standards, Revit-Familien, Modellprüfung, Schulungen, Softwaretests, Abstimmung mit Fachplanern",
+      "seniority": "Senior Specialist ohne Geschäftsführungsrolle",
+      "decision_power": "mittel; kann Tools empfehlen oder blockieren, braucht Freigabe von Partnerkreis und IT"
+    },
+    "company_context": {
+      "industry": "Architektur, öffentliche und private Hochbauprojekte",
+      "size": "65 Mitarbeitende",
+      "stack": "Revit, Solibri/Navisworks, BIMcollab, Teams, SharePoint, AVA, IFC-Austausch",
+      "operating_model": "Projektteams mit zentralen Standards; hohe Koordinationslast bei öffentlichen Ausschreibungen und Fachplanerabstimmung"
+    },
+    "goals": [
+      "Modellqualität messbar verbessern, ohne Projektteams zu überfordern",
+      "Wiederholbare Standards statt individueller Workarounds etablieren",
+      "Kollisions- und Attributprobleme früher erkennen",
+      "Neue Tools nur einführen, wenn sie Standards respektieren"
+    ],
+    "constraints": [
+      "IT-Sicherheit und Datenschutzprüfung vor jeder Cloud-Lösung",
+      "Unterschiedliche Projektreife und Disziplin im Team",
+      "Öffentliche Auftraggeber verlangen nachvollziehbare Prozesse",
+      "Fachplaner liefern uneinheitliche IFC- und Revit-Daten"
+    ],
+    "tool_ids": [
+      "revit",
+      "solibri",
+      "navisworks",
+      "bimcollab",
+      "teams",
+      "sharepoint",
+      "ifc"
+    ],
+    "tools": [
+      "Revit",
+      "Solibri",
+      "Navisworks",
+      "BIMcollab",
+      "Microsoft Teams",
+      "SharePoint",
+      "IFC"
+    ],
+    "relationships": [
+      {
+        "name": "Projektleiterin Schulbau",
+        "type": "interne Auftraggeberin",
+        "friction": "will schnelle Modellkorrekturen, hält Standards aber für Bürokratie"
+      },
+      {
+        "name": "IT-Leiter",
+        "type": "interne Freigabe",
+        "friction": "fragt nach Datenstandort, SSO und Lizenzverwaltung, bevor ein Test startet"
+      },
+      {
+        "name": "TGA-Fachplaner",
+        "type": "externer Fachplaner",
+        "friction": "liefert Modelle mit abweichenden Attributen und späten Änderungen"
+      }
+    ],
+    "personality": {
+      "working_style": "systematisch, testet sauber, dokumentiert Findings",
+      "communication_style": "ruhig erklärend, bei wiederholten Standardbrüchen trocken",
+      "risk_tolerance": "mittel; testet gerne in Sandboxen, aber nicht direkt am Abgabemodell",
+      "character_notes": "mag Tools, wenn sie Datenqualität erhöhen; verliert Interesse bei Blackbox-Ausgaben"
+    },
+    "pain_points": [
+      "Projektteams empfinden BIM-Regeln als Zusatzlast",
+      "Viele Automatisierungstools scheitern an firmeneigenen Vorlagen",
+      "KI-Ausgaben ohne Parametrik oder Attributlogik sind für ihn schwer nutzbar",
+      "Lizenzmodelle pro Nutzer passen schlecht zu sporadischer Nutzung"
+    ],
+    "success_criteria": [
+      "API- oder Add-in-Integration in Revit mit kontrollierbaren Parametern",
+      "On-premise oder EU-Datenhaltung mit klarer Modell-Datentrennung",
+      "Regelprüfung und Änderungsprotokoll für generierte Geometrie",
+      "Pilot mit zwei realen Projekttypen und messbaren Modellqualitätskennzahlen"
+    ]
+  }
+}

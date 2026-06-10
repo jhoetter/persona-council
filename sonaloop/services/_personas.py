@@ -35,7 +35,9 @@ from ..models import (
     Synthesis,
 )
 from ..storage import Store
+from ..suggestions import suggest_tech_comfort
 from ..taxonomy import GENERIC_TOOLS, normalized_tool_ids, normalized_tools
+from .. import artifacts as _A
 from .. import memory as memory_mod
 from .. import evaluation as evaluation_mod
 from ..llm_simulation import (
@@ -90,6 +92,10 @@ def render_soul(persona: dict[str, Any], store: Store | None = None) -> str:
     ) or "- None yet."
     daily_reality = "\n".join(f"- {s['date']}: {s['mood']}; open loops: {', '.join(s['open_loops']) or 'none'}" for s in summaries) or "- Not simulated yet."
     relationships = "\n".join(f"- {r['name']} ({r['type']}): {r['friction']}" for r in persona["relationships"])
+    caps = capability_profile(persona)                                      # noqa: F821 (bound)
+    comfort = _A.resolve_tech_comfort(caps["tech_comfort"]) or {"value": 3, "label": "comfortable", "hint": ""}
+    rungs = caps.get("rungs") or {}
+    rung_line = " · ".join(f"{r}={'yes' if rungs.get(r) else 'no'}" for r in CAPABILITY_RUNGS)  # noqa: F821 (bound)
     return f"""# {persona['display_name']}
 
 ## Identity
@@ -110,6 +116,13 @@ This is not a real person. Treat all non-evidence-backed details as simulation a
 - Communication style: {persona['personality']['communication_style']}
 - Risk tolerance: {persona['personality']['risk_tolerance']}
 - Decision filter: {', '.join(persona['success_criteria'])}
+
+## Capabilities
+- Session rungs (fidelities this persona can be simulated at): {rung_line}
+- Tech comfort: {comfort['value']}/5 ({comfort['label']}) — {comfort['hint']}
+- Devices: {', '.join(caps.get('devices') or []) or 'unspecified'}
+- Accessibility: {caps.get('accessibility') or 'none noted'}
+- Profile provenance: {caps.get('provenance')}
 
 ## Daily Reality
 {daily_reality}
@@ -260,6 +273,18 @@ _PERSONA_AUTHORING_HINT = (
     "profile JSON it asks for -> persist with record_persona(description, profile)."
 )
 
+# The short capabilities ask appended to every persona-authoring brief: declare the profile
+# explicitly, or accept defaults + a deterministic heuristic derivation on read.
+_CAPABILITIES_BRIEF = (
+    "\n\nCapabilities (optional but encouraged): add a `capabilities` object to the profile JSON — "
+    "{rungs: {see, walk, drive, login} booleans (which session fidelities are plausible for this "
+    "person; login=true only if simulated credentials make sense), tech_comfort: 1-5 (the closed "
+    "vocabulary — see suggest_tech_comfort()), devices: ['desktop','mobile', …], accessibility: "
+    "free-text notes session briefs must surface, provenance: 'authored'}. Absent -> safe defaults "
+    "plus a deterministic profile derived from role/demographics on read (marked "
+    "provenance='derived')."
+)
+
 
 
 def brief_persona(description: str, segment_hint: str | None = None, evidence: str | None = None,
@@ -279,7 +304,9 @@ def brief_persona(description: str, segment_hint: str | None = None, evidence: s
         "description": description,
         "segment_hint": segment_hint,
         "has_evidence": bool(evidence),
-        "instructions": build_profile_prompt(description, segment_hint, evidence, language),
+        "instructions": build_profile_prompt(description, segment_hint, evidence, language)
+        + _CAPABILITIES_BRIEF,
+        "tech_comfort": suggest_tech_comfort(),
         "frame": {"description": description, "segment_hint": segment_hint, "evidence": evidence},
     }
 
@@ -299,6 +326,10 @@ def record_persona(
     now = utc_now_iso()
     validated = validate_profile_payload(profile)
     persona = _profile_to_persona_dict(description, validated, segment_hint, evidence, now)
+    if profile.get("capabilities") is not None:
+        # Declared capabilities are validated + normalized over the safe defaults; absent stays
+        # None so reads return the derived heuristic profile without rewriting the persona.
+        persona["capabilities"] = merge_capabilities(None, profile["capabilities"])  # noqa: F821 (bound)
     persona["soul"] = write_soul(persona, store)
     store.upsert_persona(persona, reason="record_persona (host-authored)")
     if evidence:
@@ -341,6 +372,9 @@ def get_persona(persona_id: str, store: Store | None = None) -> dict[str, Any]:
     if not persona:
         raise KeyError(f"Unknown persona: {persona_id}")
     persona = ensure_persona_runtime_fields(persona, store)
+    # The capability profile in effect — derived in the RETURNED dict only when the stored
+    # persona never declared one (the persona itself is not rewritten on read).
+    persona["capabilities"] = capability_profile(persona)                   # noqa: F821 (bound)
     return {
         "persona": persona,
         "calendar_events": store.list_calendar_events(persona["id"])[-10:],
@@ -373,7 +407,11 @@ def list_personas(filters: dict[str, Any] | None = None, store: Store | None = N
     if filters:
         needle = " ".join(str(v).lower() for v in filters.values() if v)
         personas = [p for p in personas if needle in json.dumps(p, ensure_ascii=False).lower()]
-    return [_persona_summary(p) for p in personas] if compact else personas
+    if compact:
+        return [_persona_summary(p) for p in personas]
+    for p in personas:                                  # the profile in effect (derived on read)
+        p["capabilities"] = capability_profile(p)       # noqa: F821 (bound)
+    return personas
 
 
 
@@ -382,6 +420,12 @@ def update_persona(persona_id: str, patch: dict[str, Any], reason: str, store: S
     persona = store.get_persona(persona_id)
     if not persona:
         raise KeyError(f"Unknown persona: {persona_id}")
+    if "capabilities" in patch:
+        # Capability patches are validated (shape + vocabulary) and merged onto the declared
+        # profile (else the safe defaults) into a FULL normalized profile, marked authored.
+        patch = {**patch,
+                 "capabilities": merge_capabilities(persona.get("capabilities"),  # noqa: F821 (bound)
+                                                    patch["capabilities"])}
     for key, value in patch.items():
         if isinstance(value, dict) and isinstance(persona.get(key), dict):
             persona[key].update(value)

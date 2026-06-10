@@ -85,6 +85,7 @@ from ..suggestions import (  # noqa: E402
     suggest_stances,
     suggest_finding_kinds,
     suggest_friction_levels,
+    suggest_tech_comfort,
 )
 from .. import plan as _plan  # noqa: E402
 from ..plan import (  # noqa: E402
