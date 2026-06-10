@@ -17,6 +17,8 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
+from pathlib import Path
 from typing import Any
 
 from .. import artifacts as _A
@@ -341,13 +343,22 @@ def export_survey(survey_id: str, post_url: str | None = None, out: str | None =
         "post_url": post_url or "", "labels": labels,
     }
     from ..prototypes import _esc
-    html = (tpl
-            .replace("__TITLE__", _esc(survey["title"]))
-            .replace("__SUMMARY__", _esc(survey.get("intro", "")))
-            .replace("__CONCEPT_JSON__", json.dumps(concept, ensure_ascii=False).replace("</", "<\\/"))
-            .replace("</body>", _FORM_RUNTIME + "\n</body>"))
+    # One-pass fill: sequential .replace() would re-scan already-substituted text, so a sentinel
+    # appearing INSIDE a value (a title literally named __CONCEPT_JSON__) could splice the concept
+    # JSON into an HTML text context.
+    fills = {"__TITLE__": _esc(survey["title"]),
+             "__SUMMARY__": _esc(survey.get("intro", "")),
+             "__CONCEPT_JSON__": json.dumps(concept, ensure_ascii=False).replace("</", "<\\/")}
+    html = re.sub(r"__(?:TITLE|SUMMARY|CONCEPT_JSON)__", lambda m: fills[m.group(0)], tpl)
+    html = html.replace("</body>", _FORM_RUNTIME + "\n</body>")
     from ..config import DATA_DIR
-    path = write_export(html, out or (DATA_DIR / "exports" / "surveys" / f"{survey['slug']}.html"))
+    data_root = DATA_DIR.resolve()
+    target = Path(out) if out else DATA_DIR / "exports" / "surveys" / f"{survey['slug']}.html"
+    if not target.is_absolute():
+        target = DATA_DIR / target
+    if not target.resolve().is_relative_to(data_root):
+        raise ValueError(f"export path escapes the data dir ({data_root}): {out!r}")
+    path = write_export(html, target)
     if survey.get("status") == "draft":
         survey["status"] = "open"
         survey["updated_at"] = utc_now_iso()
@@ -367,6 +378,8 @@ def _rows_from_csv(text: str, survey: dict[str, Any]) -> list[dict[str, Any]]:
     for rec in csv.DictReader(io.StringIO(text)):
         answers = []
         for k, v in rec.items():
+            if k is None:  # DictReader parks overflow fields of a ragged row under None
+                raise ValueError(f"CSV row has more fields than the header declares: {v!r}")
             if k in ("respondent_key", "submitted_at", "source") or v is None:
                 continue
             v = v.strip()
@@ -418,10 +431,14 @@ def _validate_response(raw: Any, i: int, survey: dict[str, Any], source: str) ->
                 raise ValueError(f"responses[{i}].answers[{j}]: {v!r} is not an option of "
                                  f"{q['id']} ({q['options']})")
         answers.append({"question_id": q["id"], "value": v})
-    submitted = str(raw.get("submitted_at") or "").strip() or utc_now_iso()
+    # Ids must derive only from what the BATCH carries — folding in a generated timestamp would
+    # mint fresh ids on every import and double-count the same rows (idempotency is the contract).
+    # Without respondent_key AND submitted_at, identical anonymous answer-sets collapse to one row.
+    submitted_raw = str(raw.get("submitted_at") or "").strip()
     rkey = str(raw.get("respondent_key") or "").strip() \
-        or stable_id("anon", survey["id"], json.dumps(answers, sort_keys=True), submitted)
-    rid = str(raw.get("id") or "") or stable_id("sresp", survey["id"], rkey, submitted)
+        or stable_id("anon", survey["id"], json.dumps(answers, sort_keys=True), submitted_raw)
+    rid = str(raw.get("id") or "") or stable_id("sresp", survey["id"], rkey, submitted_raw)
+    submitted = submitted_raw or utc_now_iso()
     return SurveyResponse(id=rid, survey_id=survey["id"], respondent_key=rkey,
                           submitted_at=submitted, answers=answers,
                           source=str(raw.get("source") or "").strip() or source,
@@ -435,8 +452,10 @@ def import_survey_responses(survey_id: str, responses: list | None = None,
     {respondent_key?, submitted_at?, answers: [{question_id, value}], source?, id?}) and/or a CSV
     (one column per question id; ';' separates multi-select options). Every answer is validated
     against the instrument (known question id, value within the options / non-empty text). Ids are
-    deterministic from (survey, respondent_key, submitted_at), so re-importing the same batch is
-    idempotent. `source` labels the batch on rows that don't carry their own."""
+    deterministic from what the batch itself carries — (survey, respondent_key, submitted_at), with
+    anonymous rows content-addressed by their answers — so re-importing the same batch is idempotent;
+    rows with neither respondent_key nor submitted_at collapse when their answers are identical.
+    `source` labels the batch on rows that don't carry their own."""
     store = store or Store()
     survey = _require_survey(store, survey_id)
     rows = list(responses or [])

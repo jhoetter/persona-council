@@ -370,3 +370,47 @@ def test_detail_page_renders_questions_chips_and_predicted_vs_actual(store):
     # list page + not-found stay honest
     assert "Retirement readiness" in client.get("/surveys?lang=en").text
     assert STRINGS["en"]["runtime_maybe_cleared"] in client.get("/surveys/nope?lang=en").text
+
+
+def test_csv_reimport_without_timestamps_is_idempotent(store):
+    proj = _project(store)
+    s = _record(store, proj["id"])
+    csv_text = ("respondent_key,q1,q3\n"
+                "p1,Bank savings,neutral\n"
+                "p2,Not at all,oppose\n")
+    first = services.import_survey_responses(s["id"], csv_text=csv_text, store=store)
+    assert first["total_responses"] == 2
+    again = services.import_survey_responses(s["id"], csv_text=csv_text, store=store)
+    assert again["total_responses"] == 2  # same batch, same ids — never double-counted
+
+
+def test_ragged_csv_row_is_a_clean_validation_error(store):
+    proj = _project(store)
+    s = _record(store, proj["id"])
+    ragged = "respondent_key,q1\np1,Bank savings,EXTRA\n"
+    with pytest.raises(ValueError, match="more fields"):
+        services.import_survey_responses(s["id"], csv_text=ragged, store=store)
+
+
+def test_export_out_path_must_stay_inside_the_data_dir(store, tmp_path, monkeypatch):
+    from sonaloop import config
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path / "data")
+    proj = _project(store)
+    s = _record(store, proj["id"])
+    with pytest.raises(ValueError, match="escapes the data dir"):
+        services.export_survey(s["id"], out=str(tmp_path / "evil.html"), store=store)
+    with pytest.raises(ValueError, match="escapes the data dir"):
+        services.export_survey(s["id"], out="../outside.html", store=store)
+
+
+def test_export_fills_sentinels_in_one_pass(store, tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from sonaloop import config
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    proj = _project(store)
+    s = _record(store, proj["id"], title="__CONCEPT_JSON__")
+    out = services.export_survey(s["id"], store=store)
+    html = Path(out["path"]).read_text(encoding="utf-8")
+    assert html.count('"post_url"') == 1  # the concept JSON lands exactly once, in its slot
+    assert ">__CONCEPT_JSON__<" in html   # the hostile title stays literal text in the heading
