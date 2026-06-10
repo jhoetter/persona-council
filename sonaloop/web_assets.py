@@ -155,6 +155,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
    still fills the viewport. */
 .outlinecard.ol-compact{flex:0 1 auto}
 .proj:has(.outlinecard.ol-compact){overflow-y:auto}
+/* hypotheses/decisions remain sections for now (pending their own outline-row treatment) but read
+   WITH the page, not as bolt-ons: the outline's centered measure + the quiet .sec heading idiom. */
+#hypotheses,#decisions{flex:none;width:100%;max-width:900px;margin:14px auto 0;padding:8px 24px 24px}
+#hypotheses>h2,#decisions>h2{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
 /* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
 .outline .olrow.rel{background:var(--accent-weak)}
