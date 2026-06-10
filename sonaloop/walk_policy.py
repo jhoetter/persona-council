@@ -11,6 +11,8 @@ evidence the replay can cite.
 from __future__ import annotations
 
 import json
+import re
+from functools import lru_cache
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -49,16 +51,28 @@ def resolve_denylist(categories: list[str] | None = None) -> dict[str, list[str]
     return out
 
 
+@lru_cache(maxsize=32)
+def _term_pattern(terms: tuple[str, ...]):
+    """One compiled WHOLE-WORD alternation per term tuple. \b is Unicode-aware, so DE
+    umlaut terms ("löschen") bound correctly; multi-word terms bound at both phrase ends."""
+    return re.compile(r"\b(?:" + "|".join(re.escape(t) for t in terms) + r")\b")
+
+
 def match_denylist(text: str, denylist: dict[str, list[str]]) -> dict[str, str] | None:
-    """First {category, term} whose term is a case-insensitive substring of the element's
-    accessible name/text — None when the action is allowed."""
+    """First {category, term} whose term matches the element's accessible name/text on WORD
+    BOUNDARIES, case-insensitive — None when the action is allowed. Whole-word, not substring
+    (ticket walk-denylist-match-whole-words): "share" must hit "Share with team", never the
+    "shared across React" in a benign description. Over-blocking stays the intended failure
+    direction — the fix is boundaries, not term removal."""
     low = (text or "").lower()
     if not low:
         return None
     for cat, terms in denylist.items():
-        for term in terms:
-            if term in low:
-                return {"category": cat, "term": term}
+        if not terms:
+            continue
+        m = _term_pattern(tuple(terms)).search(low)
+        if m:
+            return {"category": cat, "term": m.group(0)}
     return None
 
 

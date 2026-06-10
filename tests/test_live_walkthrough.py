@@ -130,6 +130,17 @@ def test_denylist_matching_is_case_insensitive_across_languages():
     assert walk_policy.match_denylist("Konto unwiderruflich LÖSCHEN", deny)["category"] == "destructive"
     assert walk_policy.match_denylist("Jetzt ABONNIEREN", deny)["category"] == "payment"
     assert walk_policy.match_denylist("Open settings", deny) is None
+    # Word boundaries, not substrings (ticket walk-denylist-match-whole-words): the demo
+    # regression — a benign description embedding a term must pass; real controls stay blocked.
+    assert walk_policy.match_denylist("UI blocks shared across React and SSR", deny) is None
+    assert walk_policy.match_denylist("Share", deny)["term"] == "share"
+    assert walk_policy.match_denylist("Share with team", deny)["category"] == "outbound"
+    assert walk_policy.match_denylist("newsletter sender preferences", deny) is None
+    assert walk_policy.match_denylist("Send", deny)["term"] == "send"
+    assert walk_policy.match_denylist("Payment plan docs", deny)["term"] == "payment"
+    assert walk_policy.match_denylist("Verkaufen lernen — Kursübersicht", deny) is None  # 'kaufen' embedded
+    assert walk_policy.match_denylist("Jetzt kaufen", deny)["category"] == "payment"
+    assert walk_policy.match_denylist("Cache löschen", deny)["category"] == "destructive"  # DE umlaut bounds
 
 
 def test_subject_url_scheme_hardening(store):
