@@ -131,6 +131,11 @@ Core MCP tools:
   `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
   `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
   `hooks-list`, `hook-test`, `hook-remove`.
+- Selective live actuation, rung 2 (docs/selective-live-actuation.md): `walk_own`
+  (prototype_id → localhost, or a SONALOOP_OWNED_ORIGINS staging url; origin-locked,
+  caps clamped to 40 actions / 300s; fail-soft without the browser) →
+  `record_actuation_gate` (the rung-1-vs-rung-2 evidence head-to-head, persisted; live
+  must WIN before it becomes a default anywhere).
 - Screenshot flows — walkthrough with drop-off, artifact-first (docs/flow-walkthrough.md):
   attach the screens as assets → `define_flow(project, title, steps=[{asset_id}])` →
   `brief_flow_walkthrough` (view_asset every screen, author the timeline, dropoff_step +

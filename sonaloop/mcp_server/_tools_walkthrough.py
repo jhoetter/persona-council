@@ -41,3 +41,24 @@ def register_walkthrough(mcp):
         t = time.perf_counter()
         return _env("walk_open",
                     services.walk_open(url, persona_id, policy, credentials, project_id), t)
+
+    @mcp.tool()
+    def walk_own(persona_id: str, prototype_id: str | None = None, url: str | None = None,
+                 policy: dict[str, Any] | None = None, project_id: str | None = None) -> dict[str, Any]:
+        """Rung 2 — drive a live surface WE OWN: pass `prototype_id` (the scaffolded app is
+        started on localhost) or a loopback/declared-staging `url` (SONALOOP_OWNED_ORIGINS).
+        Tighter caps than walk_open; anything not owned is refused (that's rung 3). Fail-soft:
+        without the browser harness you get a structured fallback to the artifact walkthrough."""
+        t = time.perf_counter()
+        return _env("walk_own", services.walk_own(persona_id, prototype_id, url, policy, project_id), t)
+
+    @mcp.tool()
+    def record_actuation_gate(project_id: str, artifact_session_id: str, live_session_id: str,
+                              note: str = "") -> dict[str, Any]:
+        """The fidelity-vs-theater head-to-head: compare a rung-1 artifact walkthrough against a
+        rung-2 live drive of the SAME flow on derived evidence-quality dimensions; the verdict is
+        mechanical and persists as an eval_report. Rung 2 earns default status only by winning."""
+        t = time.perf_counter()
+        return _env("record_actuation_gate",
+                    services.record_actuation_gate(project_id, artifact_session_id, live_session_id, note), t)
+

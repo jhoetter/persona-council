@@ -77,6 +77,8 @@ _NEXT: dict[str, dict[str, Any]] = {
     # --- live walkthroughs (rung 3: policy-guarded real-SaaS sessions; one harness with proto_*) ---
     "walk_policy_defaults": {"name": "walk_open", "reason": "open the live walkthrough under the (possibly tweaked) safety policy"},
     "walk_open": {"name": "proto_act", "reason": "drive the live app on snapshot refs — policy refusals come back structured, never as crashes"},
+    "walk_own": {"name": "proto_act", "reason": "drive the owned surface on snapshot refs; record with fidelity='live' + session_id so states verify"},
+    "record_actuation_gate": {"name": "flow_funnel", "reason": "the gate is recorded — fold the winning rung's sessions into the funnel"},
     # --- usability sessions (the durable, replayable trace) ---
     "brief_usability_session": {"name": "record_usability_session", "reason": "author the per-step dual timeline, then persist the replayable trace"},
     "suggest_friction_levels": {"name": "record_usability_session", "reason": "author every step's friction with the canonical levels, then persist"},
