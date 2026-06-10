@@ -81,6 +81,7 @@ from . import _evaluation
 from . import _snapshots
 from . import _councils
 from . import _artifacts_service
+from . import _project_assets
 from . import _head_to_head
 from . import _red_team
 from . import _coverage
@@ -94,7 +95,7 @@ from . import _sections
 
 _SUBMODULES = (
     _common, _hooks, _capabilities, _personas, _simulation, _consolidation, _memory, _evaluation,
-    _snapshots, _councils, _artifacts_service, _head_to_head, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _usability_sessions, _sections,
+    _snapshots, _councils, _artifacts_service, _project_assets, _head_to_head, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _usability_sessions, _sections,
 )
 
 

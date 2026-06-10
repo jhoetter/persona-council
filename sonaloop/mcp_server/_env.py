@@ -78,6 +78,10 @@ _NEXT: dict[str, dict[str, Any]] = {
     # --- lifecycle hooks (docs/lifecycle-hooks.md) ---
     "list_lifecycle_events": {"name": "register_hook", "reason": "subscribe a command/webhook to the event you picked"},
     "register_hook": {"name": "test_hook", "reason": "fire a sample envelope through the new hook to verify delivery"},
+    # --- project assets: files/images/screenshots as evidence (docs/project-assets.md) ---
+    "attach_asset": {"name": "view_asset", "reason": "look at what you just attached (images render as pixels) before citing it"},
+    "attach_prototype_shot": {"name": "view_asset", "reason": "look at the captured shot before citing it"},
+    "view_asset": {"name": "brief_council", "reason": "the evidence is in the room — councils ground reactions in it automatically"},
 }
 
 

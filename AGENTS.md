@@ -131,6 +131,11 @@ Core MCP tools:
   `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
   `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
   `hooks-list`, `hook-test`, `hook-remove`.
+- Project assets — files/images/screenshots as evidence (docs/project-assets.md):
+  `attach_asset` (path or base64) → `view_asset` (images return as REAL pixels — look
+  before citing), `attach_prototype_shot`, `list_assets`, `get_asset`, `remove_asset`.
+  brief_council puts every project asset in the room automatically. CLI: `asset-attach`,
+  `asset-list`, `asset-get`, `asset-remove`.
 
 Memory & multi-resolution simulation (gather → author → write-back):
 

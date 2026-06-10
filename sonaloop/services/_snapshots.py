@@ -126,6 +126,20 @@ def export_snapshot(out_dir: str | None = None, store: Store | None = None) -> d
     for syn in syns:
         _w(base / "syntheses" / f"{syn['id']}.json", syn)
     counts["syntheses"] = len(syns)
+    # Research projects ride the snapshot too — they own the artifacts + the evidence
+    # assets (ticket attach-evidence-files-mcp: "assets persist in the snapshot").
+    # Asset binaries are copied alongside so the round-trip restores citable evidence.
+    projects = store.list_research_projects()
+    counts["projects"] = len(projects)
+    counts["assets"] = 0
+    for pr in projects:
+        _w(base / "projects" / f"{pr['id']}.json", pr)
+        for a in pr.get("assets", []):
+            src = ROOT / a["asset_path"]
+            if src.exists():
+                (base / "assets").mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(src, base / "assets" / src.name)
+                counts["assets"] += 1
     _w(base / "manifest.json", {
         "generated_at": utc_now_iso(), "schema_version": store.schema_version(),
         "counts": counts, "personas": index,
@@ -214,6 +228,18 @@ def import_snapshot(in_dir: str | None = None, store: Store | None = None, embed
         for sf in sorted(sdir.glob("*.json")):
             store.upsert_synthesis(_load(sf, None))
             counts["syntheses"] = counts.get("syntheses", 0) + 1
+    prdir = base / "projects"
+    if prdir.exists():
+        for pf in sorted(prdir.glob("*.json")):
+            store.upsert_research_project(_load(pf, None))
+            counts["projects"] = counts.get("projects", 0) + 1
+    adir = base / "assets"
+    if adir.exists():
+        dest_dir = ROOT / "data" / "assets"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        for af in sorted(adir.glob("*")):
+            shutil.copyfile(af, dest_dir / af.name)
+            counts["assets"] = counts.get("assets", 0) + 1
     store.commit()
 
     embedded = {}

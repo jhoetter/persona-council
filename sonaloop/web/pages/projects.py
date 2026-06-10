@@ -112,6 +112,28 @@ def register_projects(app) -> None:
                                h("span", {"class_": "muted small"}, raw(cap_icon), " ", cap_txt)))
             arts_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("artifacts_h")} ({len(arts)})'),
                                  fragment(*arows))
+        # Evidence assets: files/images/screenshots attached via MCP (ticket attach-evidence-files-mcp).
+        # Read-only, like everything here; image assets render a thumbnail from the static /data mount.
+        assets = graph.get("assets") or []
+        assets_html = ""
+        if assets:
+            asrows = []
+            for a in assets:
+                is_img = a.get("kind") in ("image", "screenshot")
+                thumb = (h("a", {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"},
+                           h("img", {"src": a.get("url", ""), "alt": a.get("title", ""), "loading": "lazy",
+                                     "style": "max-height:64px;max-width:120px;border-radius:6px;display:block"}))
+                         if is_img else raw(_icon("external")))
+                size_kb = f'{max(1, int(a.get("bytes", 0)) // 1024)} KB'
+                asrows.append(h("div", {"class_": "strow"},
+                               thumb, " ",
+                               h("a", {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"},
+                                 h("b", {}, a.get("title") or a.get("filename", ""))), " ",
+                               h("span", {"class_": "pill"}, t("asset_kind_" + (a.get("kind") or "file"))), " ",
+                               h("span", {"class_": "muted small"}, f'{a.get("filename", "")} · {size_kb}'
+                                 + (f' · {a.get("notes")}' if a.get("notes") else ""))))
+            assets_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("assets_h")} ({len(assets)})'),
+                                   fragment(*asrows))
         # Sections outline (methodology-independent groupings) — a navigable list in the panel.
         from ... import presentation as _pres
         secs = sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0))
@@ -179,7 +201,7 @@ def register_projects(app) -> None:
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("build_order_h")} (edges)'),
                   h("div", {"class_": "pills", "style": "margin:6px 0 14px"}, edge_leg), sec_html,
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("open_questions_h")),
-                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html, arts_html)
+                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html, arts_html, assets_html)
         oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"
                  "p=document.getElementById('oqpanel');if(!b||!p)return;"
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"

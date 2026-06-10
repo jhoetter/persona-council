@@ -49,6 +49,11 @@ LIFECYCLE_EVENTS: dict[str, dict[str, Any]] = {
         "description": "A real-world source (doc/url/note) was attached to a persona.",
         "payload": {"persona_id": "id", "evidence_id": "id", "source_type": "doc|url|user_note|…"},
     },
+    "asset.attached": {
+        "description": "A file/image/screenshot was attached to a project as evidence.",
+        "payload": {"project_id": "id", "asset_id": "id", "kind": "image|screenshot|document|file",
+                    "filename": "name"},
+    },
     "day.recorded": {
         "description": "One simulated day was persisted (calendar + experience + summary).",
         "payload": {"persona_id": "id", "date": "YYYY-MM-DD", "events": "experience-event count"},

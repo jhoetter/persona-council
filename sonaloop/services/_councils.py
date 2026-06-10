@@ -95,6 +95,11 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
     # react to the REAL thing (this is the heart of the artifacts-into-council ticket).
     artifact_briefs = council_artifact_briefs(project["id"], artifact_ids, store=store)
     artifacts_context = render_artifacts_context(artifact_briefs)
+    # Evidence assets in the room: every file/image/screenshot attached to the project rides along —
+    # image assets tell the HOST to view_asset them first (ticket attach-evidence-files-mcp).
+    asset_briefs = project_asset_briefs(project["id"], store=store)
+    assets_context = render_assets_context(asset_briefs)
+    artifacts_context = "\n\n".join(filter(None, [artifacts_context, assets_context]))
     language = ensure_content_language(" ".join(filter(None, [prompt, context])))
     if not persona_ids:
         personas = list_personas(filters, store)
@@ -109,7 +114,7 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
         return {
             "schema": "council_selection", "language": language, "project_id": project["id"], "prompt": prompt,
             "count": min(max(1, count), len(candidates)) if candidates else 0,
-            "candidate_personas": candidates, "artifacts": artifact_briefs,
+            "candidate_personas": candidates, "artifacts": artifact_briefs, "assets": asset_briefs,
             "instructions": (
                 "Select the personas whose lived contexts produce useful, honest contrast on this "
                 "prompt (never bias toward support; do not invent IDs). Then call brief_council again "
@@ -137,12 +142,15 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
     return {
         "schema": "council", "language": language, "project_id": project["id"], "prompt": prompt,
         "external_context": context, "participants": participants,
-        "artifacts": artifact_briefs, "artifacts_context": artifacts_context,
+        "artifacts": artifact_briefs, "assets": asset_briefs, "artifacts_context": artifacts_context,
         "instructions": (
+            ("EVIDENCE ASSETS ARE IN THE ROOM: view_asset every image asset and read every document "
+             "excerpt BEFORE authoring reactions — ground statements in the real material and cite "
+             "asset ids in refs.\n" if asset_briefs else "") +
             ("ARTIFACTS ARE IN THE ROOM: each participant's agent_context ends with the CAPTURED "
              "artifact(s) (a live URL/website, a prototype link, or labelled A/B variants). Ground every "
              "statement in what is ACTUALLY there — quote the captured copy, don't invent unseen content; "
-             "with two+ variants, name which wins for whom and why.\n" if artifacts_context else "") +
+             "with two+ variants, name which wins for whom and why.\n" if artifact_briefs else "") +
             "Run this council in the shape the task calls for (the UI derives the mode):\n"
             "• DISCOVERY (default for early research): pass `questions` = the OPEN, conversational "
             "user-research questions you ask. Author ONE `statement` per (persona, question) — that "

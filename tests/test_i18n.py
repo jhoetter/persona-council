@@ -131,7 +131,7 @@ def test_every_vocabulary_label_key_is_defined_in_every_language():
 # this list for stored data: resolve a vocabulary `label_key` instead (parity-tested above).
 _WEB_DYN_PREFIX_ALLOWLIST = {
     "h2h_decisive_", "rt_sev_", "council_kicker_", "council_mode_",
-    "artifact_kind_", "coverage_level_",
+    "artifact_kind_", "coverage_level_", "asset_kind_",
     # session replay: both bounded by the recorder's code enums (services._usability_sessions
     # _FIDELITIES / _ACTION_TYPES, validated on record) and membership-guarded at the call site.
     "fidelity_", "action_",
