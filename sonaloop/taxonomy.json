@@ -64,6 +64,37 @@
         "min_personas": 4,
         "persona_axes": ["willingness-to-pay", "budget-authority", "current-alternative"],
         "note": "Span low-to-high willingness-to-pay and include the budget holder; a head-to-head on price points plus a red-team of the value story exposes the sensitivity curve."
+      },
+      "protocol": {
+        "name": "Willingness-to-pay ladder",
+        "summary": "Van-Westendorp-style price ladder: a fixed ascending ladder of price points, each persona reacting to EVERY point with one of four anchor bands (too_cheap / bargain / getting_expensive / too_expensive) grounded in their profile budget/constraints; the server derives the acceptable-price range and the cliff point per segment; tier comparisons reuse head_to_head with price as variant metadata.",
+        "steps": [
+          {
+            "id": "ladder_up_front",
+            "rule": "The ladder — at least two ascending price points — is fixed BEFORE any persona reacts; a changed ladder is a new run.",
+            "tooling": "brief_price_ladder / record_price_ladder price_points=[{label, amount}]"
+          },
+          {
+            "id": "anchor_band_reactions",
+            "rule": "Each persona reacts to EACH price point with exactly ONE anchor band — too_cheap (suspiciously cheap), bargain, getting_expensive, too_expensive — plus a short grounding quote; off-vocabulary bands are rejected.",
+            "tooling": "record_price_ladder responses=[{persona_id, price, band, quote}]"
+          },
+          {
+            "id": "grounded_in_profile",
+            "rule": "Reactions are grounded in the persona's budget, authority and constraints from agent_context — quote them, never invent a wallet.",
+            "tooling": "brief_price_ladder participants[].agent_context (profile + budget signals folded in)"
+          },
+          {
+            "id": "range_and_cliffs",
+            "rule": "The server derives the acceptable-price range (where a majority sits in bargain/getting_expensive) and the cliff point (the largest acceptance drop between adjacent rungs) — overall AND per segment; the host argues the pricing story.",
+            "tooling": "price_ladder.result (server-derived) + services.price_ladder_analysis(session_id)"
+          },
+          {
+            "id": "tier_head_to_head",
+            "rule": "Tier/packaging comparisons are a HEAD-TO-HEAD with price as variant metadata, not a second ladder — the ladder finds the range, the head-to-head picks the tier.",
+            "tooling": "record_head_to_head variant_meta.variants={label: {id, price}}"
+          }
+        ]
       }
     },
     {

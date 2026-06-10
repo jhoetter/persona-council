@@ -157,6 +157,54 @@ def register_council(mcp):
         t = time.perf_counter()
         return _env("get_head_to_head", services.get_head_to_head(session_id), t)
 
+    # ================= Price Ladder (pricing Job protocol) =================
+    @mcp.tool()
+    def brief_price_ladder(project_id: str, prompt: str, price_points: list[Any],
+                           persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None,
+                           count: int = 4, context: str | None = None) -> dict[str, Any]:
+        """Gather a PRICE LADDER (pricing Job protocol — willingness-to-pay): a FIXED ascending ladder of
+        price points every persona reacts to, one van-Westendorp anchor band per rung (too_cheap | bargain |
+        getting_expensive | too_expensive), grounded in the persona's profile budget/constraints.
+        `price_points` are numbers, price strings ('$29/mo') or {label, amount}. Without persona_ids:
+        returns a candidate panel — span willingness-to-pay and include the budget holder. With
+        persona_ids: returns each participant's loaded context with the ladder folded in; author one
+        banded reaction + grounding quote per persona per rung, then call record_price_ladder."""
+        t = time.perf_counter()
+        return _env("brief_price_ladder", services.brief_price_ladder(project_id, prompt, price_points, persona_ids, filters, count, context), t)
+
+    @mcp.tool()
+    def record_price_ladder(project_id: str, prompt: str, price_points: list[Any],
+                            responses: list[dict[str, Any]] | None = None,
+                            persona_ids: list[str] | None = None, statements: list[dict[str, Any]] | None = None,
+                            summary: str = "", exec_summary: str = "", selection_reason: str = "",
+                            findings: list[dict[str, Any]] | None = None, key: str | None = None) -> dict[str, Any]:
+        """Persist a host-authored PRICE LADDER (stored as a CouncilSession with a `price_ladder` block).
+        `responses` is the structured willingness-to-pay payload — one row per persona per rung:
+        {persona_id, price (rung label or amount), band (too_cheap|bargain|getting_expensive|too_expensive
+        — closed vocabulary, off-scale rejected), quote (the persona's words, grounded in their
+        budget/constraints)}. The SERVER deterministically derives acceptance per rung, the
+        acceptable-price range and the cliff point — overall AND per segment — you author the pricing
+        story in exec_summary/summary. Tier comparisons reuse record_head_to_head with price as
+        variant_meta. Pass a stable `key` for a deterministic id (idempotent upsert)."""
+        t = time.perf_counter()
+        return _env("record_price_ladder", services.record_price_ladder(project_id, prompt, price_points, responses, persona_ids, statements, summary, exec_summary, selection_reason, findings, key), t)
+
+    @mcp.tool()
+    def get_price_ladder(session_id: str) -> dict[str, Any]:
+        """Fetch one price-ladder result by session id — the ladder, the raw per-persona/per-rung banded
+        responses (persona, price point, band, quote) and the derived result (acceptance per rung,
+        acceptable range + cliff, overall and per segment)."""
+        t = time.perf_counter()
+        return _env("get_price_ladder", services.get_price_ladder(session_id), t)
+
+    @mcp.tool()
+    def price_ladder_analysis(session_id: str) -> dict[str, Any]:
+        """The analytics shape of a recorded price ladder: acceptable-price range + cliff points, overall
+        and one row per segment (pricing protocol step range_and_cliffs) — the deterministic numbers the
+        host's pricing story stands on."""
+        t = time.perf_counter()
+        return _env("price_ladder_analysis", services.price_ladder_analysis(session_id), t)
+
     # ================= Red-Team (falsification Format) =================
     @mcp.tool()
     def brief_red_team(project_id: str, prompt: str, persona_ids: list[str] | None = None,

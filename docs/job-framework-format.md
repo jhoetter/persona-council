@@ -145,6 +145,36 @@ The `head_to_head` Format persists all of this on the recorded session
 stays **backward-compatible**: recordings made before the metadata existed still load, and
 `segmented_verdict` derives per-segment margins from their stored tallies.
 
+### Pricing (`pricing`) — willingness-to-pay ladder
+
+> *What should I charge, and where does price sensitivity break?*
+
+The pricing Job carries a van-Westendorp-style **price-ladder** protocol
+(`taxonomy.json` → `jobs[pricing].protocol`):
+
+1. **`ladder_up_front`** — a fixed ascending ladder of ≥ 2 price points
+   (`brief_price_ladder` / `record_price_ladder`, `price_points=[{label, amount}]` or plain
+   `"$29/mo"` strings); a changed ladder is a new run.
+2. **`anchor_band_reactions`** — each persona reacts to EACH rung with exactly one anchor
+   band: `too_cheap` (suspiciously cheap) / `bargain` / `getting_expensive` /
+   `too_expensive`, plus a short grounding quote. The vocabulary is closed — an
+   off-vocabulary band is rejected, never coerced.
+3. **`grounded_in_profile`** — reactions quote the persona's budget, authority and
+   constraints from their loaded `agent_context`; the host never invents a wallet.
+4. **`range_and_cliffs`** — the server derives, deterministically: acceptance per rung
+   (share in `bargain`/`getting_expensive`), the **acceptable-price range** (lowest→highest
+   rung with majority acceptance) and the **cliff point** (largest acceptance drop between
+   adjacent rungs) — overall and **per segment**
+   (`price_ladder.result` + `services.price_ladder_analysis(session_id)`).
+5. **`tier_head_to_head`** — tier/packaging comparisons reuse the `head_to_head` Format with
+   price as variant metadata (`variant_meta.variants={label: {id, price}}`); the ladder finds
+   the range, the head-to-head picks the tier.
+
+Storage follows the head-to-head pattern: a recorded ladder IS a CouncilSession carrying a
+`price_ladder` block — the ladder, the raw structured responses (persona, price point, band,
+quote — queryable for analytics) and the derived result — plus a finding of kind
+`price_ladder`. No new table.
+
 ## How to consume it
 
 ```python
