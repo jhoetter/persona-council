@@ -43,7 +43,7 @@ _RENDER: dict[str, Callable[[dict, list], str]] = {
     "gauge": lambda fig, s: _C.gauge_chart(s),
     "dot_plot": lambda fig, s: _C.dot_plot_chart(s),
     "heatmap": lambda fig, s: _C.heatmap_chart(_columns(fig), s),
-    "line": lambda fig, s: _C.line_chart(s, labels=_labels(fig)),
+    "line": lambda fig, s: _C.line_chart(s, labels=_labels(fig), target=_maybe_num(fig.get("target"))),
     "burnup": lambda fig, s: _C.burnup_chart(s, labels=_labels(fig), target=_maybe_num(fig.get("target")),
                                              now=_maybe_num(fig.get("now"))),
     "stacked_area": lambda fig, s: _C.stacked_area_chart(s, labels=_labels(fig)),
@@ -80,8 +80,10 @@ CHART_KINDS: list[dict[str, Any]] = [
      "when_to_use": "A 2D scoring matrix — option × criteria, or persona × theme; cells tinted by value.",
      "series": "[{label, values: [num]}]", "figure": "columns: [str]  (the column headers)"},
     {"of": "line", "name": "Line / trend",
-     "when_to_use": "A trend across an ordered sequence (e.g. confidence across council rounds).",
-     "series": "[{label, points: [num], color?}]", "figure": "labels: [str]  (x-axis ticks)"},
+     "when_to_use": "A trend across an ordered sequence (e.g. confidence across council rounds); "
+                    "a single series gets a soft band fill.",
+     "series": "[{label, points: [num], color?}]",
+     "figure": "labels: [str] (x-axis ticks) · target: num (dotted reference line)"},
     {"of": "stats", "name": "Stats / KPI row",
      "when_to_use": "Headline metrics as big-number tiles (N personas · % agreement · mean confidence) — "
                     "also the stat header above a burnup.",

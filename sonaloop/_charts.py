@@ -67,6 +67,12 @@ def _title(title: str) -> str:
     return f'<div class="sl-chart__title">{_md(title)}</div>' if title else ""
 
 
+def _grid(w: int, h: int) -> str:
+    """Quarter-height hairline gridlines for the SVG charts (line/burnup/stacked area)."""
+    return "".join(f'<line class="sl-line__grid" x1="0" y1="{h * q:.1f}" x2="{w}" y2="{h * q:.1f}"></line>'
+                   for q in (0.25, 0.5, 0.75))
+
+
 def bar_chart(items: Sequence[dict], *, title: str = "", max_value: float | None = None,
               show_values: bool = True) -> str:
     """Horizontal labelled bars. items: [{label, value, color?}]. Returns "" when nothing is scored."""
@@ -279,14 +285,18 @@ def dot_plot_chart(items: Sequence[dict], *, title: str = "", min_value: float =
 
 def line_chart(series: Sequence[dict], *, title: str = "", labels: Sequence[str] | None = None,
                min_value: float | None = None, max_value: float | None = None,
-               show_dots: bool = True) -> str:
+               show_dots: bool = True, target: Any = None) -> str:
     """Trend over time — a static inline-SVG polyline per series. series: [{label, points: [num], color?}];
-    optional `labels` for the x axis. The one chart that needs SVG (still print-safe). "" when empty."""
+    optional `labels` for the x axis, optional `target` for a dotted horizontal reference line.
+    A single series gets a soft band fill (multi-series stays clean). "" when empty."""
     lines = [s for s in series if isinstance(s.get("points"), (list, tuple))
              and len([p for p in s["points"] if _num(p) is not None]) > 1]
     if not lines:
         return ""
+    tgt = _num(target)
     allv = [_num(p) for s in lines for p in s["points"] if _num(p) is not None]
+    if tgt is not None:
+        allv.append(tgt)
     mn = min_value if min_value is not None else min(allv)
     mx = max_value if max_value is not None else max(allv)
     span = (mx - mn) or 1
@@ -296,14 +306,19 @@ def line_chart(series: Sequence[dict], *, title: str = "", labels: Sequence[str]
         return [((i / (len(pts) - 1)) * w, h - (v - mn) / span * h) for i, v in enumerate(pts)]
 
     paths = []
+    if tgt is not None:
+        y = h - (tgt - mn) / span * h
+        paths.append(f'<line class="sl-line__ref" x1="0" y1="{y:.2f}" x2="{w}" y2="{y:.2f}"></line>')
     for i, s in enumerate(lines):
         pts = xy([_num(p) for p in s["points"] if _num(p) is not None])
         c = s.get("color") or _SERIES[i % len(_SERIES)]
         poly = " ".join(f"{x:.2f},{y:.2f}" for x, y in pts)
+        area = (f'<polygon class="sl-line__area" points="0,{h} {poly} {pts[-1][0]:.2f},{h}"></polygon>'
+                if len(lines) == 1 else "")
         dots = ("".join(f'<circle class="sl-line__dot" cx="{x:.2f}" cy="{y:.2f}" r="1.4"></circle>'
                         for x, y in pts) if show_dots else "")
-        paths.append(f'<g style="--c:{c}"><polyline class="sl-line__path" points="{poly}"></polyline>{dots}</g>')
-    svg = (f'<svg viewBox="0 0 {w} {h}" role="img">'
+        paths.append(f'<g style="--c:{c}">{area}<polyline class="sl-line__path" points="{poly}"></polyline>{dots}</g>')
+    svg = (f'<svg viewBox="0 0 {w} {h}" role="img">{_grid(w, h)}'
            f'<line class="sl-line__axis" x1="0" y1="{h}" x2="{w}" y2="{h}"></line>{"".join(paths)}</svg>')
     labs = ('<div class="sl-line__labels">'
             + "".join(f"<span>{_esc(lab)}</span>" for lab in labels) + "</div>") if labels else ""
@@ -417,7 +432,7 @@ def burnup_chart(series: Sequence[dict], *, title: str = "", labels: Sequence[st
     if now_i is not None and n > 1:
         x_now = max(0.0, min(float(w), now_i / (n - 1) * w))
         parts.append(f'<line class="sl-line__now" x1="{x_now:.2f}" y1="0" x2="{x_now:.2f}" y2="{h}"></line>')
-    svg = (f'<svg viewBox="0 0 {w} {h}" role="img">'
+    svg = (f'<svg viewBox="0 0 {w} {h}" role="img">{_grid(w, h)}'
            f'<line class="sl-line__axis" x1="0" y1="{h}" x2="{w}" y2="{h}"></line>{"".join(parts)}</svg>')
     labs = ('<div class="sl-line__labels">'
             + "".join(f"<span>{_esc(lab)}</span>" for lab in labels) + "</div>") if labels else ""
@@ -464,7 +479,7 @@ def stacked_area_chart(series: Sequence[dict], *, title: str = "", labels: Seque
         parts.append(f'<g style="--c:{c}"><polygon class="sl-area__band" points="{upper} {lower}"></polygon>'
                      f'<polyline class="sl-area__edge" points="{upper}"></polyline></g>')
         prev = top
-    svg = (f'<svg viewBox="0 0 {w} {h}" role="img">'
+    svg = (f'<svg viewBox="0 0 {w} {h}" role="img">{_grid(w, h)}'
            f'<line class="sl-line__axis" x1="0" y1="{h}" x2="{w}" y2="{h}"></line>{"".join(parts)}</svg>')
     labs = ('<div class="sl-line__labels">'
             + "".join(f"<span>{_esc(lab)}</span>" for lab in labels) + "</div>") if labels else ""

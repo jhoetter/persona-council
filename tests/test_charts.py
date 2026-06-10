@@ -427,3 +427,12 @@ def test_pptx_export_renders_linear_wave_chart_kinds(store):
     assert sum(_has_chart(sh) for sl in prs.slides for sh in sl.shapes) >= 2  # native burnup-line + area
     texts = " ".join(sh.text_frame.text for sl in prs.slides for sh in sl.shapes if sh.has_text_frame)
     assert "72%" in texts and "Personas" in texts  # the stats tiles made it into the deck
+
+
+def test_line_chart_target_reference_reaches_render(store):
+    """The aesthetics pass: a plain line figure can carry target= for a dotted reference line."""
+    html = render_report(_report_with_figures([
+        {"kind": "chart", "of": "line", "target": 7, "labels": ["R1", "R2", "R3"],
+         "series": [{"label": "Conf", "points": [2, 4, 6]}]},
+    ]), store)
+    assert "sl-line__ref" in html and "sl-line__grid" in html and "sl-line__area" in html
