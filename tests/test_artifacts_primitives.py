@@ -34,7 +34,35 @@ def test_stance_alias_resolution_covers_legacy_vocab():
         assert A.resolve_stance(token)["value"] == val, token
     assert A.resolve_stance(2)["value"] == 2                 # numeric passthrough
     assert A.resolve_stance("")  is None                     # empty → None
-    assert A.resolve_stance("totally-unknown")["value"] == 0  # unknown → neutral fallback
+    unknown = A.resolve_stance("totally-unknown")            # unknown → neutral VALUE, raw kept (visible)
+    assert unknown == {"value": 0, "label": "neutral", "label_raw": "totally-unknown"}
+
+
+def test_validate_stance_dict_path_canonicalizes_free_labels():
+    # the host-authored dict path ({value, label}) resolves the label through the alias map —
+    # no free label survives the validator (the `stance_mixed` inspector-chip bug)
+    assert A.validate_stance({"value": 1, "label": "mixed"}) == {"value": 1, "label": "conditional"}
+    # label/value disagreement → the explicit value wins for the canonical term
+    assert A.validate_stance({"value": 2, "label": "mixed"}) == {"value": 2, "label": "support"}
+    # unknown label → value decides, raw token preserved on the stance dict
+    st = A.validate_stance({"value": -1, "label": "kinda meh"})
+    assert st == {"value": -1, "label": "skeptical", "label_raw": "kinda meh"}
+    assert A.validate_stance(st) == st                       # re-validation is idempotent (read-normalizer)
+    # already-canonical stored records read back unchanged
+    assert A.validate_stance({"value": 1, "label": "conditional"}) == {"value": 1, "label": "conditional"}
+
+
+def test_stance_display_labels_round_trip_via_aliases():
+    # echoing the system's own EN/DE display labels (web/_i18n.py stance_*) must not corrupt the scale —
+    # the labels are read from i18n so the aliases can never drift from what the UI shows
+    from sonaloop.web._i18n import STRINGS
+    expect = {"stance_support": 2, "stance_positive": 2, "stance_conditional": 1, "stance_neutral": 0,
+              "stance_skeptical": -1, "stance_oppose": -2}
+    for lang in ("en", "de"):
+        for key, val in expect.items():
+            st = A.validate_stance(STRINGS[lang][key])
+            assert st["value"] == val and "label_raw" not in st, (lang, key)
+    assert A.resolve_stance("  skeptical / OPPOSED ")["value"] == -1   # case/whitespace-insensitive lookup
 
 
 def test_stance_meta_is_data_driven():

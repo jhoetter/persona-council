@@ -40,25 +40,30 @@ def _stance_scale() -> dict[str, Any]:
             by_value[rec["value"]] = rec
             aliases[term] = term
         for alias, term in (data.get("aliases") or {}).items():
-            aliases[str(alias).lower()] = term
+            aliases[str(alias).strip().lower()] = term     # lookup is case/whitespace-insensitive
     return {"by_term": by_term, "by_value": by_value, "aliases": aliases}
+
+
+def _canon_term(label: Any) -> str | None:
+    """Alias-map a free stance token onto its canonical term (case/whitespace-insensitive); None if unknown."""
+    return _stance_scale()["aliases"].get(str(label).strip().lower())
 
 
 def resolve_stance(term: Any) -> dict[str, Any] | None:
     """Map any legacy stance/sentiment/vote token (or a numeric value) onto a canonical Stance dict
-    {value,label}. Unknown non-empty tokens fall back to neutral (value 0). Returns None for empty input."""
+    {value,label}. An unknown non-empty token falls back to neutral (value 0) but is NEVER dropped
+    silently — the original survives as `label_raw`. Returns None for empty input."""
     if term in (None, "", []):
         return None
     sc = _stance_scale()
     if isinstance(term, (int, float)) and not isinstance(term, bool):
         rec = sc["by_value"].get(int(term))
         return {"value": int(term), "label": (rec or {}).get("term", str(term))}
-    key = str(term).strip()
-    canon = sc["aliases"].get(key) or sc["aliases"].get(key.lower())
+    canon = _canon_term(term)
     rec = sc["by_term"].get(canon) if canon else None
     if rec is None:
         neutral = sc["by_value"].get(0) or {"value": 0, "term": "neutral"}
-        return {"value": neutral["value"], "label": neutral["term"]}
+        return {"value": neutral["value"], "label": neutral["term"], "label_raw": str(term).strip()}
     return {"value": rec["value"], "label": rec["term"]}
 
 
@@ -196,9 +201,14 @@ def resolve_ref(r: dict, store: Any) -> dict[str, Any]:
 
 
 def stance(value: int, *, label: str | None = None) -> dict:
-    """A point on the one positivity scale (-2 oppose … +2 support). label = canonical term (stable id)."""
+    """A point on the one positivity scale (-2 oppose … +2 support). The stored label is ALWAYS the
+    canonical term for `value` (a free label is alias-resolved; on disagreement the explicit value wins);
+    an unresolvable label is kept as `label_raw` — never silently dropped."""
     rec = _stance_scale()["by_value"].get(int(value))
-    return {"value": int(value), "label": label or (rec or {}).get("term", str(value))}
+    canonical = (rec or {}).get("term", str(int(value)))
+    if label is None or _canon_term(label) is not None:
+        return {"value": int(value), "label": canonical}
+    return _clean({"value": int(value), "label": canonical, "label_raw": str(label).strip()})
 
 
 def prompt(text: str, *, kind: str = "question", id: str | None = None) -> dict:
@@ -256,7 +266,10 @@ def validate_stance(d) -> dict | None:
     if d in (None, "", []):
         return None
     if isinstance(d, dict) and "value" in d:
-        return stance(int(d["value"]), label=d.get("label"))
+        out = stance(int(d["value"]), label=d.get("label"))
+        if d.get("label_raw") and "label_raw" not in out:   # idempotent: re-validating keeps the raw token
+            out["label_raw"] = d["label_raw"]
+        return out
     return resolve_stance(d)
 
 

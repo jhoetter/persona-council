@@ -193,6 +193,7 @@ _SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
 
 def _norm_severity(value: Any) -> str:
+    """Unknown tokens coerce to 'medium' — callers must keep the raw value inspectable (severity_raw)."""
     s = str(value or "").strip().lower()
     return s if s in _SEVERITY_RANK else "medium"
 
@@ -211,10 +212,14 @@ def _aggregate_case(items: list[dict[str, Any]], personas: dict[str, dict[str, A
                                             "items": [], "severity": "low"})
         if pid and pid not in entry["personas"]:
             entry["personas"].append(pid)
-        entry["items"].append({"persona_id": pid, "text": str(it.get("text") or "").strip(),
-                               **({"severity": _norm_severity(it.get("severity"))} if with_severity else {})})
+        item: dict[str, Any] = {"persona_id": pid, "text": str(it.get("text") or "").strip()}
         if with_severity:
-            sev = _norm_severity(it.get("severity"))
+            sev, raw = _norm_severity(it.get("severity")), str(it.get("severity") or "").strip()
+            item["severity"] = sev
+            if raw and raw.lower() not in _SEVERITY_RANK:   # coerced: keep the host's token inspectable
+                item["severity_raw"] = raw
+        entry["items"].append(item)
+        if with_severity:
             if _SEVERITY_RANK[sev] > _SEVERITY_RANK[entry["severity"]]:
                 entry["severity"] = sev
     for entry in by_theme.values():

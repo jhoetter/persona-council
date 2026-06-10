@@ -117,6 +117,20 @@ def test_case_against_dedupes_personas_per_theme(store):
     assert th["severity"] == "high"   # worst across the persona's items
 
 
+def test_unknown_severity_coerces_to_medium_but_keeps_the_raw_token(store):
+    a = create_persona(store, "A")
+    proj = services.create_research_project("sev", goal="g", persona_ids=[a], store=store)
+    session = services.record_red_team(
+        proj["id"], "?", objections=[
+            {"persona_id": a, "theme": "trust", "text": "hm", "severity": "Showstopper!"},
+            {"persona_id": a, "theme": "trust", "text": "ok", "severity": " HIGH "}],
+        store=store)
+    items = session["red_team"]["case_against"]["themes"][0]["items"]
+    # coercion default stays 'medium', but the host's token survives inspectably on the item
+    assert items[0]["severity"] == "medium" and items[0]["severity_raw"] == "Showstopper!"
+    assert items[1]["severity"] == "high" and "severity_raw" not in items[1]   # known token, case/space-tolerant
+
+
 def test_no_objections_yields_empty_case_against(store):
     a = create_persona(store, "A")
     proj = services.create_research_project("empty", goal="g", persona_ids=[a], store=store)
