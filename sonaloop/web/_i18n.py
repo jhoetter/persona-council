@@ -167,6 +167,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "fidelity_artifact": "Artefakt", "fidelity_prototype": "Klick-Prototyp", "fidelity_live": "Live",
         "outcome_dropped": "Abgesprungen bei Schritt {n}",
         "friction_n": "{n}× Reibung",
+        # sessions in the project outline (child rows under their subject + the funnel chip)
+        "session_kind_live": "Live-Session", "session_kind_prototype": "Prototyp-Session",
+        "session_kind_artifact": "Artefakt-Session", "live_surface": "Live-Oberfläche",
+        "sessions_n": "{n} Sessions", "no_dropoffs": "keine Abbrüche",
+        "drop_at_step": "{n}× Drop @ Schritt {s}", "dropoffs_n": "{n} Abbrüche",
         "funnel_h": "Funnel",
         "funnel_hint": "{n} Sessions zu diesem Gegenstand — pro Schritt: erreicht, weiter, abgesprungen.",
         "funnel_entered": "erreicht", "funnel_continued": "weiter", "funnel_dropped": "abgesprungen",
@@ -402,6 +407,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "fidelity_artifact": "Artifact", "fidelity_prototype": "Prototype", "fidelity_live": "Live",
         "outcome_dropped": "Dropped at step {n}",
         "friction_n": "{n}× friction",
+        # sessions in the project outline (child rows under their subject + the funnel chip)
+        "session_kind_live": "Live session", "session_kind_prototype": "Prototype session",
+        "session_kind_artifact": "Artifact session", "live_surface": "Live surface",
+        "sessions_n": "{n} sessions", "no_dropoffs": "no drop-offs",
+        "drop_at_step": "{n}× drop @ step {s}", "dropoffs_n": "{n} drop-offs",
         "funnel_h": "Funnel",
         "funnel_hint": "{n} sessions of this subject — per step: entered, continued, dropped.",
         "funnel_entered": "entered", "funnel_continued": "continued", "funnel_dropped": "dropped",
