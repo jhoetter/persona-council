@@ -150,6 +150,8 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ol-funnel{position:relative;z-index:1;flex-shrink:0;white-space:nowrap;font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--radius-full);background:var(--panel-2);padding:1px 9px;text-decoration:none}
 .ol-funnel:hover{color:var(--accent);border-color:var(--accent)}
 .olrow .lbl{flex-shrink:0}
+/* the declared chips slot (outline chip contract, _outline_chips) — rendered only when non-empty */
+.ol-chips{display:inline-flex;align-items:center;gap:8px;flex-shrink:0}
 /* near-empty outlines (plan-less / young projects) size to content so the sections below rise
    above the fold (tracker: outline-drops-study-nodes-on-plan-less-projects); a full outline
    still fills the viewport. */

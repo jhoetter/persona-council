@@ -7,6 +7,7 @@ from ._components import _avatar
 from ._graph_outline_sessions import merge_session_items
 from ._html import h, raw, fragment
 from ._i18n import t
+from ._outline_chips import chips_html
 
 
 def _outline_html(graph: dict, sessions: dict | None = None) -> str:
@@ -64,14 +65,16 @@ def _outline_html(graph: dict, sessions: dict | None = None) -> str:
 
     items: list[dict] = []
 
-    def add(oid, color, title, kind, href, pk, r, order, ts, indent=0, last_child=False, plabel=None):
+    def add(oid, color, title, kind, href, pk, r, order, ts, indent=0, last_child=False, plabel=None,
+            rkind="", node=None):
         # `order` = the SORT key (a built note's prototype borrows the note's slot via a '#seq' suffix so it
         # nests right under it); `ts` = the row's OWN created_at, shown to the reader. `last_child` ends the
-        # tree spine (the connector continues down through earlier siblings, stops at the last).
+        # tree spine (the connector continues down through earlier siblings, stops at the last). `rkind` is
+        # the row's machine kind for the chip CONTRACT (_outline_chips); `node` the data its builder reads.
         po, pl = pmeta.get(pk, (99, ""))
         items.append({"oid": oid, "color": color or "#9aa0a6", "title": title, "kind": kind, "href": href,
                       "plabel": plabel if plabel is not None else pl, "po": po, "round": r, "order": order,
-                      "ts": ts, "indent": indent, "last_child": last_child})
+                      "ts": ts, "indent": indent, "last_child": last_child, "rkind": rkind, "node": node or {}})
 
     # Plan-less projects (hand-built data / the study_ids report path) have NO methodology steps, so
     # pmeta is empty — their nodes must still render (parity with ?view=graph): one flat chronological
@@ -83,15 +86,16 @@ def _outline_html(graph: dict, sessions: dict | None = None) -> str:
             continue
         if n.get("phase", "") not in pmeta and not planless:   # plan graphs: phase-less rows have no slot
             continue
-        kind = n.get("kind_label") or n.get("kind") or (t("synthesis_kind") if planless else "")
+        kind = n.get("kind_label") or (t("synthesis_kind") if planless else n.get("kind", ""))
         href = n.get("href") or (f'/syntheses/{n["study_id"]}' if planless else "")
         add(n["study_id"], n.get("color", ""), n.get("title", ""), kind, href,
             n.get("phase", ""), node_round[n["study_id"]], n.get("created_at", ""), n.get("created_at", ""),
-            plabel=kind if planless else None)
+            plabel=kind if planless else None, rkind=n.get("kind", ""), node=n)
     for p in protos:                               # prototypes NOT paired under a built note → standalone
         if p["id"] not in used:
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
-                f'/prototypes/{p["slug"]}', ideation, 0, p.get("created_at", ""), p.get("created_at", ""))
+                f'/prototypes/{p["slug"]}', ideation, 0, p.get("created_at", ""), p.get("created_at", ""),
+                rkind="prototype", node=p)
     # Notes (phase-free): a CONCEPT (built, or carrying an artifact_kind) sits at the ideation/develop phase;
     # a plain observation at the FIRST (discover) phase, so the phase column reads meaningfully.
     notes_phase = ordered[0]["key"] if ordered else ""
@@ -106,12 +110,13 @@ def _outline_html(graph: dict, sessions: dict | None = None) -> str:
         add(nt["study_id"], nt.get("color", "#f29900"), nt.get("title", "") or "—",
             nt.get("kind_label", ""), nt.get("href", ""), ideation if is_concept else notes_phase, cr,
             f'{nt.get("created_at", "")}#{seq:04d}', nt.get("created_at", ""),
-            plabel=nt.get("kind_label", "") if planless else None)
+            plabel=nt.get("kind_label", "") if planless else None, rkind=nt.get("kind", ""), node=nt)
         seq += 1
         for i, p in enumerate(built):
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
                 f'/prototypes/{p["slug"]}', ideation, cr, f'{nt.get("created_at", "")}#{seq:04d}',
-                p.get("created_at", ""), indent=1, last_child=(i == len(built) - 1))
+                p.get("created_at", ""), indent=1, last_child=(i == len(built) - 1),
+                rkind="prototype", node=p)
             seq += 1
 
     # Reports — first-class project artifacts: listed inline at the end (po=99 → after the
@@ -120,7 +125,8 @@ def _outline_html(graph: dict, sessions: dict | None = None) -> str:
         items.append({"oid": mr["id"], "color": "#6d5ef0", "title": mr.get("title", "") or t("synthesis_kind"),
                       "kind": t("synthesis_kind"), "href": f'/syntheses/{mr["id"]}', "plabel": t("synthesis_kind"),
                       "po": 99, "round": max(nrounds - 1, 0), "order": f'~{mr.get("created_at", "")}',
-                      "ts": mr.get("created_at", ""), "indent": 0, "last_child": False})
+                      "ts": mr.get("created_at", ""), "indent": 0, "last_child": False,
+                      "rkind": "report", "node": mr})
 
     # Usability sessions nest under their SUBJECT row (tracker: project-page-sessions-live-under-
     # their-subject-in-the-outlin): prototype subjects under the existing prototype row (matched by
@@ -186,17 +192,20 @@ def _outline_html(graph: dict, sessions: dict | None = None) -> str:
         # --ti feeds the tree-spine x-offset so a depth-2 child (session under a paired prototype)
         # draws its connector one indent step deeper than a depth-1 child.
         attrs = {"class_": f"olrow {tw}", "data-oid": it["oid"], "data-th": " ".join(map(str, tis)),
+                 "data-rkind": it.get("rkind", ""),
                  "style": f'padding-left:{10 + it["indent"] * 26}px'
                           + (f';--ti:{it["indent"]}' if it["indent"] else "")}
         ts_short, ts_full = _fmt_ts(it["ts"])
         lead = (raw(it["lead"]) if it.get("lead")           # session child rows: persona avatar lead
                 else h("span", {"class_": "ol-dot", "style": f'background:{it["color"]}'}))
         cells = (lead,
-                 h("span", {"class_": "ol-ptag"}, it["plabel"]),
+                 # child rows (indent ≥1) leave the phase column empty — the parent carries the label
+                 # (no "LIVE SURFACE / LIVE SURFACE / …" repetition down a session group).
+                 h("span", {"class_": "ol-ptag"}, "" if it["indent"] else it["plabel"]),
                  h("span", {"class_": "ol-title"}, it["title"]),
                  h("span", {"class_": "olth-pills"}, fragment(*pills)),
                  crew,
-                 raw(it.get("chips", "")),                  # outcome/friction chips (session rows)
+                 raw(chips_html(it)),                       # the chip CONTRACT (_outline_chips registry)
                  h("span", {"class_": "ol-ts", "title": ts_full}, ts_short),
                  h("span", {"class_": "ol-kind"}, it["kind"]))
         ext = {"target": "_blank", "rel": "noopener"} if it.get("external") else {}

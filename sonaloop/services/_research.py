@@ -246,11 +246,12 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
         return None
     sentiment = _A.synthesis_sentiment_counts(syn, store)   # aggregated over the REAL council voices
     return {
-        "study_id": study_id, "title": syn.get("title", study_id),
+        "study_id": study_id, "kind": "synthesis", "title": syn.get("title", study_id),
         "status": syn.get("status", "done"), "created_at": syn.get("created_at", ""),
         "goal": syn.get("goal", ""), "council_count": len(syn.get("council_ids", [])),
         "voices": sum(sentiment.values()), "sentiment": sentiment,
         "recommendations": len(_A.synthesis_recommendations(syn)),
+        "n_findings": len(syn.get("findings") or []),        # outline chip contract (_outline_chips)
         "phase": syn.get("phase", ""), "mode": syn.get("mode", ""), "role": syn.get("role", ""),
     }
 
@@ -371,10 +372,18 @@ def _evidence_node(kind: str, eid: str, title: str, prod_task: dict, store: Stor
     voices = 0
     personas: list[dict] = []
     stance_counts: dict[int, int] = {}
+    mode = ""
+    n_statements = 0
+    n_findings = 0
+    status = ""
     if kind == "council":
         c = store.get_council_session(eid) or {}
         created = c.get("created_at", "")
         council_count = 1
+        # Outline chip contract (_outline_chips): the mode chip derives the way the council
+        # page does (council_mode), the statement count rides the node.
+        mode = council_mode(c)
+        n_statements = len(c.get("statements") or [])
         # Outline detail (tracker: sonaloop/inspector-cinematic-detail-density):
         # WHO spoke + how the council leaned — feeds the row's avatar cluster
         # and stance dots, so the project page shows persona presence.
@@ -395,13 +404,16 @@ def _evidence_node(kind: str, eid: str, title: str, prod_task: dict, store: Stor
         s = store.get_synthesis(eid) or {}
         created = s.get("created_at", "")
         council_count = len(s.get("council_ids", []))
+        n_findings = len(s.get("findings") or [])            # outline chip contract
+        status = s.get("status", "done")
     href = {"council": f"/councils/{eid}", "synthesis": f"/syntheses/{eid}"}.get(kind, "")
     tags = [kind] + list(prod_task.get("presentation", {}).get("tags") or [])
     return {"study_id": f"{kind}:{eid}", "kind": kind, "title": title, "phase": step,
             "bucket": prod_task.get("bucket", ""), "created_at": created, "council_count": council_count,
             "voices": voices, "sentiment": {}, "stance_counts": stance_counts,
             "personas": personas, "recommendations": 0, "role": prod_task.get("capability", ""),
-            "mode": "", "theme_tags": tags, "color": pres["color"], "kind_label": pres["label"],
+            "mode": mode, "n_statements": n_statements, "n_findings": n_findings, "status": status,
+            "theme_tags": tags, "color": pres["color"], "kind_label": pres["label"],
             "href": href}
 
 

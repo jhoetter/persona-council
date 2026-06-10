@@ -172,6 +172,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "session_kind_artifact": "Artefakt-Session", "live_surface": "Live-Oberfläche",
         "sessions_n": "{n} Sessions", "no_dropoffs": "keine Abbrüche",
         "drop_at_step": "{n}× Drop @ Schritt {s}", "dropoffs_n": "{n} Abbrüche",
+        # outline chip contract (_outline_chips — every row kind declares its chips)
+        "chip_statements_n": "{n} Statements", "chip_statements_n_one": "{n} Statement",
+        "chip_findings_n": "{n} Erkenntnisse", "chip_findings_n_one": "{n} Erkenntnis",
+        "chip_observation": "Beobachtung", "chip_built": "gebaut",
         "funnel_h": "Funnel",
         "funnel_hint": "{n} Sessions zu diesem Gegenstand — pro Schritt: erreicht, weiter, abgesprungen.",
         "funnel_entered": "erreicht", "funnel_continued": "weiter", "funnel_dropped": "abgesprungen",
@@ -412,6 +416,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "session_kind_artifact": "Artifact session", "live_surface": "Live surface",
         "sessions_n": "{n} sessions", "no_dropoffs": "no drop-offs",
         "drop_at_step": "{n}× drop @ step {s}", "dropoffs_n": "{n} drop-offs",
+        # outline chip contract (_outline_chips — every row kind declares its chips)
+        "chip_statements_n": "{n} statements", "chip_statements_n_one": "{n} statement",
+        "chip_findings_n": "{n} findings", "chip_findings_n_one": "{n} finding",
+        "chip_observation": "Observation", "chip_built": "built",
         "funnel_h": "Funnel",
         "funnel_hint": "{n} sessions of this subject — per step: entered, continued, dropped.",
         "funnel_entered": "entered", "funnel_continued": "continued", "funnel_dropped": "dropped",
