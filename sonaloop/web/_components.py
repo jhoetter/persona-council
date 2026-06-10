@@ -18,7 +18,7 @@ from ._html import h, raw, fragment, register_css, collect_css  # noqa: F401  (c
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
 from ._ext import (  # noqa: F401  (extension seams; public surface re-exported by web/__init__)
     register_nav_section, register_nav_item, resolve_label, nav_model,
-    render_slot, theme_override_css, brand_name, title_brand,
+    render_slot, theme_override_css, brand_name, brand_logo, title_brand,
 )
 
 
@@ -386,6 +386,32 @@ _FAV_ICONS_JSON = json.dumps({
 })
 
 
+# Customer brand logo (customer-theme contract): height-capped so any aspect ratio sits
+# in the lockup row; the wordmark treatment stays untouched when no logo is set.
+_BRAND_LOGO_CSS = register_css(
+    ".sl-logo__img{display:block;height:20px;max-width:150px;object-fit:contain}")
+
+
+def _brand_logo_img(alt: str) -> str:
+    """The customer-logo <img> for the sidebar lockup, or "" when none is set. A data:
+    URI is emitted as-is; a DATA_DIR path (validated by theming.validate_customer_theme)
+    is served through the /data static mount. Fail-soft: anything that no longer maps
+    into DATA_DIR falls back to the wordmark rather than a broken image."""
+    logo = brand_logo()
+    if not logo:
+        return ""
+    if logo.startswith("data:"):
+        src = logo
+    else:
+        from pathlib import Path
+        from ..config import DATA_DIR    # late: tests repoint config.DATA_DIR
+        try:
+            src = "/data/" + Path(logo).resolve().relative_to(DATA_DIR.resolve()).as_posix()
+        except ValueError:
+            return ""
+    return f'<img class="sl-logo__img" src="{_esc(src)}" alt="{_esc(alt)}">'
+
+
 def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
             active: str = "", actions: str = "") -> str:
     crumbs = crumbs or [(title, None)]
@@ -397,17 +423,22 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     # .sl-logo treatment). For a product brand ("Sonaloop Cloud" / "Sonaloop Research") the
     # trailing word becomes a muted .sl-logo__sub label beside the wordmark — matching the
     # product apps (data/tracker/design); the bare core ("Sonaloop") renders just the wordmark.
+    # A customer logo (theming.validate_customer_theme brand.logo, set via set_brand)
+    # replaces mark + wordmark entirely — the customer's identity, not a co-brand.
     _bn = brand_name()
-    _i = _bn.lower().find("loop")
-    if _i != -1:
-        _word = f'{_esc(_bn[:_i])}<span class="sl-logo__loop">{_esc(_bn[_i:_i+4])}</span>'
-        _sub = _bn[_i + 4:].strip()
-    else:
-        _word = _esc(_bn)
-        _sub = ""
-    _brand_word = f'<span class="sl-logo__word">{_word}</span>'
-    if _sub:
-        _brand_word += f'<span class="sl-logo__sub">{_esc(_sub)}</span>'
+    _lockup = _brand_logo_img(_bn)
+    if not _lockup:
+        _i = _bn.lower().find("loop")
+        if _i != -1:
+            _word = f'{_esc(_bn[:_i])}<span class="sl-logo__loop">{_esc(_bn[_i:_i+4])}</span>'
+            _sub = _bn[_i + 4:].strip()
+        else:
+            _word = _esc(_bn)
+            _sub = ""
+        _brand_word = f'<span class="sl-logo__word">{_word}</span>'
+        if _sub:
+            _brand_word += f'<span class="sl-logo__sub">{_esc(_sub)}</span>'
+        _lockup = f'<span class="sl-logo__mark">{_icon("sonaloop")}</span>{_brand_word}'
     return f"""<!doctype html>
 <html lang="{_lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_esc(title_brand() + (" · " + title if title and title.strip() else ""))}</title>
@@ -417,7 +448,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 {HEAD_JS}<style>{CSS}{PALETTE_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
 <body><div class="sl-app-shell" id="app">
   <aside class="sl-sidebar">
-    <div class="sl-brand"><a class="sl-logo" href="/"><span class="sl-logo__mark">{_icon("sonaloop")}</span>{_brand_word}</a></div>
+    <div class="sl-brand"><a class="sl-logo" href="/">{_lockup}</a></div>
     <div class="sl-sb-search"><button type="button" class="sl-cmdk-trigger" data-cmdk-open aria-label="{t("search")}">{_icon("search")}<span>{t("search")}</span><kbd class="sl-kbd">⌘K</kbd></button></div>
     <div class="sl-sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
     {_user_menu()}

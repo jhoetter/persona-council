@@ -615,14 +615,30 @@ def _share_inline_images(html_text: str, missing_label: str = "media unavailable
     return _SHARE_IMG_TAG.sub(_one, html_text)
 
 
+def _theme_block(theme_overrides: dict[str, Any] | None) -> str:
+    """The customer-theme `<style>` override for an export, or "". Validated against the
+    canonical contract (theming.validate_customer_theme — bad input raises, it never
+    ships a half-themed deliverable) and injected AFTER the base CSS so it wins by
+    cascade order — the same contract as the live web._ext seam. The PPTX deck export
+    is the known gap: the vendored _deck.py PALETTE is not parametrized (follow-up)."""
+    if not theme_overrides:
+        return ""
+    from ..theming import customer_theme_css, validate_customer_theme
+    return customer_theme_css(validate_customer_theme(theme_overrides))
+
+
 def export_synthesis_html(synthesis_id: str, out_dir: str | None = None,
-                          store: Store | None = None) -> dict[str, Any]:
+                          store: Store | None = None,
+                          theme_overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Export ANY report (synthesis) as a SHAREABLE, read-only static HTML bundle:
     `data/export/share/<token>/index.html` — the exact inspector document (one render path:
     web/_report.render_report) minus all app chrome, every asset inlined (CSS, charts, figures,
     avatars), zero external requests, opens from file://. Host the directory anywhere (S3, Pages,
     an intranet share); the unguessable token directory name is the share secret. `out_dir`
-    overrides the parent directory but must stay inside DATA_DIR."""
+    overrides the parent directory but must stay inside DATA_DIR. `theme_overrides` (a
+    customer theme per theming.validate_customer_theme) re-skins the bundle — a research
+    deliverable carries the customer's brand, not Sonaloop's."""
+    theme_css = _theme_block(theme_overrides)        # validate before any work
     store = store or Store()
     syn = get_synthesis(synthesis_id, store)
     # Import the web layer so render_report + every register_css() fragment it uses are live in
@@ -666,7 +682,7 @@ def export_synthesis_html(synthesis_id: str, out_dir: str | None = None,
     doc = (f'<!doctype html><html lang="{content_language()}"><head><meta charset="utf-8">'
            f'<meta name="viewport" content="width=device-width,initial-scale=1">'
            f'<title>{_h_esc(syn.get("title", "Report"))}</title>'
-           f"<style>{CSS}{collect_css()}{share_css}</style></head>"
+           f"<style>{CSS}{collect_css()}{share_css}</style>{theme_css}</head>"
            f'<body><main class="content"><div class="page">{body}</div>{footer}</main></body></html>')
 
     token = uuid.uuid4().hex                  # unguessable slug — the path IS the share secret
@@ -689,9 +705,12 @@ _PDF_FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com">'
               '&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">')
 
 
-def export_synthesis_pdf(synthesis_id: str, store: Store | None = None) -> bytes:
+def export_synthesis_pdf(synthesis_id: str, store: Store | None = None,
+                         theme_overrides: dict[str, Any] | None = None) -> bytes:
     """Render ANY report (synthesis) to a self-contained PDF — the report HTML + the app's CSS through
-    headless Chromium (print media), no running web server needed. Raises if the browser is absent."""
+    headless Chromium (print media), no running web server needed. Raises if the browser is absent.
+    `theme_overrides` (a customer theme per theming.validate_customer_theme) re-skins the PDF."""
+    theme_css = _theme_block(theme_overrides)        # validate before the browser gate
     from .. import browser as _browser
     if not _browser.available():
         raise RuntimeError("PDF export needs the headless browser (run `sonaloop setup` / "
@@ -707,7 +726,7 @@ def export_synthesis_pdf(synthesis_id: str, store: Store | None = None) -> bytes
     from html import escape as _h_esc
     body = render_report(syn, store)
     doc = (f'<!doctype html><html lang="{content_language()}"><head><meta charset="utf-8">'
-           f'{_PDF_FONTS}<style>{CSS}{collect_css()}</style></head>'
+           f'{_PDF_FONTS}<style>{CSS}{collect_css()}</style>{theme_css}</head>'
            f'<body><main class="content"><div class="page">{body}</div></main></body></html>')
     import os
     import tempfile

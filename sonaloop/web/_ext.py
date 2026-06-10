@@ -15,6 +15,14 @@ packages plug in WITHOUT the core ever importing them, via four seams:
                i18n _UI_LANG pattern). _layout() injects a SANITIZED :root override so a
                tenant/project can carry its own design-system colors. Pure SSR — the
                override is plain CSS custom properties; nothing leaks into JS or data-*.
+               WHAT may be themed is the customer-theme contract in sonaloop/theming.py
+               (validate_customer_theme): allowlisted color tokens (theming.COLOR_VARS),
+               --sl-sans/--sl-mono font stacks, and brand name/logo — components,
+               spacing, radius and the type scale stay Sonaloop's. Validate there, then
+               feed theming.theme_override_vars() to this seam; brand flows through
+               set_brand(). The synthesis exports (PDF / HTML bundle) take the same
+               validated dict via `theme_overrides=`, so a deliverable carries the
+               customer's brand without riding this contextvar.
 
 Labels are `str | Callable[[], str]`: pass a literal, or a lambda that resolves the
 label per request when it must (i18n) — e.g. one that returns t(<your-key>). Slot/route callables are trusted
@@ -23,8 +31,14 @@ code (they ship inside a private package), so their returned HTML is emitted as-
 from __future__ import annotations
 
 import contextvars
-import re
 from typing import Any, Callable
+
+# CSS-injection guard, re-exported under its pre-existing import path: a key must be a
+# custom property; a value a small, safe subset (colors / numeric tokens). No `;`, `{`,
+# `}`, or `:` to break out of the declaration block. Canonical definitions live with the
+# customer-theme contract (theming validates the SAME shapes loudly at persist time;
+# this seam stays fail-soft at render time).
+from ..theming import _VAL_RE, _VAR_RE  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Nav registry
@@ -103,13 +117,6 @@ def render_slot(name: str, store: Any) -> str:
 _THEME_OVERRIDES: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
     "theme_overrides", default=None)
 
-# CSS-injection guard: a key must be a custom property; a value must be a small,
-# safe subset (colors / numeric tokens). No `;`, `{`, `}`, or `:` to break out of the
-# declaration block. Anything off-shape is silently dropped — the page still renders.
-_VAR_RE = re.compile(r"^--[a-z0-9-]+$")
-_VAL_RE = re.compile(r"^[#a-zA-Z0-9_.,%()\s/-]+$")
-
-
 def set_theme_overrides(mapping: dict[str, str] | None) -> contextvars.Token:
     """Set per-request CSS custom-property overrides (e.g. {'--accent': '#0a7'}).
     Returns a token; pass it to reset_theme_overrides() in a finally block. Designed
@@ -141,17 +148,27 @@ def theme_override_css() -> str:
 # each app runs in its own process, so this is set once at startup.
 
 _BRAND = "Sonaloop"
+_BRAND_LOGO: str | None = None
 
 
-def set_brand(name: str) -> None:
-    """Override the product wordmark (page <title> suffix + sidebar). No-op on empty."""
-    global _BRAND
+def set_brand(name: str, logo: str | None = None) -> None:
+    """Override the product wordmark (page <title> suffix + sidebar). No-op on empty.
+    `logo` (optional) replaces the sidebar lockup with a customer image — pass a value
+    that passed theming.validate_customer_theme (a data: image URI or a DATA_DIR
+    path); _layout() renders it where the wordmark renders today."""
+    global _BRAND, _BRAND_LOGO
     if name and name.strip():
         _BRAND = name.strip()
+    if logo and logo.strip():
+        _BRAND_LOGO = logo.strip()
 
 
 def brand_name() -> str:
     return _BRAND
+
+
+def brand_logo() -> str | None:
+    return _BRAND_LOGO
 
 
 def title_brand() -> str:
