@@ -131,6 +131,10 @@ Core MCP tools:
   `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
   `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
   `hooks-list`, `hook-test`, `hook-remove`.
+- Embeddings are provider-agnostic (docs/embeddings.md): SONALOOP_EMBEDDINGS_PROVIDER =
+  openai | ollama | none (default: openai iff OPENAI_API_KEY, else none). Vector spaces
+  never mix — recall skips+reports rows from another provider/model; switching = config
+  change + `backfill-embeddings`. `sonaloop info` shows the resolved provider.
 - Selective live actuation, rung 2 (docs/selective-live-actuation.md): `walk_own`
   (prototype_id → localhost, or a SONALOOP_OWNED_ORIGINS staging url; origin-locked,
   caps clamped to 40 actions / 300s; fail-soft without the browser) →

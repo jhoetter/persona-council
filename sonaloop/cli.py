@@ -437,6 +437,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "info":
             from . import config as _cfg
             from . import browser as _browser
+            from . import embeddings as _emb
             _print({
                 "version": _pkg_version(),
                 "data_dir": str(_cfg.DATA_DIR),
@@ -445,6 +446,8 @@ def main(argv: list[str] | None = None) -> int:
                 "source_checkout": _cfg._is_source_checkout(),
                 "browser_available": _browser.available(),
                 "embeddings_enabled": _cfg.embeddings_enabled(),
+                "embeddings_provider": _emb.active_provider(),
+                "embeddings_model": _emb.provider_model(),
                 "content_language": _cfg.content_language(),
             })
             return 0

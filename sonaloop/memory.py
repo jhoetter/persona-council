@@ -61,31 +61,22 @@ def _unpack(blob: bytes) -> list[float]:
 def embed_texts(texts: list[str]) -> list[list[float]] | None:
     """Return one vector per input text, or None if embeddings are unavailable.
 
-    Uses the OpenAI REST API via urllib (matching avatar.py — no SDK dependency).
-    Fail-soft: any error degrades recall to keyword/entity + recency + importance.
-    """
-    import json as _json
-    import os
-    import urllib.request
+    Provider-agnostic since ticket provider-agnostic-embeddings: the active
+    provider (openai | ollama | none) is a config choice — see sonaloop/embeddings.py.
+    Fail-soft: any error degrades recall to keyword/entity + recency + importance."""
+    from . import embeddings as _emb
 
     if not embeddings_enabled() or not texts:
         return None
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return None
-    try:
-        req = urllib.request.Request(
-            "https://api.openai.com/v1/embeddings",
-            data=_json.dumps({"model": embedding_model(), "input": texts}).encode("utf-8"),
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            data = _json.loads(resp.read().decode("utf-8"))
-        rows = sorted(data["data"], key=lambda d: d["index"])
-        return [r["embedding"] for r in rows]
-    except Exception:  # noqa: BLE001 — fail-soft to keyword-only retrieval
-        return None
+    return _emb.embed_texts(texts)
+
+
+def embedding_space() -> str:
+    """The provider-qualified model id persisted with every vector — rows from a
+    different space are never scored against the active one."""
+    from . import embeddings as _emb
+
+    return _emb.provider_model()
 
 
 def cosine(a: list[float], b: list[float]) -> float:
@@ -103,7 +94,7 @@ def upsert_object_embedding(store: Store, obj_type: str, obj_id: str, persona_id
     if not vecs:
         return False
     vec = vecs[0]
-    store.upsert_embedding(obj_type, obj_id, persona_id, embedding_model(), _pack(vec), len(vec), text, utc_now_iso())
+    store.upsert_embedding(obj_type, obj_id, persona_id, embedding_space(), _pack(vec), len(vec), text, utc_now_iso())
     return True
 
 
@@ -122,7 +113,9 @@ def backfill_persona_embeddings(store: Store, persona_id: str) -> dict[str, int]
     for t in store.list_threads(persona_id):
         items.append(("thread", t["id"], t.get("text", "")))
 
-    todo = [(ot, oid, txt) for (ot, oid, txt) in items if txt.strip() and not store.has_embedding(ot, oid)]
+    space = embedding_space()                      # re-embed per vector space: a provider/model
+    todo = [(ot, oid, txt) for (ot, oid, txt) in items   # switch makes old rows invisible, not poison
+            if txt.strip() and not store.has_embedding(ot, oid, model=space)]
     counts = {"embedded": 0, "skipped_existing": len(items) - len(todo), "disabled": 0}
     if not todo:
         return counts
@@ -240,8 +233,13 @@ def recall(store: Store, persona_id: str, query: str, as_of: str | None = None, 
 
     # precompute semantic scores via stored embeddings
     emb_index = {}
+    other_space = 0
     if qvec is not None:
+        space = embedding_space()
         for row in store.list_embeddings(persona_id):
+            if row.get("model") != space:              # never mix vector spaces (provider/model switch)
+                other_space += 1
+                continue
             emb_index[(row["obj_type"], row["obj_id"])] = _unpack(row["vector"])
 
     scored = []
@@ -266,10 +264,16 @@ def recall(store: Store, persona_id: str, query: str, as_of: str | None = None, 
             "score": round(score, 4), "semantic": round(sem, 4), "keyword": round(kw, 4),
             "text": item["text"][:280],
         })
-    return {
+    out = {
         "persona_id": persona_id, "query": query, "as_of": as_of,
         "semantic_enabled": qvec is not None, "k": k, "hits": hits,
     }
+    if other_space:
+        out["embedding_space_mismatch"] = {
+            "skipped": other_space,
+            "note": "stored vectors from a different provider/model were ignored — re-run "
+                    "backfill-embeddings to re-embed them in the active space"}
+    return out
 
 
 # --------------------------------------------------------------------------- #

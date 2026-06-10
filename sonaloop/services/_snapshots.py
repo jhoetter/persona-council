@@ -142,6 +142,7 @@ def export_snapshot(out_dir: str | None = None, store: Store | None = None) -> d
                 counts["assets"] += 1
     _w(base / "manifest.json", {
         "generated_at": utc_now_iso(), "schema_version": store.schema_version(),
+        "embedding_models": store.embedding_models(),   # which spaces produced the (re-derivable) vectors
         "counts": counts, "personas": index,
         "note": "Reproducible snapshot of generated state. Rebuild the DB by re-running the simulation loop; this is the portable, local-only artifact (the SQLite DB stays gitignored).",
     })

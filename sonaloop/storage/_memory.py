@@ -184,17 +184,26 @@ class MemoryMixin:
     def list_embeddings(self, persona_id: str, obj_type: str | None = None) -> list[dict[str, Any]]:
         if obj_type:
             rows = self.conn.execute(
-                "SELECT obj_type, obj_id, persona_id, dim, vector, text FROM embeddings WHERE persona_id=? AND obj_type=?",
+                "SELECT obj_type, obj_id, persona_id, model, dim, vector, text FROM embeddings WHERE persona_id=? AND obj_type=?",
                 (persona_id, obj_type)).fetchall()
         else:
             rows = self.conn.execute(
-                "SELECT obj_type, obj_id, persona_id, dim, vector, text FROM embeddings WHERE persona_id=?",
+                "SELECT obj_type, obj_id, persona_id, model, dim, vector, text FROM embeddings WHERE persona_id=?",
                 (persona_id,)).fetchall()
         return [dict(r) for r in rows]
 
-    def has_embedding(self, obj_type: str, obj_id: str) -> bool:
+    def has_embedding(self, obj_type: str, obj_id: str, model: str | None = None) -> bool:
+        if model:
+            return self.conn.execute(
+                "SELECT 1 FROM embeddings WHERE obj_type=? AND obj_id=? AND model=?",
+                (obj_type, obj_id, model)).fetchone() is not None
         return self.conn.execute(
             "SELECT 1 FROM embeddings WHERE obj_type=? AND obj_id=?", (obj_type, obj_id)).fetchone() is not None
+
+    def embedding_models(self) -> list[str]:
+        """The distinct vector spaces present (provider-qualified model ids)."""
+        rows = self.conn.execute("SELECT DISTINCT model FROM embeddings ORDER BY model").fetchall()
+        return [r["model"] for r in rows]
 
     # ---- World context -----------------------------------------------
     def insert_world_context(self, item: dict[str, Any]) -> None:

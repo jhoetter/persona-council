@@ -130,10 +130,12 @@ def embedding_model() -> str:
 
 
 def embeddings_enabled() -> bool:
-    """Semantic retrieval is on when an OpenAI key is present and not disabled."""
+    """Semantic retrieval is on when an embedding PROVIDER is active and not disabled
+    (provider-agnostic: openai | ollama | none — see sonaloop/embeddings.py)."""
     if os.getenv("PERSONA_COUNCIL_DISABLE_EMBEDDINGS", "").lower() in {"1", "true", "yes"}:
         return False
-    return bool(os.getenv("OPENAI_API_KEY"))
+    from . import embeddings as _emb
+    return _emb.active_provider() != "none"
 
 
 def retrieval_weights() -> dict[str, float]:
