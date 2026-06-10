@@ -49,6 +49,42 @@ def test_assess_project_complete_when_plan_done(store):
     assert a["complete"] is True and a["recommendation"] == "complete"
 
 
+def test_run_state_nudge_when_loop_is_ungoverned(store):
+    """A multi-task plan with open work and NO active run must say so in-band (the stalled Codex
+    run freestyled next_action and never saw 'you are not done'); the nudge disappears once
+    start_run governs the loop, and never fires for a trivial single-task inquiry."""
+    pid, _ = _proj(store)
+    n = S.next_action(pid, store=store)
+    assert n["run_state"]["active_run"] is False
+    assert "start_run" in n["run_state"]["note"] and "NOT finished" in n["run_state"]["note"]
+    a = S.assess_project(pid, store=store)
+    assert a["run_state"]["tasks_total"] == a["coverage"]["tasks_total"]
+    # the envelope's dynamic hint points at start_run while ungoverned
+    from sonaloop.mcp_server._env import _env
+    import time as _time
+    env = _env("next_action", n, _time.perf_counter())
+    assert env["next_recommended_tool"]["name"] == "start_run"
+    # governed: the nudge is gone
+    S.start_run(pid, store=store)
+    assert "run_state" not in S.next_action(pid, store=store)
+    assert "run_state" not in S.assess_project(pid, store=store)
+    # single-task freeform inquiry: never nudged
+    fid = S.start_project("Freeform", "frage?", store=store)["id"]
+    assert "run_state" not in S.next_action(fid, store=store)
+
+
+def test_complete_task_reports_progress_when_not_terminal(store):
+    pid, _ = _proj(store)
+    S.record_frame(pid, "frame__discover", ["q?"], memory_refs=["m"], store=store)
+    t = S.add_task(pid, "act", "explore", "Council", consumes=["frame__discover"], store=store)
+    S.link_evidence(pid, t["id"], {"kind": "council", "id": "c1"}, store=store)
+    done = S.complete_task(pid, t["id"], store=store)
+    assert done["status"] == "done"
+    assert done["progress"]["tasks_done"] < done["progress"]["tasks_total"]
+    assert "NOT finished" in done["progress"]["note"] and done["progress"]["next_ready"]
+    assert done["run_state"]["active_run"] is False        # still ungoverned → nudge rides along
+
+
 def test_saturation_never_converging_while_a_diamond_is_unopened(store):
     """The stalled-run snapshot (2026-06-10): Discover+Define done, second diamond untouched.
     The old ratio-only hint read "converging" here — with open_questions empty, both published

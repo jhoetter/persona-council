@@ -68,10 +68,19 @@ _NEXT: dict[str, dict[str, Any]] = {
 
 
 def _env(tool: str, data: Any, started: float) -> dict[str, Any]:
+    nxt = _NEXT.get(tool)
+    # Ungoverned-loop override: when the engine flags `run_state` (open multi-task plan, no active
+    # run), the natural next step is start_run — for EVERY host, including ones that read neither
+    # skills nor prompts. The static DAG hint yields to this dynamic one.
+    if isinstance(data, dict):
+        rs = data.get("run_state")
+        if isinstance(rs, dict) and rs.get("active_run") is False:
+            nxt = {"name": "start_run",
+                   "reason": rs.get("note") or "no active run — govern the loop before continuing"}
     return {
         "ok": True,
         "data": data,
-        "next_recommended_tool": _NEXT.get(tool),
+        "next_recommended_tool": nxt,
         "_meta": {
             "tool": tool,
             "latency_ms": round((time.perf_counter() - started) * 1000, 1),
