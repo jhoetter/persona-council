@@ -96,7 +96,9 @@ def _avatar(p: dict, size: int = 36) -> str:
     return h("span", {"class_": "sl-avatar", "style": f"width:{size}px;height:{size}px;background:{c};font-size:{fs}px"}, ini)
 
 
-def _stance_color(s: str) -> str:
+def _status_color(s: str) -> str:
+    # Status/score words only (done/blocked/läuft, the vote-score buckets) — NEVER Stance data:
+    # a stance's color comes from its canonical value via artifacts.stance_meta, not keywords.
     s = (s or "").lower()
     if any(k in s for k in ["positiv", "befürwort", "support", "abgeschloss", "done", "grün", "green", "stark"]):
         return "var(--green)"
@@ -109,9 +111,13 @@ def _stance_color(s: str) -> str:
     return "var(--accent)"
 
 
-def _label(text: str, color: str | None = None, variant: str = "soft", dot: bool = True) -> str:
+def _label(text: str, color: str | None = None, variant: str = "soft", dot: bool = True,
+           title: str | None = None) -> str:
     d = h("span", {"class_": "sl-dot", "style": f"background:{color or 'var(--muted)'}"}) if dot else None
-    return h("span", {"class_": f"lbl lbl-{variant}"}, d, text)
+    attrs = {"class_": f"lbl lbl-{variant}"}
+    if title:
+        attrs["title"] = title
+    return h("span", attrs, d, text)
 
 
 def _crumbs_html(crumbs: list) -> str:
