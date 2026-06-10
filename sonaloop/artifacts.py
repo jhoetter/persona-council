@@ -268,17 +268,21 @@ def _clean(d: dict) -> dict:
 
 
 _REF_ROUTES = {"council": "/councils/", "synthesis": "/syntheses/", "persona": "/personas/",
-               "survey": "/surveys/"}
+               "survey": "/surveys/", "session": "/sessions/"}
 
 
 def ref_href(r: dict) -> str | None:
     """The internal link for a record-pointing Ref (kept in the DOMAIN layer so the web renderer never
     hardcodes a kind→route literal — the kind-vocabulary grep gate). When the ref carries an `anchor`
-    (a part within the artifact) the link deep-links to that part via `#<anchor>`."""
+    (a part within the artifact) the link deep-links to that part via `#<anchor>`. A usability-session
+    step anchor (`step:<index>`) maps onto the replay view's per-step DOM id (`#step-<index>`)."""
     base = _REF_ROUTES.get(r.get("kind"))
     if not (base and r.get("id")):
         return None
-    return base + r["id"] + (f'#{r["anchor"]}' if r.get("anchor") else "")
+    anchor = r.get("anchor")
+    if anchor and r.get("kind") == "session" and anchor.startswith("step:"):
+        anchor = "step-" + anchor.split(":", 1)[1]
+    return base + r["id"] + (f"#{anchor}" if anchor else "")
 
 
 def ref(kind: str, *, id: str | None = None, anchor: str | None = None, role: str | None = None,
