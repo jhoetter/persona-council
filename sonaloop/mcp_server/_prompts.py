@@ -32,8 +32,16 @@ valid outcomes.
 - Author analysis prose as Markdown (no ALL-CAPS, no literal section headers -- the UI renders those). \
 A persona's statement text stays in that persona's natural voice (it is a quote).
 - Generated content follows the language the user writes in (auto-detected, then persisted).
+- Multi-step projects run on the GOVERNED loop, never on your own sense of "enough": \
+start_project -> start_run(project_id) -> loop run_step(run_id) -> execute each dispatch -> \
+checkpoint_step, until run_step returns kind=='done'. Gates passed != finished — a project is DONE \
+only when `assess_project.finish.finished` is true and the completeness critic passes. Never stop \
+silently at a phase boundary ("Discover and Define are complete" is the START of the second \
+diamond, not an ending). If your session must end mid-run, say so explicitly and hand off the \
+resume call: start_run(project_id, run_id=<open run>) replays the journal with no lost work.
 - Ready playbooks are exposed as MCP prompts: run_council, synthesize, design_thinking, \
-compose_research_plan. Browse every tool via the `sonaloop://guide/catalogue` resource.
+compose_research_plan, autonomous_research_run (resume). Browse every tool via the \
+`sonaloop://guide/catalogue` resource.
 - Parallelism: if your host supports parallel sub-agents, fan out independent work (one per persona / \
 per angle) and persist sequentially; otherwise run the same steps sequentially -- the methodology is \
 identical.
@@ -121,9 +129,13 @@ answer the user reads.
         return f"""\
 Run a Double-Diamond design-thinking project on: {how_might_we}
 
-Use the plan engine as the spine. start_project(title, goal=the HMW, methodology="double_diamond") (or
-freeform), then loop: brief_next / next_action -> author the proposed analyze -> act -> verify step ->
-record it (record_frame / link_evidence / record_judgment -> complete_task); assess_project for progress.
+Use the plan engine as the spine, on the GOVERNED loop: start_project(title, goal=the HMW,
+methodology="double_diamond") (or freeform), then start_run(project_id) and loop run_step(run_id) —
+execute each dispatch (analyze|act|verify: author the step grounded in its next_action, record it via
+record_frame / link_evidence / record_judgment -> complete_task, then checkpoint_step; critic: author
+the completeness verdict via record_completeness_critic + record_critic_round) until run_step returns
+kind=='done'. The engine — not your judgment — ends the run: gates passed != finished, and "Discover
+and Define are complete" is the midpoint, not an ending. assess_project is the pulse along the way.
 
 - Discover -> Define: frame user-research questions grounded in persona memory -> a FEW real
   multi-persona councils (run_council) -> synthesize key problems + a sharp POV (the surprising core
@@ -149,10 +161,37 @@ request: {request}
    clustering, proband sessions, syntheses, sections) and in what analyze -> act -> verify shape. Fit it
    to the request; do not force a fixed template.
 2. Seed it: start_project(title, goal=request, methodology=... or freeform) and add_task as needed.
-3. Run it to a documented result: loop next_action / brief_next -> author each step (always grounded in
-   cited persona memory + prior syntheses) -> record + judge behind evidence gates -> assess_project,
-   until the goal is answered. Organize with sections; conclude with a synthesis/report.
+3. Run it to a documented result on the GOVERNED loop: start_run(project_id), then loop
+   run_step(run_id) -> execute each dispatch (author the step grounded in cited persona memory + prior
+   syntheses -> record + judge behind evidence gates -> checkpoint_step; critic dispatches author the
+   completeness verdict) until run_step returns kind=='done'. Do NOT freestyle next_action and stop
+   when it feels answered: gates passed != finished — done means `assess_project.finish.finished` is
+   true and the critic passed. Organize with sections; conclude with a synthesis/report. If the
+   session must end mid-run, say so and hand off start_run(project_id, run_id=...) to resume.
 
 Everything host-authored via MCP; no in-process LLM. Parallel sub-agents optional -- the loop is the
 same sequentially.
+"""
+
+    @mcp.prompt(title="Resume an autonomous research run",
+                description="Continue an existing project's run to DONE — the resume front door for any host.")
+    def autonomous_research_run(project_id: str) -> str:
+        return f"""\
+Resume/continue the autonomous run of project {project_id} until the ENGINE says done.
+
+1. Orient: assess_project({project_id}) — the recommendation, open gates, gaps and finish state.
+2. Attach the governed loop: start_run({project_id}) — if the project has an open run it is resumed
+   (journal replay, no lost work); otherwise a fresh run object is created.
+3. Loop: s = run_step(run_id)
+   - s.kind == 'done'   -> the run is over (finished | capped | stopped). Only THIS ends the run.
+   - s.kind == 'critic' -> author the completeness verdict from s.brief (independent judgment) ->
+     record_completeness_critic + record_critic_round; the engine injects each missing gap as work.
+   - else (analyze|act|verify) -> author ONE step grounded in s.next_action (frame -> record_frame;
+     act -> councils/prototypes + link_evidence + complete_task; verify -> a RICH record_synthesis +
+     record_judgment + complete_task), then checkpoint_step(run_id, {{...}}).
+4. Gates passed != finished: keep looping until `assess_project.finish.finished` is true (organized
+   sections + a substantial terminal synthesis + the meta-report) AND the critic passes.
+
+Never conclude at a phase boundary, never report done early; if the session must end mid-run, state
+it and hand off start_run({project_id}, run_id=...) so the next session continues seamlessly.
 """
