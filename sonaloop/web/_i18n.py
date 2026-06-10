@@ -123,6 +123,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "stance_support": "Befürwortend", "stance_conditional": "Bedingt / teils",
         "stance_neutral": "Neutral", "stance_skeptical": "Skeptisch / ablehnend",
         "stance_oppose": "Ablehnend",
+        # friction levels (usability-session steps — friction_levels.json label_keys)
+        "friction_none": "Reibungslos", "friction_hesitation": "Zögern",
+        "friction_confusion": "Verwirrung", "friction_blocked": "Blockiert",
         # sentiment section
         "sentiment_block": "Stimmungsbild",
         "sentiment_scope_chain": "die Council-Kette", "sentiment_scope_session": "diese Sitzung",
@@ -296,6 +299,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "stance_support": "Support", "stance_conditional": "Conditional / partly",
         "stance_neutral": "Neutral", "stance_skeptical": "Skeptical / opposed",
         "stance_oppose": "Oppose",
+        # friction levels (usability-session steps — friction_levels.json label_keys)
+        "friction_none": "None", "friction_hesitation": "Hesitation",
+        "friction_confusion": "Confusion", "friction_blocked": "Blocked",
         # sentiment section
         "sentiment_block": "Sentiment",
         "sentiment_scope_chain": "the council chain", "sentiment_scope_session": "this session",
