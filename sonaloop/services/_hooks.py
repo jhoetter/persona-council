@@ -229,6 +229,18 @@ def _deliver(hook: dict[str, Any], envelope: dict[str, Any]) -> tuple[bool, str]
         return False, str(exc)[:500]
 
 
+def deliver_notification(kind: str, target: str, envelope: dict[str, Any]) -> tuple[bool, str]:
+    """PUBLIC one-shot delivery on the hook transport: run a command (envelope JSON on
+    stdin) or POST to a webhook, returning (ok, detail). The seam connectors and cloud
+    automations (recurring-jobs alerts) send through, so every notification in the
+    system uses ONE transport with the same timeout/disable knobs."""
+    if _hooks_disabled():
+        return False, "hooks disabled (SONALOOP_DISABLE_HOOKS)"
+    if kind not in HOOK_KINDS:
+        raise ValueError(f"Unknown notification kind: {kind!r}. Valid: {list(HOOK_KINDS)}")
+    return _deliver({"kind": kind, "target": target}, envelope)
+
+
 def test_hook(hook_id: str, store: Store | None = None) -> dict[str, Any]:
     """Fire a sample envelope through one registered hook and report the outcome —
     the verification step after register_hook."""

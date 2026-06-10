@@ -25,6 +25,27 @@ from ._tools_assets import register_assets
 from ._tools_substrate import register_substrate
 
 
+def _load_tool_extensions(mcp) -> int:
+    """The MCP counterpart of the web-extension and hooks seams: discover the
+    `sonaloop.mcp.tools` entry-point group and run each `register(mcp)`, so private
+    packages (sonaloop-cloud, sonaloop-research) put their tools on the SAME server
+    without the core importing them. A broken extension is logged and skipped."""
+    import logging
+    loaded = 0
+    try:
+        from importlib.metadata import entry_points
+        for ep in entry_points(group="sonaloop.mcp.tools"):
+            try:
+                ep.load()(mcp)
+                loaded += 1
+            except Exception as exc:
+                logging.getLogger("sonaloop.mcp").warning(
+                    "MCP tool extension %r failed to load: %s", ep.name, exc)
+    except Exception as exc:
+        logging.getLogger("sonaloop.mcp").warning("MCP tool entry-point discovery failed: %s", exc)
+    return loaded
+
+
 def build_server():
     from mcp.server.fastmcp import FastMCP
     from ._prompts import SERVER_INSTRUCTIONS, register_prompts
@@ -50,6 +71,7 @@ def build_server():
     register_assets(mcp)
     register_substrate(mcp)
     register_prompts(mcp)
+    _load_tool_extensions(mcp)
 
     from ._catalogue import catalogue_md
 
