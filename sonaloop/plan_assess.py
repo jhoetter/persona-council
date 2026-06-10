@@ -37,6 +37,46 @@ def run_state(project_id: str, plan: dict[str, Any], store: Store) -> dict[str, 
                      f"Stopping now strands the project mid-run.")}
 
 
+def project_run_state(project_id: str, store: Store | None = None,
+                      stale_hours: int = 6) -> dict[str, Any] | None:
+    """One project's DRIVER status, computed on read (no background jobs): is anyone actually
+    driving the plan? `active` = an open run checkpointed recently; `stalled` = open work with no
+    active run (abandoned mid-plan — the silent failure mode), or an open run quiet for
+    `stale_hours`; `finished` = plan complete. None for projects without a plan. The stalled note
+    carries the concrete resume affordance (the stalled Codex project sat invisible for hours —
+    ready frame__ideate, no run, and nothing anywhere said so)."""
+    from datetime import datetime, timedelta, timezone
+    from . import plan as _p
+    store = store or Store()
+    plan = _p.get_plan(project_id, store=store)
+    if plan is None:
+        return None
+    try:
+        runs = store.list_runs(project_id)
+    except Exception:
+        runs = []
+    last_activity = max([plan.get("updated_at", "")] + [r.get("updated_at", "") for r in runs])
+    if _p.is_complete(plan):
+        return {"state": "finished", "last_activity": last_activity}
+    ready = [t["id"] for t in _p.ready_tasks(plan)]
+    open_runs = [r for r in runs if r.get("status") == "active"]
+    if open_runs:
+        newest = max(r.get("updated_at", "") for r in open_runs)
+        try:
+            quiet = datetime.now(timezone.utc) - datetime.fromisoformat(newest) > timedelta(hours=stale_hours)
+        except Exception:
+            quiet = False
+        if not quiet:
+            return {"state": "active", "last_activity": last_activity, "next_ready": ready}
+        rid = open_runs[0].get("run_id", "")
+        return {"state": "stalled", "last_activity": last_activity, "next_ready": ready,
+                "note": (f"open run quiet since {newest[:16]} — resume with "
+                         f"start_run('{project_id}', run_id='{rid}')")}
+    return {"state": "stalled", "last_activity": last_activity, "next_ready": ready,
+            "note": (f"ready step {', '.join(ready[:2]) if ready else '(blocked)'} waiting since "
+                     f"{last_activity[:16]}; no active run — resume with start_run('{project_id}')")}
+
+
 def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any]:
     """Project-level meta-assessment (read-only, COMPUTED — no LLM verdict): coverage, open evidence
     gates, open questions, a saturation hint, structural gaps, and a computed

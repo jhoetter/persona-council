@@ -135,8 +135,16 @@ def register_projects(app) -> None:
             gaps = ap.get("gaps") or []
             gap_str = (h("div", {"class_": "muted small", "style": "margin-top:4px"}, f'{t("gaps")}: ', "; ".join(gaps[:4]))
                        if gaps else "")
+            # stalled banner: open work, nobody driving — name the ready step + the resume call
+            rs = services.project_run_state(proj["id"], store=store)
+            stall_html = ""
+            if rs and rs.get("state") == "stalled":
+                stall_html = h("div", {"class_": "strow"},
+                               h("span", {"class_": "pill", "style": "border-color:var(--amber);color:var(--amber)"},
+                                 t("stalled")), " ",
+                               h("span", {"class_": "muted small"}, rs.get("note", "")))
             pulse_html = fragment(
-                h("div", {"class_": "oqp-h"}, t("pulse")),
+                h("div", {"class_": "oqp-h"}, t("pulse")), stall_html,
                 h("div", {"class_": "strow"}, h("span", {"class_": "pill"}, ap["recommendation"]), " ",
                   h("span", {"class_": "muted small"}, cov_str, f' · {t("saturation")}: {ap["saturation"]["hint"]}'), gap_str))
         except Exception:

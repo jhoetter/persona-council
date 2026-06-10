@@ -247,6 +247,10 @@ def assess_project(project_id, store: Store | None = None) -> dict[str, Any]:
     return _plan.assess_project(project_id, store=store)
 
 
+def project_run_state(project_id, store: Store | None = None) -> dict[str, Any] | None:
+    return _plan.project_run_state(project_id, store=store)
+
+
 def next_action(project_id, store: Store | None = None) -> dict[str, Any]:
     return _plan.next_action(project_id, store=store)
 
