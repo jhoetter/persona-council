@@ -16,6 +16,7 @@ from typing import Any
 from .. import artifacts as _A
 from .. import browser as _browser
 from .. import prototypes as _proto
+from .. import walk_policy as _wp
 from ..config import ROOT, sessions_dir, utc_now_iso
 from ..models import UsabilitySession
 from ..storage import Store
@@ -45,6 +46,9 @@ def _validate_subject(subject: Any) -> dict[str, Any]:
     if subject.get("id"):
         out["id"] = str(subject["id"])
     if subject.get("url"):
+        # The stored subject.url lands in an href on the replay page — only http(s) is a
+        # walkthrough subject (origin_of rejects javascript:/data:/file: with a clear error).
+        _wp.origin_of(subject["url"])
         out["url"] = str(subject["url"])
     return out
 
@@ -231,6 +235,7 @@ def _validate_statements(raw_statements, sess_id: str, n_steps: int, store: Stor
 def _require_screenshots(steps: list[dict[str, Any]], sess_id: str) -> None:
     """Referenced screenshot files must exist under the data dir (convention:
     data/sessions/<session_id>/step-<index>.png; relative paths resolve against the session's dir,
+    then the sessions dir — the harness writes <browser_session_id>/step-<n>.png relative to it —
     then the data dir). Paths that resolve OUTSIDE the data dir are rejected — the trace may only
     claim files the store actually owns."""
     from ..config import DATA_DIR
@@ -242,7 +247,7 @@ def _require_screenshots(steps: list[dict[str, Any]], sess_id: str) -> None:
         if not shot:
             continue
         p = Path(shot)
-        candidates = [p] if p.is_absolute() else [base / p, DATA_DIR / p]
+        candidates = [p] if p.is_absolute() else [base / p, sessions_dir() / p, DATA_DIR / p]
         contained = [c for c in candidates if c.resolve().is_relative_to(data_root)]
         if not contained:
             raise ValueError(f"screenshot path escapes the data dir ({data_root}): {shot!r} "
