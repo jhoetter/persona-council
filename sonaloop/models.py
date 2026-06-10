@@ -333,7 +333,10 @@ class Prototype:
 @dataclass
 class PrototypeSession:
     """A persona's recorded use of a prototype (Playwright session), with the
-    observed-state evidence the reaction is grounded in."""
+    observed-state evidence the reaction is grounded in.
+
+    SUPERSEDED by UsabilitySession (the durable, replayable per-step trace) for new
+    recordings — kept working for back-compat (existing records, record_prototype_session)."""
     id: str
     persona_id: str
     prototype_id: str
@@ -341,6 +344,35 @@ class PrototypeSession:
     date: str
     reaction: Json
     observed_state_refs: list[str]
+    created_at: str
+    statements: list = field(default_factory=list)   # unified primitive (spec/unified-artifact-schema.md)
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class UsabilitySession:
+    """The durable, replayable usability-session trace — THE SESSION IS THE DELIVERABLE, not a
+    summary of it. One schema serves all three fidelity rungs (artifact flow → prototype → live
+    browser); only the fidelity of each step's `state` changes. Supersedes PrototypeSession for
+    new recordings.
+
+    steps: the ordered dual timeline — each step is
+      {index, action:{type,target,detail}, monologue, state:{url?,title?,screen,screenshot?},
+       friction:{level,note}, verdict:{would_continue,reason}}
+    (friction levels are data-driven via suggestions/friction_levels.json; screenshots live under
+    data/sessions/<id>/step-<index>.png). `outcome` is {completed, dropoff_step, summary,
+    predicted_behaviors}; `statements` are the unified primitives, whose session refs
+    ({kind:'session', id, anchor:'step:<index>'}) are validated against existing steps."""
+    id: str
+    project_id: str
+    persona_id: str
+    date: str
+    subject: Json                # {kind: flow|prototype|live_url, id?, url?, label}
+    fidelity: str                # artifact | prototype | live
+    steps: list[Json]
+    outcome: Json
     created_at: str
     statements: list = field(default_factory=list)   # unified primitive (spec/unified-artifact-schema.md)
 

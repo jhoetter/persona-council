@@ -14,6 +14,7 @@ from ._prototypes import PrototypesMixin
 from ._research import ResearchMixin
 from ._schema import SCHEMA
 from ._simulation import SimulationMixin
+from ._usability_sessions import UsabilitySessionsMixin
 
 
 class Store(
@@ -22,6 +23,7 @@ class Store(
     CouncilsMixin,
     ResearchMixin,
     PrototypesMixin,
+    UsabilitySessionsMixin,
     MemoryMixin,
     StoreBase,
 ):

@@ -64,6 +64,10 @@ _NEXT: dict[str, dict[str, Any]] = {
     "proto_open": {"name": "proto_act", "reason": "act on the snapshot (click/type), or proto_read"},
     "brief_prototype_session": {"name": "proto_open", "reason": "drive the app as the persona, then record the session"},
     "record_prototype_session": {"name": "brief_council", "reason": "fold the grounded reaction into a test council"},
+    # --- usability sessions (the durable, replayable trace) ---
+    "brief_usability_session": {"name": "record_usability_session", "reason": "author the per-step dual timeline, then persist the replayable trace"},
+    "suggest_friction_levels": {"name": "record_usability_session", "reason": "author every step's friction with the canonical levels, then persist"},
+    "record_usability_session": {"name": "get_session_funnel", "reason": "aggregate this subject's sessions into the step funnel"},
 }
 
 

@@ -14,6 +14,7 @@ _DOMAIN_LABELS = {
     "plan": "Plan engine & run loop (the core ESV path)",
     "council": "Councils & syntheses",
     "prototypes": "Prototypes & proband sessions",
+    "usability": "Usability sessions (replayable traces)",
     "sections": "Sections, notes & organization",
     "research": "Research projects, graph & report",
     "jobs": "Jobs (presets + sharpen-the-question)",
@@ -22,7 +23,7 @@ _DOMAIN_LABELS = {
     "simulation": "Simulation & memory (days/months/recall/timeline)",
     "eval": "Evaluation & critics",
 }
-_ORDER = ["plan", "council", "prototypes", "sections", "research", "jobs", "methodology",
+_ORDER = ["plan", "council", "prototypes", "usability", "sections", "research", "jobs", "methodology",
           "personas", "simulation", "eval"]
 
 

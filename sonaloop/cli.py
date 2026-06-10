@@ -412,6 +412,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("session-brief"); p.add_argument("persona_id"); p.add_argument("prototype_id")
     p = sub.add_parser("session-record")
     p.add_argument("persona_id"); p.add_argument("prototype_id"); p.add_argument("session_id"); p.add_argument("date"); p.add_argument("file")
+    # Usability sessions (the durable, replayable trace)
+    p = sub.add_parser("session-list")
+    p.add_argument("--project"); p.add_argument("--persona"); p.add_argument("--subject")
+    p = sub.add_parser("session-get"); p.add_argument("session_id")
     # Deletes (CRUD: delete via CLI/MCP only)
     p = sub.add_parser("research-delete"); p.add_argument("project_id")
     p = sub.add_parser("synthesis-delete"); p.add_argument("synthesis_id")
@@ -772,6 +776,10 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.brief_prototype_session(args.persona_id, args.prototype_id))
         elif args.command == "session-record":
             _print(services.record_prototype_session(args.persona_id, args.prototype_id, args.session_id, args.date, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "session-list":
+            _print(services.list_usability_sessions(args.project, args.persona, args.subject))
+        elif args.command == "session-get":
+            _print(services.get_usability_session(args.session_id))
         elif args.command == "research-delete":
             _print(services.delete_research_project(args.project_id))
         elif args.command == "synthesis-delete":
