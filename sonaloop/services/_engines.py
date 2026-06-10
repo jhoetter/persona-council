@@ -81,6 +81,8 @@ from ..suggestions import (  # noqa: E402
     suggest_section_kinds,
     suggest_chart_kinds,
     suggest_methodologies,
+    suggest_stances,
+    suggest_finding_kinds,
 )
 from .. import plan as _plan  # noqa: E402
 from ..plan import (  # noqa: E402

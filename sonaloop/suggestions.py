@@ -42,6 +42,34 @@ def suggest_section_kinds() -> dict[str, Any]:
     return _load("section_kinds")
 
 
+def suggest_stances() -> dict[str, Any]:
+    """The CANONICAL stance scale (suggestions/stance_scale.json) in scale order (+2 → −2) — unlike the
+    other suggest_* vocabularies this one IS the closed set every stance resolves onto. Each item:
+    {term, value, label_key, aliases} (label_key = the i18n key the UI renders; the engine stays
+    label-free, the host authors display text itself). Derived live via artifacts.stance_terms() so the
+    JSON is the single source — no term is hardcoded here."""
+    from . import artifacts
+    raw = _load("stance_scale")
+    alias_of: dict[str, list[str]] = {}
+    for alias, term in (raw.get("aliases") or {}).items():
+        alias_of.setdefault(term, []).append(alias)
+    items = [{"term": r["term"], "value": r["value"], "label_key": r["label_key"],
+              "aliases": sorted(alias_of.get(r["term"], []), key=str.lower)}
+             for r in artifacts.stance_terms()]
+    return {"kind": "stance_scale", "items": items,
+            "note": "Author a stance as {value -2..2, label?: " + "|".join(i["term"] for i in items)
+                    + "}. `label` is optional when `value` is given; any other label resolves via the "
+                      "aliases, and an unknown one buckets at neutral but survives as `label_raw` "
+                      "(never silently dropped). Council votes use the same terms."}
+
+
+def suggest_finding_kinds() -> dict[str, Any]:
+    """Suggested Finding kinds (suggestions/finding_kinds.json) — summary/key_problem/pain_solver/… with
+    the section id + label_key each renders under. Recommendations: an invented kind still renders
+    (artifacts.finding_kind has a generic fallback)."""
+    return _load("finding_kinds")
+
+
 def suggest_chart_kinds() -> dict[str, Any]:
     """Suggested report chart kinds — which `of` to use when, + each one's author payload shape.
     The single source of truth is charts_catalogue.py (also drives the report renderer)."""

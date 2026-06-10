@@ -77,14 +77,15 @@ For each participating persona (parallel if your host supports sub-agents, else 
    as never researching). Aim for 0-2 lookups, driven by the persona's judgement.
 3. React in character -- support, skepticism, indifference, or rejection are all valid; never force
    approval; no vendor tone. Author a `statement`: {{persona_id, text (Markdown, in voice),
-   stance:{{value -2..2}}, about:{{kind:"prompt", id}}, refs:[{{kind:"memory", text}}, ...]}}.
+   stance:{{value -2..2, label?: support|conditional|neutral|skeptical|oppose}} (the closed scale --
+   see suggest_stances), about:{{kind:"prompt", id}}, refs:[{{kind:"memory", text}}, ...]}}.
 
 Optional moderated back-and-forth (rich topics): after the openings, author a mediator `finding`
 (kind "summary") that names the sharpest tensions and selects who replies next; run 1-2 directed rounds
 (strategy: positive-deepdive | pain-discovery | tension | goal); use hand-raising to stop when the
 energy is spent (never loop unbounded).
 
-Then (host): author proposal, votes (stance-scale terms: support/conditional/neutral/skeptical/oppose),
+Then (host): author proposal, votes (the same stance-scale terms: support|conditional|neutral|skeptical|oppose),
 a short summary, and a rich
 Markdown exec_summary, and persist with record_council(...). brief_council(prompt) returns candidate
 personas; brief_council(prompt, persona_ids) returns each one's loaded context to author against.

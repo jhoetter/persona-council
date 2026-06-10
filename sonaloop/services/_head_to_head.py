@@ -157,7 +157,8 @@ def brief_head_to_head(project_id: str, prompt: str, options: list[Any],
         "instructions": (
             "THE OPTIONS ARE IN THE ROOM, labelled A/B/… — each participant's agent_context ends with the "
             "side-by-side comparison. For EACH persona author: (1) one `statement` per option giving that "
-            "persona's stance on it (about={kind:'prompt', id:'opt:A'|'opt:B'|…}, stance:{value -2..2}); "
+            "persona's stance on it (about={kind:'prompt', id:'opt:A'|'opt:B'|…}, "
+            "stance:{value -2..2, label?: support|conditional|neutral|skeptical|oppose}); "
             "(2) the persona's single `preference` = the option label they'd pick, with a one-line reason. "
             "Stay anti-steering — a persona may genuinely prefer either side or be torn. Ground every "
             "statement in agent_context; quote the captured artifact / the literal text option, don't "

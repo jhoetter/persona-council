@@ -7,7 +7,8 @@ from __future__ import annotations
 
 PRIMITIVES_CONTRACT = (
     "\n\nUNIFIED PRIMITIVES (spec/unified-artifact-schema.md) — the ONLY accepted content shape:\n"
-    "• `statements`: one per persona utterance — {persona_id, text (Markdown), stance:{value -2..2, label}, "
+    "• `statements`: one per persona utterance — {persona_id, text (Markdown), "
+    "stance:{value -2..2, label?: support|conditional|neutral|skeptical|oppose}, "
     "about:{kind:'prompt', id}, refs:[{kind:'memory'|'council'|'synthesis'|'prototype_state', id, anchor, "
     "role} | {kind:'memory', text}], meta}. The ONE voice shape (council voices, synthesis voices, "
     "prototype reactions).\n"

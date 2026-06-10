@@ -179,7 +179,9 @@ def brief_red_team(project_id: str, prompt: str, persona_ids: list[str] | None =
             "short blocker label, e.g. 'switching cost', 'no proof', 'price'), text (the objection in their "
             "voice), severity ('low'|'medium'|'high'|'critical')}. Stay anti-steering and grounded: no "
             "boilerplate, quote the artifact / lived context. Also author each as a `statement` "
-            "(about={kind:'prompt', id:'red_team'}, stance:{value -2..2}) so it renders in the transcript. "
+            "(about={kind:'prompt', id:'red_team'}, "
+            "stance:{value -2..2, label?: support|conditional|neutral|skeptical|oppose}) so it renders "
+            "in the transcript. "
             + ("Because stance='both', ALSO collect the case FOR (`endorsements`=[{persona_id, theme, text}]) "
                "so case-for and case-against sit side by side. " if stance == "both" else
                "Pass stance='both' to ALSO collect the case for (run the same question both directions). ") +
