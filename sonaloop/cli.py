@@ -142,6 +142,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("prompt")
     p.add_argument("personas", nargs="+")
 
+    sub.add_parser("taxonomy-lint", help="Validate taxonomy.json structural completeness (framework/"
+                   "format keys, coverage, protocol blocks, doc sections). Exit code 1 on problems.")
+
     _cli_hooks.add_hook_parsers(sub)
     _cli_substrate.add_substrate_parsers(sub)
 
@@ -495,6 +498,12 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.ask_persona(args.persona_id, args.question))
         elif args.command == "compare":
             _print(services.compare_personas(args.prompt, args.personas))
+        elif args.command == "taxonomy-lint":
+            from . import job_taxonomy
+            problems = job_taxonomy.lint_taxonomy()
+            _print({"ok": not problems, "problems": problems})
+            if problems:
+                sys.exit(1)
         elif args.command in _cli_hooks.COMMANDS:
             _print(_cli_hooks.run_hook_command(args))
         elif args.command in _cli_substrate.COMMANDS:

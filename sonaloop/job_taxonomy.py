@@ -14,6 +14,7 @@ re-reading the raw JSON, so the ids/labels stay aligned across repos.
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from typing import Any
 
@@ -104,3 +105,91 @@ def framework_keys() -> set[str]:
 def format_ids() -> set[str]:
     """All known Format ids (implemented or planned)."""
     return {fmt["id"] for fmt in formats()}
+
+
+# Jobs whose discipline is load-bearing: shipping one of these WITHOUT its protocol block would
+# silently drop the run rules the Job sells (see docs/job-framework-format.md "Job protocols").
+PROTOCOL_REQUIRED_JOBS = frozenset({"ab_test", "pricing", "ideation_hmw"})
+
+_JOB_ID = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def lint_taxonomy(store: Any | None = None, taxonomy: dict[str, Any] | None = None) -> list[str]:
+    """Structural-completeness lint for the canonical taxonomy — the "Adding a Job" checklist
+    (docs/job-framework-format.md), machine-checked. Returns a list of problems (empty = clean):
+    every Framework's methodology_key resolves to a REAL methodology spec; every Job's framework
+    and format keys resolve; coverage carries min_personas + persona_axes; a protocol block is
+    present where required (PROTOCOL_REQUIRED_JOBS) and well-formed wherever present (named steps,
+    each with rule + tooling); and the companion doc has a section per job id. The doc check is
+    skipped when the repo doc is absent (installed package data ships without docs/). Pass
+    `taxonomy` to lint a candidate document before committing it. CLI: `sonaloop taxonomy-lint`."""
+    from . import methodology as _meth   # local import to avoid an import cycle at module load
+    from .config import taxonomy_path
+
+    tax = taxonomy or load_taxonomy()
+    problems: list[str] = []
+    registry = set(_meth.registry(store))
+    fw_ids: set[str] = set()
+    for fw in tax.get("frameworks", []):
+        fw_ids.add(fw.get("id", ""))
+        if fw.get("methodology_key") not in registry:
+            problems.append(f"framework '{fw.get('id')}': methodology_key "
+                            f"{fw.get('methodology_key')!r} resolves to no methodology spec")
+    fmt_ids = {f.get("id") for f in tax.get("formats", [])}
+
+    seen: set[str] = set()
+    for job in tax.get("jobs", []):
+        jid = job.get("id", "")
+        where = f"job '{jid}'"
+        if not _JOB_ID.match(jid or ""):
+            problems.append(f"{where}: id must be lower_snake_case")
+        if jid in seen:
+            problems.append(f"{where}: duplicate id")
+        seen.add(jid)
+        for field in ("name", "sells_as", "user_question"):
+            if not str(job.get(field) or "").strip():
+                problems.append(f"{where}: {field} is missing")
+        fws = job.get("frameworks") or []
+        if not fws:
+            problems.append(f"{where}: no frameworks")
+        for f in fws:
+            if f not in fw_ids:
+                problems.append(f"{where}: framework {f!r} is not a taxonomy framework")
+        if job.get("default_framework") not in fws:
+            problems.append(f"{where}: default_framework {job.get('default_framework')!r} "
+                            "not in frameworks")
+        if not job.get("formats"):
+            problems.append(f"{where}: no formats")
+        for f in job.get("formats") or []:
+            if f not in fmt_ids:
+                problems.append(f"{where}: format {f!r} is not a taxonomy format")
+        cov = job.get("coverage") or {}
+        if not (isinstance(cov.get("min_personas"), int) and cov["min_personas"] >= 1):
+            problems.append(f"{where}: coverage.min_personas must be an int >= 1")
+        if not cov.get("persona_axes"):
+            problems.append(f"{where}: coverage.persona_axes is missing")
+        proto = job.get("protocol")
+        if jid in PROTOCOL_REQUIRED_JOBS and not proto:
+            problems.append(f"{where}: protocol block is REQUIRED (the Job sells a run discipline)")
+        if proto:
+            if not str(proto.get("name") or "").strip() or not str(proto.get("summary") or "").strip():
+                problems.append(f"{where}: protocol needs name + summary")
+            steps = proto.get("steps") or []
+            if not steps:
+                problems.append(f"{where}: protocol has no steps")
+            step_ids = [s.get("id") for s in steps]
+            if len(set(step_ids)) != len(step_ids):
+                problems.append(f"{where}: protocol step ids must be unique")
+            for s in steps:
+                if not (str(s.get("id") or "").strip() and str(s.get("rule") or "").strip()
+                        and str(s.get("tooling") or "").strip()):
+                    problems.append(f"{where}: protocol step {s.get('id')!r} needs id + rule + tooling")
+
+    doc = taxonomy_path().parent.parent / "docs" / "job-framework-format.md"
+    if doc.exists():
+        text = doc.read_text(encoding="utf-8")
+        for job in tax.get("jobs", []):
+            if f"(`{job.get('id')}`)" not in text:
+                problems.append(f"job '{job.get('id')}': no section in docs/job-framework-format.md "
+                                f"(expected a \"(`{job.get('id')}`)\" mention)")
+    return problems

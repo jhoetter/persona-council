@@ -202,6 +202,41 @@ primitives — no parallel store:
    plugs straight into `record_decision`'s `based_on` — the ideation output is
    **decision-record compatible by construction**.
 
+## Adding a Job — the repeatable recipe
+
+Every new Job follows the same checklist (machine-checked by
+`job_taxonomy.lint_taxonomy()` — run `sonaloop taxonomy-lint`, enforced for every Job by
+`tests/test_job_taxonomy.py`):
+
+1. **Definition question** — the `user_question` a buyer walks in with, phrased from their
+   side ("Which variant wins — and for whom?"). Plus stable `id` (lower_snake_case, never
+   renamed), `name`, and a unique buyer-facing `sells_as` label.
+2. **Framework mapping** — `frameworks` (each id must be a taxonomy Framework whose
+   `methodology_key` resolves to a real spec under `sonaloop/methodologies/`) and a
+   `default_framework` from that list. Justify the default in this doc.
+3. **Formats** — the moves the Job composes (`formats` ⊆ the taxonomy Format ids), lead
+   Format first.
+4. **Coverage minimum** — `coverage.min_personas` (≥ 1) + the `persona_axes` the panel must
+   span, with a one-line `note` on why that spread makes the answer trustworthy.
+5. **Protocol block** — when the Job sells a run *discipline* (ordering/commitment rules),
+   encode it as `protocol.steps[{id, rule, tooling}]` (see "Job protocols" above) and add the
+   Job to `job_taxonomy.PROTOCOL_REQUIRED_JOBS` so the lint enforces it.
+6. **Docs section** — a row in the mapping table plus (if it has a protocol) a protocol
+   subsection here, mentioning the job as ``(`<id>`)`` — the lint greps for it.
+7. **Website registry note** — the website repo consumes this taxonomy (`sells_as` is the nav
+   label); a new Job lands there by inheriting the taxonomy entry — never hand-duplicate ids
+   or labels in the website registry. Keyword signals for `sharpen_question`
+   (`job_presets._JOB_SIGNALS`) must also cover the new Job (test-enforced).
+
+### Candidate Jobs (not yet scheduled)
+
+| Candidate id | One-liner |
+|--------------|-----------|
+| `onboarding_friction` | Where do new users stall in the first session, and which friction is cheapest to remove? |
+| `naming_tests` | Which name/label do the target segments understand, remember, and not mis-read? |
+| `messaging_resonance` | Which message lands with which segment — and which falls flat or backfires? |
+| `churn_deep_dive` | For ONE churn cohort: reconstruct the leaving journey and find the reversible moment. |
+
 ## How to consume it
 
 ```python

@@ -91,6 +91,50 @@ def test_get_job_round_trips():
     assert T.get_job("positioning")["default_framework"] == "double_diamond"
 
 
+# ----------------------------------------------------- structural completeness (the Adding-a-Job gate)
+
+def test_every_job_is_structurally_complete(store):
+    """The "Adding a Job" checklist, machine-checked for EVERY Job (docs/job-framework-format.md):
+    framework keys resolve to real methodology specs, format keys exist, the coverage minimum is
+    present, a protocol block exists where required (and is well-formed wherever present), and the
+    companion doc carries a section per job id. `sonaloop taxonomy-lint` runs the same gate."""
+    assert T.lint_taxonomy(store=store) == []
+
+
+def test_lint_catches_an_incomplete_job(store):
+    """The lint actually bites: a candidate Job missing its pieces is reported, not waved through."""
+    import copy
+    tax = copy.deepcopy(T.load_taxonomy())
+    tax["jobs"].append({
+        "id": "Bad-Id", "name": "", "sells_as": "X", "user_question": "?",
+        "frameworks": ["not_a_framework"], "default_framework": "other",
+        "formats": ["not_a_format"], "coverage": {},
+        "protocol": {"name": "p", "summary": "", "steps": [{"id": "s1", "rule": "", "tooling": ""}]},
+    })
+    problems = "\n".join(T.lint_taxonomy(store=store, taxonomy=tax))
+    for needle in ("lower_snake_case", "name is missing", "not a taxonomy framework",
+                   "not in frameworks", "not a taxonomy format", "min_personas", "persona_axes",
+                   "name + summary", "rule + tooling", "no section in docs"):
+        assert needle in problems, needle
+
+
+def test_lint_enforces_required_protocols(store):
+    """Stripping a required protocol (the discipline the Job sells) fails the lint."""
+    import copy
+    tax = copy.deepcopy(T.load_taxonomy())
+    for job in tax["jobs"]:
+        if job["id"] == "ab_test":
+            del job["protocol"]
+    problems = T.lint_taxonomy(store=store, taxonomy=tax)
+    assert any("ab_test" in p and "protocol block is REQUIRED" in p for p in problems)
+
+
+def test_taxonomy_lint_cli_is_wired():
+    from sonaloop.cli import build_parser
+    args = build_parser().parse_args(["taxonomy-lint"])
+    assert args.command == "taxonomy-lint"
+
+
 def test_framework_descriptions_are_structured_and_complete(store):
     """The website 'how it works' page + the job presets consume ONE clean shape:
     {id, name, what, when, stages:[{id, name, what}]} — every Framework must fill all fields."""
