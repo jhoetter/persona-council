@@ -25,6 +25,9 @@ def test_sidebar_library_lists_surveys_hypotheses_decisions():
                             ("/decisions", "decisions_h")):
         assert f'href="{href}"' in html, f"nav link {href} missing"
         assert STRINGS["en"][label_key] in html
+    # Sessions are produced primitives (the session IS the deliverable) — they live in the
+    # library group, below its header, not in the unlabeled workspace group above it.
+    assert html.index(STRINGS["en"]["library_h"]) < html.index('href="/sessions"')
 
 
 def test_vote_tally_is_case_robust():

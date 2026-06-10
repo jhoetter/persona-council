@@ -6,8 +6,9 @@ sonaloop-research would, so downstream sections sit beside these (ordered by `or
 Imported for its side effects by _components (the render side lives in _nav there).
 
 Workspace = the inputs/containers; Library = the methodology-agnostic primitives any
-methodology produces (council/concept/prototype/synthesis). Labels are lambdas so they
-resolve per request (i18n). Within a section, item order follows list order.
+methodology produces (council/concept/prototype/session/synthesis/survey/hypothesis/
+decision). Labels are lambdas so they resolve per request (i18n). Within a section,
+item order follows list order.
 """
 from __future__ import annotations
 
@@ -21,13 +22,15 @@ _CORE_NAV = {
     "workspace": [
         ("/projects", "projects", "projects", lambda: t("projects")),
         ("/personas", "personas", "personas", lambda: t("personas")),
-        ("/sessions", "sessions", "activity", lambda: t("sessions")),
         ("/documentation", "docs", "overview", lambda: t("documentation")),
     ],
     "library": [
         ("/notes", "note", "panel", lambda: t("notes")),
         ("/councils", "councils", "councils", lambda: t("councils")),
         ("/prototypes", "prototype", "prototype", lambda: t("prototypes_h")),
+        # Sessions are produced primitives like councils — the session IS the deliverable,
+        # and councils/syntheses cite it — so they sit in the library, not the workspace.
+        ("/sessions", "sessions", "activity", lambda: t("sessions")),
         ("/syntheses", "syntheses", "report", lambda: t("syntheses")),
         ("/surveys", "surveys", "clipboard", lambda: t("surveys_h")),
         ("/hypotheses", "hypotheses", "target", lambda: t("hypotheses_h")),
