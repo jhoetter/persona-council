@@ -61,10 +61,12 @@ Replaces: `memory_refs`, `evidence`, `citations`, `observed_state_refs`, inline 
 One scale; the UI derives color + label from data (no per-vocabulary maps). Votes/stance/sentiment all
 become a `Stance`. A council "vote" is just a `Stance` with a stricter authoring rule.
 
-Validation invariants: the stored `label` is ALWAYS a canonical term — free labels (incl. the EN/DE
-display labels) are alias-resolved via `stance_scale.json`; on label/value disagreement the explicit
-`value` wins. A token that cannot be resolved is never dropped silently: it is kept as `label_raw`
-(bare unknown tokens additionally fall back to value 0).
+Validation invariants: the stored `value` is ALWAYS on-scale and the stored `label` ALWAYS its
+canonical term — free labels (incl. the EN/DE display labels) are alias-resolved via
+`stance_scale.json`; on label/value disagreement the explicit on-scale `value` wins, while an
+OFF-scale value defers to a resolvable label (else clamps to the nearest endpoint). Whatever loses is
+never dropped silently: it survives as `label_raw` / `value_raw` (bare unknown tokens additionally
+fall back to value 0).
 
 ### `Statement` — a persona's utterance (the big unifier)
 ```json
