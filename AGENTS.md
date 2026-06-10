@@ -38,12 +38,14 @@ product.
   indifference, satisfaction, and rejection when those are plausible.
 - Before speaking from a profile perspective, load `SOUL.md` through
   `prepare_persona_agent_context` or `sonaloop persona-context`.
-- Use CLI/MCP for all mutations: create profiles, generate avatars, simulate
-  days, attach evidence, run councils, clear simulations, and export logs.
+- Use CLI/MCP for all CONTENT mutations: create profiles, generate avatars,
+  simulate days, attach evidence, run councils, clear simulations, export logs.
 - Point the user to the web inspector as soon as there is something to see. Once
   personas/councils/syntheses exist, tell them to open **http://127.0.0.1:8787**
   (start it with `make dev`, or `sonaloop-web`, which prints the URL). The
-  web UI is read-only; all authoring still happens through CLI/MCP.
+  web UI never authors or edits generated/authored TEXT; it does offer
+  STRUCTURAL writes — create/edit/delete projects, notes and sections, persona
+  metadata edits, and deletes — documented in docs/web-mutations.md.
 - Language: generated CONTENT follows the language the user writes in, auto-
   detected on first input and persisted (de|en). Do not switch languages
   mid-stream. The web UI language is independent (toggle in the top bar, or
