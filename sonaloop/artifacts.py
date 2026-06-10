@@ -117,6 +117,57 @@ def vote_tally(votes: list | None) -> dict[str, int]:
 
 
 @lru_cache(maxsize=1)
+def _friction_scale() -> dict[str, Any]:
+    """Load suggestions/friction_levels.json → the same shape as _stance_scale(): {"by_term": {...},
+    "by_value": {...}, "aliases": {...}}. The ONE per-step friction vocabulary for usability sessions
+    (0 none … 3 blocked); no friction words hardcoded in engine/UI."""
+    p = suggestions_dir() / "friction_levels.json"
+    by_term: dict[str, dict] = {}
+    by_value: dict[int, dict] = {}
+    aliases: dict[str, str] = {}
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        for it in data.get("items", []) or []:
+            term = it.get("tag")
+            if not term:
+                continue
+            pres = it.get("presentation") or {}
+            rec = {"value": int(it.get("value", 0)), "term": term,
+                   "label_key": it.get("label_key") or term, "color": pres.get("color") or "var(--muted)"}
+            by_term[term] = rec
+            by_value[rec["value"]] = rec
+            aliases[term] = term
+        for alias, term in (data.get("aliases") or {}).items():
+            aliases[str(alias).strip().lower()] = term     # lookup is case/whitespace-insensitive
+    return {"by_term": by_term, "by_value": by_value, "aliases": aliases}
+
+
+def resolve_friction(term: Any) -> dict[str, Any] | None:
+    """Map a friction token (or its numeric value) onto a canonical level {value, label}; aliases
+    resolve case/whitespace-insensitively like resolve_stance. Unlike stances there is NO silent
+    fallback: an unknown token returns None so the recorder can REJECT it — bucketing a 'blocked'
+    read at 'none' would corrupt the session funnel."""
+    if term in (None, "", []):
+        return None
+    sc = _friction_scale()
+    if isinstance(term, (int, float)) and not isinstance(term, bool):
+        rec = sc["by_value"].get(int(term))
+        return {"value": rec["value"], "label": rec["term"]} if rec else None
+    canon = sc["aliases"].get(str(term).strip().lower())
+    rec = sc["by_term"].get(canon) if canon else None
+    return {"value": rec["value"], "label": rec["term"]} if rec else None
+
+
+def friction_terms() -> list[dict[str, Any]]:
+    """The friction scale's items ({term,value,label_key,color}) in severity order (none → blocked) —
+    the ONE order/color/label source for funnel/step rendering (mirror of stance_terms)."""
+    return sorted((dict(r) for r in _friction_scale()["by_term"].values()), key=lambda r: r["value"])
+
+
+@lru_cache(maxsize=1)
 def _finding_kinds() -> dict[str, dict[str, Any]]:
     """Load suggestions/finding_kinds.json → {kind: {id, label_key}}. The section id/label vocabulary for
     Finding lists (the synthesis minimap anchors come from here)."""
@@ -141,6 +192,7 @@ def finding_kind(kind: str) -> dict[str, Any]:
 
 def reload_vocab() -> None:                # mirror presentation.reload_hints() for tests
     _stance_scale.cache_clear()
+    _friction_scale.cache_clear()
     _finding_kinds.cache_clear()
 
 
@@ -167,8 +219,9 @@ def ref_href(r: dict) -> str | None:
 def ref(kind: str, *, id: str | None = None, anchor: str | None = None, role: str | None = None,
         text: str | None = None, quote: str | None = None) -> dict:
     """A typed cross-reference (spec/artifact-cross-references.md). kind: memory|council|synthesis|note|
-    prototype|persona|prototype_state|external. `id` points at a record; `anchor` addresses a PART within
-    it (a statement/finding/prose-block id, None = whole artifact); `role` is the typed relation
+    prototype|persona|prototype_state|session|external. `id` points at a record; `anchor` addresses a PART
+    within it (a statement/finding/prose-block id — or `step:<index>` for a usability-session step,
+    None = whole artifact); `role` is the typed relation
     (cites|reinterprets|derived_from|answers|supports|refutes|…, open vocab). `quote` is an OPTIONAL
     cached display hint — the source of truth is resolved LIVE from the addressed part. `text` is only for
     anchor-less observed-state strings."""
@@ -201,10 +254,20 @@ _PROSE_PARTS = ("gesamtbild", "positionierung", "arc_narrative", "exec_summary",
 
 
 def _find_part(art: dict, anchor: str) -> dict | None:
-    """Find the part with id == anchor inside an artifact (statements/findings/prompts), or a named prose
-    block wrapped as {text}. Returns None for a broken anchor."""
+    """Find the part with id == anchor inside an artifact (statements/findings/prompts), a named prose
+    block wrapped as {text}, or a usability-session step addressed as `step:<index>`. Returns None for
+    a broken anchor."""
     if anchor in _PROSE_PARTS:
         return {"text": art.get(anchor, "")} if art.get(anchor) else None
+    if anchor.startswith("step:") and isinstance(art.get("steps"), list):
+        try:
+            idx = int(anchor.split(":", 1)[1])
+        except ValueError:
+            return None
+        for s in art["steps"]:
+            if isinstance(s, dict) and s.get("index") == idx:
+                return {"text": s.get("monologue") or (s.get("action") or {}).get("detail", "")}
+        return None
     for key in ("statements", "findings", "prompts"):
         for p in (art.get(key) or []):
             if isinstance(p, dict) and p.get("id") == anchor:
@@ -225,7 +288,8 @@ def resolve_ref(r: dict, store: Any) -> dict[str, Any]:
         out["exists"] = bool(out["text"])
         return out
     getter = {"council": "get_council_session", "synthesis": "get_synthesis",
-              "prototype": "get_prototype", "persona": "get_persona"}.get(kind)
+              "prototype": "get_prototype", "persona": "get_persona",
+              "session": "get_usability_session"}.get(kind)
     art = getattr(store, getter)(rid) if (getter and hasattr(store, getter)) else None
     if not art:
         return out

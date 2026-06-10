@@ -309,4 +309,19 @@ CREATE TABLE IF NOT EXISTS prototype_sessions (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_protosess_proto ON prototype_sessions(prototype_id);
+
+-- Usability sessions: the durable, replayable per-step session trace (one schema across the
+-- artifact/prototype/live fidelity rungs; supersedes prototype_sessions for new recordings).
+-- subject_key = subject.id or subject.url, so the funnel can aggregate sessions of one subject.
+CREATE TABLE IF NOT EXISTS usability_sessions (
+  id TEXT PRIMARY KEY,
+  project_id TEXT,
+  persona_id TEXT NOT NULL,
+  subject_kind TEXT NOT NULL,
+  subject_key TEXT NOT NULL,
+  fidelity TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_usess_subject ON usability_sessions(subject_kind, subject_key);
 """

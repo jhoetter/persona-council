@@ -59,6 +59,9 @@ def test_expected_tools_registered():
         "run_prototype", "stop_prototype", "delete_prototype",
         "proto_open", "proto_act", "proto_read", "proto_close", "list_proto_sessions",
         "brief_prototype_session", "record_prototype_session",
+        # usability sessions (the durable, replayable trace):
+        "brief_usability_session", "record_usability_session", "get_usability_session",
+        "list_usability_sessions", "suggest_friction_levels", "get_session_funnel",
         # authoring vocabularies (the stance scale is the CLOSED set every stance resolves onto):
         "suggest_stances", "suggest_finding_kinds",
     }

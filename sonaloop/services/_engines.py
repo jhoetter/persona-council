@@ -84,6 +84,7 @@ from ..suggestions import (  # noqa: E402
     suggest_methodologies,
     suggest_stances,
     suggest_finding_kinds,
+    suggest_friction_levels,
 )
 from .. import plan as _plan  # noqa: E402
 from ..plan import (  # noqa: E402

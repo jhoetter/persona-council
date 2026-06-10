@@ -107,6 +107,13 @@ def prototypes_dir() -> Path:
     return DATA_DIR / "prototypes"
 
 
+def sessions_dir() -> Path:
+    """Where usability-session artifacts live (writable runtime, like data/personas and the
+    avatar output dir): per-step screenshots under data/sessions/<session_id>/step-<index>.png
+    (spec: the usability-session artifact — the session is the deliverable)."""
+    return DATA_DIR / "sessions"
+
+
 def max_browser_sessions() -> int:
     try:
         return max(1, min(16, int(os.getenv("PERSONA_COUNCIL_MAX_BROWSER_SESSIONS", 4))))

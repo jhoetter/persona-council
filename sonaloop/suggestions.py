@@ -63,6 +63,27 @@ def suggest_stances() -> dict[str, Any]:
                       "(never silently dropped). Council votes use the same terms."}
 
 
+def suggest_friction_levels() -> dict[str, Any]:
+    """The CANONICAL per-step friction vocabulary for usability sessions (suggestions/
+    friction_levels.json) in severity order (none → blocked). Like suggest_stances this set is
+    CLOSED: each item is {term, value, label_key, aliases}; an alias resolves onto its level, and —
+    unlike stances — an UNKNOWN level is rejected on record instead of bucketed (a 'blocked' read
+    silently downgraded to 'none' would corrupt the funnel). Derived live via
+    artifacts.friction_terms() so the JSON is the single source — no level is hardcoded here."""
+    from . import artifacts
+    raw = _load("friction_levels")
+    alias_of: dict[str, list[str]] = {}
+    for alias, term in (raw.get("aliases") or {}).items():
+        alias_of.setdefault(term, []).append(alias)
+    items = [{"term": r["term"], "value": r["value"], "label_key": r["label_key"],
+              "aliases": sorted(alias_of.get(r["term"], []), key=str.lower)}
+             for r in artifacts.friction_terms()]
+    return {"kind": "friction_levels", "items": items,
+            "note": "Author each step's friction as {level: " + "|".join(i["term"] for i in items)
+                    + ", note}. A known alias resolves to its level; an unknown level is REJECTED on "
+                      "record — never invent friction words when these fit."}
+
+
 def suggest_blocker_themes() -> dict[str, Any]:
     """Suggested starter `theme` labels for red-team objections (suggestions/blocker_themes.json) — the
     common blocker families (price / trust / switching cost / …). Recommendations only: brief_red_team
