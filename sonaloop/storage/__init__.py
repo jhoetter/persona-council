@@ -8,7 +8,7 @@ from typing import Any
 from ..config import DATA_DIR, database_path, utc_now_iso
 from ._base import StoreBase
 from ._chats import ChatsMixin
-from ._corpora import CorporaMixin
+from ._corpora import CorporaMixin, PredictionOutcomesMixin
 from ._councils import CouncilsMixin
 from ._decisions import DecisionsMixin
 from ._hooks import HooksMixin
@@ -35,6 +35,7 @@ class Store(
     UsabilitySessionsMixin,
     ChatsMixin,
     CorporaMixin,
+    PredictionOutcomesMixin,
     HooksMixin,
     MemoryMixin,
     StoreBase,

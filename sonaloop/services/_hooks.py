@@ -53,6 +53,14 @@ LIFECYCLE_EVENTS: dict[str, dict[str, Any]] = {
         "description": "A persona was grounded in real source material (provenance recorded).",
         "payload": {"persona_id": "id", "corpus_ids": ["corpus ids"], "claims": "new claim count"},
     },
+    "prediction.scored": {
+        "description": "A real outcome was matched to a predicted behavior (Brier derived).",
+        "payload": {"project_id": "id", "outcome_id": "id", "brier": "0..1", "hit": "bool"},
+    },
+    "calibration.round_recorded": {
+        "description": "A correction round was stamped after calibration misses (docs/calibration.md).",
+        "payload": {"scope": "project id or 'global'", "corrections": "count", "mean_brier": "0..1|null"},
+    },
     "asset.attached": {
         "description": "A file/image/screenshot was attached to a project as evidence.",
         "payload": {"project_id": "id", "asset_id": "id", "kind": "image|screenshot|document|file",

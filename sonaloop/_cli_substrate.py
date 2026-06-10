@@ -7,7 +7,7 @@ from typing import Any
 from . import services
 
 COMMANDS = ("substrate-schema", "query-personas", "query-projects", "query-councils",
-            "query-syntheses", "study-result", "predictions-aggregate", "chat-brief", "chat-record", "chat-get", "chat-list")
+            "query-syntheses", "study-result", "predictions-aggregate", "calibration-report", "calibration-trend", "chat-brief", "chat-record", "chat-get", "chat-list")
 
 
 def add_substrate_parsers(sub) -> None:
@@ -25,6 +25,10 @@ def add_substrate_parsers(sub) -> None:
     p.add_argument("project_id")
     p = sub.add_parser("predictions-aggregate", help="Segment roll-up of every predicted behavior in a project.")
     p.add_argument("project_id")
+    p = sub.add_parser("calibration-report", help="Measure + persist a calibration snapshot (Brier, hit rate, reliability).")
+    p.add_argument("--project")
+    p = sub.add_parser("calibration-trend", help="Calibration quality over time (the Brier delta).")
+    p.add_argument("--project")
     p = sub.add_parser("chat-brief", help="Gather context to author a persona's chat reply (host-authored).")
     p.add_argument("persona_id")
     p.add_argument("message")
@@ -58,6 +62,10 @@ def run_substrate_command(args) -> Any:
         return services.get_study_result(args.project_id)
     if args.command == "predictions-aggregate":
         return services.aggregate_predictions(args.project_id)
+    if args.command == "calibration-report":
+        return services.calibration_report(args.project)
+    if args.command == "calibration-trend":
+        return services.calibration_trend(args.project)
     if args.command == "chat-brief":
         return services.chat_with_persona(args.persona_id, args.message, args.chat_id)
     if args.command == "chat-record":

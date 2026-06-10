@@ -131,6 +131,11 @@ Core MCP tools:
   `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
   `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
   `hooks-list`, `hook-test`, `hook-remove`.
+- The calibration backtest loop (docs/calibration.md): `record_prediction_outcome`
+  (match a real outcome to a prediction; Brier derived) → `calibration_report` (mean Brier,
+  hit rate, reliability curve; persisted) → `calibration_trend` (the Brier delta over time) →
+  `brief_calibration` (the misses + evidence) → author corrections (update_persona /
+  record_grounding) → `record_calibration_round`. CLI: `calibration-report`, `calibration-trend`.
 - Predicted behavior, not opinions: author `predicted_behaviors` (canonical
   `suggest_likelihood_levels` or raw 0..1 + evidence refs) on usability outcomes, councils
   (`record_council(predictions=…)`) and syntheses; `aggregate_predictions(project_id)` is the

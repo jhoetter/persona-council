@@ -71,6 +71,13 @@ CREATE TABLE IF NOT EXISTS evidence (
   data TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS prediction_outcomes (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  data TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS corpora (
   id TEXT PRIMARY KEY,
   data TEXT NOT NULL

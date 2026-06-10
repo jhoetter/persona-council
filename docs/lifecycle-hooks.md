@@ -34,6 +34,8 @@ version-stamped envelope. This shape is the stable surface connectors depend on:
 | `evidence.attached` | a real-world source is attached to a persona | `persona_id`, `evidence_id`, `source_type` |
 | `chat.recorded` | a persona chat exchange is persisted (docs/substrate.md) | `chat_id`, `persona_id`, `turns` |
 | `persona.grounded` | a persona was grounded in real source material (docs/grounding.md) | `persona_id`, `corpus_ids`, `claims` |
+| `prediction.scored` | a real outcome was matched to a predicted behavior (docs/calibration.md) | `project_id`, `outcome_id`, `brier`, `hit` |
+| `calibration.round_recorded` | a correction round was stamped after calibration misses | `scope`, `corrections`, `mean_brier` |
 | `asset.attached` | a file/image/screenshot is attached to a project as evidence (docs/project-assets.md) | `project_id`, `asset_id`, `kind`, `filename` |
 | `day.recorded` | one simulated day is persisted | `persona_id`, `date`, `events` |
 | `council.recorded` | a council session finishes inside its project — the **"session finished"** moment | `council_id`, `project_id`, `prompt`, `persona_ids`, `statements`, `votes` |

@@ -50,3 +50,26 @@ class CorporaMixin:
             rows = self.conn.execute(
                 "SELECT data FROM corpus_chunks ORDER BY corpus_id, idx").fetchall()
         return [json.loads(r["data"]) for r in rows]
+
+
+class PredictionOutcomesMixin:
+    """Scored behavioral predictions (docs/calibration.md): one row per real-world
+    observation matched to a prediction — the raw series the calibration loop trends."""
+
+    def insert_prediction_outcome(self, outcome: dict[str, Any]) -> None:
+        self.conn.execute(
+            "INSERT OR REPLACE INTO prediction_outcomes (id, project_id, created_at, data) VALUES (?, ?, ?, ?)",
+            (outcome["id"], outcome["project_id"], outcome["created_at"],
+             json.dumps(outcome, ensure_ascii=False)),
+        )
+        self.conn.commit()
+
+    def list_prediction_outcomes(self, project_id: str | None = None) -> list[dict[str, Any]]:
+        if project_id:
+            rows = self.conn.execute(
+                "SELECT data FROM prediction_outcomes WHERE project_id=? ORDER BY created_at",
+                (project_id,)).fetchall()
+        else:
+            rows = self.conn.execute(
+                "SELECT data FROM prediction_outcomes ORDER BY created_at").fetchall()
+        return [json.loads(r["data"]) for r in rows]

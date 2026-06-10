@@ -100,6 +100,11 @@ _NEXT: dict[str, dict[str, Any]] = {
     # --- predicted behavior (the calibration substrate) ---
     "suggest_likelihood_levels": {"name": "record_usability_session", "reason": "author predicted_behaviors with the canonical likelihoods + evidence refs, then persist"},
     "aggregate_predictions": {"name": "brief_hypothesis", "reason": "promote a recurring predicted behavior into a falsifiable bet"},
+    # --- the calibration backtest loop (docs/calibration.md) ---
+    "record_prediction_outcome": {"name": "calibration_report", "reason": "measure the cohort's calibration with the new observation in"},
+    "calibration_report": {"name": "brief_calibration", "reason": "gather the misses and author the corrections"},
+    "brief_calibration": {"name": "record_calibration_round", "reason": "stamp the corrections you applied so the trend can judge them"},
+    "record_calibration_round": {"name": "calibration_trend", "reason": "did the loop improve? the Brier delta answers"},
     "record_chat_turn": {"name": "chat_with_persona", "reason": "continue the conversation with full history (pass chat_id)"},
 }
 
