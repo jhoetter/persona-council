@@ -51,10 +51,17 @@ product.
 
 ## CLI
 
-In this checkout, invoke the CLI as **`uv run sonaloop …`** (or `python -m sonaloop.cli …`);
-the bare `sonaloop` is only on PATH after an install. Don't probe — go straight to `uv run`.
-The MCP tools and the CLI are the same service surface; prefer MCP when your host has the
-`sonaloop` server connected, the CLI otherwise. The governed run loop exists on both:
+**Invocation ladder** — work down it; don't probe, and never give up at "command not found":
+
+1. **MCP first**: if your host has the `sonaloop` MCP server connected, use the MCP tools —
+   the richest surface (envelopes, `next_recommended_tool`, validation contracts).
+2. **`uv run sonaloop <cmd>`** from this checkout — works with NO install (uv resolves the
+   project venv). This is the default CLI invocation; the bare `sonaloop` is not on PATH.
+3. **`python -m sonaloop.cli <cmd>`** if `uv` is unavailable in your shell.
+4. Only if a step fails on missing dependencies: run `uv sync` once, then retry (2).
+   Do not install globally (`uv tool install` / `pip install`) unless the user asks.
+
+The CLI and the MCP tools are the SAME service surface — including the governed run loop:
 `run-start` / `run-step` / `run-checkpoint` / `run-critic-round` / `run-finish` / `run-journal`.
 
 ```bash

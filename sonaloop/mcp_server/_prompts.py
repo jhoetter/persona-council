@@ -50,6 +50,12 @@ compose_research_plan, autonomous_research_run (resume). Browse every tool via t
 - Parallelism: if your host supports parallel sub-agents, fan out independent work (one per persona / \
 per angle) and persist sequentially; otherwise run the same steps sequentially -- the methodology is \
 identical.
+- Invocation ladder (don't probe, don't give up at "command not found"): (1) these MCP tools when the \
+`sonaloop` server is connected -- the richest surface; (2) else, from the repo checkout, \
+`uv run sonaloop <cmd>` (no install needed -- uv resolves the project venv); (3) no uv? \
+`python -m sonaloop.cli <cmd>` from the checkout; (4) only if a step fails for missing deps, \
+`uv sync` once and retry. Never install globally unless the user asks. The CLI and MCP are the \
+SAME service surface (incl. the governed run loop: run-start/run-step/run-checkpoint).
 """
 
 
