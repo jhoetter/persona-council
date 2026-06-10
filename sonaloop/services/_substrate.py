@@ -173,11 +173,16 @@ def get_study_result(project_id: str, store: Store | None = None) -> dict[str, A
         run_state = project_run_state(project["id"], store=store)  # noqa: F821 (bound)
     except Exception:
         run_state = None
+    try:
+        predictions = aggregate_predictions(project["id"], store=store)  # noqa: F821 (bound)
+    except Exception:
+        predictions = None
     return {"substrate_version": SUBSTRATE_VERSION,
             "project": _project_row(project),
             "run_state": run_state,
             "councils": councils,
             "syntheses": syntheses,
+            "predictions": predictions,
             "open_questions": graph.get("open_questions") or [],
             "counts": graph.get("counts") or {}}
 

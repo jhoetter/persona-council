@@ -97,6 +97,9 @@ _NEXT: dict[str, dict[str, Any]] = {
     "ingest_corpus": {"name": "brief_grounding", "reason": "author a persona (or a patch) from the real chunks, with provenance"},
     "brief_grounding": {"name": "record_grounding", "reason": "persist the provenance (claim -> chunk ids) you authored (record_persona first for a NEW persona)"},
     "record_grounding": {"name": "prepare_persona_agent_context", "reason": "sessions now carry the grounded chunks — cite them as evidence refs"},
+    # --- predicted behavior (the calibration substrate) ---
+    "suggest_likelihood_levels": {"name": "record_usability_session", "reason": "author predicted_behaviors with the canonical likelihoods + evidence refs, then persist"},
+    "aggregate_predictions": {"name": "brief_hypothesis", "reason": "promote a recurring predicted behavior into a falsifiable bet"},
     "record_chat_turn": {"name": "chat_with_persona", "reason": "continue the conversation with full history (pass chat_id)"},
 }
 

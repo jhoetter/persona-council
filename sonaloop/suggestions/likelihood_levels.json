@@ -1,0 +1,18 @@
+{
+  "kind": "likelihood_levels",
+  "note": "The ONE likelihood vocabulary for predicted behaviors (ticket behavioral-prediction-output). An ordered probability scale; each level carries the numeric midpoint calibration scores against, so a prediction is falsifiable by construction. Resolved via artifacts.resolve_likelihood(): a known alias maps onto its level; a NUMBER in 0..1 is kept as the value and labelled with the nearest level; an unknown token is REJECTED on record (a vague 'probably-ish' would corrupt the calibration loop). `aliases` map free/legacy tokens (EN/DE) onto a canonical level — add an alias, no code change.",
+  "items": [
+    {"tag": "rare",     "value": 0.1,  "label_key": "likelihood_rare",     "presentation": {"color": "var(--muted)"}},
+    {"tag": "unlikely", "value": 0.3,  "label_key": "likelihood_unlikely", "presentation": {"color": "var(--muted)"}},
+    {"tag": "possible", "value": 0.5,  "label_key": "likelihood_possible", "presentation": {"color": "var(--accent)"}},
+    {"tag": "likely",   "value": 0.7,  "label_key": "likelihood_likely",   "presentation": {"color": "var(--amber)"}},
+    {"tag": "certain",  "value": 0.95, "label_key": "likelihood_certain",  "presentation": {"color": "var(--red)"}}
+  ],
+  "aliases": {
+    "never": "rare", "rarely": "rare", "selten": "rare", "kaum": "rare",
+    "doubtful": "unlikely", "improbable": "unlikely", "unwahrscheinlich": "unlikely",
+    "maybe": "possible", "perhaps": "possible", "möglich" : "possible", "moeglich": "possible", "vielleicht": "possible", "50/50": "possible",
+    "probable": "likely", "probably": "likely", "wahrscheinlich": "likely", "very likely": "likely",
+    "sure": "certain", "definite": "certain", "definitely": "certain", "almost certain": "certain", "sicher": "certain", "ziemlich sicher": "certain"
+  }
+}

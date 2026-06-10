@@ -85,6 +85,7 @@ from . import _artifacts_service
 from . import _project_assets
 from . import _substrate
 from . import _grounding
+from . import _predictions
 from . import _head_to_head
 from . import _red_team
 from . import _coverage
@@ -101,7 +102,7 @@ from . import _sections
 
 _SUBMODULES = (
     _common, _hooks, _capabilities, _personas, _simulation, _consolidation, _memory, _evaluation,
-    _snapshots, _councils, _artifacts_service, _project_assets, _substrate, _grounding, _head_to_head, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _hypotheses, _decisions, _usability_sessions, _walkthrough, _sections,
+    _snapshots, _councils, _artifacts_service, _project_assets, _substrate, _grounding, _predictions, _head_to_head, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _hypotheses, _decisions, _usability_sessions, _walkthrough, _sections,
 )
 
 
@@ -145,7 +146,7 @@ _REGISTRY["record_judgment"] = _engines.record_judgment
 for _eng_name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
     "set_project_methodology",
-    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies", "suggest_stances", "suggest_finding_kinds", "suggest_friction_levels", "suggest_tech_comfort",
+    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies", "suggest_stances", "suggest_finding_kinds", "suggest_friction_levels", "suggest_tech_comfort", "suggest_likelihood_levels",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser",
@@ -172,7 +173,7 @@ for _name, _value in _REGISTRY.items():
 for _name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
     "set_project_methodology",
-    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies", "suggest_stances", "suggest_finding_kinds", "suggest_friction_levels", "suggest_tech_comfort",
+    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies", "suggest_stances", "suggest_finding_kinds", "suggest_friction_levels", "suggest_tech_comfort", "suggest_likelihood_levels",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser",

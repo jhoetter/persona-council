@@ -7,7 +7,7 @@ from typing import Any
 from . import services
 
 COMMANDS = ("substrate-schema", "query-personas", "query-projects", "query-councils",
-            "query-syntheses", "study-result", "chat-brief", "chat-record", "chat-get", "chat-list")
+            "query-syntheses", "study-result", "predictions-aggregate", "chat-brief", "chat-record", "chat-get", "chat-list")
 
 
 def add_substrate_parsers(sub) -> None:
@@ -22,6 +22,8 @@ def add_substrate_parsers(sub) -> None:
         p.add_argument("--limit", type=int, default=50)
         p.add_argument("--offset", type=int, default=0)
     p = sub.add_parser("study-result", help="One project's full structured result (the automation shape).")
+    p.add_argument("project_id")
+    p = sub.add_parser("predictions-aggregate", help="Segment roll-up of every predicted behavior in a project.")
     p.add_argument("project_id")
     p = sub.add_parser("chat-brief", help="Gather context to author a persona's chat reply (host-authored).")
     p.add_argument("persona_id")
@@ -54,6 +56,8 @@ def run_substrate_command(args) -> Any:
         return services.query_syntheses(args.status, args.q, args.since, args.limit, args.offset)
     if args.command == "study-result":
         return services.get_study_result(args.project_id)
+    if args.command == "predictions-aggregate":
+        return services.aggregate_predictions(args.project_id)
     if args.command == "chat-brief":
         return services.chat_with_persona(args.persona_id, args.message, args.chat_id)
     if args.command == "chat-record":

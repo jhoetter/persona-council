@@ -141,6 +141,7 @@ def brief_synthesis(council_ids: list[str], title: str | None = None, start_inpu
 def record_synthesis(title: str, start_input: str, council_ids: list[str] | None = None,
                      payload: dict[str, Any] | None = None,
                      goal: str = "", synthesis_id: str | None = None, key: str | None = None,
+                     predictions: list | None = None,
                      created_at: str | None = None, store: Store | None = None) -> dict[str, Any]:
     """Persist a host-authored synthesis. A synthesis is a FIRST-CLASS answer/report node and is
     DECOUPLED from councils: `council_ids` is an OPTIONAL list of referenced evidence and may be
@@ -186,6 +187,9 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
         findings=findings or prev.get("findings", []),
         prompts=prompts or prev.get("prompts", []),
     ).to_dict()
+    predictions_out = [_A.validate_predicted_behavior(pb) for pb in (predictions or [])]
+    _A.assign_part_ids(predictions_out, "pb")
+    rec["predictions"] = predictions_out or prev.get("predictions", [])
     rec["updated_at"] = utc_now_iso()
     store.upsert_synthesis(rec)
     emit_lifecycle_event("synthesis.recorded", {"synthesis_id": sid, "title": title,  # noqa: F821 (bound)

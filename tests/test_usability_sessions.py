@@ -55,9 +55,15 @@ def test_record_read_roundtrip_is_lossless(store, subject, fidelity):
                                         "likelihood": "likely", "trigger": "unclear copy"}]}
     res = _record(store, subject, fidelity, steps, outcome, project_id="proj-1")
     sess = services.get_usability_session(res["usability_session"]["id"], store=store)
-    # the trace survives byte-for-byte: the dual timeline, the outcome, the subject, the fidelity
+    # the trace survives byte-for-byte: the dual timeline, the outcome, the subject, the fidelity.
+    # The one canonicalization: predicted_behaviors validate through the primitive
+    # (ticket behavioral-prediction-output) — likelihood resolves onto the scale, a part id lands.
     assert sess["steps"] == steps
-    assert sess["outcome"] == outcome
+    assert {k: v for k, v in sess["outcome"].items() if k != "predicted_behaviors"} \
+        == {k: v for k, v in outcome.items() if k != "predicted_behaviors"}
+    pb = sess["outcome"]["predicted_behaviors"][0]
+    assert pb["action"] == "ask a colleague" and pb["step"] == 2 and pb["id"] == "pb1"
+    assert pb["likelihood"] == {"value": 0.7, "label": "likely"} and pb["trigger"] == "unclear copy"
     assert sess["subject"] == subject and sess["fidelity"] == fidelity
     assert sess["project_id"] == "proj-1" and sess["persona_id"] == "pX" and sess["date"] == "2026-06-10"
 

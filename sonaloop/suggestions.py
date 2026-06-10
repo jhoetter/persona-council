@@ -84,6 +84,27 @@ def suggest_friction_levels() -> dict[str, Any]:
                       "record — never invent friction words when these fit."}
 
 
+def suggest_likelihood_levels() -> dict[str, Any]:
+    """The CANONICAL likelihood vocabulary for predicted behaviors (suggestions/
+    likelihood_levels.json) in probability order (rare -> certain). Like suggest_friction_levels
+    this set is CLOSED: each item is {term, value, label_key, aliases}; an alias resolves onto its
+    level, a raw 0..1 number keeps its exact value, and an unknown token is REJECTED on record —
+    the numeric midpoints are what the calibration loop scores against."""
+    from . import artifacts
+    raw = _load("likelihood_levels")
+    alias_of: dict[str, list[str]] = {}
+    for alias, term in (raw.get("aliases") or {}).items():
+        alias_of.setdefault(term, []).append(alias)
+    items = [{"term": r["term"], "value": r["value"], "label_key": r["label_key"],
+              "aliases": sorted(alias_of.get(r["term"], []), key=str.lower)}
+             for r in artifacts.likelihood_terms()]
+    return {"kind": "likelihood_levels", "items": items,
+            "note": "Author a predicted behavior's likelihood as one of "
+                    + "|".join(i["term"] for i in items)
+                    + " (or a raw probability 0..1, kept exact). A known alias resolves; an unknown "
+                      "token is REJECTED on record — vague likelihoods would corrupt calibration."}
+
+
 def suggest_tech_comfort() -> dict[str, Any]:
     """The CANONICAL tech-comfort vocabulary for a persona's capability profile (suggestions/
     tech_comfort.json) in comfort order (novice → expert). Like suggest_friction_levels this set is

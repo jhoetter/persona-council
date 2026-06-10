@@ -168,6 +168,58 @@ def friction_terms() -> list[dict[str, Any]]:
 
 
 @lru_cache(maxsize=1)
+def _likelihood_scale() -> dict[str, Any]:
+    """Load suggestions/likelihood_levels.json -> the same shape as _friction_scale(). The ONE
+    likelihood vocabulary for predicted behaviors; each level's numeric midpoint is what the
+    calibration loop scores against (ticket behavioral-prediction-output)."""
+    p = suggestions_dir() / "likelihood_levels.json"
+    by_term: dict[str, dict] = {}
+    aliases: dict[str, str] = {}
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        for it in data.get("items", []) or []:
+            term = it.get("tag")
+            if not term:
+                continue
+            pres = it.get("presentation") or {}
+            rec = {"value": float(it.get("value", 0.5)), "term": term,
+                   "label_key": it.get("label_key") or term, "color": pres.get("color") or "var(--muted)"}
+            by_term[term] = rec
+            aliases[term] = term
+        for alias, term in (data.get("aliases") or {}).items():
+            aliases[str(alias).strip().lower()] = term
+    return {"by_term": by_term, "aliases": aliases}
+
+
+def resolve_likelihood(term: Any) -> dict[str, Any] | None:
+    """Map a likelihood token onto {value (0..1), label}. A canonical term/alias resolves to its
+    level midpoint; a NUMBER in 0..1 keeps its exact value and is labelled with the nearest level
+    (calibration wants the raw probability when the author has one). Like friction there is NO
+    silent fallback: an unknown token returns None so the recorder REJECTS it."""
+    if term in (None, "", []):
+        return None
+    sc = _likelihood_scale()
+    if isinstance(term, (int, float)) and not isinstance(term, bool):
+        v = float(term)
+        if not 0.0 <= v <= 1.0 or not sc["by_term"]:
+            return None
+        nearest = min(sc["by_term"].values(), key=lambda r: abs(r["value"] - v))
+        return {"value": round(v, 4), "label": nearest["term"]}
+    canon = sc["aliases"].get(str(term).strip().lower())
+    rec = sc["by_term"].get(canon) if canon else None
+    return {"value": rec["value"], "label": rec["term"]} if rec else None
+
+
+def likelihood_terms() -> list[dict[str, Any]]:
+    """The likelihood scale's items ({term,value,label_key,color}) in probability order — the ONE
+    order/label source for prediction rendering (mirror of friction_terms)."""
+    return sorted((dict(r) for r in _likelihood_scale()["by_term"].values()), key=lambda r: r["value"])
+
+
+@lru_cache(maxsize=1)
 def _tech_comfort_scale() -> dict[str, Any]:
     """Load suggestions/tech_comfort.json → the same shape as _friction_scale(): {"by_term": {...},
     "by_value": {...}, "aliases": {...}}. The ONE tech-comfort vocabulary for a persona's capability
@@ -257,6 +309,7 @@ def finding_kind(kind: str) -> dict[str, Any]:
 def reload_vocab() -> None:                # mirror presentation.reload_hints() for tests
     _stance_scale.cache_clear()
     _friction_scale.cache_clear()
+    _likelihood_scale.cache_clear()
     _finding_kinds.cache_clear()
 
 
@@ -477,6 +530,38 @@ def validate_statement(d: dict) -> dict:
 def validate_finding(d: dict) -> dict:
     return finding(d.get("text", ""), kind=d.get("kind", "note"), id=d.get("id"), score=d.get("score") or None,
                    refs=[validate_ref(r) for r in (d.get("refs") or [])], meta=d.get("meta") or None)
+
+
+def predicted_behavior(action: str, *, step: int | None = None, subject: str = "",
+                       likelihood: Any = None, trigger: str = "", refs: list | None = None,
+                       persona_id: str = "", id: str | None = None, meta: dict | None = None) -> dict:
+    """The behavioral-prediction primitive (ticket behavioral-prediction-output): a concrete
+    predicted ACTION — "abandons at the price reveal" — not a sentiment. `likelihood` resolves on
+    the canonical scale (or a raw 0..1 number, kept exact); `refs` is the evidence layer (grounding
+    chunks {kind:'evidence'}, session steps, memory) that makes the prediction auditable; the
+    structured shape is what the calibration loop scores against."""
+    act = str(action or "").strip()
+    if not act:
+        raise ValueError("predicted_behavior.action is required (the concrete action, not a vibe)")
+    lk = None
+    if likelihood not in (None, "", []):
+        lk = resolve_likelihood(likelihood)
+        if lk is None:
+            raise ValueError(f"likelihood {likelihood!r} is not on the scale — "
+                             "suggest_likelihood_levels() names the valid levels (or pass 0..1)")
+    if step is not None and (not isinstance(step, int) or isinstance(step, bool)):
+        raise ValueError("predicted_behavior.step must be an int step index or null")
+    return _clean({"id": id, "action": act, "step": step, "subject": str(subject or ""),
+                   "likelihood": lk, "trigger": str(trigger or ""), "persona_id": str(persona_id or ""),
+                   "refs": [validate_ref(r) for r in (refs or [])], "meta": meta or None})
+
+
+def validate_predicted_behavior(d: dict) -> dict:
+    return predicted_behavior(d.get("action", ""), step=d.get("step"), subject=d.get("subject", ""),
+                              likelihood=(d.get("likelihood") if not isinstance(d.get("likelihood"), dict)
+                                          else d["likelihood"].get("value")),
+                              trigger=d.get("trigger", ""), refs=d.get("refs") or [],
+                              persona_id=d.get("persona_id", ""), id=d.get("id"), meta=d.get("meta") or None)
 
 
 def validate_event(d: dict) -> dict:

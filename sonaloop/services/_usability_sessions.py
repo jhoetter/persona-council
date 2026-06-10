@@ -109,7 +109,8 @@ def brief_usability_session(persona_id, subject, fidelity, project_id=None, stor
             "{index (0,1,2,…), action:{type,target,detail}, monologue (concurrent think-aloud), "
             "state:{url?, title?, screen, screenshot?}, friction:{level, note}, "
             "verdict:{would_continue, reason}} — then the outcome {completed, dropoff_step, summary, "
-            "predicted_behaviors:[{action, step, likelihood, trigger}]}. Anti-steering: only praise "
+            "predicted_behaviors:[{action, step, likelihood (suggest_likelihood_levels or 0..1), "
+            "trigger, refs: the evidence ({kind:'evidence'|'session'|'memory', id, quote?})}]}. Anti-steering: only praise "
             "what you actually exercised; honest hesitation, confusion, dead ends and giving up are "
             "first-class outcomes — a persona whose context does not support enthusiasm should stall "
             "or drop off. The session is the deliverable, not a summary of it: record every step you "
@@ -185,12 +186,15 @@ def _validate_outcome(raw: Any, n_steps: int) -> dict[str, Any]:
         raise ValueError("outcome.dropoff_step must be null when completed=true (a completed session has no drop-off)")
     preds = []
     for j, p in enumerate(raw.get("predicted_behaviors") or []):
-        step = p.get("step")
-        if step is not None and (not isinstance(step, int) or isinstance(step, bool)
-                                 or not 0 <= step < n_steps):
+        try:
+            pb = _A.validate_predicted_behavior(p)   # canonical likelihood + evidence refs (the primitive)
+        except ValueError as exc:
+            raise ValueError(f"outcome.predicted_behaviors[{j}]: {exc}") from None
+        step = pb.get("step")
+        if step is not None and not 0 <= step < n_steps:
             raise ValueError(f"outcome.predicted_behaviors[{j}].step must reference an existing step or null")
-        preds.append({"action": str(p.get("action") or ""), "step": step,
-                      "likelihood": p.get("likelihood"), "trigger": str(p.get("trigger") or "")})
+        preds.append(pb)
+    _A.assign_part_ids(preds, "pb")                  # citable: refs can anchor a specific prediction
     return {"completed": raw["completed"], "dropoff_step": drop,
             "summary": str(raw.get("summary") or ""), "predicted_behaviors": preds}
 

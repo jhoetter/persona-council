@@ -131,6 +131,11 @@ Core MCP tools:
   `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
   `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
   `hooks-list`, `hook-test`, `hook-remove`.
+- Predicted behavior, not opinions: author `predicted_behaviors` (canonical
+  `suggest_likelihood_levels` or raw 0..1 + evidence refs) on usability outcomes, councils
+  (`record_council(predictions=…)`) and syntheses; `aggregate_predictions(project_id)` is the
+  segment roll-up ("3 of 5 abandon at the price reveal") riding get_study_result and
+  brief_hypothesis — promote recurring groups into falsifiable bets. CLI: `predictions-aggregate`.
 - Grounding in REAL material (docs/grounding.md): `ingest_corpus` (transcript/tickets/
   reviews → deduped citable chunks) → `brief_grounding` (author a persona or patch FROM
   the chunks, with provenance) → `record_grounding` (claim → chunk-id traceability;

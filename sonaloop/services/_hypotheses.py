@@ -152,6 +152,10 @@ def brief_hypothesis(project_id: str, store: Store | None = None) -> dict[str, A
         "open_questions": open_qs,
         "contested_findings": contested_findings(project["id"], store),  # noqa: F821 (bound)
         "predicted_behaviors": predicted,
+        # The segment view: the same predictions rolled up by (action, step, subject) across the
+        # whole project incl. councils/syntheses — a recurring predicted behavior with a high mean
+        # likelihood is the strongest bet candidate (ticket behavioral-prediction-output).
+        "predicted_behaviors_aggregate": aggregate_predictions(project["id"], store=store)["groups"][:12],
         "instructions": (
             "Author the hypothesis YOURSELF — the server never writes text. Turn a contested "
             "finding, a predicted behavior or an open question above into ONE falsifiable "

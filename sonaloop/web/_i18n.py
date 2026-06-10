@@ -156,6 +156,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "stance_neutral": "Neutral", "stance_skeptical": "Skeptisch / ablehnend",
         "stance_oppose": "Ablehnend",
         # friction levels (usability-session steps — friction_levels.json label_keys)
+        "likelihood_rare": "Selten", "likelihood_unlikely": "Unwahrscheinlich", "likelihood_possible": "Möglich", "likelihood_likely": "Wahrscheinlich", "likelihood_certain": "Nahezu sicher",
         "friction_none": "Reibungslos", "friction_hesitation": "Zögern",
         "friction_confusion": "Verwirrung", "friction_blocked": "Blockiert",
         # session replay inspector (usability sessions — list / funnel / dual timeline)
@@ -392,6 +393,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "stance_neutral": "Neutral", "stance_skeptical": "Skeptical / opposed",
         "stance_oppose": "Oppose",
         # friction levels (usability-session steps — friction_levels.json label_keys)
+        "likelihood_rare": "Rare", "likelihood_unlikely": "Unlikely", "likelihood_possible": "Possible", "likelihood_likely": "Likely", "likelihood_certain": "Near-certain",
         "friction_none": "None", "friction_hesitation": "Hesitation",
         "friction_confusion": "Confusion", "friction_blocked": "Blocked",
         # session replay inspector (usability sessions — list / funnel / dual timeline)

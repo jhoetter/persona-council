@@ -267,7 +267,8 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
                    proposal: str = "", summary: str = "", exec_summary: str = "",
                    selection_reason: str = "", questions: list[str] | None = None,
                    key: str | None = None, findings: list | None = None,
-                   prompts: list | None = None, created_at: str | None = None,
+                   prompts: list | None = None, predictions: list | None = None,
+                   created_at: str | None = None,
                    store: Store | None = None) -> dict[str, Any]:
     """Persist a host-authored council. A council is a research artefact and MUST live inside a research
     project — `project_id` is required and validated. Author the voices as `statements` (the ONE voice
@@ -300,9 +301,13 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
     findings_out = [_artifacts.validate_finding(f) for f in (findings or [])]
     # Stable part ids so other artifacts can cross-reference these statements/findings + the UI can
     # deep-link to them (spec/artifact-cross-references.md). Prompts keep their semantic ids (q0/proposal).
+    # Predicted behaviors (ticket behavioral-prediction-output): concrete actions, not sentiment —
+    # canonical likelihood + evidence refs; stamp persona_id so segment aggregation can attribute.
+    predictions_out = [_artifacts.validate_predicted_behavior(pb) for pb in (predictions or [])]
     _artifacts.assign_part_ids(statements_out, "st")
     _artifacts.assign_part_ids(findings_out, "f")
     _artifacts.assign_part_ids(prompts_out, "p")
+    _artifacts.assign_part_ids(predictions_out, "pb")
     session = CouncilSession(
         id=cid,
         prompt=prompt, persona_ids=persona_ids, selection_reason=selection_reason or "host-authored",
@@ -314,6 +319,8 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
         findings=findings_out,
         prompts=prompts_out,
     ).to_dict()
+    if predictions_out:
+        session["predictions"] = predictions_out
     store.insert_council_session(session)
     # Register the council on its project so the project owns it directly (idempotent).
     council_ids = project.setdefault("council_ids", [])
