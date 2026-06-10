@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._html import register_css
+from .._presence import survey_status_pill as _status_pill
 from .._render import render_ref
 from ... import artifacts as _A
 
@@ -26,16 +27,6 @@ register_css(r"""
 .pvseg{height:100%}
 .pvline{display:flex;gap:10px;align-items:center;margin:5px 0}
 """)
-
-
-def _status_pill(status: str) -> str:
-    """Survey lifecycle pill (a lifecycle, not a vocabulary — the stance strip below stays fully
-    data-driven via stance_meta). Resolved per request so the labels follow the active UI language."""
-    pills = {"draft": (t("survey_status_draft"), "var(--muted)"),
-             "open": (t("survey_status_open"), "var(--green)"),
-             "closed": (t("survey_status_closed"), "var(--violet)")}
-    label, color = pills.get(status, pills["draft"])
-    return _label(label, color)
 
 
 def _stance_strip(counts: dict, total: int) -> str:

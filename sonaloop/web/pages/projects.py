@@ -5,6 +5,11 @@ from fastapi.responses import RedirectResponse
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._graph_outline_sessions import outline_session_groups
+# Presence contract (tracker: sonaloop/project-presence-contract): the tier-3 rescue sections —
+# open questions / evidence assets / surveys — render on the DEFAULT view below the outline.
+from .._presence import (
+    asset_rows, assets_section_html, open_questions_section_html, surveys_section_html,
+)
 # The bet/decision section renderers live with their artifact's page module (which also serves the
 # cross-project /hypotheses and /decisions lists) — the project page embeds the same cards.
 from .hypotheses import _hypotheses_html
@@ -117,27 +122,12 @@ def register_projects(app) -> None:
             arts_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("artifacts_h")} ({len(arts)})'),
                                  fragment(*arows))
         # Evidence assets: files/images/screenshots attached via MCP (ticket attach-evidence-files-mcp).
-        # Read-only, like everything here; image assets render a thumbnail from the static /data mount.
+        # Read-only; the rows are shared with the default view's #assets section (_presence).
         assets = graph.get("assets") or []
         assets_html = ""
         if assets:
-            asrows = []
-            for a in assets:
-                is_img = a.get("kind") in ("image", "screenshot")
-                thumb = (h("a", {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"},
-                           h("img", {"src": a.get("url", ""), "alt": a.get("title", ""), "loading": "lazy",
-                                     "style": "max-height:64px;max-width:120px;border-radius:6px;display:block"}))
-                         if is_img else raw(_icon("external")))
-                size_kb = f'{max(1, int(a.get("bytes", 0)) // 1024)} KB'
-                asrows.append(h("div", {"class_": "strow"},
-                               thumb, " ",
-                               h("a", {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"},
-                                 h("b", {}, a.get("title") or a.get("filename", ""))), " ",
-                               h("span", {"class_": "pill"}, t("asset_kind_" + (a.get("kind") or "file"))), " ",
-                               h("span", {"class_": "muted small"}, f'{a.get("filename", "")} · {size_kb}'
-                                 + (f' · {a.get("notes")}' if a.get("notes") else ""))))
             assets_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("assets_h")} ({len(assets)})'),
-                                   fragment(*asrows))
+                                   raw(asset_rows(assets)))
         # Sections outline (methodology-independent groupings) — a navigable list in the panel.
         from ... import presentation as _pres
         secs = sorted(graph.get("sections") or [], key=lambda s: s.get("order", 0))
@@ -224,20 +214,31 @@ def register_projects(app) -> None:
             services.list_usability_sessions(project_id=proj["id"], store=store), store)
         # A near-empty outline sizes to content instead of pinning a viewport-high dead zone (the
         # sections below rise above the fold); a full outline keeps filling the viewport.
-        n_rows = (len(graph["nodes"]) + len(protos) + len(graph.get("reports") or [])
+        n_rows = (len(graph["nodes"]) + len(protos) + len(graph.get("reports") or []) + len(arts)
                   + sum(1 + len(g["sessions"]) for g in sess_groups.values()))
         card_cls = "outlinecard" + ("" if n_rows > 8 else " ol-compact")
         main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
                      if is_graph else h("div", {"class_": card_cls}, raw(_outline_html(graph, sessions=sess_groups))))
-        # Hypotheses/decisions live BELOW the outline — surface their counts as header chips
+        # The section kinds live BELOW the outline — surface their counts as header jump-chips
         # (anchor-jumps) so they stay visible above the fold and can't be scrolled past unnoticed.
+        # Presence contract: hypotheses · decisions · open questions · assets · surveys — every
+        # non-empty section kind gets a chip, empty kinds render no chrome.
         n_hyp = len(services.list_hypotheses(proj["id"], store=store))
         n_dec = len(services.list_decisions(proj["id"], store=store))
+        surveys = services.list_surveys(project_id=proj["id"], store=store)
+        n_resp = sum(s.get("response_count") or 0 for s in surveys)
         jump_chips = [c for c in (
             (h("a", {"class_": "pill projjump", "href": "#hypotheses"},
                raw(_icon("target")), f' {n_hyp} · {t("hypotheses_h")}') if n_hyp else None),
             (h("a", {"class_": "pill projjump", "href": "#decisions"},
                raw(_icon("flag")), f' {n_dec} · {t("decisions_h")}') if n_dec else None),
+            (h("a", {"class_": "pill projjump", "href": "#open-questions"},
+               raw(_icon("help")), f' {len(oqs)} · {t("open_questions_h")}') if oqs else None),
+            (h("a", {"class_": "pill projjump", "href": "#assets"},
+               raw(_icon("file")), f' {len(assets)} · {t("assets_h")}') if assets else None),
+            (h("a", {"class_": "pill projjump", "href": "#surveys"},
+               raw(_icon("plan")),
+               f' {len(surveys)} · {t("surveys_h")} · {t("n_responses", n=n_resp)}') if surveys else None),
         ) if c]
         jump_html = (h("div", {"class_": "pills", "style": "margin-top:8px"}, *jump_chips)
                      if jump_chips else "")
@@ -245,7 +246,10 @@ def register_projects(app) -> None:
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
                    h("p", {"class_": "lead"}, proj.get("goal", "")), jump_html, head_tools),
                  main_view, raw(_hypotheses_html(proj["id"], store)),
-                 raw(_decisions_html(proj["id"], store)))
+                 raw(_decisions_html(proj["id"], store)),
+                 raw(open_questions_section_html(graph["open_questions"])),
+                 raw(assets_section_html(assets)),
+                 raw(surveys_section_html(surveys)))
         actions = fragment(top_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)

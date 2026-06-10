@@ -68,6 +68,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "survey_stance_mapped": "Stance-gemappt",
         "survey_predicted": "Council-Prognose", "survey_actual": "Echte Antworten",
         "no_survey_responses": "Noch keine echten Antworten importiert (import_survey_responses).",
+        # open-questions section on the project page (presence contract)
+        "oq_resolved_h": "Geklärt",
         # hypotheses (falsifiable predictions scored against reality)
         "hypotheses_h": "Hypothesen",
         "hypotheses_lead": "Falsifizierbare Wetten über alle Projekte — von der Realität bewertet.",
@@ -325,6 +327,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "survey_stance_mapped": "stance-mapped",
         "survey_predicted": "Council prediction", "survey_actual": "Real answers",
         "no_survey_responses": "No real responses imported yet (import_survey_responses).",
+        # open-questions section on the project page (presence contract)
+        "oq_resolved_h": "Resolved",
         # hypotheses (falsifiable predictions scored against reality)
         "hypotheses_h": "Hypotheses",
         "hypotheses_lead": "Falsifiable bets across all projects — scored by reality.",

@@ -79,6 +79,20 @@ def _friction_count(sess: dict) -> int:
                         if r["term"] == (s.get("friction") or {}).get("level")), 0) > 0)
 
 
+def _url_artifact_chips(item: dict) -> str:
+    """The A/B label + the capture status (captured green / reference-only amber) — the
+    reproducibility signal a council-pool artifact carries. URL artifacts are outline rows on the
+    DEFAULT view (tracker: sonaloop/project-presence-contract); `kind` is bounded by the code enum
+    services ARTIFACT_KINDS, normalized on add_artifact."""
+    node = item.get("node") or {}
+    chips = [_label(str(node.get("label") or "?"))]
+    if (node.get("snapshot") or {}).get("ok"):
+        chips.append(_label(t("artifact_captured"), "var(--green)"))
+    else:
+        chips.append(_label(t("artifact_capture_failed"), "var(--amber)"))
+    return "".join(chips)
+
+
 def _session_chips(item: dict) -> str:
     """Outcome (completed green / dropped red) + the friction count — the session child-row
     chips that previously lived in _graph_outline_sessions, now routed through the registry."""
@@ -104,6 +118,7 @@ _register("synthesis", _synthesis_chips)
 _register("report", _report_chips)
 _register("note", _note_chips)
 _register("session", _session_chips)
+_register("url_artifact", _url_artifact_chips)
 # Declared chip-less — each reason names the affordance that already carries the signal:
 _register("prototype", NoChips("the fidelity kind pill + the parent funnel chip carry it"))
 _register("live_url", NoChips("the funnel chip + its session child rows carry the signal"))

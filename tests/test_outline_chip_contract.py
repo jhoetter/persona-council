@@ -130,6 +130,10 @@ def _every_kind_project(store) -> str:
     services.record_synthesis_outline(pid, {"build_order_narrative": "n",
                                             "sections": [{"heading": "A"}, {"heading": "B"}]},
                                       store=store)
+    # a URL artifact (council-pool A/B capture) — an outline row on the DEFAULT view with the
+    # A/B label + capture-status chips (tracker: sonaloop/project-presence-contract)
+    services.add_artifact(pid, "https://example.test/landing", kind="url", title="Landing A",
+                          capture=False, store=store)
     return pid
 
 
