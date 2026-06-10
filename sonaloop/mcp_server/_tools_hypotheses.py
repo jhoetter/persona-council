@@ -54,6 +54,14 @@ def register_hypotheses(mcp):
                     services.record_hypothesis_result(hypothesis_id, observed_value, source, note), t)
 
     @mcp.tool()
+    def drop_hypothesis(hypothesis_id: str, note: str = "") -> dict[str, Any]:
+        """Retire an OPEN bet without scoring it (the question became moot, the metric
+        unmeasurable). Dropped bets stay on the record but never enter the scorecard — only
+        reality may validate or refute. A resolved verdict cannot be dropped after the fact."""
+        t = time.perf_counter()
+        return _env("drop_hypothesis", services.drop_hypothesis(hypothesis_id, note), t)
+
+    @mcp.tool()
     def eval_scorecard(project_id: str | None = None) -> dict[str, Any]:
         """Aggregate the hit-rate across RESOLVED hypotheses (per project, or global with a
         per-project breakdown) and write the sim-vs-reality calibration record into eval_reports.

@@ -181,7 +181,9 @@ def record_hypothesis(project_id: str, text: str, prediction: dict, derived_from
     pred = _validate_prediction(prediction)
     refs = _validate_derived_from(derived_from, project["id"], store)  # noqa: F821 (bound)
     now = utc_now_iso()
-    hid = stable_id("hyp", key) if key else stable_id("hyp", project["id"], text, now)
+    # The key hash is project-scoped — a key-only hash would let one project's record_hypothesis
+    # silently re-author and adopt another project's open bet on key collision.
+    hid = stable_id("hyp", project["id"], key) if key else stable_id("hyp", project["id"], text, now)
     existing = store.get_hypothesis(hid)
     if existing and existing.get("status") != "open":
         raise ValueError(f"hypothesis {hid} is already {existing.get('status')} — a scored bet "
@@ -222,6 +224,9 @@ def record_hypothesis_result(hypothesis_id: str, observed_value: Any, source: di
     hyp = _require_hypothesis(store, hypothesis_id)
     if hyp.get("status") == "dropped":
         raise ValueError("this hypothesis was dropped — a dropped bet is not scored")
+    if hyp.get("status") != "open":
+        raise ValueError(f"this hypothesis is already {hyp['status']} — a scored verdict is the "
+                         "audit trail and cannot be rewritten; record a new hypothesis to re-test")
     if observed_value in (None, ""):
         raise ValueError("observed_value is required — a result without an observation scores nothing")
     if not isinstance(source, dict):
@@ -229,6 +234,11 @@ def record_hypothesis_result(hypothesis_id: str, observed_value: Any, source: di
                          "reality answer?")
     src = _A.validate_ref(source)
     src.setdefault("role", "observed_in")
+    # Record kinds must point at an actual record — an id-less ref resolves on bare text, which
+    # would let free prose masquerade as e.g. a survey-grounded observation.
+    if src.get("kind") != "external" and not src.get("id"):
+        raise ValueError(f"source kind {src.get('kind')!r} needs an id (the record reality answered "
+                         "in) — only {kind:'external', text} may carry a free observation")
     if not _A.resolve_ref(src, store).get("exists"):
         anchor = f"#{src['anchor']}" if src.get("anchor") else ""
         raise ValueError(f"source does not resolve: {src.get('kind')}:{src.get('id') or ''}{anchor}"
@@ -242,6 +252,22 @@ def record_hypothesis_result(hypothesis_id: str, observed_value: Any, source: di
     hyp["updated_at"] = now
     store.upsert_hypothesis(hyp)
     return {"hypothesis": hyp, "status": status}
+
+
+def drop_hypothesis(hypothesis_id: str, note: str = "", store: Store | None = None) -> dict[str, Any]:
+    """Retire an OPEN bet without scoring it (the question became moot, the metric unmeasurable).
+    Dropped bets stay on the record but are excluded from the scorecard — only reality may
+    validate or refute; a resolved verdict cannot be dropped after the fact."""
+    store = store or Store()
+    hyp = _require_hypothesis(store, hypothesis_id)
+    if hyp.get("status") != "open":
+        raise ValueError(f"only an open bet can be dropped — this hypothesis is "
+                         f"{hyp.get('status')}")
+    hyp["status"] = "dropped"
+    hyp["drop_note"] = str(note or "")
+    hyp["updated_at"] = utc_now_iso()
+    store.upsert_hypothesis(hyp)
+    return {"hypothesis": hyp}
 
 
 # --------------------------------------------------------------------------- scorecard (calibration)

@@ -315,3 +315,50 @@ def test_project_page_shows_open_bets_resolved_and_hit_rate(store):
     # a project without hypotheses shows no section (and no empty chrome)
     other = _project(store, "Quiet study")
     assert STRINGS["en"]["hyp_open_bets"] not in client.get(f'/projects/{other["id"]}?lang=en').text
+
+
+# --------------------------------------------------------------- review fixes (audit-trail integrity)
+
+def test_a_resolved_verdict_cannot_be_rescored(store):
+    proj = _project(store)
+    hx = _record(store, proj["id"])
+    services.record_hypothesis_result(hx["id"], 41, _OBS, store=store)
+    with pytest.raises(ValueError, match="already validated"):
+        services.record_hypothesis_result(hx["id"], 999, _OBS, store=store)
+    kept = services.get_hypothesis(hx["id"], store=store)
+    assert kept["result"]["observed_value"] == 41  # the original observation survives
+
+
+def test_key_hash_is_project_scoped(store):
+    pa, pb = _project(store, "Project A"), _project(store, "Project B")
+    ha = _record(store, pa["id"], key="shared-key")
+    hb = _record(store, pb["id"], key="shared-key", text="B's own bet on the same key")
+    assert ha["id"] != hb["id"]
+    assert [x["id"] for x in services.list_hypotheses(pa["id"], store=store)] == [ha["id"]]
+    assert services.get_hypothesis(ha["id"], store=store)["text"].startswith("At least 40%")
+
+
+def test_record_kind_sources_need_an_id(store):
+    proj = _project(store)
+    hx = _record(store, proj["id"])
+    with pytest.raises(ValueError, match="needs an id"):
+        services.record_hypothesis_result(
+            hx["id"], 41, {"kind": "survey", "text": "trust me, a survey said so"}, store=store)
+    # the free-observation escape hatch stays open, but only as kind external
+    services.record_hypothesis_result(hx["id"], 41, _OBS, store=store)
+
+
+def test_drop_hypothesis_retires_open_bets_only(store):
+    proj = _project(store)
+    hx = _record(store, proj["id"])
+    dropped = services.drop_hypothesis(hx["id"], note="metric became unmeasurable", store=store)
+    assert dropped["hypothesis"]["status"] == "dropped"
+    assert dropped["hypothesis"]["drop_note"] == "metric became unmeasurable"
+    with pytest.raises(ValueError, match="not scored"):
+        services.record_hypothesis_result(hx["id"], 41, _OBS, store=store)
+    scored = _record(store, proj["id"], text="Another bet", key="k2")
+    services.record_hypothesis_result(scored["id"], 41, _OBS, store=store)
+    with pytest.raises(ValueError, match="only an open bet"):
+        services.drop_hypothesis(scored["id"], store=store)
+    card = services.eval_scorecard(proj["id"], store=store)
+    assert card["scorecard"]["resolved"] == 1  # the dropped bet never enters the scorecard

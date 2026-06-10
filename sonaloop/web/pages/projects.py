@@ -92,7 +92,8 @@ def _hypotheses_html(project_id: str, store) -> str:
                                        "style": (f"width:{n / len(scored) * 100:.1f}%;"
                                                  f"background:{_HYP_STATUS_COLORS[status]}"),
                                        "title": f"{_hyp_status_label(status)}: {n}"}))
-        rate = f"{hits}/{len(decisive)}" + (f" · {hits / len(decisive) * 100:.0f}%" if decisive else "")
+        rate = (f"{hits}/{len(decisive)} · {hits / len(decisive) * 100:.0f}%" if decisive
+                else t("hyp_no_decisive"))
         strip = h("div", {"class_": "hyprate"},
                   h("span", {"class_": "muted small"}, t("hyp_hit_rate"), f": {rate}"),
                   h("div", {"class_": "hypstrip"}, fragment(*segs)))

@@ -66,7 +66,7 @@ def test_expected_tools_registered():
         "brief_survey", "record_survey", "get_survey", "list_surveys", "export_survey",
         "import_survey_responses", "survey_results", "attach_survey_evidence",
         # hypotheses (falsifiable predictions scored against reality → eval_reports):
-        "brief_hypothesis", "record_hypothesis", "record_hypothesis_result", "eval_scorecard",
+        "brief_hypothesis", "record_hypothesis", "record_hypothesis_result", "drop_hypothesis", "eval_scorecard",
         "get_hypothesis", "list_hypotheses",
         # authoring vocabularies (the stance scale is the CLOSED set every stance resolves onto):
         "suggest_stances", "suggest_finding_kinds",
