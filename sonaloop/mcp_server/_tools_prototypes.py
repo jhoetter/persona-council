@@ -73,9 +73,25 @@ def register_prototypes(mcp):
     @mcp.tool()
     def proto_open(prototype_id: str | None = None, url: str | None = None,
                    persona_id: str | None = None) -> dict[str, Any]:
-        """Open a real running app in a headless browser session; returns {session_id, snapshot}."""
+        """Open a real running app in a headless browser session; returns {session_id, snapshot}.
+        Without the optional browser harness this degrades gracefully (in-band fallback, no error)."""
         t = time.perf_counter()
-        return _env("proto_open", services.proto_open(prototype_id, url, persona_id), t)
+        from .. import browser as _browser
+        fallback = {
+            "session_id": None, "unavailable": True,
+            "note": "browser harness disabled — run `sonaloop setup` to fetch the headless "
+                    "chromium (optional). Every core flow works without it: use the artifact "
+                    "rung instead (define_flow + brief_flow_walkthrough need no browser).",
+        }
+        if not _browser.available():
+            # Cold start without the optional browser is normal — answer in-band, never raise.
+            return _env("proto_open", fallback, t)
+        try:
+            return _env("proto_open", services.proto_open(prototype_id, url, persona_id), t)
+        except _browser.HarnessError as he:
+            if he.code == "PLAYWRIGHT_UNAVAILABLE":   # package present, chromium binary not fetched
+                return _env("proto_open", fallback, t)
+            raise
 
     @mcp.tool()
     def proto_act(session_id: str, action: dict[str, Any]) -> dict[str, Any]:

@@ -7,9 +7,22 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .config import ROOT, load_env, utc_now_iso
+from .config import DATA_DIR, ROOT, load_env, utc_now_iso
 from .services import stable_id
 from .storage import Store
+
+
+# The single, helpful degradation message (cold start without an OPENAI_API_KEY is normal):
+# avatars are optional eye-candy, never a blocker — everything else works without the key.
+AVATAR_DISABLED_NOTE = (
+    "avatars disabled — no OPENAI_API_KEY configured (optional; used only for avatar images "
+    "and embedding-based recall). Set it in the environment or in <data dir>/.env "
+    "(`sonaloop info` shows the data dir), then retry. Everything else works without it."
+)
+
+
+def avatars_enabled() -> bool:
+    return bool(os.getenv("OPENAI_API_KEY"))
 
 
 def _post_json(url: str, payload: dict[str, Any], api_key: str) -> dict[str, Any]:
@@ -71,11 +84,18 @@ def generate_persona_avatar(persona_id: str, style: str | None = None, store: St
         raise KeyError(f"Unknown persona: {persona_id}")
     api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured.")
+        raise RuntimeError(AVATAR_DISABLED_NOTE)
     model = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
-    out_dir = Path(os.getenv("AVATAR_OUTPUT_DIR", "data/avatars"))
-    if not out_dir.is_absolute():
-        out_dir = ROOT / out_dir
+    # Default to the writable per-user runtime (DATA_DIR/avatars == the web app's /data mount).
+    # In a source checkout DATA_DIR is ROOT/data, so this is the same data/avatars as before;
+    # installed (uvx/pipx), ROOT is site-packages and must never be written to.
+    env_dir = os.getenv("AVATAR_OUTPUT_DIR")
+    if env_dir:
+        out_dir = Path(env_dir)
+        if not out_dir.is_absolute():
+            out_dir = ROOT / out_dir
+    else:
+        out_dir = DATA_DIR / "avatars"
     out_dir.mkdir(parents=True, exist_ok=True)
     prompt = build_avatar_prompt(persona, style)
     result = _post_json(
@@ -94,8 +114,16 @@ def generate_persona_avatar(persona_id: str, style: str | None = None, store: St
     filename = f"{persona['slug']}-{stable_id('avatar', persona['id'], prompt).split('_')[1]}.png"
     out_path = out_dir / filename
     out_path.write_bytes(img_bytes)
+    # The stored path doubles as the web URL (src="/<path>"; the inspector mounts /data → DATA_DIR),
+    # so files under DATA_DIR persist as "data/...". Source checkouts keep the identical value.
+    if out_path.is_relative_to(DATA_DIR):
+        rel = "data/" + str(out_path.relative_to(DATA_DIR))
+    elif out_path.is_relative_to(ROOT):
+        rel = str(out_path.relative_to(ROOT))
+    else:
+        rel = str(out_path)
     avatar = {
-        "path": str(out_path.relative_to(ROOT)),
+        "path": rel,
         "prompt": prompt,
         "model": model,
         "validated_against": ["display_name", "role", "identity_traits"],

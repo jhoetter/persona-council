@@ -285,6 +285,16 @@ STRINGS: dict[str, dict[str, str]] = {
         "evt_asset_attached": "Asset angehängt", "evt_council_recorded": "Council erfasst",
         "evt_synthesis_recorded": "Report erfasst", "evt_project_created": "Projekt angelegt",
         "evt_run_finished": "Run beendet",
+        # first-steps checklist on the empty-DB home (ticket one-sentence-mcp-install)
+        "first_steps_h": "Erste Schritte",
+        "first_steps_lead": "Sonaloop läuft — drei Schritte bis zum ersten Ergebnis.",
+        "fs_step_install_h": "Installieren & als MCP-Server registrieren",
+        "fs_step_install_d": "Erledigt, wenn dein Agent die Sonaloop-Tools sieht. Falls nicht, der Einzeiler für Claude Code:",
+        "fs_step_project_h": "Projekt anlegen oder laden",
+        "fs_step_project_d": "Bitte deinen Agenten: „Starte ein Forschungsprojekt zu …“ — er legt Projekt und Plan über die MCP-Tools an.",
+        "fs_step_council_h": "Erstes Council laufen lassen",
+        "fs_step_council_d": "Lass 2–4 Personas anlegen und stelle dann eine Frage als Council — das Ergebnis erscheint hier live.",
+        "fs_docs_link": "Getting-started-Guide",
     },
     "en": {
         "personas": "Personas", "councils": "Councils",
@@ -543,6 +553,16 @@ STRINGS: dict[str, dict[str, str]] = {
         "evt_asset_attached": "Asset attached", "evt_council_recorded": "Council recorded",
         "evt_synthesis_recorded": "Report recorded", "evt_project_created": "Project created",
         "evt_run_finished": "Run finished",
+        # first-steps checklist on the empty-DB home (ticket one-sentence-mcp-install)
+        "first_steps_h": "First steps",
+        "first_steps_lead": "Sonaloop is running — three steps to a first result.",
+        "fs_step_install_h": "Install & register the MCP server",
+        "fs_step_install_d": "Done once your agent sees the Sonaloop tools. If not, the one-liner for Claude Code:",
+        "fs_step_project_h": "Create or load a project",
+        "fs_step_project_d": "Ask your agent: “Start a research project on …” — it creates the project and plan through the MCP tools.",
+        "fs_step_council_h": "Run a first council",
+        "fs_step_council_d": "Have 2–4 personas authored, then put one question to a council — the result shows up here live.",
+        "fs_docs_link": "Getting-started guide",
     },
 }
 

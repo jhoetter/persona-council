@@ -17,7 +17,32 @@ supports it.
 
 ![Sonaloop inspector — a memory-grounded council with executive summary, sentiment breakdown, and links into the synthesis](docs/assets/sonaloop-council.png)
 
-## Get started — paste this to your AI agent
+**Docs:** the canonical documentation lives at **<https://jhoetter.github.io/sonaloop-docs/>** —
+start with [Getting started](https://jhoetter.github.io/sonaloop-docs/getting-started/).
+
+## Get started
+
+**Know what MCP is? One sentence per host** (needs [`uv`](https://docs.astral.sh/uv/)):
+
+- **Claude Code**
+
+  ```bash
+  claude mcp add sonaloop -- uvx sonaloop-mcp
+  ```
+
+- **Claude Desktop / Cursor / any MCP host** — add to the host's MCP config (`mcpServers`):
+
+  ```json
+  { "sonaloop": { "command": "uvx", "args": ["sonaloop-mcp"] } }
+  ```
+
+That's it — no data dir, no `.env`, no setup step required; the server bootstraps itself on first
+touch and your first tool call on a fresh database returns the first steps (project → personas →
+council). Optional extras come later: `sonaloop setup` fetches the headless browser for prototype
+testing, and an `OPENAI_API_KEY` enables avatars + semantic recall. `sonaloop info` checks the
+wiring and prints these exact one-liners when something's missing.
+
+### Or: paste this to your AI agent
 
 No setup knowledge needed. Paste the prompt below into an **AI agent that can run commands
 on your machine** — e.g. **Claude Code, Cursor, or Codex** (and other local/desktop agents
@@ -49,19 +74,9 @@ me posted; I just want to talk, not configure anything.
 That's the whole onboarding. Everything below is reference.
 
 <details>
-<summary>Prefer to wire it up yourself?</summary>
+<summary>Prefer a permanent install instead of uvx?</summary>
 
-Register the MCP server directly (works in any MCP client — no checkout needed):
-
-```json
-{
-  "mcpServers": {
-    "sonaloop": { "command": "uvx", "args": ["--from", "sonaloop", "sonaloop-mcp"] }
-  }
-}
-```
-
-Or install the entrypoints (`sonaloop` CLI · `sonaloop-mcp` · `sonaloop-web`):
+Install the entrypoints (`sonaloop` CLI · `sonaloop-mcp` · `sonaloop-web`):
 
 ```bash
 uv tool install sonaloop      # or: pipx install sonaloop / pip install --user sonaloop
@@ -148,7 +163,9 @@ the public repo): `make snapshot` writes `data/export/` (your portable state), a
 local-only — your content never leaves your machine.
 
 For releases: bump `version` in `pyproject.toml` (a published version is immutable),
-then `uv build && uv publish`. Refresh the vendored icons with `make icons`.
+then `uv build && uv publish`. The `uvx sonaloop-mcp` one-liner is backed by the shim
+distribution in [`packaging/sonaloop-mcp/`](packaging/sonaloop-mcp/) — bump its version in
+lockstep and publish it the same way. Refresh the vendored icons with `make icons`.
 
 ## Operating rules & docs
 

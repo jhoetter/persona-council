@@ -115,6 +115,46 @@ _NEXT: dict[str, dict[str, Any]] = {
 }
 
 
+# --- First-contact orientation (ticket one-sentence-mcp-install) -------------------------
+# After a cold one-liner install the host's first call is usually a list/next tool on an EMPTY
+# database. Instead of a bare empty list, those entry tools carry ONE short "you're new here"
+# note (what to create first: project → personas → council, plus where the guide lives). The
+# note appears only while the DB has neither projects nor personas, so it never repeats once
+# real work exists — and only on this entry set, so brief_*/record_* chains stay clean.
+_ENTRY_TOOLS = {
+    "list_personas", "list_research_projects", "list_active_projects", "list_councils",
+    "list_syntheses", "list_methodologies", "list_frameworks", "list_job_presets",
+    "query_projects", "substrate_schema", "next_action", "brief_next",
+}
+
+_ORIENTATION = (
+    "You're new here — the database is empty. First steps: 1) create a research project "
+    "(start_project(title, goal) — the front door for any research question), 2) author 2-4 "
+    "personas (brief_persona → you write the profile JSON → record_persona), 3) run a first "
+    "council (brief_council → author each statement in character → record_council). The full "
+    "operating contract + first-run recipe is the sonaloop://guide/catalogue resource (or "
+    "`sonaloop guide`); start `sonaloop-web` so the user can watch at http://127.0.0.1:8787."
+)
+
+
+def _db_is_empty() -> bool:
+    """True only when the runtime DB has neither personas nor research projects.
+    Fail-soft by contract: any storage hiccup means 'not empty' (no note, no error)."""
+    try:
+        from ..storage import Store
+
+        store = Store()
+        try:
+            for table in ("personas", "research_projects"):
+                if store.conn.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone():
+                    return False
+        finally:
+            store.close()
+        return True
+    except Exception:
+        return False
+
+
 def _env(tool: str, data: Any, started: float) -> dict[str, Any]:
     nxt = _NEXT.get(tool)
     # Ungoverned-loop override: when the engine flags `run_state` (open multi-task plan, no active
@@ -125,7 +165,7 @@ def _env(tool: str, data: Any, started: float) -> dict[str, Any]:
         if isinstance(rs, dict) and rs.get("active_run") is False:
             nxt = {"name": "start_run",
                    "reason": rs.get("note") or "no active run — govern the loop before continuing"}
-    return {
+    env: dict[str, Any] = {
         "ok": True,
         "data": data,
         "next_recommended_tool": nxt,
@@ -136,3 +176,6 @@ def _env(tool: str, data: Any, started: float) -> dict[str, Any]:
             "schema_version": MEMORY_SCHEMA_VERSION,
         },
     }
+    if tool in _ENTRY_TOOLS and _db_is_empty():
+        env["orientation"] = _ORIENTATION
+    return env

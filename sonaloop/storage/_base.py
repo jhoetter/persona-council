@@ -12,7 +12,9 @@ from ._schema import SCHEMA
 class StoreBase:
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or database_path()
-        DATA_DIR.mkdir(exist_ok=True)
+        # parents=True: a cold uvx/pipx install starts with NO per-user data dir (and possibly
+        # no ~/.local/share at all) — first touch must create the whole chain, not error.
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.path)
         self.conn.row_factory = sqlite3.Row

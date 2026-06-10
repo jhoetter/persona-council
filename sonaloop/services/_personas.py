@@ -335,12 +335,17 @@ def record_persona(
     if evidence:
         attach_evidence(persona["id"], "user_note", evidence, "Initial persona evidence", store)
     if generate_avatar:
-        from ..avatar import generate_persona_avatar
+        from ..avatar import AVATAR_DISABLED_NOTE, avatars_enabled, generate_persona_avatar
 
-        avatar = generate_persona_avatar(persona["id"], store=store)
-        persona["avatar"] = avatar
-        persona["updated_at"] = utc_now_iso()
-        store.upsert_persona(persona, reason="generated avatar")
+        if not avatars_enabled():
+            # Fail-soft (cold start without the optional key): the persona is the product,
+            # the avatar is eye-candy — record the helpful note in-band instead of raising.
+            persona["avatar_note"] = AVATAR_DISABLED_NOTE
+        else:
+            avatar = generate_persona_avatar(persona["id"], store=store)
+            persona["avatar"] = avatar
+            persona["updated_at"] = utc_now_iso()
+            store.upsert_persona(persona, reason="generated avatar")
     emit_lifecycle_event("persona.created", {"persona_id": persona["id"], "slug": persona["slug"],  # noqa: F821 (bound)
                                              "display_name": persona.get("display_name", "")}, store)
     return persona

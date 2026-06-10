@@ -341,7 +341,16 @@ class _Session(threading.Thread):
         self.start()
         status, payload = self._ready.get(timeout=timeout)
         if status != "ok":
-            raise HarnessError("OPEN_FAILED", str(payload))
+            msg = str(payload)
+            if "Executable doesn't exist" in msg or "playwright install" in msg:
+                # The playwright PACKAGE is installed but the chromium BINARY was never fetched —
+                # the normal cold-start state. Same stable code as a missing package, plus the fix.
+                raise HarnessError(
+                    "PLAYWRIGHT_UNAVAILABLE",
+                    "the headless chromium is not fetched yet — run `sonaloop setup` (or "
+                    "`playwright install chromium`) once. Artifact walkthroughs (define_flow + "
+                    "brief_flow_walkthrough) work without it.")
+            raise HarnessError("OPEN_FAILED", msg)
         return payload
 
     def send(self, cmd: str, payload: Any = None, timeout: float = 30.0) -> Any:

@@ -39,16 +39,22 @@ DEFAULT_DB_PATH = DATA_DIR / "sonaloop.db"
 
 
 def load_env(path: Path | None = None) -> None:
-    """Load a simple .env file without requiring python-dotenv at import time."""
-    env_path = path or ROOT / ".env"
-    if not env_path.exists():
-        return
-    for raw in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    """Load a simple .env file without requiring python-dotenv at import time.
+
+    Cold-start contract (ticket one-sentence-mcp-install): a missing .env is the
+    NORMAL first-run state, never an error. In a source checkout the file lives at
+    repo/.env; for an installed package (uvx/pipx) ROOT is site-packages, so the
+    per-user DATA_DIR/.env is read as well — the one writable, documented place."""
+    candidates = [path] if path else [ROOT / ".env", DATA_DIR / ".env"]
+    for env_path in candidates:
+        if not env_path.exists():
             continue
-        key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+        for raw in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
 def database_path() -> Path:

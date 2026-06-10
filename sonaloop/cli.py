@@ -40,7 +40,8 @@ def build_parser() -> argparse.ArgumentParser:
     # Onboarding: setup + the agent-facing guide + diagnostics (matter most for a fresh install).
     sub.add_parser("setup", help="Fetch the headless-browser binary (prototype screenshots + PDF export).")
     sub.add_parser("guide", help="Print the agent operating contract + first-run recipe (read & follow it).")
-    sub.add_parser("info", help="Show resolved data dir, DB path, and browser availability.")
+    sub.add_parser("info", help="Diagnostics: data dir, DB, optional providers, and MCP wiring "
+                                "(prints the exact per-host register one-liners when missing).")
 
     p = sub.add_parser("persona-create")
     p.add_argument("description")
@@ -435,21 +436,12 @@ def main(argv: list[str] | None = None) -> int:
             _print(getting_started(), as_json=False)
             return 0
         elif args.command == "info":
-            from . import config as _cfg
-            from . import browser as _browser
-            from . import embeddings as _emb
-            _print({
-                "version": _pkg_version(),
-                "data_dir": str(_cfg.DATA_DIR),
-                "db_path": str(_cfg.database_path()),
-                "prototypes_dir": str(_cfg.prototypes_dir()),
-                "source_checkout": _cfg._is_source_checkout(),
-                "browser_available": _browser.available(),
-                "embeddings_enabled": _cfg.embeddings_enabled(),
-                "embeddings_provider": _emb.active_provider(),
-                "embeddings_model": _emb.provider_model(),
-                "content_language": _cfg.content_language(),
-            })
+            from ._diagnostics import info_payload, register_hint_text
+            payload = info_payload(_pkg_version())
+            _print(payload)                                   # stdout stays pure JSON
+            hint = register_hint_text(payload["mcp"])
+            if hint:
+                print(hint, file=sys.stderr)                  # the exact per-host one-liners
             return 0
         elif args.command == "persona-create":
             _print(services.create_persona(args.description, args.segment, args.evidence, args.avatar))

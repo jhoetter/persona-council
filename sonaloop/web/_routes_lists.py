@@ -9,7 +9,7 @@ from __future__ import annotations
 from .. import services
 from ..storage import Store
 from ._i18n import t
-from ._components import _icon, _avatar, _label, _star, _list_page, _artifact_present
+from ._components import _icon, _avatar, _label, _star, _list_page, _layout, _artifact_present
 from ._html import h, raw, fragment, register_css
 from ._docs import register_docs
 
@@ -21,6 +21,35 @@ def _row(href: str, ric, title, right=None, *, color: str | None = None, sub=Non
              h("span", {"class_": "title"}, title,
                h("span", {"class_": "muted small"}, f" · {sub}") if sub else None),
              h("span", {"class_": "right"}, right))
+
+
+def _first_steps_html() -> str:
+    """The first-steps checklist shown on the home page while the database is EMPTY
+    (ticket one-sentence-mcp-install): install/register → create or load a project →
+    run a first council. The inspector running locally proves step 1, so it renders
+    checked; the open steps tell the user what to ask their agent. Disappears as soon
+    as the first project or persona exists (the normal empty-list states take over)."""
+    from .._diagnostics import DOCS_GETTING_STARTED_URL, REGISTER_CLAUDE_CODE
+
+    steps = (
+        (True, t("fs_step_install_h"), fragment(t("fs_step_install_d"), " ",
+                                                h("code", {}, REGISTER_CLAUDE_CODE))),
+        (False, t("fs_step_project_h"), t("fs_step_project_d")),
+        (False, t("fs_step_council_h"), t("fs_step_council_d")),
+    )
+    rows = fragment(*(
+        h("div", {"class_": "fsrow" + (" fsdone" if done else "")},
+          h("span", {"class_": "fsmark"}, raw(_icon("check" if done else "circle"))),
+          h("span", {"class_": "fsbody"}, h("b", {}, head), h("span", {"class_": "muted"}, body)))
+        for done, head, body in steps))
+    return h("div", {"class_": "page"},
+             h("h1", {"class_": "h1"}, t("first_steps_h")),
+             h("p", {"class_": "lead"}, t("first_steps_lead")),
+             h("div", {"class_": "fscard"}, rows),
+             h("p", {"style": "margin-top:14px"},
+               h("a", {"class_": "sl-btn", "href": DOCS_GETTING_STARTED_URL,
+                       "target": "_blank", "rel": "noopener"},
+                 raw(_icon("external")), " ", t("fs_docs_link"))))
 
 
 def _projects_page() -> str:
@@ -38,6 +67,10 @@ def _projects_page() -> str:
         meta = fragment(_label(t("stalled"), "var(--amber)") if stalled else None,
                         counts, raw(_star("project", p["id"], p["title"], f'/projects/{p["id"]}')))
         rows.append(_row(f'/projects/{p["id"]}', "projects", p["title"], meta, color="var(--accent)"))
+    if not rows and not store.list_personas():
+        # Truly fresh database (no projects AND no personas): orient instead of an empty list.
+        return _layout(t("first_steps_h"), _first_steps_html(), store,
+                       crumbs=[(t("projects"), None)], active="projects")
     return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
                       empty_icon="projects", empty_msg=t("no_projects"), active="projects")
 
@@ -112,4 +145,13 @@ register_css(r"""
 .row .right{display:flex;align-items:center;gap:11px;flex-shrink:0;color:var(--faint);font-size:var(--t-sm)}
 .votebar{display:inline-flex;height:6px;width:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line)}
 .votebar i{display:block;height:100%}
+/* ---- first-steps checklist (empty-DB home; ticket one-sentence-mcp-install) ---- */
+.fscard{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);max-width:640px}
+.fsrow{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line-2);align-items:flex-start}
+.fsrow:last-child{border-bottom:0}
+.fsmark{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--panel-2);color:var(--faint)}
+.fsmark svg{width:14px;height:14px}
+.fsdone .fsmark{color:var(--green,#34a853)}
+.fsbody{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fsbody code{font-size:var(--t-sm);word-break:break-all}
 """)

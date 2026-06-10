@@ -54,7 +54,7 @@ def create_app():
     except ImportError as exc:
         raise RuntimeError("Install web dependencies first: uv sync") from exc
 
-    DATA_DIR.mkdir(exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)   # cold start: create the whole chain on first touch
     app = FastAPI(title="Sonaloop")
     # Absolute path (not cwd-relative "data"): downstream apps (sonaloop-cloud/-research)
     # call create_app() from their own working directory, so the mount must not depend on cwd.
