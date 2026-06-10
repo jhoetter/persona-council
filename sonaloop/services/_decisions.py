@@ -70,7 +70,9 @@ def record_decision(project_id: str, title: str, decision: str, based_on: list,
     record cannot be re-authored — the audit trail stays intact."""
     store = store or Store()
     project = _require_research_project(store, project_id)
-    title = str(title or "").strip()
+    # Collapsed to one line — the title is a heading everywhere it lands (web pill row, markdown
+    # exports), and interior newlines would let it forge structure in the exported documents.
+    title = " ".join(str(title or "").split())
     if not title:
         raise ValueError("title is required")
     decision = str(decision or "").strip()
@@ -85,7 +87,9 @@ def record_decision(project_id: str, title: str, decision: str, based_on: list,
                          "evidence it rests on (syntheses / findings / hypotheses)")
     rej = _validate_evidence_refs(rejected, "rejected", "rejected", store, with_note=True)
     now = utc_now_iso()
-    did = stable_id("dec", key) if key else stable_id("dec", project["id"], title, now)
+    # Project-scoped key hash — a key-only hash would let one project's record_decision silently
+    # hijack and re-author another project's record on key collision (same fix as hypotheses).
+    did = stable_id("dec", project["id"], key) if key else stable_id("dec", project["id"], title, now)
     existing = store.get_decision(did)
     if existing and existing.get("status") == "superseded":
         raise ValueError(f"decision {did} is superseded — a superseded record cannot be "
@@ -126,6 +130,14 @@ def update_decision(decision_id: str, status: str | None = None,
             raise ValueError("a decision cannot supersede itself")
         if successor.get("project_id") != dec.get("project_id"):
             raise ValueError("the superseding decision must belong to the same project")
+        if successor.get("status") == "superseded":
+            # Also closes the A→B→A cycle: once A is superseded it can never adopt a successor role.
+            raise ValueError(f"decision {successor['id']} is itself superseded — a retired record "
+                             "cannot supersede a live one; point at its successor instead")
+        if successor.get("supersedes") and successor["supersedes"] != dec["id"]:
+            raise ValueError(f"decision {successor['id']} already supersedes "
+                             f"{successor['supersedes']} — one record supersedes one predecessor; "
+                             "chain decisions instead of fanning in")
         dec["status"] = "superseded"
         dec["superseded_by"] = successor["id"]
         successor["supersedes"] = dec["id"]                 # both directions recorded
@@ -182,15 +194,18 @@ def decisions_section_md(project_id: str, store: Store | None = None, de: bool =
         return ""
     by_id = {d["id"]: d for d in decs}
     lines = [f"## {'Entscheidungen' if de else 'Decisions'}", ""]
+    # Host text is flattened to one line each — interior newlines in a title/body/note would
+    # forge document structure (headings, status bullets) in this audit-trail section.
+    flat = lambda s: " ".join(str(s or "").split())  # noqa: E731
     for d in decs:
-        lines.append(f"- **{d.get('title', '')}** — `{d.get('status', '')}`")
+        lines.append(f"- **{flat(d.get('title'))}** — `{d.get('status', '')}`")
         if d.get("decision"):
-            lines.append(f"  {d['decision']}")
+            lines.append(f"  {flat(d['decision'])}")
         if d.get("based_on"):
             cites = "; ".join(_ref_cite(r, store) for r in d["based_on"])
             lines.append(f"  - {'basiert auf' if de else 'based on'}: {cites}")
         for r in d.get("rejected") or []:
-            note = f" — {r['note']}" if r.get("note") else ""
+            note = f" — {flat(r['note'])}" if r.get("note") else ""
             lines.append(f"  - {'verworfen' if de else 'rejected'}: {_ref_cite(r, store)}{note}")
         if d.get("superseded_by"):
             succ = by_id.get(d["superseded_by"]) or store.get_decision(d["superseded_by"]) or {}

@@ -306,3 +306,49 @@ def test_synthesis_page_shows_informed_decisions(store):
     html = TestClient(web.create_app()).get(f'/syntheses/{syn["id"]}?lang=en').text
     assert STRINGS["en"]["dec_informed_h"] in html            # "informed decision <title>"
     assert dec["title"] in html and f'/decisions/{dec["id"]}' in html
+
+
+# --------------------------------------------------------------- review fixes (audit-trail integrity)
+
+def test_key_hash_is_project_scoped(store):
+    pa, pb = _project(store, "Project A"), _project(store, "Project B")
+    da = _record(store, pa["id"], key="q3-pivot")
+    db = _record(store, pb["id"], key="q3-pivot", title="B's own call on the same key")
+    assert da["id"] != db["id"]
+    assert [x["id"] for x in services.list_decisions(pa["id"], store=store)] == [da["id"]]
+    assert services.get_decision(da["id"], store=store)["title"].startswith("Ship the pension")
+
+
+def test_a_superseded_record_cannot_become_a_successor(store):
+    proj = _project(store)
+    d1, d2, d3 = (_record(store, proj["id"], key=k) for k in ("k1", "k2", "k3"))
+    services.update_decision(d1["id"], superseded_by=d2["id"], store=store)
+    with pytest.raises(ValueError, match="itself superseded"):
+        services.update_decision(d2["id"], superseded_by=d1["id"], store=store)  # the A→B→A cycle
+    with pytest.raises(ValueError, match="itself superseded"):
+        services.update_decision(d3["id"], superseded_by=d1["id"], store=store)
+    kept = services.get_decision(d1["id"], store=store)
+    assert kept["status"] == "superseded" and kept["superseded_by"] == d2["id"]
+    assert kept.get("supersedes") in (None, "")              # the frozen record was never mutated
+
+
+def test_one_successor_supersedes_one_predecessor(store):
+    proj = _project(store)
+    x1, x2, succ = (_record(store, proj["id"], key=k) for k in ("x1", "x2", "succ"))
+    services.update_decision(x1["id"], superseded_by=succ["id"], store=store)
+    with pytest.raises(ValueError, match="already supersedes"):
+        services.update_decision(x2["id"], superseded_by=succ["id"], store=store)
+    assert services.get_decision(succ["id"], store=store)["supersedes"] == x1["id"]
+    assert services.get_decision(x2["id"], store=store)["status"] != "superseded"
+
+
+def test_export_flattens_multiline_host_text(store):
+    proj = _project(store)
+    _record(store, proj["id"],
+            title="Honest title\n## Injected heading\n- **fake** — `adopted`",
+            decision="line one\n# another forged heading")
+    md = services.decisions_section_md(proj["id"], store=store)
+    # The hostile text survives as inline content but no LINE starts with it — structure defused.
+    assert not any(ln.startswith(("## Injected", "# another", "- **fake**"))
+                   for ln in md.splitlines())
+    assert "Honest title ## Injected heading" in md
