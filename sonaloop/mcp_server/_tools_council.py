@@ -131,22 +131,29 @@ def register_council(mcp):
     def record_head_to_head(project_id: str, prompt: str, options: list[Any], preferences: list[dict[str, Any]] | None = None,
                             persona_ids: list[str] | None = None, statements: list[dict[str, Any]] | None = None,
                             summary: str = "", exec_summary: str = "", selection_reason: str = "",
-                            findings: list[dict[str, Any]] | None = None, key: str | None = None) -> dict[str, Any]:
+                            findings: list[dict[str, Any]] | None = None, key: str | None = None,
+                            variant_meta: dict[str, Any] | None = None) -> dict[str, Any]:
         """Persist a host-authored HEAD-TO-HEAD (stored as a CouncilSession with a `head_to_head` block).
         Pass the labelled `options`, each persona's `preferences` ([{persona_id, choice (an option label
-        'A'|'B'|…), reason}]), the authored `statements` (one per persona+option, stance:{value -2..2,
+        'A'|'B'|…), intensity?, reason}]), the authored `statements` (one per persona+option, stance:{value -2..2,
         label?: support|conditional|neutral|skeptical|oppose} — see suggest_stances,
         about={kind:'prompt', id:'opt:A'|'opt:B'}), and the prose verdict in exec_summary/summary. The
-        SERVER deterministically tallies overall preference + margin (how decisive) + segment-splits (who
-        prefers what, by persona segment) — you author the qualitative synthesis. Returns the session incl.
-        head_to_head.result. Pass a stable `key` for a deterministic id (idempotent upsert)."""
+        SERVER deterministically tallies overall preference + margin (how decisive) + abstentions +
+        segment-splits (who prefers what, by persona segment) — you author the qualitative synthesis.
+        For an A/B TEST (taxonomy job `ab_test`) also pass `variant_meta`: {variants: {label: {id, …}},
+        order_shown: {persona_id: [labels] — the order actually shown, from the brief's per-participant
+        option_order}, hypothesis_id: the ONE bet stamped BEFORE exposure (record_hypothesis)}. It is
+        validated (orders must be permutations; the hypothesis must resolve) and persisted with the
+        result — queryable via get_head_to_head. Returns the session incl. head_to_head.result.
+        Pass a stable `key` for a deterministic id (idempotent upsert)."""
         t = time.perf_counter()
-        return _env("record_head_to_head", services.record_head_to_head(project_id, prompt, options, preferences, persona_ids, statements, summary, exec_summary, selection_reason, findings, key), t)
+        return _env("record_head_to_head", services.record_head_to_head(project_id, prompt, options, preferences, persona_ids, statements, summary, exec_summary, selection_reason, findings, key, variant_meta), t)
 
     @mcp.tool()
     def get_head_to_head(session_id: str) -> dict[str, Any]:
-        """Fetch one head-to-head result by session id — its options, per-persona preferences and the
-        deterministic aggregate (preference + margin + segment-splits)."""
+        """Fetch one head-to-head result by session id — its options, per-persona preferences, the
+        deterministic aggregate (preference + margin + abstentions + segment-splits) and, when recorded
+        with the A/B protocol, its variant_meta (variant ids, per-persona order shown, hypothesis ref)."""
         t = time.perf_counter()
         return _env("get_head_to_head", services.get_head_to_head(session_id), t)
 

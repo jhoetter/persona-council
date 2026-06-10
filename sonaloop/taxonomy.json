@@ -121,6 +121,51 @@
         "persona_axes": ["churn-reason", "tenure", "current-alternative"],
         "note": "Fits naturally as a focused continuous-discovery Job. Cover distinct churn reasons and where they switched to; red-team your retention story against them."
       }
+    },
+    {
+      "id": "ab_test",
+      "name": "A/B Test",
+      "sells_as": "A/B test",
+      "user_question": "Which variant wins — and for whom?",
+      "frameworks": ["lean_jtbd"],
+      "default_framework": "lean_jtbd",
+      "formats": ["head_to_head", "prototype_test", "red_team"],
+      "coverage": {
+        "min_personas": 4,
+        "persona_axes": ["segment", "current-alternative", "buying-stage"],
+        "note": "Segment-DIVERSE by design: the verdict is segmented (overall + per-segment winner), so the panel must span every segment the variants could split. Four personas minimum, no segment owning the panel."
+      },
+      "protocol": {
+        "name": "A/B test discipline",
+        "summary": "What separates an A/B test from a vibe-check: variants frozen up front, ONE hypothesis + success metric stamped before exposure, per-persona randomized variant order (position-bias guard), a forced preference with intensity from every persona, and a segmented verdict (overall + per-segment winner, margin, abstentions).",
+        "steps": [
+          {
+            "id": "variants_up_front",
+            "rule": "All variants are defined and FROZEN before any persona sees them — never edit an option mid-run; a changed variant is a new test.",
+            "tooling": "add_artifact (captured A/B variants) or plain text options on brief_head_to_head / record_head_to_head"
+          },
+          {
+            "id": "hypothesis_before_exposure",
+            "rule": "Exactly ONE falsifiable hypothesis + success metric is stamped BEFORE exposure, and the recording carries its ref — no post-hoc rationalisation.",
+            "tooling": "record_hypothesis → pass its id as variant_meta.hypothesis_id to record_head_to_head"
+          },
+          {
+            "id": "randomized_order",
+            "rule": "Variant presentation order is randomized PER PERSONA (position-bias guard) and the order actually shown is recorded with the result.",
+            "tooling": "brief_head_to_head participants[].option_order → record via variant_meta.order_shown"
+          },
+          {
+            "id": "forced_preference",
+            "rule": "Every persona states a FORCED preference plus intensity (per-option stance -2..2 and one choice with a reason). A genuine 'torn' is an abstention and is counted as one, never silently dropped.",
+            "tooling": "record_head_to_head preferences=[{persona_id, choice, intensity?, reason}] + per-option statements"
+          },
+          {
+            "id": "segmented_verdict",
+            "rule": "The verdict is overall AND per-segment — winner, margin, abstentions per segment — never a single blended number that hides who the loser variant still wins.",
+            "tooling": "head_to_head.result (server-derived) + services.segmented_verdict(session_id)"
+          }
+        ]
+      }
     }
   ]
 }

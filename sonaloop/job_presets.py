@@ -62,6 +62,10 @@ def job_presets(store: Any | None = None) -> list[dict[str, Any]]:
                 "tools": dict(FORMAT_TOOLS.get(fid, {})),
             } for fid in job["formats"]],
             "coverage": dict(job["coverage"]),
+            # The Job's run discipline (e.g. ab_test: variants frozen up front, hypothesis before
+            # exposure, randomized order, forced preference, segmented verdict) rides into the
+            # preset verbatim so the host sees the protocol where it plans the run.
+            **({"protocol": dict(job["protocol"])} if job.get("protocol") else {}),
             "note": PRESET_NOTE,
         })
     return presets
@@ -125,6 +129,8 @@ _JOB_SIGNALS: dict[str, list[str]] = {
                              "learn next", "discovery loop", "regularly"],
     "churn_reasons": ["churn", "leaving", "cancel", "retention", "stop using", "switched away",
                       "win back"],
+    "ab_test": ["a/b test", "ab test", "a/b-test", "split test", "variant", "which version",
+                "version a", "two versions", "which wins", "winner"],
 }
 
 

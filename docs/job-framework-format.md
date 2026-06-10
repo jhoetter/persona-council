@@ -85,9 +85,65 @@ Each named Job resolves to a concrete default Framework, a set of Formats, and t
 | **Ideation (How-Might-We)** (`ideation_hmw`) | Ideation (HMW) | `dschool_micro` | `dschool_micro`, `double_diamond_deep` | `council`, `prototype_test`, `head_to_head` | 4 · segment, expertise-level, extreme-user |
 | **Continuous Discovery** (`continuous_discovery`) | Continuous discovery | `dschool_micro` | `dschool_micro` | `council`, `prototype_test` | 3 · segment, lifecycle-stage, recency-of-use |
 | **Churn Reasons** (`churn_reasons`) | Churn reasons | `lean_jtbd` | `lean_jtbd` | `council`, `red_team` | 4 · churn-reason, tenure, current-alternative |
+| **A/B Test** (`ab_test`) | A/B test | `lean_jtbd` | `lean_jtbd` | `head_to_head`, `prototype_test`, `red_team` | 4 · segment, current-alternative, buying-stage |
 
 The **coverage** column is the persona spread a Job needs to be trustworthy: a minimum count
 plus the axes the panel must span. The full notes (one per Job) live in `taxonomy.json`.
+
+## Job protocols — the run discipline a Job carries
+
+Some Jobs are only trustworthy when run with a specific **discipline** — not just the right
+Framework and Formats, but rules about *ordering and commitment* (what must be frozen before
+what). Those Jobs carry a `protocol` block in `taxonomy.json`:
+
+```json
+"protocol": {
+  "name": "…",
+  "summary": "…",
+  "steps": [{"id": "…", "rule": "…", "tooling": "…"}]
+}
+```
+
+Each step is a **rule** (what the discipline demands) plus the **tooling** that makes it
+checkable (the MCP tools / fields that carry it). The protocol rides verbatim into the Job's
+preset (`get_job_preset`), so the host sees the discipline exactly where it plans the run. As
+everywhere in core: the host authors all text; a protocol constrains *structure and order* —
+the server validates and persists, it never generates.
+
+### A/B test (`ab_test`)
+
+> *Which variant wins — and for whom?*
+
+**Framework: `lean_jtbd`** — the decide-fast loop. An A/B test arrives with the variants
+already in hand, so the empathy-first front half of `dschool_micro` (Understand & Observe →
+Define POV) would be ceremony; `lean_jtbd`'s spine — state the bet, expose the thing, validate
+at a hard waist, loop back if refuted — *is* the A/B discipline (hypothesis before exposure,
+verdict at the gate). A run typically enters at `solution_explore` (the variants are the
+solution options) and converges at `validate`.
+
+The protocol (`taxonomy.json` → `jobs[ab_test].protocol`):
+
+1. **`variants_up_front`** — all variants defined and FROZEN before any persona sees them; a
+   changed variant is a new test. Tooling: `add_artifact` (captured variants) or text options.
+2. **`hypothesis_before_exposure`** — exactly ONE falsifiable hypothesis + success metric
+   stamped before exposure (`record_hypothesis`); the recording carries its ref
+   (`variant_meta.hypothesis_id`), so the verdict answers a pre-registered bet, never a
+   post-hoc story.
+3. **`randomized_order`** — variant presentation order is randomized per persona (the
+   position-bias guard). `brief_head_to_head` hands each participant a deterministic
+   `option_order`; the order actually shown is recorded back via `variant_meta.order_shown`
+   (validated: each entry must be a permutation of the option labels).
+4. **`forced_preference`** — every persona states a forced preference plus intensity (a
+   per-option stance −2..2 and one choice with a reason). A genuine "torn" is an
+   **abstention** and is counted as one — never silently dropped.
+5. **`segmented_verdict`** — the verdict is overall AND per-segment: winner, margin,
+   abstentions per segment (`head_to_head.result.segment_splits` +
+   `services.segmented_verdict(session_id)`), never one blended number.
+
+The `head_to_head` Format persists all of this on the recorded session
+(`head_to_head.variant_meta` = variant ids + per-persona order shown + hypothesis ref) and
+stays **backward-compatible**: recordings made before the metadata existed still load, and
+`segmented_verdict` derives per-segment margins from their stored tallies.
 
 ## How to consume it
 
@@ -112,8 +168,8 @@ Downstream tickets reference this artifact directly:
 ## Naming + stable ids
 
 - **Job ids** are lower_snake_case and stable (`positioning`, `pricing`, `jtbd_demand`,
-  `ideation_hmw`, `continuous_discovery`, `churn_reasons`). Never renumber or rename — add new
-  Jobs instead.
+  `ideation_hmw`, `continuous_discovery`, `churn_reasons`, `ab_test`). Never renumber or
+  rename — add new Jobs instead.
 - **Framework ids** equal the methodology `key` (`double_diamond`, …).
 - **Format ids** are lower_snake_case (`council`, `prototype_test`, `head_to_head`, `red_team`).
 

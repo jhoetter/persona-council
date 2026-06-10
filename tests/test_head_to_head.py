@@ -153,6 +153,142 @@ def test_unparseable_preference_is_not_counted(store):
         preferences=[{"persona_id": a, "choice": "A"}, {"persona_id": b, "choice": "torn"}], store=store)
     res = session["head_to_head"]["result"]
     assert res["voters"] == 1 and res["preference"] == "A"
+    # ab_test protocol (forced_preference): a 'torn' is an ABSTENTION and is counted as one —
+    # overall and on the abstainer's segment row — never silently dropped.
+    assert res["abstentions"] == 1
+    seg = {s["segment"]: s for s in res["segment_splits"]}["X"]
+    assert seg["abstentions"] == 1 and seg["voters"] == 1
+
+
+# --------------------------------------------------------------------------- ab_test protocol: variant metadata
+
+def test_brief_randomizes_option_order_per_persona(store):
+    """Position-bias guard (ab_test protocol `randomized_order`): each participant carries a
+    deterministic per-persona option_order — a permutation of the labels — and their context
+    presents the options in THAT order."""
+    pids = [create_persona(store, f"P{i}") for i in range(6)]
+    proj = services.create_research_project("ab", goal="g", persona_ids=pids, store=store)
+    brief = services.brief_head_to_head(proj["id"], "Which variant wins?",
+                                        ["calm landing page", "loud landing page"],
+                                        persona_ids=pids, store=store)
+    orders = []
+    for part in brief["participants"]:
+        assert sorted(part["option_order"]) == ["A", "B"]
+        first = part["option_order"][0]
+        # The participant's context block lists their first option first.
+        ctx = part["agent_context"].split("=== HEAD-TO-HEAD OPTIONS ===")[1]
+        assert ctx.index(f"OPTION {first}") < ctx.index(
+            "OPTION " + ({"A", "B"} - {first}).pop())
+        orders.append(tuple(part["option_order"]))
+    # Across a 6-persona panel both orders occur (randomized, not fixed) …
+    assert len(set(orders)) == 2
+    # … and the assignment is deterministic (same brief → same orders; resumable).
+    again = services.brief_head_to_head(proj["id"], "Which variant wins?",
+                                        ["calm landing page", "loud landing page"],
+                                        persona_ids=pids, store=store)
+    assert [p["option_order"] for p in again["participants"]] == [list(o) for o in orders]
+
+
+def test_variant_metadata_round_trips(store):
+    """ab_test recording: variant ids, per-persona order shown and the pre-exposure hypothesis
+    ref persist on the head_to_head block and come back from get_head_to_head."""
+    a = create_persona(store, "Arch", customer_type="Architect")
+    b = create_persona(store, "Eng", customer_type="Engineer")
+    proj = services.create_research_project("ab", goal="g", persona_ids=[a, b], store=store)
+    hyp = services.record_hypothesis(
+        proj["id"], "Variant B lifts signup intent",
+        {"metric": "signup_intent", "expected_direction": "increase"}, store=store)["hypothesis"]
+
+    meta = {"variants": {"A": {"id": "var-calm"}, "B": "var-loud"},
+            "order_shown": {a: ["B", "A"], b: ["A", "B"]},
+            "hypothesis_id": hyp["id"]}
+    session = services.record_head_to_head(
+        proj["id"], "calm vs loud", ["calm page", "loud page"],
+        preferences=[{"persona_id": a, "choice": "B", "intensity": 2, "reason": "clearer"},
+                     {"persona_id": b, "choice": "B", "intensity": 1, "reason": "faster"}],
+        variant_meta=meta, exec_summary="Host verdict.", store=store)
+
+    stored = session["head_to_head"]["variant_meta"]
+    assert stored["variants"] == {"A": {"id": "var-calm"}, "B": {"id": "var-loud"}}  # bare str → {id}
+    assert stored["order_shown"] == {a: ["B", "A"], b: ["A", "B"]}
+    assert stored["hypothesis_id"] == hyp["id"]
+    # Queryable round-trip — and the intensity rides on the stored preferences verbatim.
+    ht = services.get_head_to_head(session["id"], store=store)
+    assert ht["variant_meta"] == stored
+    assert ht["preferences"][0]["intensity"] == 2
+
+
+def test_variant_metadata_is_validated(store):
+    import pytest
+    pid, [persona] = _project(store)
+    common = dict(prompt="?", options=["o1", "o2"],
+                  preferences=[{"persona_id": persona, "choice": "A"}], store=store)
+    with pytest.raises(ValueError, match="permutation"):
+        services.record_head_to_head(pid, **common,
+                                     variant_meta={"order_shown": {persona: ["A"]}})
+    with pytest.raises(ValueError, match="hypothesis_id does not resolve"):
+        services.record_head_to_head(pid, **common, variant_meta={"hypothesis_id": "hyp_nope"})
+    with pytest.raises(ValueError, match="option labels"):
+        services.record_head_to_head(pid, **common, variant_meta={"variants": {"Z": "v1"}})
+    with pytest.raises(ValueError, match="unknown variant_meta keys"):
+        services.record_head_to_head(pid, **common, variant_meta={"surprise": 1})
+
+
+def test_recordings_without_variant_metadata_stay_loadable(store):
+    """Backward compatibility: pre-metadata recordings (no variant_meta, no abstentions/margin on
+    segment rows) still load, and segmented_verdict derives the missing numbers from the stored
+    tallies."""
+    a = create_persona(store, "A", customer_type="X")
+    proj = services.create_research_project("legacy", goal="g", persona_ids=[a], store=store)
+    session = services.record_head_to_head(
+        proj["id"], "old", ["o1", "o2"],
+        preferences=[{"persona_id": a, "choice": "A"}], store=store)
+    # Strip the block down to the LEGACY shape (as recorded before this ticket) and re-persist.
+    legacy = store.get_council_session(session["id"])
+    ht = legacy["head_to_head"]
+    ht.pop("variant_meta", None)
+    ht["result"].pop("abstentions")
+    for seg in ht["result"]["segment_splits"]:
+        seg.pop("margin"), seg.pop("abstentions")
+    store.insert_council_session(legacy)
+
+    fetched = services.get_head_to_head(session["id"], store=store)
+    assert "variant_meta" not in fetched
+    verdict = services.segmented_verdict(session["id"], store=store)
+    assert verdict["overall"] == {"winner": "A", "winner_title": "o1", "margin": 1.0,
+                                  "decisive": "decisive", "voters": 1, "abstentions": 0}
+    assert verdict["segments"] == [{"segment": "X", "winner": "A", "voters": 1,
+                                    "margin": 1.0, "abstentions": 0}]
+    assert verdict["hypothesis_id"] is None and verdict["variants"] == {}
+
+
+def test_segmented_verdict_derivation(store):
+    """The segmented verdict (ab_test protocol `segmented_verdict`): overall + per-segment winner,
+    margin and abstentions, plus the hypothesis ref the verdict answers."""
+    arch = [create_persona(store, f"Arch{i}", customer_type="Architect") for i in range(3)]
+    eng = [create_persona(store, f"Eng{i}", customer_type="Engineer") for i in range(2)]
+    proj = services.create_research_project("seg", goal="g", persona_ids=arch + eng, store=store)
+    hyp = services.record_hypothesis(
+        proj["id"], "B wins overall", {"metric": "preference_share", "expected_direction": "increase"},
+        store=store)["hypothesis"]
+    session = services.record_head_to_head(
+        proj["id"], "A vs B", ["v1", "v2"],
+        preferences=[{"persona_id": arch[0], "choice": "A"},
+                     {"persona_id": arch[1], "choice": "A"},
+                     {"persona_id": arch[2], "choice": "torn"},     # abstains
+                     {"persona_id": eng[0], "choice": "B"},
+                     {"persona_id": eng[1], "choice": "B"}],
+        variant_meta={"hypothesis_id": hyp["id"], "variants": {"A": "v1", "B": "v2"}}, store=store)
+
+    v = services.segmented_verdict(session["id"], store=store)
+    assert v["overall"]["winner"] is None and v["overall"]["decisive"] == "tie"  # 2:2 with 1 out
+    assert v["overall"]["voters"] == 4 and v["overall"]["abstentions"] == 1
+    by_seg = {s["segment"]: s for s in v["segments"]}
+    assert by_seg["Architect"] == {"segment": "Architect", "winner": "A", "voters": 2,
+                                   "margin": 1.0, "abstentions": 1}
+    assert by_seg["Engineer"]["winner"] == "B" and by_seg["Engineer"]["margin"] == 1.0
+    assert v["hypothesis_id"] == hyp["id"]
+    assert v["variants"]["B"] == {"id": "v2"}
 
 
 # --------------------------------------------------------------------------- persistence + queryable seam

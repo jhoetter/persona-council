@@ -36,6 +36,21 @@ def _label_for(i: int) -> str:
     return chr(ord("A") + i) if i < 26 else f"V{i + 1}"
 
 
+def _option_order(labels: list[str], persona_id: str, prompt: str) -> list[str]:
+    """Deterministic per-persona variant order — the A/B POSITION-BIAS guard (taxonomy job
+    `ab_test`, protocol step `randomized_order`): a Fisher-Yates permutation driven by a hash of
+    (persona_id, prompt), so different personas see different orders yet the same brief is stable
+    across calls (testable, resumable — no RNG state). The order actually shown is recorded back
+    via `variant_meta.order_shown` on record_head_to_head."""
+    import hashlib
+    seed = int.from_bytes(hashlib.sha256(f"{persona_id}|{prompt}".encode()).digest()[:8], "big")
+    out = list(labels)
+    for i in range(len(out) - 1, 0, -1):
+        seed, j = divmod(seed, i + 1)
+        out[i], out[j] = out[j], out[i]
+    return out
+
+
 def _normalize_options(project_id: str, options: list[Any], store: Store) -> list[dict[str, Any]]:
     """Turn the host's `options` into a uniform list of labelled comparison options. Each entry is either
     an ARTIFACT (an id/label of an artifact already ingested via add_artifact → reuse its captured brief)
@@ -137,6 +152,7 @@ def brief_head_to_head(project_id: str, prompt: str, options: list[Any],
         }
 
     context_block = "\n\n".join(filter(None, [context or "", options_context]))
+    by_label = {o["label"]: o for o in opts}
     participants = []
     for pid in persona_ids:
         p = store.get_persona(pid)
@@ -144,10 +160,15 @@ def brief_head_to_head(project_id: str, prompt: str, options: list[Any],
             continue
         ctx = prepare_persona_agent_context(
             p["id"], f"Head-to-head prompt: {prompt}\nOptions:\n{context_block}", store=store)
-        agent_context = f"{ctx['agent_context']}\n\n=== HEAD-TO-HEAD OPTIONS ===\n{options_context}"
+        # Each participant sees the options in THEIR randomized order (position-bias guard) —
+        # record the order actually shown via variant_meta.order_shown.
+        order = _option_order(label_ids, p["id"], prompt)
+        ordered_context = _render_options_context([by_label[lab] for lab in order])
+        agent_context = f"{ctx['agent_context']}\n\n=== HEAD-TO-HEAD OPTIONS ===\n{ordered_context}"
         participants.append({
             "persona_id": p["id"], "display_name": p["display_name"],
             "segment": p.get("segment", {}), "soul_path": ctx["soul_path"],
+            "option_order": order,
             "agent_context": agent_context,
         })
     return {
@@ -162,9 +183,13 @@ def brief_head_to_head(project_id: str, prompt: str, options: list[Any],
             "(2) the persona's single `preference` = the option label they'd pick, with a one-line reason. "
             "Stay anti-steering — a persona may genuinely prefer either side or be torn. Ground every "
             "statement in agent_context; quote the captured artifact / the literal text option, don't "
-            "invent. Then call record_head_to_head(project_id, prompt, options, preferences=[{persona_id, "
-            "choice, reason}], statements=[...], exec_summary, summary). The server tallies preference + "
-            f"margin + segment-splits; you author the prose verdict. {language_instruction(language)}"),
+            "invent. Each participant carries `option_order` — present the options in THAT order (the "
+            "position-bias guard) and record it back via variant_meta.order_shown. Then call "
+            "record_head_to_head(project_id, prompt, options, preferences=[{persona_id, "
+            "choice, intensity?, reason}], statements=[...], exec_summary, summary, variant_meta?). "
+            "For an ab_test Job also pass variant_meta.hypothesis_id — the ONE bet stamped before "
+            "exposure (record_hypothesis). The server tallies preference + margin + abstentions + "
+            f"segment-splits; you author the prose verdict. {language_instruction(language)}"),
     }
 
 
@@ -180,17 +205,22 @@ def _aggregate(options: list[dict[str, Any]], preferences: list[dict[str, Any]],
     valid = set(labels)
     tally = {lab: 0 for lab in labels}
     seg_tally: dict[str, dict[str, int]] = {}
+    seg_abst: dict[str, int] = {}
     cast = 0
+    abstentions = 0
     for pref in preferences:
         choice = str(pref.get("choice") or pref.get("label") or pref.get("preference") or "").strip()
-        if choice not in valid:
-            continue                                       # abstention / unparseable → not counted
-        cast += 1
-        tally[choice] += 1
         seg = "unspecified"
         p = personas.get(pref.get("persona_id", ""))
         if p:
             seg = (p.get("segment") or {}).get("customer_type") or seg
+        if choice not in valid:                            # abstention / unparseable → counted as such
+            abstentions += 1
+            seg_abst[seg] = seg_abst.get(seg, 0) + 1
+            seg_tally.setdefault(seg, {lab: 0 for lab in labels})
+            continue
+        cast += 1
+        tally[choice] += 1
         seg_tally.setdefault(seg, {lab: 0 for lab in labels})[choice] += 1
 
     ranked = sorted(labels, key=lambda lab: tally[lab], reverse=True)
@@ -205,16 +235,22 @@ def _aggregate(options: list[dict[str, Any]], preferences: list[dict[str, Any]],
     segment_splits = []
     for seg, counts in sorted(seg_tally.items()):
         seg_cast = sum(counts.values())
-        seg_winner = max(counts, key=lambda lab: counts[lab]) if seg_cast else None
-        seg_tie = bool(seg_winner) and sum(1 for lab in labels if counts[lab] == counts[seg_winner]) > 1
+        seg_ranked = sorted(labels, key=lambda lab: counts[lab], reverse=True)
+        seg_winner = seg_ranked[0] if seg_cast else None
+        seg_top = counts[seg_winner] if seg_winner else 0
+        seg_runner = counts[seg_ranked[1]] if len(seg_ranked) > 1 else 0
+        seg_tie = bool(seg_winner) and sum(1 for lab in labels if counts[lab] == seg_top) > 1
         segment_splits.append({
             "segment": seg, "voters": seg_cast, "tally": counts,
             "prefers": (None if (seg_tie or not seg_cast) else seg_winner),
+            "margin": round((seg_top - seg_runner) / seg_cast, 3) if seg_cast else 0.0,
+            "abstentions": seg_abst.get(seg, 0),
         })
 
     return {
         "options": [{"label": lab, "title": title_by[lab], "votes": tally[lab]} for lab in labels],
         "voters": cast,
+        "abstentions": abstentions,
         "preference": (None if tie else winner),
         "preference_title": (title_by.get(winner) if winner and not tie else None),
         "tally": tally,
@@ -224,22 +260,71 @@ def _aggregate(options: list[dict[str, Any]], preferences: list[dict[str, Any]],
     }
 
 
+def _validate_variant_meta(meta: dict[str, Any] | None, opts: list[dict[str, Any]],
+                           store: Store) -> dict[str, Any] | None:
+    """Validate the OPTIONAL A/B-protocol metadata (taxonomy job `ab_test`) so a recorded
+    head-to-head is auditable: `variants` maps option labels → external variant ids/details
+    (a bare string becomes {id}); `order_shown` records the per-persona presentation order —
+    each value must be a permutation of the option labels (the position-bias guard, made
+    checkable); `hypothesis_id` references the ONE bet stamped BEFORE exposure (must resolve).
+    All keys optional; recordings without metadata stay valid (backward-compatible)."""
+    if not meta:
+        return None
+    if not isinstance(meta, dict):
+        raise ValueError("variant_meta must be a dict {variants?, order_shown?, hypothesis_id?}")
+    unknown = set(meta) - {"variants", "order_shown", "hypothesis_id"}
+    if unknown:
+        raise ValueError(f"unknown variant_meta keys {sorted(unknown)} — allowed: "
+                         "variants, order_shown, hypothesis_id")
+    labels = [o["label"] for o in opts]
+    out: dict[str, Any] = {}
+    variants = meta.get("variants")
+    if variants:
+        if not isinstance(variants, dict) or not set(variants) <= set(labels):
+            raise ValueError(f"variant_meta.variants keys must be option labels {labels}, got "
+                             f"{sorted(variants) if isinstance(variants, dict) else variants!r}")
+        out["variants"] = {lab: (dict(v) if isinstance(v, dict) else {"id": str(v)})
+                           for lab, v in variants.items()}
+    order_shown = meta.get("order_shown")
+    if order_shown:
+        if not isinstance(order_shown, dict):
+            raise ValueError("variant_meta.order_shown must map persona_id -> [option labels]")
+        for pid, order in order_shown.items():
+            if sorted(str(x) for x in (order or [])) != sorted(labels):
+                raise ValueError(f"variant_meta.order_shown[{pid!r}] must be a permutation of the "
+                                 f"option labels {labels}, got {order!r} — record the order "
+                                 "actually shown to that persona")
+        out["order_shown"] = {pid: [str(x) for x in order] for pid, order in order_shown.items()}
+    hyp = meta.get("hypothesis_id")
+    if hyp:
+        if not store.get_hypothesis(str(hyp)):
+            raise ValueError(f"variant_meta.hypothesis_id does not resolve: {hyp!r} — stamp the "
+                             "bet FIRST (record_hypothesis), then expose the variants")
+        out["hypothesis_id"] = str(hyp)
+    return out or None
+
+
 def record_head_to_head(project_id: str, prompt: str, options: list[Any],
                         preferences: list[dict[str, Any]] | None = None,
                         persona_ids: list[str] | None = None, statements: list | None = None,
                         summary: str = "", exec_summary: str = "", selection_reason: str = "",
                         findings: list | None = None, key: str | None = None,
+                        variant_meta: dict[str, Any] | None = None,
                         created_at: str | None = None, store: Store | None = None) -> dict[str, Any]:
     """Persist a host-authored HEAD-TO-HEAD as a CouncilSession carrying a `head_to_head` block. The host
-    passes the labelled `options`, each persona's `preferences` ([{persona_id, choice (a label), reason}]),
-    and the authored `statements` (per-option stances) + exec_summary/summary (the prose verdict). The
-    SERVER does the deterministic aggregation (preference + margin + segment-splits) from `preferences`
-    and stores it — a queryable result. Pass a stable `key` for a deterministic id (idempotent upsert)."""
+    passes the labelled `options`, each persona's `preferences` ([{persona_id, choice (a label),
+    intensity?, reason}]), and the authored `statements` (per-option stances) + exec_summary/summary (the
+    prose verdict). The SERVER does the deterministic aggregation (preference + margin + abstentions +
+    segment-splits) from `preferences` and stores it — a queryable result. `variant_meta` is the OPTIONAL
+    A/B-protocol metadata (job `ab_test`): {variants: {label: {id,…}}, order_shown: {persona_id:
+    [labels]}, hypothesis_id} — validated, persisted, queryable; recordings without it stay valid.
+    Pass a stable `key` for a deterministic id (idempotent upsert)."""
     store = store or Store()
     project = _require_research_project(store, project_id)
     opts = _normalize_options(project["id"], options or [], store)
     if len(opts) < 2:
         raise ValueError("head_to_head needs at least two options to compare.")
+    vmeta = _validate_variant_meta(variant_meta, opts, store)
     public_options = [{k: v for k, v in o.items() if k != "brief"} for o in opts]
     prefs = [dict(p) for p in (preferences or []) if p.get("persona_id")]
     pids = persona_ids or [p["persona_id"] for p in prefs]
@@ -276,6 +361,7 @@ def record_head_to_head(project_id: str, prompt: str, options: list[Any],
         "preferences": prefs,
         "result": aggregate,
         "recorded_at": utc_now_iso(),
+        **({"variant_meta": vmeta} if vmeta else {}),
     }
     store.insert_council_session(session)
     return session
@@ -298,3 +384,45 @@ def get_head_to_head(session_id: str, store: Store | None = None) -> dict[str, A
 def is_head_to_head(council: dict[str, Any]) -> bool:
     """True when a council session carries a recorded head-to-head result (drives the UI branch)."""
     return bool(council.get("head_to_head"))
+
+
+def segmented_verdict(session_id: str, store: Store | None = None) -> dict[str, Any]:
+    """The SEGMENTED verdict of a recorded head-to-head (job `ab_test`, protocol step
+    `segmented_verdict`), derived from the STORED block — works for recordings made before the A/B
+    variant metadata existed: overall winner + margin + decisiveness + abstentions, one row per
+    segment (winner, margin, voters, abstentions), plus — when the run followed the ab_test
+    protocol — the hypothesis ref and variant ids the verdict answers. Deterministic math only;
+    the prose verdict stays the host's."""
+    store = store or Store()
+    ht = get_head_to_head(session_id, store=store)
+    res = ht.get("result") or {}
+    prefs = ht.get("preferences") or []
+    voters = res.get("voters", 0)
+    segments = []
+    for s in res.get("segment_splits") or []:
+        counts = s.get("tally") or {}
+        seg_cast = s.get("voters", 0)
+        if "margin" in s:                                  # post-metadata recording: stored as-is
+            seg_margin = s["margin"]
+        else:                                              # legacy recording: derive from the tally
+            ranked = sorted(counts, key=lambda lab: counts[lab], reverse=True)
+            top = counts[ranked[0]] if ranked else 0
+            runner = counts[ranked[1]] if len(ranked) > 1 else 0
+            seg_margin = round((top - runner) / seg_cast, 3) if seg_cast else 0.0
+        segments.append({"segment": s.get("segment", "unspecified"), "winner": s.get("prefers"),
+                         "voters": seg_cast, "margin": seg_margin,
+                         "abstentions": s.get("abstentions", 0)})
+    meta = ht.get("variant_meta") or {}
+    return {
+        "schema": "segmented_verdict",
+        "session_id": ht["id"], "project_id": ht.get("project_id", ""), "prompt": ht.get("prompt", ""),
+        "overall": {
+            "winner": res.get("preference"), "winner_title": res.get("preference_title"),
+            "margin": res.get("margin", 0.0), "decisive": res.get("decisive", "tie"),
+            "voters": voters,
+            "abstentions": res.get("abstentions", max(0, len(prefs) - voters)),
+        },
+        "segments": segments,
+        "hypothesis_id": meta.get("hypothesis_id"),
+        "variants": meta.get("variants") or {},
+    }

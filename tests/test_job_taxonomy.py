@@ -40,6 +40,37 @@ def test_seed_jobs_present_and_resolve():
         assert cov["min_personas"] >= 1 and cov["persona_axes"], job["id"]
 
 
+def test_ab_test_job_is_first_class():
+    """A/B test is a JOB (ticket ab-test-first-class-job): the decide-fast lean_jtbd loop,
+    head-to-head as its lead Format, a segment-diverse 4-persona floor, and the A/B discipline
+    encoded as a protocol block (variants up front, hypothesis before exposure, randomized
+    per-persona order, forced preference + intensity, segmented verdict)."""
+    job = T.get_job("ab_test")
+    assert job["user_question"] == "Which variant wins — and for whom?"
+    assert job["default_framework"] == "lean_jtbd"
+    assert job["formats"] == ["head_to_head", "prototype_test", "red_team"]
+    assert job["coverage"]["min_personas"] == 4
+    assert "segment" in job["coverage"]["persona_axes"]
+
+    proto = job["protocol"]
+    assert proto["name"] and proto["summary"]
+    assert [s["id"] for s in proto["steps"]] == [
+        "variants_up_front", "hypothesis_before_exposure", "randomized_order",
+        "forced_preference", "segmented_verdict"]
+    for step in proto["steps"]:
+        assert step["rule"] and step["tooling"], step["id"]
+
+
+def test_protocol_rides_into_the_job_preset(store):
+    """The protocol block reaches the host verbatim through the preset (the surface the host
+    actually plans runs from), so the discipline is not buried in the raw JSON."""
+    from sonaloop import job_presets as P
+    preset = P.get_job_preset("ab_test", store)
+    assert preset["protocol"]["steps"][0]["id"] == "variants_up_front"
+    # Jobs without a protocol stay protocol-free (no empty noise keys).
+    assert "protocol" not in P.get_job_preset("positioning", store)
+
+
 def test_sells_as_labels_are_unique():
     """`sells_as` is the buyer-facing label (website nav) — two Jobs sharing one label
     would collapse into a single ambiguous menu entry. Kinship between Jobs belongs in
