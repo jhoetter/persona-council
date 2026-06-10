@@ -110,7 +110,7 @@ def register_surveys(app) -> None:
                             h("span", {}, t("n_responses", n=s.get("response_count", 0))),
                             h("span", {}, s["created_at"][:10]))))
         return _list_page(store, title=t("surveys_h"), lead=t("surveys_lead"), rows=rows,
-                          empty_icon="plan", empty_msg=t("no_surveys"), active="projects")
+                          empty_icon="plan", empty_msg=t("no_surveys"), active="surveys")
 
     @app.get("/surveys/{survey_id}", response_class=HTMLResponse)
     def survey_detail(survey_id: str) -> str:
@@ -119,7 +119,7 @@ def register_surveys(app) -> None:
             s = services.get_survey(survey_id, store=store)
         except KeyError:
             return _layout(t("not_found"), _empty_state(t("surveys_h"), t("runtime_maybe_cleared"),
-                                                        icon="plan"), store, active="projects")
+                                                        icon="plan"), store, active="surveys")
         results = services.survey_results(s["id"], store=store)
         by_q = {r["question_id"]: r for r in results["questions"]}
         proj = store.get_research_project(s.get("project_id")) if s.get("project_id") else None
@@ -146,7 +146,7 @@ def register_surveys(app) -> None:
         body = fragment(intro_html, derived_html, results_head, questions_html)
         proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")
         return detail_page(
-            store, title=s["title"], active="projects", crumbs=crumbs,
+            store, title=s["title"], active="surveys", crumbs=crumbs,
             icon="plan", sub=fragment(t("surveys_h"), " ", raw(_status_pill(s.get("status", "draft")))),
             body=body,
             prop_rows=[("dot", t("type_h"), t("surveys_h")),

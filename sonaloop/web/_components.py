@@ -485,15 +485,19 @@ def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
 
 
 def _list_page(store: Store, *, title: str, lead: str, rows: list,
-               empty_icon: str, empty_msg: str, active: str) -> str:
+               empty_icon: str, empty_msg: str, active: str,
+               pre: str = "", count: int | None = None) -> str:
     """One index-page shell — title + count + lead + rows (or an empty state). Every list page
-    (projects, personas, councils, syntheses, prototypes, concepts) renders identically through this."""
+    (projects, personas, councils, syntheses, prototypes, concepts) renders identically through this.
+    `pre` is optional HTML between the lead and the rows (e.g. the hypotheses hit-rate strip);
+    `count` overrides the h1 count when `rows` interleaves `.group` headers with the records."""
     rows_html = (raw("".join(str(r) for r in rows)) if rows else
                  h("div", {"class_": "sl-empty"}, h("div", {"class_": "sl-empty__icon"}, raw(_hifi(empty_icon, 44))),
                    h("p", {"class_": "sl-empty__body"}, empty_msg)))
-    cnt = h("span", {"class_": "h1cnt"}, str(len(rows))) if rows else ""
+    cnt = h("span", {"class_": "h1cnt"}, str(count if count is not None else len(rows))) if rows else ""
     body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, title, cnt),
-             h("p", {"class_": "lead"}, lead), h("div", {"class_": "rows"}, rows_html))
+             h("p", {"class_": "lead"}, lead), raw(pre) if pre else None,
+             h("div", {"class_": "rows"}, rows_html))
     return _layout(title, body, store, crumbs=[(title, None)], active=active)
 
 

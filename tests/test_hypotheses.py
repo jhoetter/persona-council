@@ -317,6 +317,36 @@ def test_project_page_shows_open_bets_resolved_and_hit_rate(store):
     assert STRINGS["en"]["hyp_open_bets"] not in client.get(f'/projects/{other["id"]}?lang=en').text
 
 
+# --------------------------------------------------------------- inspector: the cross-project list
+
+def test_global_hypotheses_list_renders_empty_and_populated(store):
+    from starlette.testclient import TestClient
+    from sonaloop import web
+    from sonaloop.web._i18n import STRINGS
+    client = TestClient(web.create_app())
+    empty = client.get("/hypotheses?lang=en")                 # honest empty state, no chrome
+    assert empty.status_code == 200 and STRINGS["en"]["no_hypotheses"] in empty.text
+    pa, pb = _project(store, "Project A"), _project(store, "Project B")
+    open_bet = _record(store, pa["id"], key="open")
+    resolved = _record(store, pb["id"], key="res", text="Half of savers would pay for the check")
+    services.record_hypothesis_result(resolved["id"], 38, _OBS, note="close enough", store=store)
+    page = client.get("/hypotheses?lang=en")
+    assert page.status_code == 200
+    html = page.text
+    assert STRINGS["en"]["hyp_open_bets"] in html and STRINGS["en"]["hyp_resolved"] in html
+    assert open_bet["text"] in html and resolved["text"] in html
+    # each row deep-links into ITS project's bets section, named after the project
+    assert f'/projects/{pa["id"]}#hyp-{open_bet["id"]}' in html
+    assert f'/projects/{pb["id"]}#hyp-{resolved["id"]}' in html
+    assert "Project A" in html and "Project B" in html
+    # the GLOBAL hit-rate strip (over resolved bets across all projects)
+    assert STRINGS["en"]["hyp_hit_rate"] in html and "1/1" in html
+    # the list route does not shadow the canonical /hypotheses/{id} redirect
+    r = client.get(f'/hypotheses/{resolved["id"]}', follow_redirects=False)
+    assert r.status_code in (302, 307)
+    assert r.headers["location"] == f'/projects/{pb["id"]}#hyp-{resolved["id"]}'
+
+
 # --------------------------------------------------------------- review fixes (audit-trail integrity)
 
 def test_a_resolved_verdict_cannot_be_rescored(store):

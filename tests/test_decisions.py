@@ -261,6 +261,37 @@ def test_project_page_groups_decisions_with_evidence_chips(store):
     assert 'id="decisions"' not in client.get(f'/projects/{other["id"]}?lang=en').text
 
 
+def test_global_decisions_list_renders_empty_and_populated(store):
+    from starlette.testclient import TestClient
+    from sonaloop import web
+    from sonaloop.web._i18n import STRINGS
+    client = TestClient(web.create_app())
+    empty = client.get("/decisions?lang=en")                  # honest empty state, no chrome
+    assert empty.status_code == 200 and STRINGS["en"]["no_decisions"] in empty.text
+    pa, pb = _project(store, "Project A"), _project(store, "Project B")
+    council = _council(store, pa["id"])
+    alt = _council(store, pa["id"], prompt="The alternative considered")
+    adopted = _record(store, pa["id"], council=council, key="a", status="adopted",
+                      rejected=[{"kind": "council", "id": alt["id"], "note": "banks gatekeep"}])
+    proposed = _record(store, pb["id"], key="p", title="Offer a paper fallback")
+    page = client.get("/decisions?lang=en")
+    assert page.status_code == 200
+    html = page.text
+    assert STRINGS["en"]["dec_status_adopted"] in html and STRINGS["en"]["dec_status_proposed"] in html
+    assert adopted["title"] in html and proposed["title"] in html
+    # each row deep-links into ITS project's decisions section, named after the project
+    assert f'/projects/{pa["id"]}#dec-{adopted["id"]}' in html
+    assert f'/projects/{pb["id"]}#dec-{proposed["id"]}' in html
+    assert "Project A" in html and "Project B" in html
+    # evidence + rejected chips render via render_ref, with the why-not note
+    assert f'/councils/{council["id"]}' in html and f'/councils/{alt["id"]}' in html
+    assert "banks gatekeep" in html
+    # the list route does not shadow the canonical /decisions/{id} redirect
+    r = client.get(f'/decisions/{adopted["id"]}', follow_redirects=False)
+    assert r.status_code in (302, 307)
+    assert r.headers["location"] == f'/projects/{pa["id"]}#dec-{adopted["id"]}'
+
+
 def test_synthesis_page_shows_informed_decisions(store):
     from starlette.testclient import TestClient
     from sonaloop import web

@@ -70,6 +70,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "no_survey_responses": "Noch keine echten Antworten importiert (import_survey_responses).",
         # hypotheses (falsifiable predictions scored against reality)
         "hypotheses_h": "Hypothesen",
+        "hypotheses_lead": "Falsifizierbare Wetten über alle Projekte — von der Realität bewertet.",
+        "no_hypotheses": "Noch keine Hypothesen.",
         "hyp_open_bets": "Offene Wetten", "hyp_resolved": "Aufgelöst",
         "hyp_hit_rate": "Trefferquote",
         "hyp_no_resolved": "Noch keine aufgelöst — die Trefferquote erscheint, sobald reale Ergebnisse erfasst sind.",
@@ -81,6 +83,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "hyp_dir_increase": "steigt", "hyp_dir_decrease": "fällt",
         # decisions (what we decided, on which evidence, rejecting what)
         "decisions_h": "Entscheidungen",
+        "decisions_lead": "Was entschieden wurde, auf welcher Evidenz — und was verworfen wurde.",
+        "no_decisions": "Noch keine Entscheidungen.",
         "dec_status_proposed": "Vorgeschlagen", "dec_status_adopted": "Beschlossen",
         "dec_status_superseded": "Abgelöst",
         "dec_rejected": "Verworfen", "dec_superseded_by": "Abgelöst durch",
@@ -302,6 +306,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "no_survey_responses": "No real responses imported yet (import_survey_responses).",
         # hypotheses (falsifiable predictions scored against reality)
         "hypotheses_h": "Hypotheses",
+        "hypotheses_lead": "Falsifiable bets across all projects — scored by reality.",
+        "no_hypotheses": "No hypotheses yet.",
         "hyp_open_bets": "Open bets", "hyp_resolved": "Resolved",
         "hyp_hit_rate": "Hit rate",
         "hyp_no_resolved": "None resolved yet — the hit rate appears once real results are recorded.",
@@ -313,6 +319,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "hyp_dir_increase": "increases", "hyp_dir_decrease": "decreases",
         # decisions (what we decided, on which evidence, rejecting what)
         "decisions_h": "Decisions",
+        "decisions_lead": "What was decided, on which evidence — and what was rejected.",
+        "no_decisions": "No decisions yet.",
         "dec_status_proposed": "Proposed", "dec_status_adopted": "Adopted",
         "dec_status_superseded": "Superseded",
         "dec_rejected": "Rejected", "dec_superseded_by": "Superseded by",

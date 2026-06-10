@@ -14,6 +14,19 @@ def test_assets_present_and_app_builds():
     assert "/projects" in paths
 
 
+def test_sidebar_library_lists_surveys_hypotheses_decisions():
+    """The library nav section links the three outbound artifacts (seeded in _nav_seed.py via the
+    same public registry an extension uses) — without these a /surveys etc. page is unreachable."""
+    from starlette.testclient import TestClient
+    from sonaloop.web._i18n import STRINGS
+    html = TestClient(web.create_app()).get("/?lang=en").text
+    for href, label_key in (("/surveys", "surveys_h"),
+                            ("/hypotheses", "hypotheses_h"),
+                            ("/decisions", "decisions_h")):
+        assert f'href="{href}"' in html, f"nav link {href} missing"
+        assert STRINGS["en"][label_key] in html
+
+
 def test_vote_tally_is_case_robust():
     """A council's votes display regardless of token case ('support' counts like SUPPORT) — so
     host/subagent-authored votes aren't silently dropped. Buckets are stance VALUES (votes ARE
