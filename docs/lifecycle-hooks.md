@@ -95,6 +95,31 @@ from sonaloop import services
 services.add_hook_handler("council.recorded", lambda env: ...)
 ```
 
+## The event bus + live inspector (SSE)
+
+The MCP server, the CLI and the web inspector are separate processes sharing one
+SQLite DB, so the inspector can't see in-process emissions directly. A built-in
+`'*'` subscriber (`sonaloop/services/_events.py`, registered whenever the services
+layer loads — i.e. in whichever process records data) appends every emitted event
+to a durable `events` table: monotonic id, timestamp, event name, the primary
+entity (+ owning project), and a short label + inspector URL. The table is capped
+to the newest ~1000 rows on append; like every subscriber, the append is
+best-effort and never breaks the recording operation.
+
+The web app tails that table:
+
+- `GET /api/events` — a plain SSE stream (heartbeat comment every ~15s; the table
+  is polled about once a second). Each frame's `id:` is the bus row id, so an
+  `EventSource` reconnect replays missed rows via `Last-Event-ID` automatically.
+- Every inspector page connects on load: new events show a small activity toast
+  linking to the recorded entity, and the page reloads itself when an event
+  concerns the entity/project currently on screen — Claude records a council over
+  MCP in one window, the open project page updates in the other.
+- `/activity` — the Activity feed page listing the recent bus rows.
+
+Knobs: `SONALOOP_EVENTS_POLL` (table-poll seconds, default 1) and
+`SONALOOP_EVENTS_HEARTBEAT` (heartbeat seconds, default 15).
+
 ## Operational knobs
 
 - `SONALOOP_DISABLE_HOOKS=1` — skip command/webhook delivery entirely
