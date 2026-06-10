@@ -68,6 +68,16 @@ STRINGS: dict[str, dict[str, str]] = {
         "survey_stance_mapped": "Stance-gemappt",
         "survey_predicted": "Council-Prognose", "survey_actual": "Echte Antworten",
         "no_survey_responses": "Noch keine echten Antworten importiert (import_survey_responses).",
+        # hypotheses (falsifiable predictions scored against reality)
+        "hypotheses_h": "Hypothesen",
+        "hyp_open_bets": "Offene Wetten", "hyp_resolved": "Aufgelöst",
+        "hyp_hit_rate": "Trefferquote",
+        "hyp_no_resolved": "Noch keine aufgelöst — die Trefferquote erscheint, sobald reale Ergebnisse erfasst sind.",
+        "hyp_predicted": "Vorhergesagt", "hyp_observed": "Beobachtet", "hyp_confidence": "Konfidenz",
+        "hyp_status_open": "Offen", "hyp_status_validated": "Bestätigt",
+        "hyp_status_refuted": "Widerlegt", "hyp_status_inconclusive": "Unentschieden",
+        "hyp_status_dropped": "Verworfen",
+        "hyp_dir_increase": "steigt", "hyp_dir_decrease": "fällt",
         # generic / not-found
         "not_found": "Nicht gefunden",
         "no_personas": "Noch keine Personas.",
@@ -282,6 +292,16 @@ STRINGS: dict[str, dict[str, str]] = {
         "survey_stance_mapped": "stance-mapped",
         "survey_predicted": "Council prediction", "survey_actual": "Real answers",
         "no_survey_responses": "No real responses imported yet (import_survey_responses).",
+        # hypotheses (falsifiable predictions scored against reality)
+        "hypotheses_h": "Hypotheses",
+        "hyp_open_bets": "Open bets", "hyp_resolved": "Resolved",
+        "hyp_hit_rate": "Hit rate",
+        "hyp_no_resolved": "None resolved yet — the hit rate appears once real results are recorded.",
+        "hyp_predicted": "Predicted", "hyp_observed": "Observed", "hyp_confidence": "Confidence",
+        "hyp_status_open": "Open", "hyp_status_validated": "Validated",
+        "hyp_status_refuted": "Refuted", "hyp_status_inconclusive": "Inconclusive",
+        "hyp_status_dropped": "Dropped",
+        "hyp_dir_increase": "increases", "hyp_dir_decrease": "decreases",
         # generic / not-found
         "not_found": "Not found",
         "no_personas": "No personas yet.",

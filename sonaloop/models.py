@@ -432,6 +432,33 @@ class SurveyResponse:
 
 
 @dataclass
+class Hypothesis:
+    """A falsifiable prediction — "we expect X on metric M" stamped BEFORE reality answers, scored
+    when it does. The sim-vs-reality calibration artifact: councils/synthesis only ever argue what
+    is plausible; a Hypothesis records what was PREDICTED so eval_scorecard can show whether the
+    simulations are predictive (it gives the eval_reports table its writer).
+
+    prediction: {metric, expected_value (+tolerance?) OR expected_direction (increase|decrease),
+    confidence?} — record_hypothesis rejects anything unfalsifiable. derived_from: Ref[] — the
+    council statements / synthesis findings / predicted behaviors / open questions the bet
+    operationalizes (validated to resolve on record). status is DERIVED at result-recording time by
+    comparing observed against predicted; result ({observed_value, source (Ref), note, recorded_at})
+    keeps BOTH raw values so the verdict stays auditable — the host argues it in `note`."""
+    id: str
+    project_id: str
+    text: str
+    prediction: Json
+    derived_from: list[Json]
+    status: str                  # open | validated | refuted | inconclusive | dropped
+    result: Json | None
+    created_at: str
+    updated_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
 class Evidence:
     id: str
     persona_id: str

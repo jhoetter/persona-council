@@ -340,6 +340,19 @@ CREATE TABLE IF NOT EXISTS survey_responses (
 );
 CREATE INDEX IF NOT EXISTS idx_survey_responses_survey ON survey_responses(survey_id);
 
+-- Hypotheses: falsifiable predictions stamped BEFORE reality answers, scored when it does
+-- (prediction / derived_from refs / the recorded result live in `data`). Resolved hypotheses
+-- aggregate into eval_reports via eval_scorecard — the sim-vs-reality calibration record.
+CREATE TABLE IF NOT EXISTS hypotheses (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_hypotheses_project ON hypotheses(project_id);
+
 -- Usability sessions: the durable, replayable per-step session trace (one schema across the
 -- artifact/prototype/live fidelity rungs; supersedes prototype_sessions for new recordings).
 -- subject_key = subject.id or subject.url, so the funnel can aggregate sessions of one subject.

@@ -114,18 +114,13 @@ def _validate_derived_from(refs: Any, project_id: str, store: Store) -> list[dic
 
 # --------------------------------------------------------------------------- brief → record
 
-def brief_survey(project_id: str, store: Store | None = None) -> dict[str, Any]:
-    """GATHER everything needed to author a survey that is actually answerable against the graph:
-    the project's OPEN questions, its CONTESTED findings (councils whose statements span both
-    positive and negative stances — exactly where a real-world answer is worth the postage), and
-    the canonical stance vocabulary (so stance_mapped scale options map cleanly). The host authors
-    the questions; record_survey validates + persists."""
-    store = store or Store()
-    project = _require_research_project(store, project_id)
-    open_qs = [o for o in store.list_open_questions(project["id"]) if o.get("status") == "open"]
-    contested = []
+def contested_findings(project_id: str, store: Store) -> list[dict[str, Any]]:
+    """The project's CONTESTED findings: councils whose statements span both positive and negative
+    stances — exactly where a real-world answer is worth the postage. The shared context-pack
+    gatherer behind brief_survey and brief_hypothesis."""
+    contested: list[dict[str, Any]] = []
     for c in store.list_council_sessions():
-        if c.get("project_id") != project["id"]:
+        if c.get("project_id") != project_id:
             continue
         stances = [s.get("stance") for s in (c.get("statements") or []) if s.get("stance")]
         values = [st.get("value") for st in stances if st.get("value") is not None]
@@ -137,10 +132,22 @@ def brief_survey(project_id: str, store: Store | None = None) -> dict[str, Any]:
                                 "stance": s.get("stance"), "text": (s.get("text") or "")[:240]}
                                for s in c.get("statements") or [] if s.get("stance")],
             })
+    return contested
+
+
+def brief_survey(project_id: str, store: Store | None = None) -> dict[str, Any]:
+    """GATHER everything needed to author a survey that is actually answerable against the graph:
+    the project's OPEN questions, its CONTESTED findings (councils whose statements span both
+    positive and negative stances — exactly where a real-world answer is worth the postage), and
+    the canonical stance vocabulary (so stance_mapped scale options map cleanly). The host authors
+    the questions; record_survey validates + persists."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    open_qs = [o for o in store.list_open_questions(project["id"]) if o.get("status") == "open"]
     return {
         "schema": "survey", "project_id": project["id"], "goal": project.get("goal", ""),
         "open_questions": open_qs,
-        "contested_findings": contested,
+        "contested_findings": contested_findings(project["id"], store),
         "stance_scale": suggest_stances(),
         "instructions": (
             "Author the survey YOURSELF — the server never writes text. Operationalize the open "

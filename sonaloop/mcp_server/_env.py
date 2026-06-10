@@ -70,6 +70,10 @@ _NEXT: dict[str, dict[str, Any]] = {
     "export_survey": {"name": "import_survey_responses", "reason": "when the real responses come back, ingest the batch"},
     "import_survey_responses": {"name": "survey_results", "reason": "aggregate per question — predicted-vs-actual for stance_mapped"},
     "survey_results": {"name": "attach_survey_evidence", "reason": "loop the real responses back onto a persona as calibration evidence"},
+    # --- hypotheses (falsifiable predictions scored against reality) ---
+    "brief_hypothesis": {"name": "record_hypothesis", "reason": "author the falsifiable statement + checkable prediction, then persist the open bet"},
+    "record_hypothesis": {"name": "record_hypothesis_result", "reason": "when reality answers, attach the observation — the status derives from observed vs predicted"},
+    "record_hypothesis_result": {"name": "eval_scorecard", "reason": "aggregate the hit-rate across resolved hypotheses into the calibration record"},
     # --- usability sessions (the durable, replayable trace) ---
     "brief_usability_session": {"name": "record_usability_session", "reason": "author the per-step dual timeline, then persist the replayable trace"},
     "suggest_friction_levels": {"name": "record_usability_session", "reason": "author every step's friction with the canonical levels, then persist"},

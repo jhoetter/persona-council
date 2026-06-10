@@ -20,6 +20,10 @@ class CouncilsMixin:
         self.audit("evidence", evidence["id"], "attach", evidence.get("notes"), evidence)
         self.conn.commit()
 
+    def get_evidence(self, evidence_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute("SELECT data FROM evidence WHERE id=?", (evidence_id,)).fetchone()
+        return json.loads(row["data"]) if row else None
+
     def list_evidence(self, persona_id: str) -> list[dict[str, Any]]:
         rows = self.conn.execute(
             "SELECT data FROM evidence WHERE persona_id=? ORDER BY id", (persona_id,)

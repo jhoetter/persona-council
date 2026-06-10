@@ -268,7 +268,7 @@ def _clean(d: dict) -> dict:
 
 
 _REF_ROUTES = {"council": "/councils/", "synthesis": "/syntheses/", "persona": "/personas/",
-               "survey": "/surveys/", "session": "/sessions/"}
+               "survey": "/surveys/", "session": "/sessions/", "hypothesis": "/hypotheses/"}
 
 
 def ref_href(r: dict) -> str | None:
@@ -358,12 +358,14 @@ def resolve_ref(r: dict, store: Any) -> dict[str, Any]:
         return out
     getter = {"council": "get_council_session", "synthesis": "get_synthesis",
               "prototype": "get_prototype", "persona": "get_persona",
-              "session": "get_usability_session", "survey": "get_survey"}.get(kind)
+              "session": "get_usability_session", "survey": "get_survey",
+              "hypothesis": "get_hypothesis", "evidence": "get_evidence"}.get(kind)
     art = getattr(store, getter)(rid) if (getter and hasattr(store, getter)) else None
     if not art:
         return out
     out["exists"] = True
-    out["title"] = art.get("title") or art.get("prompt") or art.get("name") or rid
+    out["title"] = (art.get("title") or art.get("prompt") or art.get("name")
+                    or art.get("text") or art.get("notes") or rid)
     if anchor:
         part = _find_part(art, anchor)
         if part is None:

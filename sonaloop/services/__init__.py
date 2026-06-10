@@ -27,6 +27,7 @@ from ..models import (
     DailySummary,
     Evidence,
     ExperienceEvent,
+    Hypothesis,
     OpenQuestion,
     PainPointObservation,
     Persona,
@@ -90,12 +91,13 @@ from . import _synthesis_pptx
 from . import _research
 from . import _engines
 from . import _surveys
+from . import _hypotheses
 from . import _usability_sessions
 from . import _sections
 
 _SUBMODULES = (
     _common, _hooks, _capabilities, _personas, _simulation, _consolidation, _memory, _evaluation,
-    _snapshots, _councils, _artifacts_service, _project_assets, _head_to_head, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _usability_sessions, _sections,
+    _snapshots, _councils, _artifacts_service, _project_assets, _head_to_head, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _hypotheses, _usability_sessions, _sections,
 )
 
 
