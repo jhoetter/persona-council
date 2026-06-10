@@ -434,6 +434,8 @@ def list_proto_sessions(store: Store | None = None):
 def brief_prototype_session(persona_id, prototype_id, store: Store | None = None):
     store = store or Store()
     proto = _proto.get_prototype(prototype_id, store=store)
+    persona = _require_persona(store, persona_id)
+    profile = capability_profile(persona)   # declared, else derived heuristic (capability ticket)
     ctx = prepare_persona_agent_context(
         persona_id, task=f"Use the prototype '{proto['name']}' as you really would and report what you experienced",
         recent_events=8, store=store)
@@ -446,16 +448,21 @@ def brief_prototype_session(persona_id, prototype_id, store: Store | None = None
                        for s in _json.loads(cpath.read_text(encoding="utf-8")).get("screens", [])]
     except Exception:
         pass
-    return {
+    brief = {
         "schema": "prototype_session", "persona_id": persona_id,
         "prototype": {"id": proto["id"], "name": proto["name"], "slug": proto["slug"], "screens": screens},
         "agent_context": ctx.get("agent_context"),
+        "capabilities": profile,
         "instructions": ("Open the running app (proto_open), drive it like THIS persona "
                          "(proto_act click/type/select on refs from the latest snapshot), observe the REAL "
                          "state, then author a grounded reaction. Anti-steering: only praise what you actually "
                          "exercised; honest friction and rejection are first-class. Cite the states you saw in "
-                         "observed_state_refs.") + PRIMITIVES_CONTRACT,
+                         "observed_state_refs.") + capability_context_line(profile) + PRIMITIVES_CONTRACT,
     }
+    gate = capability_fidelity_warnings(profile, "prototype", proto["name"])  # warn, never block
+    if gate:
+        brief["warnings"] = gate
+    return brief
 
 
 

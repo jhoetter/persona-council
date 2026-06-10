@@ -278,17 +278,22 @@ def test_brief_gathers_persona_context_and_friction_vocabulary(store):
     assert [i["term"] for i in brief["friction_levels"]["items"]] == \
         [r["term"] for r in artifacts.friction_terms()]
     assert "Anti-steering" in brief["instructions"]
-    # no capabilities profile on the persona -> omitted gracefully (a follow-up ticket adds it)
-    assert "capabilities" not in brief
+    # no declared capabilities -> the DERIVED profile rides along (never persisted back)
+    assert brief["capabilities"]["provenance"] == "derived"
+    assert store.get_persona(pid)["capabilities"] is None
 
 
 def test_brief_includes_capabilities_when_the_persona_carries_them(store):
     from conftest import create_persona
     pid = create_persona(store, "Carl Capable")
     persona = store.get_persona(pid)
-    persona["capabilities"] = {"vision": "low", "tech_literacy": "high"}
+    # legacy free-form keys survive normalization; canonical fields fill from the defaults
+    persona["capabilities"] = {"vision": "low", "tech_comfort": "high"}
     store.upsert_persona(persona, reason="test: capabilities profile")
     brief = services.brief_usability_session(pid, _LIVE, "live", store=store)
-    assert brief["capabilities"] == {"vision": "low", "tech_literacy": "high"}
+    caps = brief["capabilities"]
+    assert caps["vision"] == "low" and caps["tech_comfort"] == 4      # alias resolved on read
+    assert caps["rungs"] == {"see": True, "walk": True, "drive": True, "login": False}
+    assert caps["provenance"] == "authored"
     with pytest.raises(KeyError):
         services.brief_usability_session("nobody", _FLOW, "artifact", store=store)

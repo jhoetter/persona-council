@@ -68,6 +68,7 @@ _NEXT: dict[str, dict[str, Any]] = {
     "brief_usability_session": {"name": "record_usability_session", "reason": "author the per-step dual timeline, then persist the replayable trace"},
     "suggest_friction_levels": {"name": "record_usability_session", "reason": "author every step's friction with the canonical levels, then persist"},
     "record_usability_session": {"name": "get_session_funnel", "reason": "aggregate this subject's sessions into the step funnel"},
+    "suggest_tech_comfort": {"name": "update_persona", "reason": "patch capabilities.tech_comfort with a canonical level (the hint is the behavioral contract)"},
 }
 
 

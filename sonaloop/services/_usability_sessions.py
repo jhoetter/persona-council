@@ -79,14 +79,17 @@ def _concept_screens(prototype_id: str, store: Store) -> tuple[dict[str, Any] | 
 
 def brief_usability_session(persona_id, subject, fidelity, project_id=None, store: Store | None = None):
     """GATHER everything needed to run + author ONE usability session: the persona's loaded context
-    (SOUL + state + task-keyed memory recall), its `capabilities` profile when the persona carries
-    one (omitted gracefully otherwise), anti-steering framing, the friction vocabulary, and the
-    subject's context (prototype how-to-drive when the subject is a prototype/flow artifact). The
-    host authors the step timeline; record_usability_session validates + persists."""
+    (SOUL + state + task-keyed memory recall), its capability profile (declared, else derived) with
+    the tech-comfort behavioral hint woven into the anti-steering framing — plus explicit `warnings`
+    when the requested fidelity exceeds the declared rungs (warn, never block) — the friction
+    vocabulary, and the subject's context (prototype how-to-drive when the subject is a
+    prototype/flow artifact). The host authors the step timeline; record_usability_session
+    validates + persists."""
     store = store or Store()
     subject = _validate_subject(subject)
     _require_fidelity(fidelity)
     persona = _require_persona(store, persona_id)
+    profile = capability_profile(persona)  # noqa: F821 (bound) — declared, else derived heuristic
     ctx = prepare_persona_agent_context(  # noqa: F821 (bound)
         persona_id,
         task=f"Use '{subject['label']}' as you really would, thinking aloud at every step",
@@ -95,6 +98,7 @@ def brief_usability_session(persona_id, subject, fidelity, project_id=None, stor
         "schema": "usability_session", "persona_id": persona["id"], "project_id": project_id,
         "subject": subject, "fidelity": fidelity,
         "agent_context": ctx.get("agent_context"),
+        "capabilities": profile,
         "friction_levels": suggest_friction_levels(),
         "instructions": (
             "Drive the subject like THIS persona and record the DUAL TIMELINE — one entry per step: "
@@ -106,11 +110,12 @@ def brief_usability_session(persona_id, subject, fidelity, project_id=None, stor
             "first-class outcomes — a persona whose context does not support enthusiasm should stall "
             "or drop off. The session is the deliverable, not a summary of it: record every step you "
             "took, not the highlights."
-        ) + PRIMITIVES_CONTRACT,
+        ) + capability_context_line(profile) + PRIMITIVES_CONTRACT,  # noqa: F821 (bound)
     }
-    if persona.get("capabilities"):
-        # A persona capabilities profile (separate feature) rides along when present — never built here.
-        brief["capabilities"] = persona["capabilities"]
+    gate = capability_fidelity_warnings(                              # noqa: F821 (bound)
+        profile, fidelity, " ".join(str(subject.get(k) or "") for k in ("label", "url", "id")))
+    if gate:
+        brief["warnings"] = gate
     if subject["kind"] in ("prototype", "flow") and subject.get("id"):
         proto, screens = _concept_screens(subject["id"], store)
         if proto:
@@ -289,7 +294,9 @@ def record_usability_session(persona_id, subject, fidelity, date_value, steps, o
     point at existing steps), and referenced screenshot files. When fidelity is prototype/live and a
     browser `session_id` is passed, the claimed per-step states are verified against the harness
     session log (unmatched claims are rejected; a missing log records with an UNVERIFIED_SESSION
-    warning). Pass a stable `key` for a deterministic id (idempotent upsert → resumable runs)."""
+    warning). The persona's capability profile in effect is stamped onto the stored session as
+    `capabilities_snapshot` so traces stay interpretable after the persona evolves. Pass a stable
+    `key` for a deterministic id (idempotent upsert → resumable runs)."""
     store = store or Store()
     subject = _validate_subject(subject)
     _require_fidelity(fidelity)
@@ -322,6 +329,11 @@ def record_usability_session(persona_id, subject, fidelity, date_value, steps, o
         id=sess_id, project_id=project_id or "", persona_id=persona_id, date=date_value,
         subject=subject, fidelity=fidelity, steps=norm_steps, outcome=norm_outcome,
         created_at=now, statements=norm_statements).to_dict()
+    persona = store.get_persona(persona_id)
+    if persona:
+        # The capability profile IN EFFECT at record time — sessions stay interpretable after
+        # the persona evolves. (Sessions of unknown/ad-hoc persona ids record without one.)
+        sess["capabilities_snapshot"] = capability_profile(persona)   # noqa: F821 (bound)
     if session_id:
         sess["session_id"] = session_id          # the browser session the trace was verified against
     if grounded is not None:
