@@ -175,6 +175,33 @@ Storage follows the head-to-head pattern: a recorded ladder IS a CouncilSession 
 quote — queryable for analytics) and the derived result — plus a finding of kind
 `price_ladder`. No new table.
 
+### Ideation (`ideation_hmw`) — structured HMW, end-to-end
+
+> *Given this How-Might-We, what could we build?*
+
+The ideation Job carries a three-step **reframe → diverge → converge** protocol
+(`taxonomy.json` → `jobs[ideation_hmw].protocol`), built entirely on existing record
+primitives — no parallel store:
+
+1. **`reframe`** — the host turns the raw problem into **3–5 HMW questions**
+   (`record_hmw_reframe`), persisted as the project's open-question records (stable ids —
+   the `hmw_ref` every idea attaches to). A bare HMW question is not falsifiable, so it is
+   deliberately *not* forced into the hypotheses table (that would pollute the eval
+   scorecard's calibration math); whenever the host can state a checkable bet for an HMW it
+   passes `prediction` and the question is **also** promoted to a real hypothesis
+   (`record_hypothesis`, full falsifiability validation, `derived_from` the question).
+2. **`diverge`** — the council generates ideas (`brief_council` with the HMW questions as
+   prompts); every idea is persisted as a first-class **note of kind `idea`**
+   (`record_ideas`) carrying `{persona_id, hmw_ref, cluster?}` — an unattributed or
+   unanchored idea is rejected. Ideas live in the project graph (sections/edges work on
+   them) and are queryable via `list_ideas(project, hmw_ref|persona_id|cluster)`.
+3. **`converge`** — a **forced ranking** (`record_ideation_summary`, ordered
+   `shortlist=[{idea_id, rationale}]`, rank = position, rationale required per pick) is
+   recorded as an `ideation` block on a CouncilSession: problem + HMW questions + the full
+   idea pool + the ranked shortlist. The returned `cite_as` ref (`{kind: 'council', id}`)
+   plugs straight into `record_decision`'s `based_on` — the ideation output is
+   **decision-record compatible by construction**.
+
 ## How to consume it
 
 ```python

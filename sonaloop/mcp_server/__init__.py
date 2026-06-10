@@ -21,6 +21,7 @@ from ._tools_decisions import register_decisions
 from ._tools_usability import register_usability
 from ._tools_walkthrough import register_walkthrough
 from ._tools_council import register_council
+from ._tools_ideation import register_ideation
 from ._tools_sections import register_sections
 from ._tools_hooks import register_hooks
 from ._tools_assets import register_assets
@@ -74,6 +75,7 @@ def build_server():
     register_usability(mcp)
     register_walkthrough(mcp)
     register_council(mcp)
+    register_ideation(mcp)
     register_sections(mcp)
     register_hooks(mcp)
     register_assets(mcp)

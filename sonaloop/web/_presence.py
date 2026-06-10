@@ -90,6 +90,9 @@ LIST_SOURCES: dict[str, str | NotAnArtifact] = {
     "list_decisions": "decision",
     "list_flows": "flow",
     "list_hypotheses": "hypothesis",
+    # ideas ARE note records (kind 'idea' on the note primitive — services/_ideation.py);
+    # list_ideas is a filtered view over list_notes, so their presence rides the note kind.
+    "list_ideas": "note",
     "list_notes": "note",
     "list_prototypes_artifacts": "prototype",
     "list_sections": "section",

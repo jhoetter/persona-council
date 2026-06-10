@@ -123,6 +123,27 @@
         "min_personas": 4,
         "persona_axes": ["segment", "expertise-level", "extreme-user"],
         "note": "How-Might-We is really a FORMAT-shaped move often mis-sold as a Job; here it is the ideation Job. Include at least one extreme user to push non-obvious concepts."
+      },
+      "protocol": {
+        "name": "Structured HMW ideation",
+        "summary": "Reframe → diverge → converge: the host reframes the raw problem into 3–5 How-Might-We questions recorded as first-class question records (each promotable to a falsifiable hypothesis); the council diverges into ideas, every idea attributed to a source persona and an HMW ref; a forced ranking converges on a shortlist with a rationale per pick, recorded as an ideation summary that decision records cite as evidence.",
+        "steps": [
+          {
+            "id": "reframe",
+            "rule": "The host turns the raw problem into 3–5 HMW questions BEFORE any council runs; each is recorded as a question record, and carries a hypothesis ref whenever the host can state a falsifiable bet for it.",
+            "tooling": "record_hmw_reframe(problem, hmws) → open-question records; optional {prediction} per HMW promotes it via record_hypothesis"
+          },
+          {
+            "id": "diverge",
+            "rule": "The council generates ideas against the HMW questions; EVERY idea is attributed to a source persona and an HMW ref (an unattributed or unanchored idea is rejected); the host may add a cluster/tag.",
+            "tooling": "brief_council (HMW questions as prompts) → record_ideas(ideas=[{text, persona_id, hmw_ref, cluster?}])"
+          },
+          {
+            "id": "converge",
+            "rule": "A FORCED ranking produces the shortlist — ordered picks, each with a host-authored rationale — recorded as an ideation summary whose session a decision record cites as based_on evidence.",
+            "tooling": "record_ideation_summary(shortlist=[{idea_id, rationale}]) → cite {kind:'council', id} in record_decision"
+          }
+        ]
       }
     },
     {

@@ -91,6 +91,7 @@ from . import _calibration
 from . import _flows
 from . import _head_to_head
 from . import _pricing
+from . import _ideation
 from . import _red_team
 from . import _coverage
 from . import _synthesis
@@ -107,7 +108,7 @@ from . import _sections
 
 _SUBMODULES = (
     _common, _hooks, _events, _capabilities, _personas, _simulation, _consolidation, _memory, _evaluation,
-    _snapshots, _councils, _artifacts_service, _project_assets, _substrate, _grounding, _predictions, _calibration, _flows, _head_to_head, _pricing, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _hypotheses, _decisions, _usability_sessions, _walkthrough, _actuation, _sections,
+    _snapshots, _councils, _artifacts_service, _project_assets, _substrate, _grounding, _predictions, _calibration, _flows, _head_to_head, _pricing, _ideation, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _hypotheses, _decisions, _usability_sessions, _walkthrough, _actuation, _sections,
 )
 
 
