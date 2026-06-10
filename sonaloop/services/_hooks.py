@@ -90,6 +90,10 @@ LIFECYCLE_EVENTS: dict[str, dict[str, Any]] = {
         "payload": {"project_id": "id", "title": "title", "goal": "goal",
                     "methodology": "framework key or ''"},
     },
+    "project.updated": {
+        "description": "A project's structural metadata (title/goal/description/status) was patched.",
+        "payload": {"project_id": "id", "title": "title"},
+    },
     "run.finished": {
         "description": "A governed run ended (status finished|stopped) — the study completed.",
         "payload": {"run_id": "id", "project_id": "id", "status": "finished|stopped",

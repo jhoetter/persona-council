@@ -35,6 +35,7 @@ _ENTITY: dict[str, tuple[str, str, str]] = {
     "council.recorded": ("council", "council_id", "prompt"),
     "synthesis.recorded": ("synthesis", "synthesis_id", "title"),
     "project.created": ("project", "project_id", "title"),
+    "project.updated": ("project", "project_id", "title"),
     "run.finished": ("run", "run_id", "status"),
 }
 

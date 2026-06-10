@@ -194,6 +194,26 @@ def create_note(project_id: str, text: str, title: str = "", kind: str = "note",
     return note
 
 
+def update_note(note_id: str, patch: dict[str, Any], store=None) -> dict[str, Any]:
+    """Patch a note's authored fields (title/text). Structured `data` keeps its own
+    path (set_note_data); `kind` stays as recorded. Same caps as create_note."""
+    store = store or Store()  # noqa: F821
+    for project in store.list_research_projects():
+        for n in _notes(project):
+            if n.get("id") == note_id:
+                if "text" in patch and patch["text"] is not None:
+                    text = str(patch["text"]).strip()
+                    if not text:
+                        raise ValueError("a note needs non-empty text")
+                    n["text"] = text[:2000]
+                if "title" in patch and patch["title"] is not None:
+                    n["title"] = (str(patch["title"]).strip() or n["text"][:60])[:120]
+                project["updated_at"] = utc_now_iso()  # noqa: F821
+                store.upsert_research_project(project)
+                return n
+    raise KeyError(f"Unknown note: {note_id}")
+
+
 def set_note_data(note_id: str, patch: dict[str, Any], store=None) -> dict[str, Any]:
     """Merge keys into a note's `data` (e.g. set a concept note's prototype_id once built), so the
     completeness critic stops flagging that concept as un-prototyped (ESV/OD-3)."""

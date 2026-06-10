@@ -89,6 +89,31 @@ def create_research_project(title: str, goal: str = "", persona_ids: list[str] |
 
 
 
+def update_research_project(project_id: str, patch: dict[str, Any],
+                            store: Store | None = None) -> dict[str, Any]:
+    """Patch a project's STRUCTURAL metadata (title/goal/description/status) — the
+    container fields only, never graph contents or authored study text. Unknown
+    patch keys are ignored; the slug stays stable (it's a durable handle)."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)
+    if "title" in patch and patch["title"] is not None:
+        title = str(patch["title"]).strip()
+        if not title:
+            raise ValueError("a project needs a non-empty title")
+        project["title"] = title[:200]
+    for key in ("goal", "description"):
+        if key in patch and patch[key] is not None:
+            project[key] = str(patch[key]).strip()[:2000]
+    if patch.get("status"):
+        project["status"] = str(patch["status"]).strip()[:40]
+    project["updated_at"] = utc_now_iso()
+    store.upsert_research_project(project)
+    emit_lifecycle_event("project.updated",  # noqa: F821 (bound)
+                         {"project_id": project["id"], "title": project["title"]}, store)
+    return project
+
+
+
 def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
     """Project summaries for the inspector list. Counts come from the project GRAPH —
     the plan-evidence graph is the source of truth, and `study_ids` is empty for
@@ -617,7 +642,8 @@ def get_research_frontier(project_id: str, store: Store | None = None) -> dict[s
 # M-cleanup: backfill_project_from_syntheses RETIRED (a one-time study-graph migration).
 
 
-# --- Deletes (D in CRUD; MCP/CLI only — the web UI is read-only) -------------
+# --- Deletes (D in CRUD; reachable from MCP/CLI and the web's structural
+#     write routes — docs/web-mutations.md documents the boundary) -------------
 
 
 

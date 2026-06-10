@@ -51,6 +51,15 @@ def _guard(operation: str, resource: dict[str, Any]) -> None:
         g(operation, resource)
 
 
+def check_access(operation: str, resource: dict[str, Any] | None = None) -> None:
+    """Run the registered access guards over a NON-substrate operation — the same
+    seam register_access_guard feeds. The web inspector's write routes call this
+    with `web.<action>` operations so sonaloop-cloud's tenancy guard can hold its
+    editor+ write rule in multi-user installs; locally it is a no-op. Raises
+    PermissionError to deny, like every guard call."""
+    _guard(operation, resource or {})
+
+
 # --- Envelope / paging helpers --------------------------------------------------
 
 def _clamp(limit: int, offset: int) -> tuple[int, int]:
