@@ -15,7 +15,9 @@ Host-authors-all-text contract (README): the host (Claude) authors the prose obj
 the SCAFFOLD — it assembles the disconfirmation brief with per-persona adversarial roles, collects each
 persona's concrete objections (a `theme`, a severity, the persona who raised it), and does the
 DETERMINISTIC aggregation server-side (group objections by theme → the structured "case against": how many
-personas raise each blocker + worst severity). No server-side text-LLM call ever happens here.
+personas raise each blocker + worst severity). No server-side text-LLM call ever happens here. Theme
+grouping folds case/whitespace ONLY — semantic merging ('price' vs 'pricing') stays with the host, nudged
+by the brief surfacing the project's prior themes + a starter vocabulary for REUSE over invention.
 
 `stance` runs the SAME question in both directions easily: "against" (the default — only the case against),
 "for" (the confirming case), or "both" (a paired confirm+disconfirm so case-for and case-against sit side
@@ -30,6 +32,7 @@ from typing import Any
 
 from ..config import utc_now_iso, ensure_content_language, language_instruction
 from ..storage import Store
+from ..suggestions import suggest_blocker_themes
 from .. import artifacts as _artifacts
 
 from ._common import *  # noqa: F401,F403  (stable_id, _require_research_project, list_personas, …)
@@ -146,6 +149,8 @@ def brief_red_team(project_id: str, prompt: str, persona_ids: list[str] | None =
     personas = {pid: store.get_persona(pid) for pid in persona_ids}
     personas = {pid: p for pid, p in personas.items() if p}
     roles_block = _render_roles_block({pid: roles[pid] for pid in personas}, personas)
+    prior_themes = _prior_themes(store, project["id"])
+    suggested_themes = [i.get("tag") for i in suggest_blocker_themes().get("items") or []]
 
     task_context = "\n\n".join(filter(None, [context or "", artifacts_context])) or None
     participants = []
@@ -172,6 +177,7 @@ def brief_red_team(project_id: str, prompt: str, persona_ids: list[str] | None =
         "stance": stance, "external_context": context, "artifacts": artifact_briefs,
         "roles": {pid: roles[pid] for pid in personas}, "roles_block": roles_block,
         "reframing": reframing, "participants": participants,
+        "prior_themes": prior_themes, "suggested_themes": suggested_themes,
         "instructions": (
             "THE IDEA IS ON TRIAL. Each participant's agent_context ends with the disconfirmation reframing "
             "AND their assigned adversarial lens. For EACH persona author one or more `objections` = the "
@@ -184,14 +190,39 @@ def brief_red_team(project_id: str, prompt: str, persona_ids: list[str] | None =
             "in the transcript. "
             + ("Because stance='both', ALSO collect the case FOR (`endorsements`=[{persona_id, theme, text}]) "
                "so case-for and case-against sit side by side. " if stance == "both" else
-               "Pass stance='both' to ALSO collect the case for (run the same question both directions). ") +
-            "Then call record_red_team(project_id, prompt, objections=[...], endorsements=[...], statements="
-            "[...], stance, exec_summary, summary). The server groups objections by theme into the structured "
-            f"case-against (count + worst severity); you author the prose. {language_instruction(language)}"),
+               "Pass stance='both' to ALSO collect the case for (run the same question both directions). ")
+            + "REUSE themes over inventing: pick a label from `prior_themes` (this project's earlier "
+              "red-teams) or `suggested_themes` (common blocker families) when one fits — a new label only "
+              "when none does, so one shared blocker is not fragmented across near-duplicates. "
+            + "Then call record_red_team(project_id, prompt, objections=[...], endorsements=[...], statements="
+            "[...], stance, exec_summary, summary). The server groups objections by theme (case/whitespace-"
+            f"insensitive) into the structured case-against (count + worst severity); you author the prose. "
+            f"{language_instruction(language)}"),
     }
 
 
 _SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+
+
+def _theme_fold(theme: Any) -> str:
+    """STRUCTURAL normalization only (case + whitespace) — 'Pricing'/'pricing ' must not split one blocker.
+    No stemming/fuzzy matching: semantic merging is the host's job, never the server's guess."""
+    return " ".join(str(theme or "").split()).casefold()
+
+
+def _prior_themes(store: Store, project_id: str) -> list[str]:
+    """The themes already recorded in THIS project's red-team sessions (case-against + case-for), newest
+    first, fold-deduped. The brief hands them to the host so an existing theme gets REUSED instead of
+    re-invented — near-duplicate labels fragment a shared blocker and demote it in the reach ranking."""
+    seen: dict[str, str] = {}
+    for c in store.list_council_sessions():   # newest-first (store orders by created_at DESC)
+        rt = c.get("red_team")
+        if not rt or c.get("project_id") != project_id:
+            continue
+        for case in (rt.get("case_against"), rt.get("case_for")):
+            for t in (case or {}).get("themes") or []:
+                seen.setdefault(_theme_fold(t.get("theme")), t.get("theme"))
+    return list(seen.values())
 
 
 def _norm_severity(value: Any) -> str:
@@ -205,13 +236,14 @@ def _aggregate_case(items: list[dict[str, Any]], personas: dict[str, dict[str, A
     """The DETERMINISTIC red-team math (no LLM): group objections (or endorsements) by `theme` into the
     structured case — for each theme, how many DISTINCT personas raise it, which personas, and (for
     objections) the worst severity. Themes are ranked by reach (personas raising), then severity, so the
-    most-shared, most-severe blocker leads."""
+    most-shared, most-severe blocker leads. Grouping keys are case/whitespace-folded (display keeps the
+    first-seen casing) so trivially-identical labels cannot split a theme — and nothing more."""
     by_theme: dict[str, dict[str, Any]] = {}
     for it in items:
         pid = it.get("persona_id")
-        theme = str(it.get("theme") or it.get("label") or "other").strip() or "other"
-        entry = by_theme.setdefault(theme, {"theme": theme, "personas": [], "count": 0,
-                                            "items": [], "severity": "low"})
+        theme = " ".join(str(it.get("theme") or it.get("label") or "other").split()) or "other"
+        entry = by_theme.setdefault(_theme_fold(theme), {"theme": theme, "personas": [], "count": 0,
+                                                         "items": [], "severity": "low"})
         if pid and pid not in entry["personas"]:
             entry["personas"].append(pid)
         item: dict[str, Any] = {"persona_id": pid, "text": str(it.get("text") or "").strip()}
@@ -245,6 +277,19 @@ def _aggregate_case(items: list[dict[str, Any]], personas: dict[str, dict[str, A
         **({"worst_severity": worst, "top_blocker": themes[0]["theme"] if themes else None}
            if with_severity else {}),
     }
+
+
+def _fragmentation_note(case: dict[str, Any]) -> str | None:
+    """Visibility, never a gate: when most themes are single-persona, near-duplicate labels may have split
+    a shared blocker and demoted it in the reach ranking — describe it, let the host decide. Purely
+    structural (counts only); a single-voice session can't fragment, so it never trips this."""
+    themes = case["themes"]
+    singles = sum(1 for t in themes if t["count"] == 1)
+    if case["voices"] < 2 or len(themes) < 4 or singles * 10 < len(themes) * 7:
+        return None
+    return (f"{len(themes)} themes, {singles} raised by a single persona — the case-against looks "
+            "fragmented (near-duplicate labels like 'price'/'pricing' split one blocker's reach); "
+            "consider re-recording with merged themes so shared blockers rank by their real reach.")
 
 
 def record_red_team(project_id: str, prompt: str, objections: list[dict[str, Any]] | None = None,
@@ -305,6 +350,10 @@ def record_red_team(project_id: str, prompt: str, objections: list[dict[str, Any
         "recorded_at": utc_now_iso(),
     }
     store.insert_council_session(session)
+    # Response-only (set AFTER the insert, so the stored record stays clean): advice to the host, not data.
+    note = _fragmentation_note(case_against)
+    if note:
+        session["hints"] = [note]
     return session
 
 

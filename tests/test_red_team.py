@@ -139,6 +139,84 @@ def test_no_objections_yields_empty_case_against(store):
     assert case["theme_count"] == 0 and case["top_blocker"] is None and case["voices"] == 0
 
 
+def test_case_fold_merges_trivially_identical_themes(store):
+    a = create_persona(store, "A")
+    b = create_persona(store, "B")
+    c = create_persona(store, "C")
+    proj = services.create_research_project("fold", goal="g", persona_ids=[a, b, c], store=store)
+    session = services.record_red_team(
+        proj["id"], "?", stance="both", objections=[
+            {"persona_id": a, "theme": "Pricing", "text": "x", "severity": "medium"},
+            {"persona_id": b, "theme": "pricing ", "text": "y", "severity": "critical"},
+            {"persona_id": c, "theme": " PRICING", "text": "z", "severity": "low"},
+            {"persona_id": a, "theme": "trust", "text": "t", "severity": "high"}],
+        endorsements=[{"persona_id": a, "theme": "Time Saved", "text": "e1"},
+                      {"persona_id": b, "theme": "time   saved", "text": "e2"}],
+        store=store)
+    case = session["red_team"]["case_against"]
+    # Case/whitespace variants group as ONE theme; display keeps the first-seen casing.
+    assert case["theme_count"] == 2
+    top = case["themes"][0]
+    assert top["theme"] == "Pricing" and top["count"] == 3
+    # The reach-then-severity ranking is unaffected: the merged theme leads with the worst severity.
+    assert top["severity"] == "critical" and case["top_blocker"] == "Pricing"
+    # The SAME structural normalization applies to the case-for (endorsements path, with_severity=False).
+    case_for = session["red_team"]["case_for"]
+    assert case_for["theme_count"] == 1 and case_for["themes"][0]["count"] == 2
+
+
+def test_brief_hands_back_prior_themes_for_reuse(store):
+    a = create_persona(store, "A")
+    proj = services.create_research_project("reuse", goal="g", persona_ids=[a], store=store)
+    services.record_red_team(
+        proj["id"], "first pass", stance="both",
+        objections=[{"persona_id": a, "theme": "switching cost", "text": "x", "severity": "high"}],
+        endorsements=[{"persona_id": a, "theme": "time saved", "text": "y"}], store=store)
+    brief = services.brief_red_team(proj["id"], "second pass", persona_ids=[a], store=store)
+    # The project's earlier red-team themes (both directions) ride in the brief with a reuse instruction.
+    assert "switching cost" in brief["prior_themes"] and "time saved" in brief["prior_themes"]
+    assert "prior_themes" in brief["instructions"]
+    # The starter vocabulary (common blocker families) is suggestions-only data — never enforced.
+    assert "price" in brief["suggested_themes"] and "switching cost" in brief["suggested_themes"]
+    # Scoped to the project: another project's brief starts with no prior themes.
+    other = services.create_research_project("other", goal="g", persona_ids=[a], store=store)
+    assert services.brief_red_team(other["id"], "?", persona_ids=[a], store=store)["prior_themes"] == []
+
+
+def test_fragmented_case_against_gets_a_descriptive_hint(store):
+    a = create_persona(store, "A")
+    b = create_persona(store, "B")
+    c = create_persona(store, "C")
+    proj = services.create_research_project("frag", goal="g", persona_ids=[a, b, c], store=store)
+    fragmented = services.record_red_team(
+        proj["id"], "?", objections=[
+            {"persona_id": a, "theme": "pricing", "text": "x", "severity": "high"},
+            {"persona_id": b, "theme": "price point", "text": "y", "severity": "high"},
+            {"persona_id": c, "theme": "monthly cost", "text": "z", "severity": "medium"},
+            {"persona_id": a, "theme": "trust", "text": "t", "severity": "low"},
+            {"persona_id": b, "theme": "no proof", "text": "p", "severity": "low"}],
+        key="frag", store=store)
+    # Mostly single-persona themes → a descriptive hint (visibility, never a gate)…
+    assert any("single persona" in h for h in fragmented["hints"])
+    # …response-only: the stored record stays clean.
+    assert "hints" not in services.get_council(fragmented["id"], store=store)
+
+
+def test_consolidated_case_against_stays_silent(store):
+    a = create_persona(store, "A")
+    b = create_persona(store, "B")
+    c = create_persona(store, "C")
+    proj = services.create_research_project("cons", goal="g", persona_ids=[a, b, c], store=store)
+    consolidated = services.record_red_team(
+        proj["id"], "?", objections=[
+            {"persona_id": a, "theme": "price", "text": "x", "severity": "high"},
+            {"persona_id": b, "theme": "price", "text": "y", "severity": "high"},
+            {"persona_id": c, "theme": "price", "text": "z", "severity": "medium"},
+            {"persona_id": a, "theme": "trust", "text": "t", "severity": "low"}],
+        key="cons", store=store)
+    assert "hints" not in consolidated
+
+
 # --------------------------------------------------------------------------- both directions on one question
 
 def test_stance_both_runs_same_question_in_both_directions(store):

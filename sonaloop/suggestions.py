@@ -63,6 +63,13 @@ def suggest_stances() -> dict[str, Any]:
                       "(never silently dropped). Council votes use the same terms."}
 
 
+def suggest_blocker_themes() -> dict[str, Any]:
+    """Suggested starter `theme` labels for red-team objections (suggestions/blocker_themes.json) — the
+    common blocker families (price / trust / switching cost / …). Recommendations only: brief_red_team
+    surfaces them next to the project's own prior themes; any free-text theme is always accepted."""
+    return _load("blocker_themes")
+
+
 def suggest_finding_kinds() -> dict[str, Any]:
     """Suggested Finding kinds (suggestions/finding_kinds.json) — summary/key_problem/pain_solver/… with
     the section id + label_key each renders under. Recommendations: an invented kind still renders
