@@ -327,6 +327,26 @@ def test_pptx_export_project_report_with_chart(store):
     assert any(_has_chart(sh) for sl in prs.slides for sh in sl.shapes)  # the pie
 
 
+def test_pptx_export_sectionless_project_synthesis_falls_back_to_analytic_deck(store):
+    """A project-scoped synthesis whose report flow never ran (no sections) still has the
+    analytic layers — the deck renders them instead of an empty cover+closing shell, and
+    carries the brand layer (logo + canvas pictures on cover, logo on closing)."""
+    import io
+    from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    from sonaloop import services
+    rep = {"id": "rnosec", "title": "Demo — Report", "scope": "project", "project_id": "",
+           "created_at": "2026-06-10T00:00:00+00:00", "lead": "", "council_ids": [],
+           "gesamtbild": "G" * 80, "positionierung": "P" * 80,
+           "findings": [{"kind": "key_problem", "text": "Search dead-ends on synonyms"}],
+           "statements": [], "prompts": [], "graph_snapshot": None, "sections": []}
+    store.upsert_synthesis(rep)
+    prs = Presentation(io.BytesIO(services.export_synthesis_pptx("rnosec", store=store)))
+    assert len(prs.slides) >= 5  # cover + big picture + positioning + key problems + closing
+    pics = [sum(1 for sh in sl.shapes if sh.shape_type == MSO_SHAPE_TYPE.PICTURE) for sl in prs.slides]
+    assert pics[0] == 2 and pics[-1] == 1  # branded cover (logo + canvas) and closing (logo)
+
+
 def test_figure_to_chart_maps_every_design_system_kind(store):
     """The PPTX bridge mirrors the design-system chart of-kinds (charts_catalogue), so a deck shows
     the same chart the report/PDF does — one neutral _pptx model per author-supplied `of`."""

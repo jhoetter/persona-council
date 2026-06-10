@@ -251,8 +251,10 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
     kind_label = "Report"
     slides: list[dict] = []
 
-    if syn.get("scope") == "project":
-        secs = syn.get("sections", [])
+    secs = syn.get("sections", [])
+    # A project synthesis without report sections (report flow never run) still has the
+    # analytic layers — fall through to that deck instead of an empty cover+closing shell.
+    if syn.get("scope") == "project" and secs:
         node_title = {n["study_id"]: (n.get("title") or "") for n in (syn.get("graph_snapshot") or {}).get("nodes", [])}
 
         def ref_title(ref: str) -> str:
@@ -266,7 +268,8 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
             return (c.get("prompt") or rid)[:60] if c else rid
 
         meta = f"{len(secs)} {'Abschnitte' if de else 'sections'}"
-        slides.append({"kind": "cover", "eyebrow": kind_label, "title": title,
+        slides.append({"kind": "cover", "logo": True, "canvas": "dawn",
+                       "eyebrow": kind_label, "title": title,
                        "subtitle": _strip_md(syn.get("lead", "")), "meta": meta,
                        "date": syn.get("created_at", "")[:10]})
         if len(secs) >= 3:  # the reader's map — only when there are chapters to map
@@ -289,8 +292,10 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
                 slides.append({"kind": "image", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
                                "image": path, "caption": cap})
     else:
-        meta = f"{len(syn.get('council_ids', []))} {'Councils' if de else 'councils'}"
-        slides.append({"kind": "cover", "eyebrow": kind_label, "title": title,
+        cids = syn.get("council_ids", [])
+        meta = f"{len(cids)} {'Councils' if de else 'councils'}" if cids else ""
+        slides.append({"kind": "cover", "logo": True, "canvas": "dawn",
+                       "eyebrow": kind_label, "title": title,
                        "subtitle": _strip_md(syn.get("goal", "")), "meta": meta,
                        "date": syn.get("created_at", "")[:10]})
         n = 0
@@ -316,7 +321,7 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
             n += 1
             slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["open_questions"], "blocks": _li(oqs)})
 
-    slides.append({"kind": "closing",
+    slides.append({"kind": "closing", "logo": True,
                    "title": "Vielen Dank" if de else "Thank you",
                    "text": ("Erstellt mit der Sonaloop-Research-Engine — jede Aussage in diesem Deck "
                             "führt auf eine inspizierbare Session zurück." if de else
