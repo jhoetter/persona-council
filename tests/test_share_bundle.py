@@ -175,3 +175,40 @@ def test_out_dir_must_stay_inside_the_data_dir(store, tmp_path, monkeypatch):
     # a RELATIVE dir resolves under DATA_DIR and is fine
     out = services.export_synthesis_html(syn["id"], out_dir="export/custom", store=store)
     assert (tmp_path / "data" / "export" / "custom" / out["token"] / "index.html").is_file()
+
+
+# --------------------------------------------------------------- review fixes (post-processors)
+
+def test_inliner_unescapes_attr_src_and_caps_size(tmp_path, monkeypatch):
+    from sonaloop import config
+    from sonaloop.services import _synthesis as S
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    (tmp_path / "figs").mkdir(parents=True)
+    (tmp_path / "figs" / "a&b.png").write_bytes(_PNG_1X1)
+    # the renderer attribute-escapes src — the file on disk is a&b.png, the markup says a&amp;b.png
+    out = S._share_inline_images('<img src="/data/figs/a&amp;b.png">', missing_label="gone")
+    assert out.startswith('<img src="data:image/png;base64,')
+    # past the per-file budget: a visible note, never an empty husk or a 40 MB index.html
+    monkeypatch.setattr(S, "_SHARE_INLINE_MAX_BYTES", 4)
+    out = S._share_inline_images('<img src="/data/figs/a&amp;b.png">', missing_label="gone")
+    assert out == '<span class="share-missing">[gone]</span>'
+
+
+def test_inliner_denies_external_src_by_default():
+    from sonaloop.services import _synthesis as S
+    for src in ("https://evil.example/x.png", "//evil.example/x.png", "relative.png"):
+        out = S._share_inline_images(f'<IMG SRC="{src}">', missing_label="gone")
+        assert "evil.example" not in out
+        assert out == '<span class="share-missing">[gone]</span>'
+    keep = '<img src="data:image/png;base64,AAAA">'
+    assert S._share_inline_images(keep) == keep
+
+
+def test_unwrapped_links_keep_their_class(tmp_path):
+    from sonaloop.services import _synthesis as S
+    out = S._share_rewrite_links('<a class="ref-row" href="/councils/c1">cited</a>')
+    assert out == '<span class="ref-row share-unlinked">cited</span>'   # layout class survives
+    out = S._share_rewrite_links("<A HREF='https://evil.example'>live</A>")
+    assert "evil.example" not in out and "share-unlinked" in out        # case/quote-insensitive
+    anchor = '<a href="#rp-s1">toc</a>'
+    assert S._share_rewrite_links(anchor) == anchor                     # internal anchors live

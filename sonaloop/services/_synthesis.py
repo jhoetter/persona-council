@@ -542,47 +542,76 @@ def export_report(project_id: str, report_id: str | None = None, format: str = "
 # ===================================================================== #
 
 _SHARE_LABELS = {
-    "de": {"project": "Projekt", "generated": "erzeugt", "footer": "Schreibgeschützter Report"},
-    "en": {"project": "Project", "generated": "generated", "footer": "Read-only report"},
+    "de": {"project": "Projekt", "generated": "erzeugt", "footer": "Schreibgeschützter Report",
+           "missing": "Medium nicht verfügbar"},
+    "en": {"project": "Project", "generated": "generated", "footer": "Read-only report",
+           "missing": "media unavailable"},
 }
 
-_SHARE_A_TAG = re.compile(r'<a\b[^>]*?\bhref="([^"]*)"[^>]*>(.*?)</a>', re.DOTALL)
-_SHARE_IMG_TAG = re.compile(r"<img\b[^>]*>")
-_SHARE_SRC_ATTR = re.compile(r'\bsrc="([^"]*)"')
+# Case-insensitive, single- or double-quoted: the post-processors are the ENFORCEMENT layer for
+# the zero-requests invariant, so they must not be foolable by markup the regex didn't expect.
+_SHARE_A_TAG = re.compile(r"<a\b([^>]*)>(.*?)</a>", re.DOTALL | re.IGNORECASE)
+_SHARE_HREF_ATTR = re.compile(r"""\bhref=(?:"([^"]*)"|'([^']*)')""", re.IGNORECASE)
+_SHARE_CLASS_ATTR = re.compile(r"""\bclass=(?:"([^"]*)"|'([^']*)')""", re.IGNORECASE)
+_SHARE_IMG_TAG = re.compile(r"<img\b[^>]*>", re.IGNORECASE)
+_SHARE_SRC_ATTR = re.compile(r"""\bsrc=(?:"([^"]*)"|'([^']*)')""", re.IGNORECASE)
+
+# Per-file inlining budget: past this a base64'd capture balloons the bundle into an index.html
+# browsers choke on (a 30 MB screenshot alone makes a 42 MB document) — drop with a note instead.
+_SHARE_INLINE_MAX_BYTES = 8 * 1024 * 1024
 
 
 def _share_rewrite_links(html_text: str) -> str:
     """Links into live inspector routes (and any other URL) become plain text — the recipient has
     no inspector and the bundle must trigger zero requests. Internal #anchors (TOC, citations,
-    part deep-links) keep working."""
+    part deep-links) keep working. The anchor's class rides over onto the span (plus
+    share-unlinked) so styled rows (.ref-row, .prow) keep their layout."""
     def _one(m: re.Match) -> str:
-        if m.group(1).startswith("#"):
+        attrs, inner = m.group(1), m.group(2)
+        hm = _SHARE_HREF_ATTR.search(attrs)
+        href = (hm.group(1) if hm and hm.group(1) is not None else (hm.group(2) if hm else "")) or ""
+        if href.startswith("#"):
             return m.group(0)
-        return f'<span class="share-unlinked">{m.group(2)}</span>'
+        cm = _SHARE_CLASS_ATTR.search(attrs)
+        cls = (cm.group(1) if cm and cm.group(1) is not None else (cm.group(2) if cm else "")) or ""
+        classes = f"{cls} share-unlinked".strip()
+        return f'<span class="{classes}">{inner}</span>'
     return _SHARE_A_TAG.sub(_one, html_text)
 
 
-def _share_inline_images(html_text: str) -> str:
+def _share_inline_images(html_text: str, missing_label: str = "media unavailable") -> str:
     """Local media (`/data/…` figures, prototype screenshots, avatars — charts are already inline
-    SVG/CSS) become data: URIs so the bundle opens from file:// with zero requests. An absolute src
-    that can't be resolved inside DATA_DIR drops honestly instead of shipping a broken ref."""
+    SVG/CSS) become data: URIs so the bundle opens from file:// with zero requests. DENY BY
+    DEFAULT: anything that is not already a data: URI and does not resolve to a real file inside
+    DATA_DIR (external URLs included) is replaced with a visible note — never an empty husk,
+    never a live request. src values are HTML-attribute-escaped by the renderer, so they are
+    unescaped before touching the filesystem (a&amp;b.png is a&b.png on disk)."""
     import base64
+    import html as _html_mod
     import mimetypes
     from ..config import DATA_DIR
     data_root = DATA_DIR.resolve()
+    note = f'<span class="share-missing">[{_html_mod.escape(missing_label)}]</span>'
 
     def _one(m: re.Match) -> str:
         tag = m.group(0)
         sm = _SHARE_SRC_ATTR.search(tag)
-        if not sm or not sm.group(1).startswith("/"):
-            return tag                                  # data: URI / relative — already contained
-        src = sm.group(1)
-        fp = (DATA_DIR / src[len("/data/"):]).resolve() if src.startswith("/data/") else None
-        if fp is None or not fp.is_relative_to(data_root) or not fp.is_file():
-            return ""
+        if not sm:
+            return note
+        g = 1 if sm.group(1) is not None else 2
+        src = _html_mod.unescape(sm.group(g))
+        if src.startswith("data:"):
+            return tag                                  # already self-contained
+        if not src.startswith("/data/"):
+            return note                                 # external / unknown scheme / relative
+        fp = (DATA_DIR / src[len("/data/"):]).resolve()
+        if not fp.is_relative_to(data_root) or not fp.is_file():
+            return note
+        if fp.stat().st_size > _SHARE_INLINE_MAX_BYTES:
+            return note
         mime = mimetypes.guess_type(fp.name)[0] or "application/octet-stream"
         uri = f"data:{mime};base64,{base64.b64encode(fp.read_bytes()).decode('ascii')}"
-        return tag[:sm.start(1)] + uri + tag[sm.end(1):]
+        return tag[:sm.start(g)] + uri + tag[sm.end(g):]
     return _SHARE_IMG_TAG.sub(_one, html_text)
 
 
@@ -607,7 +636,9 @@ def export_synthesis_html(synthesis_id: str, out_dir: str | None = None,
     from .. import __version__
     from html import escape as _h_esc
 
-    body = _share_inline_images(_share_rewrite_links(str(render_report(syn, store))))
+    L0 = _SHARE_LABELS.get(content_language(), _SHARE_LABELS["en"])
+    body = _share_inline_images(_share_rewrite_links(str(render_report(syn, store))),
+                                missing_label=L0["missing"])
 
     # Footer stamp: project · generated date · sonaloop version — reproducible provenance.
     # Project resolution mirrors the inspector page, plus the cited councils as a fallback
@@ -618,7 +649,7 @@ def export_synthesis_html(synthesis_id: str, out_dir: str | None = None,
         proj = parent_project_of_council(cid, store=store)          # noqa: F821 (bound)
         if proj:
             break
-    L = _SHARE_LABELS.get(content_language(), _SHARE_LABELS["en"])
+    L = L0
     stamp = " · ".join(x for x in [
         L["footer"],
         (f'{L["project"]}: {proj["title"]}' if proj else ""),
@@ -627,6 +658,7 @@ def export_synthesis_html(synthesis_id: str, out_dir: str | None = None,
     footer = f'<footer class="share-foot">{_h_esc(stamp)}</footer>'
 
     share_css = (".share-unlinked{color:inherit}"
+                 ".share-missing{color:var(--muted);font-size:var(--t-sm);font-style:italic}"
                  ".share-foot{max-width:780px;margin:48px auto 0;padding:14px 0;"
                  "border-top:1px solid var(--line);color:var(--muted);font-size:var(--t-sm)}")
     # No font/CDN <link>s (unlike the PDF's Google-Fonts head): the bundle makes ZERO requests;
