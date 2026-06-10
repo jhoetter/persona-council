@@ -23,6 +23,9 @@ _CONCEPT = {
 
 def _proto(store, tmp_path, monkeypatch, slug):
     monkeypatch.setattr(prototypes, "prototypes_dir", lambda: tmp_path)
+    # every snapshot now writes a per-step screenshot under DATA_DIR/sessions — keep it hermetic
+    from sonaloop import config
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path / "data")
     return prototypes.scaffold_prototype(slug, "Übergabe-Check", _CONCEPT, store=store)
 
 
