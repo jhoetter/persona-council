@@ -362,10 +362,29 @@ def _evidence_node(kind: str, eid: str, title: str, prod_task: dict, store: Stor
         step = cons[0] if cons else prod_task.get("step", "")
     created = ""
     council_count = 0
+    voices = 0
+    personas: list[dict] = []
+    stance_counts: dict[int, int] = {}
     if kind == "council":
         c = store.get_council_session(eid) or {}
         created = c.get("created_at", "")
         council_count = 1
+        # Outline detail (tracker: sonaloop/inspector-cinematic-detail-density):
+        # WHO spoke + how the council leaned — feeds the row's avatar cluster
+        # and stance dots, so the project page shows persona presence.
+        pids: list[str] = []
+        for st in c.get("statements") or []:
+            pid = st.get("persona_id") or ""
+            if pid and pid not in pids:
+                pids.append(pid)
+            val = (st.get("stance") or {}).get("value")
+            if val is not None:
+                stance_counts[int(val)] = stance_counts.get(int(val), 0) + 1
+        voices = len(pids)
+        for pid in pids[:4]:
+            pr = store.get_persona(pid) or {}
+            personas.append({"id": pid, "display_name": pr.get("display_name", "?"),
+                             "avatar": pr.get("avatar")})
     elif kind == "synthesis":
         s = store.get_synthesis(eid) or {}
         created = s.get("created_at", "")
@@ -374,7 +393,8 @@ def _evidence_node(kind: str, eid: str, title: str, prod_task: dict, store: Stor
     tags = [kind] + list(prod_task.get("presentation", {}).get("tags") or [])
     return {"study_id": f"{kind}:{eid}", "kind": kind, "title": title, "phase": step,
             "bucket": prod_task.get("bucket", ""), "created_at": created, "council_count": council_count,
-            "voices": 0, "sentiment": {}, "recommendations": 0, "role": prod_task.get("capability", ""),
+            "voices": voices, "sentiment": {}, "stance_counts": stance_counts,
+            "personas": personas, "recommendations": 0, "role": prod_task.get("capability", ""),
             "mode": "", "theme_tags": tags, "color": pres["color"], "kind_label": pres["label"],
             "href": href}
 

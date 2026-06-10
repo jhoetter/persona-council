@@ -86,7 +86,13 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .olrow:hover{background:var(--hover)}
 .ol-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .olrow .ol-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.olrow .ol-kind{color:var(--faint);font-size:var(--t-sm);flex-shrink:0;white-space:nowrap}
+.olrow .ol-kind{color:var(--muted);font-size:var(--t-xs);flex-shrink:0;white-space:nowrap;border:1px solid var(--line);border-radius:var(--radius-full);padding:1px 9px;background:var(--panel-2)}
+.olrow .ol-crew{display:inline-flex;align-items:center;flex-shrink:0}
+.ol-crew .sl-avatar{width:18px;height:18px;font-size:9px;margin-left:-6px;box-shadow:0 0 0 1.5px var(--panel)}
+.ol-crew .sl-avatar:first-child{margin-left:0}
+.ol-more{font-size:var(--t-xs);color:var(--faint);margin-left:3px}
+.ol-sds{display:inline-flex;gap:3px;margin-left:7px}
+.ol-sd{width:6px;height:6px;border-radius:var(--radius-full);display:inline-block}
 .olrow .ol-ts{color:var(--faint);font-size:var(--t-xs);flex-shrink:0;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
 .ol-gl.ol-round{color:var(--muted)}
 .ol-cnt{font-size:var(--t-xs);color:var(--faint);font-weight:600;background:var(--panel-2);border-radius:var(--radius);padding:1px 7px;margin-left:2px}

@@ -7,8 +7,9 @@ from .. import presentation as _pres
 from ._i18n import t
 from ._components import (
     _esc, _icon, _artifact_present, _proto_tags, _EDGE_COLORS, _theme_color,
-    _RGRAPH_JS,
+    _RGRAPH_JS, _avatar,
 )
+from .. import artifacts as _A_art
 from ._html import h, raw, fragment
 from ._plan_fw import _framework_strip
 
@@ -715,9 +716,28 @@ def _outline_html(graph: dict) -> str:
         except Exception:
             return iso[:16].replace("T", " "), iso
 
+    by_oid = {n["study_id"]: n for n in nodes}
+
     def row(it: dict) -> str:
         tw = ("ol-tw" + (" ol-last" if it.get("last_child") else "")) if it["indent"] else ""  # tree connector
         tis = node_themes.get(it["oid"], [])
+        # Persona presence + stance lean (tracker: sonaloop/inspector-cinematic-
+        # detail-density): councils show WHO debated (avatar cluster) and how it
+        # leaned (stance dots, scale colors) — detail worth a close look, kept quiet.
+        extra = by_oid.get(it["oid"]) or {}
+        crew = ""
+        pers = extra.get("personas") or []
+        if pers:
+            avs = fragment(*(raw(_avatar(pp, 18)) for pp in pers))
+            more = (h("span", {"class_": "ol-more"}, f'+{extra.get("voices", 0) - len(pers)}')
+                    if extra.get("voices", 0) > len(pers) else "")
+            sc = extra.get("stance_counts") or {}
+            dots = fragment(*(h("i", {"class_": "ol-sd",
+                                      "style": f'background:{_A_art.stance_meta(int(v))["color"]}',
+                                      "title": str(n)})
+                              for v, n in sorted(sc.items(), key=lambda kv: -int(kv[0])) if n))
+            crew = h("span", {"class_": "ol-crew"}, avs, more,
+                     h("span", {"class_": "ol-sds"}, dots) if sc else "")
         pills = [                                             # labelled pills (colour + name), not cryptic dots
             h("span", {"class_": "olth-pill", "title": themes[i]["title"]},
               h("i", {"style": f'background:{th_color[themes[i]["id"]]}'}), th_short[i])
@@ -732,6 +752,7 @@ def _outline_html(graph: dict) -> str:
                  h("span", {"class_": "ol-ptag"}, it["plabel"]),
                  h("span", {"class_": "ol-title"}, it["title"]),
                  h("span", {"class_": "olth-pills"}, fragment(*pills)),
+                 crew,
                  h("span", {"class_": "ol-ts", "title": ts_full}, ts_short),
                  h("span", {"class_": "ol-kind"}, it["kind"]))
 
