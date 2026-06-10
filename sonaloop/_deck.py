@@ -218,6 +218,16 @@ LAYOUTS: list = [
     "desc": "A full-width native chart led by its takeaway as the headline — the chart is evidence, the headline is the point."
   },
   {
+    "key": "charts",
+    "title": "Charts",
+    "desc": "Two charts side by side, each with its own caption — paired evidence: a metric and its driver, or one measure across two segments."
+  },
+  {
+    "key": "table",
+    "title": "Table",
+    "desc": "A native PowerPoint table — header row plus zebra body. For evidence that wants exact values: segments, criteria, per-persona numbers."
+  },
+  {
     "key": "comparison",
     "title": "Comparison",
     "desc": "Two columns, status quo against the proposal — the cleanest way to show what actually changes."
@@ -342,6 +352,22 @@ SAMPLE_SLIDES: list = [
       "Lena and Tom would pay for it today; Mehmet adopts if the basket stays under €60/week.",
       "Swappable single dinners keep autonomy without reopening the whole decision."
     ],
+    "chart": {
+      "type": "bar",
+      "categories": [
+        "Lena",
+        "Sabine",
+        "Mehmet",
+        "Tom"
+      ],
+      "values": [
+        4,
+        3,
+        2,
+        1
+      ]
+    },
+    "footnote": "Weeknight dinners rescued per persona — 14-day pilot.",
     "meta": "Effort 2/5 · Value 5/5 · Quick win"
   },
   {
@@ -487,6 +513,91 @@ SAMPLE_SLIDES: list = [
       ]
     },
     "footnote": "Share of panel evenings cooked at home, % — 124 simulated days vs. 14-day pilot."
+  },
+  {
+    "kind": "charts",
+    "num": "03",
+    "heading": "The default menu pays off twice",
+    "items": [
+      {
+        "title": "Cooked-at-home share, % of evenings",
+        "chart": {
+          "type": "bar",
+          "categories": [
+            "Status quo",
+            "Pilot week 1",
+            "Pilot week 2"
+          ],
+          "values": [
+            29,
+            64,
+            71
+          ]
+        }
+      },
+      {
+        "title": "Panel verdict after 14 days",
+        "chart": {
+          "type": "gauge",
+          "items": [
+            {
+              "label": "Kept the menu",
+              "value": 3,
+              "max": 4
+            },
+            {
+              "label": "Would pay",
+              "value": 2,
+              "max": 4
+            }
+          ]
+        }
+      }
+    ],
+    "footnote": "124 simulated days vs. 14-day pilot, four-persona panel."
+  },
+  {
+    "kind": "table",
+    "num": "03",
+    "heading": "The panel at a glance",
+    "columns": [
+      "Persona",
+      "Household",
+      "Cooks/week",
+      "6 pm blocker",
+      "Default menu stance"
+    ],
+    "rows": [
+      [
+        "Lena, 34",
+        "Single, full-time",
+        "2–3",
+        "Decision fatigue",
+        "Would pay today"
+      ],
+      [
+        "Mehmet, 23",
+        "Shared flat, student",
+        "1–2",
+        "Budget + skill doubt",
+        "In under €60/week"
+      ],
+      [
+        "Sabine, 41",
+        "Family of four",
+        "4–5",
+        "Kids veto dinners",
+        "Needs kid-safe swaps"
+      ],
+      [
+        "Tom, 29",
+        "Couple, remote dev",
+        "3",
+        "Grocery-trip friction",
+        "Free + exportable only"
+      ]
+    ],
+    "footnote": "Stances from council #6 — final vote, on the record."
   },
   {
     "kind": "comparison",

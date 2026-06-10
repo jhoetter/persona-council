@@ -16,7 +16,7 @@ def _slide_text(slide) -> str:
 def test_sample_slides_cover_every_layout():
     """The placeholder deck demonstrates the FULL taxonomy — one sample per layout, in deck order."""
     assert [s["kind"] for s in _deck.SAMPLE_SLIDES] == [l["key"] for l in _deck.LAYOUTS]
-    assert len(_deck.LAYOUTS) >= 18  # cover … closing + brand layouts + content/image fallbacks
+    assert len(_deck.LAYOUTS) >= 20  # cover … closing + brand/charts/table layouts + fallbacks
 
 
 def test_master_template_renders_one_slide_per_sample():
@@ -74,6 +74,33 @@ def test_brand_slides_carry_their_copy():
     assert "sona" in by_kind["cover"] and "loop" in by_kind["cover"]  # wordmark
     assert "Three product directions" in by_kind["canvas-section"]
     assert "Grounded personas" in by_kind["pillars"]
+
+
+def test_table_slide_is_a_native_table():
+    """The table layout lands as a real GraphicFrame table — header + one row per data row."""
+    data = _pptx.render(_deck.SAMPLE_SLIDES, title=_deck.DECK_TITLE)
+    prs = Presentation(io.BytesIO(data))
+    spec, slide = next((s, sl) for s, sl in zip(_deck.SAMPLE_SLIDES, prs.slides)
+                       if s["kind"] == "table")
+    tbl = next(sh.table for sh in slide.shapes if sh.has_table)
+    assert len(tbl.columns) == len(spec["columns"])
+    assert len(tbl.rows) == len(spec["rows"]) + 1
+    assert tbl.cell(0, 0).text == spec["columns"][0]
+    assert tbl.cell(1, 0).text == spec["rows"][0][0]
+
+
+def test_charts_slide_carries_two_native_charts():
+    """The charts layout paints both chart slots (shapes, not a screenshot)."""
+    data = _pptx.render(_deck.SAMPLE_SLIDES, title=_deck.DECK_TITLE)
+    prs = Presentation(io.BytesIO(data))
+    spec, slide = next((s, sl) for s, sl in zip(_deck.SAMPLE_SLIDES, prs.slides)
+                       if s["kind"] == "charts")
+    text = " ".join(r.text for sh in slide.shapes if sh.has_text_frame
+                    for p in sh.text_frame.paragraphs for r in p.runs)
+    for it in spec["items"]:
+        assert it["title"] in text
+    # both slots draw real shape clusters under their captions
+    assert len(slide.shapes) > 20
 
 
 def test_unknown_brand_assets_degrade_silently():

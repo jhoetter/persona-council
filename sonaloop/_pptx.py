@@ -436,14 +436,17 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             _pic_cover(slide, canvas, 0, 0, W.inches, H.inches)
         y0 = H.inches - 2.65
         _rrect(slide, 0.9, y0, 6.4, 1.75, _PANEL, radius=0.09)
+        # the card content flows (mirrors the preview): num is optional, title/subtitle move up
+        ty = y0 + 0.24
         if s.get("num"):
             nt = _text(slide, 1.24, y0 + 0.22, 5.7, 0.28, s["num"], size=13, bold=True,
                        color=_ACCENT, anchor=MSO_ANCHOR.TOP)
             _mono_run(nt.text_frame.paragraphs[0].runs[0])
-        _text(slide, 1.24, y0 + 0.52, 5.7, 0.55, s.get("title", ""), size=_TS["title"],
+            ty = y0 + 0.52
+        _text(slide, 1.24, ty, 5.7, 0.55, s.get("title", ""), size=_TS["title"],
               bold=True, anchor=MSO_ANCHOR.TOP)
         if s.get("subtitle"):
-            _text(slide, 1.24, y0 + 1.12, 5.7, 0.5, s["subtitle"], size=12, color=_MUTED,
+            _text(slide, 1.24, ty + 0.6, 5.7, 0.5, s["subtitle"], size=12, color=_MUTED,
                   anchor=MSO_ANCHOR.TOP)
 
     def _pillars_slide(s):
@@ -570,6 +573,59 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             _run(ft.paragraphs[0], s["footnote"], size=10, color=_FAINT, italic=True)
         _footer(slide)
 
+    def _charts_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s)
+        items = s.get("items") or []
+        n = max(len(items), 1)
+        gap = 0.4
+        cw = (W.inches - 1.4 - gap * (n - 1)) / n
+        top = 1.75
+        ch = H.inches - top - 0.5 - (1.3 if s.get("footnote") else 1.0)
+        for i, it in enumerate(items):
+            x = 0.7 + i * (cw + gap)
+            _text(slide, x, top, cw, 0.35, it.get("title", ""), size=13, bold=True,
+                  anchor=MSO_ANCHOR.TOP)
+            if it.get("chart"):
+                _chart(slide, it["chart"], Inches(x), Inches(top + 0.5), Inches(cw), Inches(ch))
+        if s.get("footnote"):
+            ft = _box(slide, Inches(0.7), H - Inches(0.72), W - Inches(1.4), Inches(0.4))
+            _run(ft.paragraphs[0], s["footnote"], size=10, color=_FAINT, italic=True)
+        _footer(slide)
+
+    def _table_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s)
+        cols = s.get("columns") or []
+        rows = [list(r) for r in (s.get("rows") or [])]
+        if cols:
+            tw = W.inches - 1.4
+            th = min(0.42 * (len(rows) + 1), H.inches - 1.9 - 1.0)
+            gf = slide.shapes.add_table(len(rows) + 1, len(cols),
+                                        Inches(0.7), Inches(1.9), Inches(tw), Inches(th))
+            tbl = gf.table
+            # kill the theme's banding/header styling; the cells below carry the deck's own
+            tbl.first_row = False
+            tbl.horz_banding = False
+            for j, c in enumerate(cols):
+                cell = tbl.cell(0, j)
+                cell.fill.solid(); cell.fill.fore_color.rgb = rgb(_ACCENT_WEAK)
+                cell.text_frame.word_wrap = True
+                _run(cell.text_frame.paragraphs[0], str(c), size=11.5, bold=True)
+            for i, row in enumerate(rows, start=1):
+                for j in range(len(cols)):
+                    cell = tbl.cell(i, j)
+                    cell.fill.solid()
+                    cell.fill.fore_color.rgb = rgb(_BG if i % 2 else _PANEL)
+                    cell.text_frame.word_wrap = True
+                    val = str(row[j]) if j < len(row) else ""
+                    _run(cell.text_frame.paragraphs[0], val, size=11.5,
+                         bold=(j == 0), color=_INK if j == 0 else _MUTED)
+        if s.get("footnote"):
+            ft = _box(slide, Inches(0.7), H - Inches(0.72), W - Inches(1.4), Inches(0.4))
+            _run(ft.paragraphs[0], s["footnote"], size=10, color=_FAINT, italic=True)
+        _footer(slide)
+
     def _comparison_slide(s):
         slide = prs.slides.add_slide(blank); _bg(slide)
         _heading_band(slide, s)
@@ -632,7 +688,8 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
                 "pillars": _pillars_slide, "summary": _summary_slide,
                 "insight": _insight_slide, "recommendation": _insight_slide, "risk": _insight_slide,
                 "quote": _quote_slide, "voices": _voices_slide, "stats": _stats_slide,
-                "chart": _chart_slide, "comparison": _comparison_slide, "timeline": _timeline_slide,
+                "chart": _chart_slide, "charts": _charts_slide, "table": _table_slide,
+                "comparison": _comparison_slide, "timeline": _timeline_slide,
                 "closing": _closing_slide, "image": _image_slide}
     for s in slides:
         painters.get(s.get("kind"), _content_slide)(s)

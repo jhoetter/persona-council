@@ -108,7 +108,9 @@ Vendored so the PyPI package has no local-path dependency."""'
   } > "$ddst"
   echo "synced $dsrc -> $ddst ($(wc -c < "$ddst") bytes)"
 else
-  echo "warn: deck module not found at $dsrc (run 'node scripts/gen-deck.mjs' in ../sonaloop-design)" >&2
+  # hard fail: a silent skip lets check-icons print a false "in sync" against a stale copy
+  echo "error: deck module not found at $dsrc (run 'node scripts/gen-deck.mjs' in ../sonaloop-design)" >&2
+  exit 1
 fi
 
 # Deck brand assets (rasterized icons/logos/canvases as base64), generated alongside deck.py.
@@ -119,5 +121,6 @@ if [[ -f "$asrc" ]]; then
   cp "$asrc" "$adst"
   echo "synced $asrc -> $adst ($(wc -c < "$adst") bytes)"
 else
-  echo "warn: deck assets module not found at $asrc (run 'node scripts/gen-deck.mjs' in ../sonaloop-design)" >&2
+  echo "error: deck assets module not found at $asrc (run 'node scripts/gen-deck.mjs' in ../sonaloop-design)" >&2
+  exit 1
 fi
