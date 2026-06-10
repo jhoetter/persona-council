@@ -486,10 +486,22 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
     except Exception:
         oqs = []
     # saturation hint: act evidence accumulated vs convergences produced (a coarse, honest proxy —
-    # NOT a score; "are we still diverging faster than we converge?").
+    # NOT a score; "are we still diverging faster than we converge?"). PLAN-AWARE: the ratio only
+    # means anything once the plan's divergent work has actually happened — a half-done plan must
+    # never read "converging" (a real run stalled after Define because this hint + empty
+    # open_questions matched the published stop rule with the entire second diamond untouched).
     n_act = sum(1 for t in tasks if t["bucket"] == "act" and t["status"] == "done")
     n_syn = cov["evidence_by_kind"].get("synthesis", 0)
     n_council = cov["evidence_by_kind"].get("council", 0)
+    divergent_open = any(t["status"] != "done" and t["bucket"] in ("analyze", "act") for t in tasks)
+    if not n_act:
+        sat_hint = "early — no act evidence yet"
+    elif divergent_open:
+        sat_hint = "still diverging"        # later phases haven't produced their act evidence yet
+    elif n_syn and n_act <= n_syn * 2:
+        sat_hint = "converging"             # all divergent work done; consolidation keeps pace
+    else:
+        sat_hint = "still diverging"
     # structural gaps
     gaps = []
     for g in open_gates:
@@ -617,7 +629,7 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
         "open_gates": open_gates,
         "open_questions": oqs,
         "saturation": {"act_done": n_act, "councils": n_council, "syntheses": n_syn,
-                       "hint": ("converging" if n_syn and n_act <= n_syn * 2 else "still diverging")},
+                       "hint": sat_hint},
         "novelty": novelty,
         "finish": finish,
         "memory_depth": memory_depth,

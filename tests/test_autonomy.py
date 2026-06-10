@@ -47,3 +47,41 @@ def test_assess_project_complete_when_plan_done(store):
     S.record_frame(pid, "frame__root", ["q?"], memory_refs=["m"], store=store)
     a = S.assess_project(pid, store=store)
     assert a["complete"] is True and a["recommendation"] == "complete"
+
+
+def test_saturation_never_converging_while_a_diamond_is_unopened(store):
+    """The stalled-run snapshot (2026-06-10): Discover+Define done, second diamond untouched.
+    The old ratio-only hint read "converging" here — with open_questions empty, both published
+    stop conditions were green at the exact stall point. Plan-aware: still diverging."""
+    pid = S.start_project("Stall", "hmw?", "double_diamond", persona_ids=["p1"], store=store)["id"]
+    a = S.assess_project(pid, store=store)
+    assert a["saturation"]["hint"].startswith("early")            # no act evidence at all yet
+    S.record_frame(pid, "frame__discover", ["q1?", "q2?"], memory_refs=["m1"], store=store)
+    for i in (1, 2):
+        t = S.add_task(pid, "act", "explore", f"Council {i}", consumes=["frame__discover"], store=store)
+        S.link_evidence(pid, t["id"], {"kind": "council", "id": f"c{i}"}, store=store)
+        S.complete_task(pid, t["id"], store=store)
+    syn = S.record_synthesis("Define POV", "hmw?", ["c1", "c2"], {"gesamtbild": "pov"}, store=store)
+    S.link_evidence(pid, "verify__define", {"kind": "synthesis", "id": syn["id"]}, store=store)
+    S.record_judgment(pid, "verify__define", "divergence_complete", True, "saturating",
+                      evidence_refs=["c1", "c2"], store=store)
+    S.complete_task(pid, "verify__define", store=store)
+    a = S.assess_project(pid, store=store)
+    # 2 act done vs 1 synthesis satisfied the old ratio — but frame__ideate (analyze) is still open
+    assert a["saturation"]["act_done"] == 2 and a["saturation"]["syntheses"] >= 1
+    assert a["saturation"]["hint"] == "still diverging"
+    assert a["complete"] is False
+
+
+def test_saturation_converging_once_divergent_work_is_done(store):
+    """When every analyze/act task is done and consolidation kept pace, the hint is honest again."""
+    pid = S.start_project("Conv", "frage?", store=store)["id"]          # freeform: one root frame
+    S.record_frame(pid, "frame__root", ["q?"], memory_refs=["m"], store=store)
+    t = S.add_task(pid, "act", "explore", "Council", consumes=["frame__root"], store=store)
+    S.link_evidence(pid, t["id"], {"kind": "council", "id": "c1"}, store=store)
+    S.complete_task(pid, t["id"], store=store)
+    syn = S.record_synthesis("Answer", "frage?", ["c1"], {"gesamtbild": "answer"}, store=store)
+    v = S.add_task(pid, "verify", "consolidate", "Decide", consumes=[t["id"]], store=store)
+    S.link_evidence(pid, v["id"], {"kind": "synthesis", "id": syn["id"]}, store=store)
+    a = S.assess_project(pid, store=store)
+    assert a["saturation"]["hint"] == "converging"                      # 1 act ≤ 2·1 syn, nothing divergent open
