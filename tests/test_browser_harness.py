@@ -73,3 +73,31 @@ def _refs(snapshot):
     tree = snapshot["tree"]
     nodes = tree if isinstance(tree, list) else [tree]
     return {n["ref"]: {"role": n["role"], "name": n["name"]} for n in nodes if n.get("ref")}
+
+
+@pytest.mark.skipif(not browser.available(), reason="chromium not installed")
+def test_proto_drive_one_process_grounded(store, tmp_path, monkeypatch):
+    """proto_drive: the whole proband session (open → actions → read → close → record) in one
+    call — the CLI-safe path, since sessions + retained logs are process-memory only."""
+    _proto(store, tmp_path, monkeypatch, "harness-drive")
+    try:
+        out = services.proto_drive(
+            "harness-drive", persona_id="pX",
+            actions=[],                                   # open already shows the start screen
+            reaction={"summary": "saw the start screen", "liked": ["Vergleichen button"],
+                      "observed_state_refs": ["Vergleichen"]},
+            date_value="2026-06-10", store=store)
+        assert out["session_id"].startswith("psession_")
+        assert out["final"] and out["recorded"]["grounded_verified"] is True
+        # the session is closed (no live sessions remain)
+        assert services.list_proto_sessions() == []
+    finally:
+        prototypes.stop_prototype("harness-drive", store=store)
+
+
+def test_proto_drive_unavailable_is_graceful(store, tmp_path, monkeypatch):
+    if browser.available():
+        pytest.skip("playwright present; covered by the live test")
+    _proto(store, tmp_path, monkeypatch, "harness-drive-na")
+    with pytest.raises(browser.HarnessError):
+        services.proto_drive("harness-drive-na", actions=[], store=store)

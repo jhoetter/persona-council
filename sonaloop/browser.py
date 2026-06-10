@@ -215,7 +215,10 @@ def open_session(url: str, prototype_id: str | None = None, persona_id: str | No
 def _require(session_id: str) -> _Session:
     s = _SESSIONS.get(session_id)
     if not s:
-        raise HarnessError("SESSION_NOT_FOUND", f"no live session '{session_id}'")
+        raise HarnessError("SESSION_NOT_FOUND",
+                           f"no live session '{session_id}' — browser sessions live inside ONE process; "
+                           f"from the CLI use `proto-drive` (open→actions→read→close in a single run), "
+                           f"or drive via the long-lived MCP server")
     return s
 
 
