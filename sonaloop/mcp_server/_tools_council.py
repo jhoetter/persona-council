@@ -162,7 +162,9 @@ def register_council(mcp):
         `artifact_ids` (a captured URL/price page/prototype). `stance` runs the SAME question in both
         directions: 'against' (default — case against), 'for' (confirming), or 'both'. Without persona_ids:
         returns a segment-diverse candidate panel. With persona_ids: returns each participant's loaded
-        context (with its adversarial role stamped in) to author concrete objections, then call
+        context (with its adversarial role stamped in) to author concrete objections, plus `prior_themes`
+        (this project's earlier red-team themes) and `suggested_themes` (common blocker families) — REUSE
+        one when it fits so a shared blocker doesn't fragment across near-duplicate labels — then call
         record_red_team."""
         t = time.perf_counter()
         return _env("brief_red_team", services.brief_red_team(project_id, prompt, persona_ids, filters, count, context, stance, artifact_ids), t)
@@ -179,10 +181,12 @@ def register_council(mcp):
         (about={kind:'prompt', id:'red_team'},
         stance:{value -2..2, label?: support|conditional|neutral|skeptical|oppose} — see
         suggest_stances) and the prose verdict in exec_summary/summary. The SERVER
-        deterministically groups objections by theme into the structured case-against (how many personas
-        raise each blocker + worst severity) — you author the qualitative synthesis. With stance='both', pass
+        deterministically groups objections by theme (case/whitespace-insensitive — reuse the brief's
+        prior_themes/suggested_themes labels) into the structured case-against (how many personas raise
+        each blocker + worst severity) — you author the qualitative synthesis. With stance='both', pass
         `endorsements` ([{persona_id, theme, text}]) to also store the case FOR side by side. Returns the
-        session incl. red_team.case_against. Pass a stable `key` for a deterministic id (idempotent upsert)."""
+        session incl. red_team.case_against, plus `hints` when the case looks fragmented (mostly
+        single-persona themes). Pass a stable `key` for a deterministic id (idempotent upsert)."""
         t = time.perf_counter()
         return _env("record_red_team", services.record_red_team(project_id, prompt, objections, endorsements, stance, persona_ids, statements, summary, exec_summary, selection_reason, findings, key), t)
 

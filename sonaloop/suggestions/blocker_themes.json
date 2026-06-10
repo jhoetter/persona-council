@@ -1,0 +1,16 @@
+{
+  "kind": "blocker_themes",
+  "note": "SUGGESTED starter `theme` labels for red-team objections — the common families an idea breaks on (they mirror the adversarial lenses). Recommendations only, never enforced: reuse one when it fits, invent freely when it doesn't. brief_red_team also surfaces the project's OWN prior themes for reuse.",
+  "items": [
+    {"tag": "price", "hint": "Too expensive / wrong pricing model for the value this persona perceives."},
+    {"tag": "trust", "hint": "No reason to believe the vendor or product — brand, security, references."},
+    {"tag": "no proof", "hint": "Missing evidence it works for MY case — case study, trial, benchmark."},
+    {"tag": "switching cost", "hint": "Migration, retraining or lock-in makes leaving the current tool costly."},
+    {"tag": "status quo", "hint": "'Good enough today' wins — no urgency to change anything."},
+    {"tag": "no need", "hint": "The problem is not real or not painful enough for this persona."},
+    {"tag": "missing feature", "hint": "A concrete capability gap blocks adoption (e.g. SSO, an integration)."},
+    {"tag": "complexity", "hint": "Onboarding / setup / learning effort outweighs the promised gain."},
+    {"tag": "compliance", "hint": "A policy, legal or regulatory constraint forbids or stalls adoption."},
+    {"tag": "risk", "hint": "A failure mode or worst case that would cause regret or churn."}
+  ]
+}
