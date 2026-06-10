@@ -219,6 +219,19 @@ def _effort_impact_chart(syn: dict) -> dict | None:
             "quadrants": [L["q_quick"], L["q_big"], L["q_fill"], L["q_sink"]]}
 
 
+def export_template_deck(out: str = "master-template.pptx") -> dict:
+    """Render the deck MASTER TEMPLATE — every layout with its placeholder content (vendored
+    _deck.SAMPLE_SLIDES ← sonaloop-design/deck.data.mjs, previewed at #/deck in the design docs)
+    — to a real .pptx. The harness demo deck: `sonaloop template-deck` / `make template-deck`."""
+    from .. import _deck, _pptx
+    if not _pptx.available():
+        raise RuntimeError("PPTX export needs the python-pptx package (run `uv sync`).")
+    from ._common import write_export_bytes
+    data = _pptx.render(_deck.SAMPLE_SLIDES, title=_deck.DECK_TITLE)
+    return {"path": write_export_bytes(data, out), "slides": len(_deck.SAMPLE_SLIDES),
+            "title": _deck.DECK_TITLE}
+
+
 def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> bytes:
     """Render ANY report (synthesis) as a native PowerPoint deck: a title slide + one slide per section
     (project scope) or per analytic layer (convergence scope), with native charts. Raises if the
@@ -252,9 +265,13 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
             c = store.get_council_session(rid)
             return (c.get("prompt") or rid)[:60] if c else rid
 
-        subtitle = f"{len(secs)} {'Abschnitte' if de else 'sections'} · {syn.get('created_at','')[:10]}"
-        slides.append({"kind": "title", "eyebrow": kind_label, "title": title,
-                       "subtitle": subtitle, "lead": _strip_md(syn.get("lead", ""))})
+        meta = f"{len(secs)} {'Abschnitte' if de else 'sections'}"
+        slides.append({"kind": "cover", "eyebrow": kind_label, "title": title,
+                       "subtitle": _strip_md(syn.get("lead", "")), "meta": meta,
+                       "date": syn.get("created_at", "")[:10]})
+        if len(secs) >= 3:  # the reader's map — only when there are chapters to map
+            slides.append({"kind": "agenda", "heading": "Inhalt" if de else "Contents",
+                           "items": [_strip_md(sec.get("heading", "")) for sec in secs]})
         for idx, sec in enumerate(secs, 1):
             figs = sec.get("figures") or []
             charts = [c for c in (_figure_to_chart(f, store) for f in figs) if c]
@@ -272,9 +289,10 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
                 slides.append({"kind": "image", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
                                "image": path, "caption": cap})
     else:
-        subtitle = f"{len(syn.get('council_ids', []))} {'Councils' if de else 'councils'} · {syn.get('created_at','')[:10]}"
-        slides.append({"kind": "title", "eyebrow": kind_label, "title": title,
-                       "subtitle": subtitle, "lead": _strip_md(syn.get("goal", ""))})
+        meta = f"{len(syn.get('council_ids', []))} {'Councils' if de else 'councils'}"
+        slides.append({"kind": "cover", "eyebrow": kind_label, "title": title,
+                       "subtitle": _strip_md(syn.get("goal", "")), "meta": meta,
+                       "date": syn.get("created_at", "")[:10]})
         n = 0
         for key, heading in (("gesamtbild", L["big_picture"]), ("positionierung", L["positioning"])):
             if (syn.get(key) or "").strip():
@@ -298,4 +316,11 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
             n += 1
             slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["open_questions"], "blocks": _li(oqs)})
 
+    slides.append({"kind": "closing",
+                   "title": "Vielen Dank" if de else "Thank you",
+                   "text": ("Erstellt mit der Sonaloop-Research-Engine — jede Aussage in diesem Deck "
+                            "führt auf eine inspizierbare Session zurück." if de else
+                            "Built with the Sonaloop research engine — every statement in this deck "
+                            "traces back to an inspectable session."),
+                   "meta": f"{kind_label} · {title} · {syn.get('created_at', '')[:10]}"})
     return _pptx.render(slides, title=title or kind_label)

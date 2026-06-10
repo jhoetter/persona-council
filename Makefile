@@ -3,7 +3,7 @@ FORWARDED_WEB_PORT ?= 18787
 
 UV ?= uv
 
-.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons check-icons hooks
+.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons check-icons hooks template-deck
 
 # Install the repo's git hooks (pre-push runs `check-icons`, so a stale vendored
 # copy is caught locally before the design-sync CI goes red). Idempotent; `make
@@ -20,9 +20,14 @@ icons:
 # design system — i.e. a token/icon change in ../sonaloop-design wasn't synced here. (CI / pre-push.)
 check-icons:
 	bash scripts/sync_icons.sh
-	@git diff --exit-code -- sonaloop/_icons.py sonaloop/_tokens.py sonaloop/_components_css.py sonaloop/_charts.py \
+	@git diff --exit-code -- sonaloop/_icons.py sonaloop/_tokens.py sonaloop/_components_css.py sonaloop/_charts.py sonaloop/_deck.py \
 	  || { echo "✗ vendored design-system files are stale — run 'make icons' and commit"; exit 1; }
 	@echo "✓ vendored design-system files are in sync with ../sonaloop-design"
+
+# Render the deck master template (every layout, placeholder content) to a real .pptx —
+# the harness view of what customers get. Same data the design docs preview at #/deck.
+template-deck:
+	$(UV) run sonaloop template-deck
 
 # Symlink version-controlled skills into .claude/skills/ so Claude Code discovers
 # them (.claude/skills is gitignored). Run once after clone.

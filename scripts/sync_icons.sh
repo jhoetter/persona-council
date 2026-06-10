@@ -90,3 +90,23 @@ Vendored so the PyPI package has no local-path dependency.
 else
   echo "warn: shell module not found at $shsrc" >&2
 fi
+
+# Deck master template (palette/type/frame/layouts + placeholder SAMPLE_SLIDES), generated from
+# deck.data.mjs (scripts/gen-deck.mjs). _pptx.py renders every layout from it; `sonaloop
+# template-deck` renders SAMPLE_SLIDES into the demo deck.
+dsrc="$here/../sonaloop-design/py/sonaloop_icons/deck.py"
+ddst="$here/sonaloop/_deck.py"
+if [[ -f "$dsrc" ]]; then
+  note='"""sonaloop._deck — VENDORED COPY of the sonaloop-design deck master template.
+
+Do not edit by hand. Single source of truth: ../sonaloop-design/deck.data.mjs ->
+scripts/gen-deck.mjs. Refresh with `make icons` / scripts/sync_icons.sh.
+Vendored so the PyPI package has no local-path dependency."""'
+  {
+    printf '%s\n' "$note"
+    tail -n +8 "$dsrc"
+  } > "$ddst"
+  echo "synced $dsrc -> $ddst ($(wc -c < "$ddst") bytes)"
+else
+  echo "warn: deck module not found at $dsrc (run 'node scripts/gen-deck.mjs' in ../sonaloop-design)" >&2
+fi

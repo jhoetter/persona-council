@@ -144,10 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
     _cli_hooks.add_hook_parsers(sub)
     _cli_substrate.add_substrate_parsers(sub)
 
-    p = sub.add_parser("export-persona")
-    p.add_argument("persona_id")
-    p.add_argument("--format", choices=["json", "md"], default="json")
-    p.add_argument("--out")
+    p = sub.add_parser("export-persona"); p.add_argument("persona_id"); p.add_argument("--format", choices=["json", "md"], default="json"); p.add_argument("--out")
 
     p = sub.add_parser("export-logs")
     p.add_argument("persona_id")
@@ -163,10 +160,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--format", choices=["json", "csv", "md"], default="md")
     p.add_argument("--out")
 
-    p = sub.add_parser("export-council")
-    p.add_argument("session_id")
-    p.add_argument("--format", choices=["json", "md"], default="json")
-    p.add_argument("--out")
+    p = sub.add_parser("export-council"); p.add_argument("session_id"); p.add_argument("--format", choices=["json", "md"], default="json"); p.add_argument("--out")
 
     # ---- memory & multi-resolution loop ----
     p = sub.add_parser("recall")
@@ -335,6 +329,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("report-section"); p.add_argument("project_id"); p.add_argument("section_id"); p.add_argument("file"); p.add_argument("--report")
     p = sub.add_parser("report-export")
     p.add_argument("project_id"); p.add_argument("--format", choices=["md", "json"], default="md"); p.add_argument("--out"); p.add_argument("--report")
+    p = sub.add_parser("template-deck", help="Render the PPTX master template (every layout, placeholder content) — the demo deck."); p.add_argument("--out", default="master-template.pptx")
     # Methodology engine (data-driven, structure+LLM-judged)
     p = sub.add_parser("methodology-list")
     p = sub.add_parser("methodology-get"); p.add_argument("key")
@@ -686,6 +681,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "report-export":
             content = services.export_report(args.project_id, args.report, args.format)
             _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")
+        elif args.command == "template-deck":
+            _print(services.export_template_deck(args.out), as_json=True)
         elif args.command == "methodology-list":
             _print(services.list_methodologies())
         elif args.command == "methodology-get":

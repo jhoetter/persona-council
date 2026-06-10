@@ -12,6 +12,22 @@ Slide model (list of dicts):
      "chart": {...} | None,                         # see below
      "image": "/abs/path.png" | None,               # a figure image (prototype shot / avatar / asset)
      "footnote": str}
+Master-template kinds (the deck taxonomy — single source: sonaloop-design/deck.data.mjs,
+vendored as sonaloop/_deck.py; every layout is previewed at #/deck in the design docs and
+_deck.SAMPLE_SLIDES carries a placeholder example of each):
+  {"kind": "cover", "eyebrow", "title", "subtitle", "meta", "date"}
+  {"kind": "agenda", "heading", "items": [str]}
+  {"kind": "section", "num", "title", "subtitle"}
+  {"kind": "summary", "heading", "items": [{"title", "text"}]}
+  {"kind": "insight"|"recommendation"|"risk", "tone", "num", "statement",
+     "support": [str], "chart": {...}|None, "meta", "footnote"}
+  {"kind": "quote", "text", "attribution", "role"}
+  {"kind": "voices", "heading", "items": [{"name", "role", "sentiment", "text"}]}
+  {"kind": "stats", "heading", "items": [{"label", "value", "sub"}]}
+  {"kind": "chart", "num", "heading", "chart": {...}, "footnote"}
+  {"kind": "comparison", "heading", "left": {"title", "items"}, "right": {"title", "items"}}
+  {"kind": "timeline", "heading", "steps": [{"label", "title", "text"}]}
+  {"kind": "closing", "title", "text", "meta", "contact"}
 Chart shapes (one per design-system chart `of`):
   {"type": "bar",  "categories": [str], "values": [num]}
   {"type": "pie",  "categories": [str], "values": [num]}
@@ -33,43 +49,29 @@ from __future__ import annotations
 import io
 from typing import Any
 
-# Sonaloop brand (light) — kept in sync with sonaloop-design tokens.data.mjs.
-_INK = "1A1815"
-_MUTED = "635E56"
-_FAINT = "8C857A"
-_ACCENT = "5E6AD2"
-_BG = "FAF8F3"
-_PANEL = "FFFFFF"
+# Sonaloop brand (light) — from the vendored deck master template (_deck.py, generated out of
+# sonaloop-design/deck.data.mjs, which derives them from tokens.data.mjs).
+from ._deck import PALETTE as _PALETTE, TONES as _TONES, TYPE as _TYPE
+
+_INK = _PALETTE["ink"]
+_MUTED = _PALETTE["muted"]
+_FAINT = _PALETTE["faint"]
+_ACCENT = _PALETTE["accent"]
+_BG = _PALETTE["bg"]
+_PANEL = _PALETTE["panel"]
 # Series palette (accent · violet · blue · green · amber · red · skep).
-_SERIES = ["5E6AD2", "7A5ED1", "3D7FC4", "3D9B6B", "B87A25", "CF4D5F", "C2683F"]
-_LINE = "E9E5DB"
-_SURFACE2 = "F1EFE8"
-_GREEN, _AMBER, _RED = "3D9B6B", "B87A25", "CF4D5F"
+_SERIES = list(_PALETTE["series"])
+_LINE = _PALETTE["line"]
+_SURFACE2 = _PALETTE["surface2"]
+_GREEN, _AMBER, _RED = _PALETTE["green"], _PALETTE["amber"], _PALETTE["red"]
+_ACCENT_WEAK = _PALETTE["accentWeak"]
+# Role-based type sizes (pt) from the master template.
+_TS = {k: v.get("size", 13) for k, v in _TYPE.items()}
 
 
-def _num(v: float) -> str:
-    """Compact number for labels: 8 not 8.0, 7.5 stays 7.5."""
-    try:
-        f = float(v)
-        return str(int(f)) if f.is_integer() else f"{f:g}"
-    except (TypeError, ValueError):
-        return str(v)
-
-
-def _leverage_color(x: float, y: float) -> str:
-    """Effort·impact dot tint — mirrors sonaloop-design _charts: high value vs effort → green;
-    balanced → accent; costly → amber/red."""
-    d = y - x
-    return _GREEN if d >= 2 else _ACCENT if d >= 1 else _RED if d <= -1 else _AMBER
-
-
-def _mix(a: str, b: str, t: float) -> str:
-    """Blend hex colours a→b by t∈[0,1] (t=0 → a, t=1 → b). Used for the heatmap tint, mirroring the
-    DS `color-mix(in srgb, accent p%, surface-2)` — pass _mix(_SURFACE2, _ACCENT, value_fraction)."""
-    t = max(0.0, min(1.0, t))
-    ca = (int(a[0:2], 16), int(a[2:4], 16), int(a[4:6], 16))
-    cb = (int(b[0:2], 16), int(b[2:4], 16), int(b[4:6], 16))
-    return "".join(f"{round(ca[i] + (cb[i] - ca[i]) * t):02X}" for i in range(3))
+# Number formatting + the chart painters live in _pptx_charts (split for the LOC bar).
+from . import _pptx_charts as _pc
+from ._pptx_charts import _num
 
 
 def render(slides: list[dict], *, title: str = "Report") -> bytes:
@@ -202,37 +204,34 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         _rule(slide, 0.72, 1.34, 0.85)
         L, T = 0.7, 1.7
         maxw, maxh = W.inches - 1.4, H.inches - T - 0.95
-        try:
-            pic = slide.shapes.add_picture(s["image"], Inches(L), Inches(T))
-            scale = min(Inches(maxw) / pic.width, Inches(maxh) / pic.height)
-            pic.width = int(pic.width * scale); pic.height = int(pic.height * scale)
-            pic.left = Inches(L) + (Inches(maxw) - pic.width) // 2
-            pic.top = Inches(T) + (Inches(maxh) - pic.height) // 2
-            pic.line.color.rgb = rgb(_LINE); pic.line.width = Pt(0.75)
+        placed = False
+        if s.get("image"):
+            try:
+                pic = slide.shapes.add_picture(s["image"], Inches(L), Inches(T))
+                scale = min(Inches(maxw) / pic.width, Inches(maxh) / pic.height)
+                pic.width = int(pic.width * scale); pic.height = int(pic.height * scale)
+                pic.left = Inches(L) + (Inches(maxw) - pic.width) // 2
+                pic.top = Inches(T) + (Inches(maxh) - pic.height) // 2
+                pic.line.color.rgb = rgb(_LINE); pic.line.width = Pt(0.75)
+                if s.get("caption"):
+                    cap_t = (pic.top + pic.height) / 914400 + 0.06
+                    _text(slide, L, cap_t, maxw, 0.3, s["caption"], size=10, color=_MUTED, align=PP_ALIGN.CENTER)
+                placed = True
+            except Exception:
+                pass
+        if not placed:
+            # missing/unloadable file → a quiet placeholder panel (the master-template docs case)
+            ph = maxh - (0.35 if s.get("caption") else 0)
+            _rrect(slide, L, T, maxw, ph, _SURFACE2, radius=0.03, line=_LINE)
+            _text(slide, L, T + ph / 2 - 0.2, maxw, 0.4, "image — fitted & centred",
+                  size=12, color=_FAINT, align=PP_ALIGN.CENTER)
             if s.get("caption"):
-                cap_t = (pic.top + pic.height) / 914400 + 0.06
-                _text(slide, L, cap_t, maxw, 0.3, s["caption"], size=10, color=_MUTED, align=PP_ALIGN.CENTER)
-        except Exception:
-            pass
+                _text(slide, L, T + ph + 0.08, maxw, 0.3, s["caption"], size=10, color=_MUTED, align=PP_ALIGN.CENTER)
         _footer(slide)
 
     from pptx.oxml.ns import qn
     from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
     from pptx.enum.text import MSO_ANCHOR
-
-    def _clean_area(chart):
-        """Transparent chart area (blend into the slide) + brand default font — for the donut ring,
-        which stays a native chart (arcs are impractical as shapes)."""
-        try:
-            chart.font.name = "Geist"; chart.font.size = Pt(10); chart.font.color.rgb = rgb(_MUTED)
-            cs = chart._chartSpace
-            spPr = cs.makeelement(qn("c:spPr"), {})
-            cs.find(qn("c:chart")).addnext(spPr)
-            spPr.append(spPr.makeelement(qn("a:noFill"), {}))
-            ln = spPr.makeelement(qn("a:ln"), {}); spPr.append(ln)
-            ln.append(ln.makeelement(qn("a:noFill"), {}))
-        except Exception:
-            pass
 
     # ── chart primitives: native, EDITABLE shapes, pixel-matched to the .sl-chart components ──
     def _noshadow(sp):
@@ -296,442 +295,264 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         _run(p, str(num), size=9, bold=True, color=edge)
         return ov
 
-    def _bar_chart(slide, ch, bx, by, bw, bh):
-        cats = [str(c) for c in ch["categories"]]
-        vals = [float(v or 0) for v in ch["values"]]
-        n = max(len(cats), 1); mx = max(vals + [1]) or 1
-        label_w = min(1.5, bw * 0.34); value_w = 0.42
-        tx = bx + label_w; tw = max(0.5, bw - label_w - value_w)
-        row_h = min(bh / n, 0.5); bar_h = min(0.16, row_h * 0.38)
-        y0 = by + (bh - row_h * n) / 2          # centre the bar group vertically (DS rows are tight)
-        for i, (c, v) in enumerate(zip(cats, vals)):
-            ry = y0 + i * row_h; cy0 = ry + (row_h - bar_h) / 2
-            _text(slide, bx, ry, label_w - 0.08, row_h, c, size=11, color=_INK)
-            _rrect(slide, tx, cy0, tw, bar_h, _SURFACE2)
-            _rrect(slide, tx, cy0, max(bar_h, tw * v / mx), bar_h, _SERIES[i % len(_SERIES)])
-            _text(slide, tx + tw + 0.05, ry, value_w, row_h, _num(v), size=10, color=_MUTED)
-
-    def _donut_chart(slide, ch, bx, by, bw, bh):
-        from pptx.chart.data import CategoryChartData
-        from pptx.enum.chart import XL_CHART_TYPE
-        cats = [str(c) for c in ch["categories"]]
-        vals = [float(v or 0) for v in ch["values"]]; total = sum(vals) or 1
-        size = min(bw * 0.46, bh, 3.4)
-        cd = CategoryChartData(); cd.categories = cats; cd.add_series("", tuple(vals))
-        chart = slide.shapes.add_chart(XL_CHART_TYPE.DOUGHNUT, Inches(bx), Inches(by + (bh - size) / 2),
-                                       Inches(size), Inches(size), cd).chart
-        chart.has_title = False; chart.has_legend = False
-        _clean_area(chart)
-        plot = chart.plots[0]; plot.has_data_labels = False
-        try:
-            for j, pt in enumerate(plot.series[0].points):
-                pt.format.fill.solid(); pt.format.fill.fore_color.rgb = rgb(_SERIES[j % len(_SERIES)])
-                pt.format.line.fill.background()
-            plot._element.append(plot._element.makeelement(qn("c:holeSize"), {"val": "62"}))
-        except Exception:
-            pass
-        lx = bx + size + 0.4; lw = max(1.0, bw - size - 0.4)
-        rh = min(0.36, bh / max(len(cats), 1)); ly0 = by + (bh - rh * len(cats)) / 2
-        for i, (c, v) in enumerate(zip(cats, vals)):
-            ry = ly0 + i * rh
-            sw = _rrect(slide, lx, ry + rh / 2 - 0.07, 0.14, 0.14, _SERIES[i % len(_SERIES)], radius=0.28)
-            tb = _text(slide, lx + 0.26, ry, lw - 0.26, rh, c + "  ", size=11, color=_INK)
-            _run(tb.text_frame.paragraphs[0], f"{_num(v)} · {round(v / total * 100)}%", size=10, color=_MUTED)
-
-    def _effort_chart(slide, ch, bx, by, bw, bh):
-        pts = ch.get("points") or []
-        xlab, ylab = ch.get("x_label", "Effort"), ch.get("y_label", "Value")
-        q = (ch.get("quadrants") or ["Quick wins", "Big bets", "Fill-ins", "Time sinks"]) + ["", "", "", ""]
-        legend_h = min(bh * 0.46, 0.27 * len(pts) + 0.05)
-        ylab_w, xlab_h = 0.32, 0.3
-        plot_h = max(1.4, bh - xlab_h - legend_h - 0.2)
-        ox, oy, ow, oh = bx + ylab_w, by, bw - ylab_w, plot_h
-        # L-shaped frame (left + bottom, like .sl-quad) + dashed centre cross
-        _connector(slide, ox, oy, ox, oy + oh, _LINE, width=1)
-        _connector(slide, ox, oy + oh, ox + ow, oy + oh, _LINE, width=1)
-        _connector(slide, ox + ow / 2, oy, ox + ow / 2, oy + oh, _LINE, dash=True)
-        _connector(slide, ox, oy + oh / 2, ox + ow, oy + oh / 2, _LINE, dash=True)
-        _text(slide, ox + 0.06, oy + 0.02, ow / 2 - 0.1, 0.22, q[0], size=9, color=_FAINT, anchor=MSO_ANCHOR.TOP)
-        _text(slide, ox + ow / 2, oy + 0.02, ow / 2 - 0.06, 0.22, q[1], size=9, color=_FAINT, anchor=MSO_ANCHOR.TOP, align=PP_ALIGN.RIGHT)
-        _text(slide, ox + 0.06, oy + oh - 0.24, ow / 2 - 0.1, 0.22, q[2], size=9, color=_FAINT, anchor=MSO_ANCHOR.BOTTOM)
-        _text(slide, ox + ow / 2, oy + oh - 0.24, ow / 2 - 0.06, 0.22, q[3], size=9, color=_FAINT, anchor=MSO_ANCHOR.BOTTOM, align=PP_ALIGN.RIGHT)
-        for i, pt in enumerate(pts, 1):
-            px, py = float(pt.get("x", 1)), float(pt.get("y", 1)); col = _leverage_color(px, py)
-            _dot(slide, ox + (px - 1) / 4 * ow, oy + (1 - (py - 1) / 4) * oh, 0.3, _BG, col, i)
-        _text(slide, ox, by + oh + 0.02, ow, xlab_h, xlab, size=10, color=_INK, align=PP_ALIGN.CENTER)
-        _text(slide, bx - 0.5, by + oh / 2 - 0.15, 1.3, 0.3, ylab, size=10, color=_INK, align=PP_ALIGN.CENTER, rot=270)
-        # numbered legend (matches the DS dot legend) below the axis label
-        leg_y = by + oh + xlab_h + 0.04
-        for i, pt in enumerate(pts, 1):
-            px, py = float(pt.get("x", 1)), float(pt.get("y", 1)); col = _leverage_color(px, py)
-            ry = leg_y + (i - 1) * 0.27
-            _dot(slide, bx + 0.11, ry + 0.115, 0.2, _BG, col, i)
-            _text(slide, bx + 0.3, ry, bw - 1.0, 0.23, pt.get("label", ""), size=10, color=_INK)
-            _text(slide, bx + bw - 0.7, ry, 0.7, 0.23, f"{xlab[:1]}{_num(px)}·{ylab[:1]}{_num(py)}", size=9, color=_MUTED, align=PP_ALIGN.RIGHT)
-
-    def _legend_row(slide, items, lx, ly, lw):
-        """A horizontal swatch+label legend (matches the DS .sl-legend--row). items: [(label, color)]."""
-        x = lx
-        for lbl, col in items:
-            if x - lx > lw - 0.6:
-                break
-            _rrect(slide, x, ly + 0.03, 0.13, 0.13, col, radius=0.28)
-            _text(slide, x + 0.19, ly, min(1.7, 0.085 * len(str(lbl)) + 0.2), 0.2, str(lbl), size=9, color=_MUTED)
-            x += 0.19 + min(1.7, 0.085 * len(str(lbl)) + 0.2) + 0.18
-
-    def _stacked_bar_chart(slide, ch, bx, by, bw, bh):
-        rows = ch.get("rows") or []
-        keys = []
-        for r in rows:
-            for seg in r.get("segments") or []:
-                if seg.get("label") not in keys:
-                    keys.append(seg.get("label"))
-        col_of = lambda lbl: _SERIES[(keys.index(lbl) if lbl in keys else 0) % len(_SERIES)]
-        totals = [sum(float(s.get("value") or 0) for s in (r.get("segments") or [])) for r in rows]
-        n = max(len(rows), 1); mx = max(totals + [1]) or 1
-        label_w = min(1.5, bw * 0.30); value_w = 0.42
-        tx = bx + label_w; tw = max(0.5, bw - label_w - value_w)
-        legend_h = 0.34; avail = bh - legend_h
-        row_h = min(avail / n, 0.5); bar_h = min(0.18, row_h * 0.4)
-        y0 = by + (avail - row_h * n) / 2
-        for i, (r, total) in enumerate(zip(rows, totals)):
-            ry = y0 + i * row_h; cy0 = ry + (row_h - bar_h) / 2
-            _text(slide, bx, ry, label_w - 0.08, row_h, r.get("label", ""), size=11)
-            _rrect(slide, tx, cy0, tw, bar_h, _SURFACE2)
-            sx = tx; full = max(bar_h, tw * total / mx)
-            for seg in r.get("segments") or []:
-                v = float(seg.get("value") or 0)
-                if v <= 0:
-                    continue
-                w = full * (v / total) if total else 0
-                _rrect(slide, sx, cy0, max(0.02, w), bar_h, col_of(seg.get("label")), radius=0)
-                sx += w
-            _text(slide, tx + tw + 0.05, ry, value_w, row_h, _num(total), size=10, color=_MUTED)
-        _legend_row(slide, [(k, col_of(k)) for k in keys], tx, by + bh - legend_h + 0.04, tw)
-
-    def _diverging_chart(slide, ch, bx, by, bw, bh):
-        rows = ch.get("rows") or []
-        pos_l, neg_l = ch.get("positive_label", "Positive"), ch.get("negative_label", "Negative")
-        mx = max([max(abs(float(r.get("positive") or 0)), abs(float(r.get("negative") or 0))) for r in rows] + [1]) or 1
-        n = max(len(rows), 1)
-        label_w = min(1.4, bw * 0.24); value_w = 0.95
-        tx = bx + label_w; tw = max(0.6, bw - label_w - value_w); half = tw / 2; cx = tx + half
-        legend_h = 0.34; avail = bh - legend_h
-        row_h = min(avail / n, 0.5); bar_h = min(0.18, row_h * 0.4)
-        y0 = by + (avail - row_h * n) / 2
-        for i, r in enumerate(rows):
-            ry = y0 + i * row_h; cy0 = ry + (row_h - bar_h) / 2
-            pos = max(0.0, float(r.get("positive") or 0)); neg = max(0.0, float(r.get("negative") or 0))
-            _text(slide, bx, ry, label_w - 0.06, row_h, r.get("label", ""), size=11)
-            _rrect(slide, tx, cy0, tw, bar_h, _SURFACE2)
-            negw = half * neg / mx; posw = half * pos / mx
-            if negw > 0:
-                _rrect(slide, cx - negw, cy0, negw, bar_h, _RED, radius=0)
-            if posw > 0:
-                _rrect(slide, cx, cy0, posw, bar_h, _GREEN, radius=0)
-            _text(slide, tx + tw + 0.05, ry, value_w, row_h, f"+{_num(pos)} · −{_num(neg)}", size=9, color=_MUTED)
-        _connector(slide, cx, y0, cx, y0 + row_h * n, _LINE, width=1)
-        _legend_row(slide, [(pos_l, _GREEN), (neg_l, _RED)], tx, by + bh - legend_h + 0.04, tw)
-
-    def _gauge_chart(slide, ch, bx, by, bw, bh):
-        from pptx.chart.data import CategoryChartData
-        from pptx.enum.chart import XL_CHART_TYPE
-        items = ch.get("items") or []
-        n = max(len(items), 1); gap = 0.3
-        size = max(0.8, min((bw - gap * (n - 1)) / n, bh - 0.5, 2.2))
-        x0 = bx + (bw - (size * n + gap * (n - 1))) / 2
-        for i, it in enumerate(items):
-            m = float(it.get("max") or 100) or 1
-            v = max(0.0, min(m, float(it.get("value") or 0))); pct = v / m * 100
-            gx = x0 + i * (size + gap)
-            cd = CategoryChartData(); cd.categories = ["v", "rest"]; cd.add_series("", (v, max(0.0, m - v)))
-            chart = slide.shapes.add_chart(XL_CHART_TYPE.DOUGHNUT, Inches(gx), Inches(by),
-                                           Inches(size), Inches(size), cd).chart
-            chart.has_title = False; chart.has_legend = False
-            _clean_area(chart)
-            plot = chart.plots[0]; plot.has_data_labels = False
-            try:
-                pts = plot.series[0].points
-                for idx, col in ((0, _SERIES[i % len(_SERIES)]), (1, _SURFACE2)):
-                    pts[idx].format.fill.solid(); pts[idx].format.fill.fore_color.rgb = rgb(col)
-                    pts[idx].format.line.fill.background()
-                plot._element.append(plot._element.makeelement(qn("c:holeSize"), {"val": "70"}))
-            except Exception:
-                pass
-            _text(slide, gx, by + size / 2 - 0.2, size, 0.4, f"{round(pct)}%", size=16, bold=True,
-                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-            _text(slide, gx - 0.1, by + size + 0.04, size + 0.2, 0.3, it.get("label", ""), size=10, align=PP_ALIGN.CENTER)
-
-    def _dot_plot_chart(slide, ch, bx, by, bw, bh):
-        rows = ch.get("rows") or []
-        u = str(ch.get("unit") or "")
-        mn = float(ch.get("min", 1)); mx = float(ch.get("max", 5)); span = (mx - mn) or 1
-        n = max(len(rows), 1)
-        label_w = min(1.6, bw * 0.32); value_w = 0.42; scale_h = 0.3
-        tx = bx + label_w; tw = max(0.5, bw - label_w - value_w)
-        avail = bh - scale_h; row_h = min(avail / n, 0.5)
-        y0 = by + (avail - row_h * n) / 2
-        xof = lambda v: tx + max(0.0, min(1.0, (v - mn) / span)) * tw
-        for i, r in enumerate(rows):
-            ry = y0 + i * row_h; cyc = ry + row_h / 2
-            vals = [float(v) for v in (r.get("values") or []) if isinstance(v, (int, float))]
-            if not vals:
-                continue
-            mean = round(sum(vals) / len(vals) * 10) / 10; col = _SERIES[i % len(_SERIES)]
-            _text(slide, bx, ry, label_w - 0.08, row_h, r.get("label", ""), size=11)
-            _connector(slide, tx, cyc, tx + tw, cyc, _LINE, width=0.75)
-            d = 0.13; tint = _mix(col, _BG, 0.45)
-            for v in vals:
-                ov = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(xof(v) - d / 2), Inches(cyc - d / 2), Inches(d), Inches(d))
-                ov.fill.solid(); ov.fill.fore_color.rgb = rgb(tint); ov.line.fill.background(); _noshadow(ov)
-            mh = 0.22
-            _rrect(slide, xof(mean) - 0.025, cyc - mh / 2, 0.05, mh, col, radius=0.3)
-            _text(slide, tx + tw + 0.05, ry, value_w, row_h, _num(mean) + u, size=10, color=_MUTED)
-        _text(slide, tx, by + bh - scale_h + 0.02, 0.6, scale_h, _num(mn) + u, size=9, color=_FAINT)
-        _text(slide, tx + tw - 0.6, by + bh - scale_h + 0.02, 0.6, scale_h, _num(mx) + u, size=9, color=_FAINT, align=PP_ALIGN.RIGHT)
-
-    def _heatmap_chart(slide, ch, bx, by, bw, bh):
-        cols = [str(c) for c in (ch.get("columns") or [])]
-        rows = ch.get("rows") or []
-        if not cols or not rows:
-            return
-        allv = [float(v) for r in rows for v in (r.get("values") or []) if isinstance(v, (int, float))]
-        mn = min(allv + [0]); mx = max(allv + [1])
-        ncols, nrows = len(cols), len(rows); gap = 0.05
-        label_w = min(1.6, bw * 0.28); header_h = 0.3
-        cell_w = (bw - label_w - gap * ncols) / ncols
-        cell_h = min((bh - header_h - gap * nrows) / max(nrows, 1), 0.6)
-        for j, c in enumerate(cols):
-            _text(slide, bx + label_w + j * (cell_w + gap), by, cell_w, header_h, c, size=9, color=_MUTED, align=PP_ALIGN.CENTER)
-        y0 = by + header_h
-        for i, r in enumerate(rows):
-            ry = y0 + i * (cell_h + gap)
-            _text(slide, bx, ry, label_w - 0.08, cell_h, r.get("label", ""), size=10, anchor=MSO_ANCHOR.MIDDLE)
-            vals = r.get("values") or []
-            for j in range(ncols):
-                cxp = bx + label_w + j * (cell_w + gap)
-                v = vals[j] if j < len(vals) and isinstance(vals[j], (int, float)) else None
-                if v is None:
-                    _rrect(slide, cxp, ry, cell_w, cell_h, _SURFACE2, radius=0.12)
-                else:
-                    t = 0.0 if mx == mn else max(0.0, min(1.0, (float(v) - mn) / (mx - mn)))
-                    _rrect(slide, cxp, ry, cell_w, cell_h, _mix(_SURFACE2, _ACCENT, t), radius=0.12)
-                    _text(slide, cxp, ry, cell_w, cell_h, _num(v), size=10, color=_INK,
-                          align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-
-    def _line_chart(slide, ch, bx, by, bw, bh):
-        from pptx.chart.data import CategoryChartData
-        from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
-        lines = [s for s in (ch.get("series") or []) if (s.get("points") or [])]
-        if not lines:
-            return
-        maxlen = max(len(s.get("points") or []) for s in lines)
-        labels = ch.get("labels") or []
-        cats = [str(x) for x in labels] if len(labels) == maxlen else [str(i + 1) for i in range(maxlen)]
-        cd = CategoryChartData(); cd.categories = cats
-        for s in lines:
-            pts = [float(p) if isinstance(p, (int, float)) else None for p in (s.get("points") or [])]
-            cd.add_series(s.get("label", ""), tuple(pts + [None] * (maxlen - len(pts))))
-        # Burn-up ideal line — a straight dashed series from the first point up to the target.
-        tgt = ch.get("target")
-        has_target = isinstance(tgt, (int, float)) and not isinstance(tgt, bool) and maxlen > 1
-        if has_target:
-            first = next((float(p) for p in (lines[0].get("points") or []) if isinstance(p, (int, float))), 0.0)
-            cd.add_series("Target", tuple(first + (float(tgt) - first) * i / (maxlen - 1) for i in range(maxlen)))
-        multi = len(lines) > 1 or has_target; legend_h = 0.0
-        chart = slide.shapes.add_chart(XL_CHART_TYPE.LINE_MARKERS, Inches(bx), Inches(by),
-                                       Inches(bw), Inches(bh - legend_h), cd).chart
-        chart.has_title = False; chart.has_legend = multi
-        if multi:
-            chart.legend.position = XL_LEGEND_POSITION.BOTTOM; chart.legend.include_in_layout = False
-            chart.legend.font.size = Pt(9); chart.legend.font.name = "Geist"; chart.legend.font.color.rgb = rgb(_MUTED)
-        _clean_area(chart)
-        for i, ser in enumerate(chart.series):
-            is_target = has_target and i == len(lines)
-            col = _MUTED if is_target else _SERIES[i % len(_SERIES)]
-            try:
-                ser.format.line.color.rgb = rgb(col); ser.format.line.width = Pt(1.25 if is_target else 2)
-                ser.smooth = False
-                if is_target:
-                    from pptx.enum.chart import XL_MARKER_STYLE
-                    from pptx.enum.line import MSO_LINE
-                    ser.format.line.dash_style = MSO_LINE.DASH
-                    ser.marker.style = XL_MARKER_STYLE.NONE
-            except Exception:
-                pass
-        try:
-            for ax in (chart.category_axis, chart.value_axis):
-                ax.tick_labels.font.size = Pt(9); ax.tick_labels.font.name = "Geist"
-                ax.tick_labels.font.color.rgb = rgb(_MUTED)
-                ax.format.line.color.rgb = rgb(_LINE)
-            chart.value_axis.has_major_gridlines = False
-        except Exception:
-            pass
-
-    def _area_chart(slide, ch, bx, by, bw, bh):
-        """Stacked area / cumulative flow — a native AREA_STACKED chart, series-palette filled."""
-        from pptx.chart.data import CategoryChartData
-        from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
-        bands = [s for s in (ch.get("series") or []) if (s.get("points") or [])]
-        if not bands:
-            return
-        maxlen = max(len(s.get("points") or []) for s in bands)
-        labels = ch.get("labels") or []
-        cats = [str(x) for x in labels] if len(labels) == maxlen else [str(i + 1) for i in range(maxlen)]
-        cd = CategoryChartData(); cd.categories = cats
-        for s in bands:
-            pts = [float(p) if isinstance(p, (int, float)) else 0.0 for p in (s.get("points") or [])]
-            cd.add_series(s.get("label", ""), tuple(pts + [0.0] * (maxlen - len(pts))))
-        chart = slide.shapes.add_chart(XL_CHART_TYPE.AREA_STACKED, Inches(bx), Inches(by),
-                                       Inches(bw), Inches(bh), cd).chart
-        chart.has_title = False; chart.has_legend = True
-        chart.legend.position = XL_LEGEND_POSITION.BOTTOM; chart.legend.include_in_layout = False
-        chart.legend.font.size = Pt(9); chart.legend.font.name = "Geist"; chart.legend.font.color.rgb = rgb(_MUTED)
-        _clean_area(chart)
-        for i, ser in enumerate(chart.series):
-            col = _SERIES[i % len(_SERIES)]
-            try:
-                ser.format.fill.solid(); ser.format.fill.fore_color.rgb = rgb(_mix(col, _BG, 0.35))
-                ser.format.line.color.rgb = rgb(col); ser.format.line.width = Pt(1.25)
-            except Exception:
-                pass
-        try:
-            for ax in (chart.category_axis, chart.value_axis):
-                ax.tick_labels.font.size = Pt(9); ax.tick_labels.font.name = "Geist"
-                ax.tick_labels.font.color.rgb = rgb(_MUTED)
-                ax.format.line.color.rgb = rgb(_LINE)
-            chart.value_axis.has_major_gridlines = False
-        except Exception:
-            pass
-
-    def _column_chart(slide, ch, bx, by, bw, bh):
-        """Vertical bars (the DS column chart) — plain or segment-stacked, value + category labels."""
-        items = ch.get("items") or []
-        keys = []
-        for it in items:
-            for seg in it.get("segments") or []:
-                if seg.get("label") not in keys:
-                    keys.append(seg.get("label"))
-        col_of = lambda lbl: _SERIES[(keys.index(lbl) if lbl in keys else 0) % len(_SERIES)]
-
-        def _total(it):
-            if it.get("segments"):
-                return sum(float(s.get("value") or 0) for s in it["segments"])
-            return float(it.get("value") or 0)
-
-        totals = [_total(it) for it in items]
-        if not totals:
-            return
-        mx = max(totals + [1]) or 1
-        n = max(len(items), 1)
-        label_h, val_h = 0.26, 0.2
-        legend_h = 0.32 if keys else 0.0
-        plot_h = max(0.8, bh - label_h - val_h - legend_h)
-        gap = min(0.3, bw / n * 0.4)
-        cw = (bw - gap * (n - 1)) / n; bar_w = min(cw, 0.55)
-        base_y = by + val_h + plot_h
-        _connector(slide, bx, base_y, bx + bw, base_y, _LINE, width=1)
-        for i, (it, tot) in enumerate(zip(items, totals)):
-            cx0 = bx + i * (cw + gap)
-            bx0 = cx0 + (cw - bar_w) / 2
-            h = plot_h * tot / mx
-            if it.get("segments"):
-                sy = base_y
-                for seg in it["segments"]:
-                    v = float(seg.get("value") or 0)
-                    if v <= 0:
-                        continue
-                    sh = h * (v / tot) if tot else 0
-                    sy -= sh
-                    _rrect(slide, bx0, sy, bar_w, sh, col_of(seg.get("label")), radius=0)
-            elif h > 0:
-                _rrect(slide, bx0, base_y - h, bar_w, max(0.02, h), _SERIES[0], radius=0)
-            _text(slide, cx0, base_y - h - val_h, cw, val_h, _num(tot), size=9, color=_MUTED, align=PP_ALIGN.CENTER)
-            _text(slide, cx0, base_y + 0.03, cw, label_h, str(it.get("label", "")), size=9, color=_MUTED, align=PP_ALIGN.CENTER)
-        if keys:
-            _legend_row(slide, [(k, col_of(k)) for k in keys], bx, base_y + label_h + 0.06, bw)
-
-    def _progress_strip_chart(slide, ch, bx, by, bw, bh):
-        """One full-width segmented status bar + a count/% legend (the DS progress strip)."""
-        items = [it for it in (ch.get("items") or []) if float(it.get("value") or 0) > 0]
-        total = sum(float(it["value"]) for it in items)
-        if not items or total <= 0:
-            return
-        bar_h = 0.24; bar_y = by + min(0.4, bh * 0.2)
-        _rrect(slide, bx, bar_y, bw, bar_h, _SURFACE2)
-        sx = bx
-        for i, it in enumerate(items):
-            w = bw * float(it["value"]) / total
-            _rrect(slide, sx, bar_y, max(0.02, w), bar_h, _SERIES[i % len(_SERIES)], radius=0)
-            sx += w
-        x = bx; ly = bar_y + bar_h + 0.14
-        for i, it in enumerate(items):
-            v = float(it["value"])
-            lbl = f'{it.get("label", "")}  {_num(v)} · {round(v / total * 100)}%'
-            w = min(2.3, 0.07 * len(lbl) + 0.25)
-            if x + 0.19 + w > bx + bw:
-                x = bx; ly += 0.24
-            _rrect(slide, x, ly + 0.03, 0.13, 0.13, _SERIES[i % len(_SERIES)], radius=0.28)
-            _text(slide, x + 0.19, ly, w, 0.2, lbl, size=9, color=_MUTED)
-            x += 0.19 + w + 0.16
-
-    def _stats_chart(slide, ch, bx, by, bw, bh):
-        """KPI number row — label · big value · optional sub, one tile per item."""
-        items = ch.get("items") or []
-        if not items:
-            return
-        n = len(items)
-        tile_w = bw / n
-        for i, it in enumerate(items):
-            gx = bx + i * tile_w
-            v = it.get("value")
-            txt = v if isinstance(v, str) else _num(float(v or 0))
-            _text(slide, gx, by + 0.05, tile_w - 0.12, 0.22, str(it.get("label", "")), size=10, color=_MUTED)
-            _text(slide, gx, by + 0.28, tile_w - 0.12, 0.5, str(txt), size=24, bold=True)
-            if it.get("sub"):
-                _text(slide, gx, by + 0.8, tile_w - 0.12, 0.22, str(it["sub"]), size=9, color=_FAINT)
+    # The chart painters (bar/pie/…/scatter) live in _pptx_charts; they draw through the
+    # SAME shape primitives via this ctx, so slide and chart layers can't drift apart.
+    from types import SimpleNamespace
+    _ctx = SimpleNamespace(text=_text, rrect=_rrect, connector=_connector, dot=_dot,
+                           run=_run, noshadow=_noshadow)
 
     def _chart(slide, ch, x, y, cx, cy):
-        bx, by, bw, bh = x.inches, y.inches, cx.inches, cy.inches
-        kind = ch.get("type")
-        try:
-            if kind == "bar" and ch.get("categories"):
-                _bar_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "pie" and ch.get("categories"):
-                _donut_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "stacked_bar" and ch.get("rows"):
-                _stacked_bar_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "diverging_bar" and ch.get("rows"):
-                _diverging_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "gauge" and ch.get("items"):
-                _gauge_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "dot_plot" and ch.get("rows"):
-                _dot_plot_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "heatmap" and ch.get("columns") and ch.get("rows"):
-                _heatmap_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "line" and ch.get("series"):
-                _line_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "stacked_area" and ch.get("series"):
-                _area_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "column" and ch.get("items"):
-                _column_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "progress_strip" and ch.get("items"):
-                _progress_strip_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "stats" and ch.get("items"):
-                _stats_chart(slide, ch, bx, by, bw, bh)
-            elif kind == "scatter" and ch.get("points"):
-                _effort_chart(slide, ch, bx, by, bw, bh)
-        except Exception:
-            pass
+        _pc.draw(_ctx, slide, ch, x, y, cx, cy)
 
+    # ── master-template painters — geometry mirrors sonaloop-design site/deck.preview.mjs
+    # painter-for-painter (single source: deck.data.mjs / vendored _deck.py), so the docs
+    # previews at #/deck and the exported deck look the same. ──────────────────────────
+    def _mono_run(r):
+        r.font.name = "Geist Mono"
+        return r
+
+    def _heading_band(slide, s, default=""):
+        htf = _box(slide, Inches(0.7), Inches(0.5), W - Inches(1.4), Inches(0.9))
+        hp = htf.paragraphs[0]
+        if s.get("num"):
+            _mono_run(_run(hp, s["num"] + "   ", size=16, bold=True, color=_FAINT))
+        _run(hp, s.get("heading", default) or default, size=_TS["title"], bold=True)
+        _rule(slide, 0.72, 1.34, 0.85)
+
+    def _grid_cells(items):
+        """2-column card grid under the heading band → [(x, y, w, h), …] in inches."""
+        rows = max(1, (len(items) + 1) // 2)
+        gap = 0.25
+        cw = (W.inches - 1.4 - gap) / 2
+        ch = (H.inches - 1.75 - 0.85 - gap * (rows - 1)) / rows
+        return [(0.7 + (i % 2) * (cw + gap), 1.75 + (i // 2) * (ch + gap), cw, ch)
+                for i in range(len(items))]
+
+    def _oval(slide, l, t, d, fill):
+        ov = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(l), Inches(t), Inches(d), Inches(d))
+        ov.fill.solid(); ov.fill.fore_color.rgb = rgb(fill); ov.line.fill.background()
+        _noshadow(ov)
+        return ov
+
+    def _initials_chip(slide, l, t, d, name):
+        ov = _oval(slide, l, t, d, _ACCENT_WEAK)
+        tf = ov.text_frame
+        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = Pt(0)
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        pq = tf.paragraphs[0]; pq.alignment = PP_ALIGN.CENTER
+        ini = "".join(w[0] for w in str(name or "?").split()[:2]).upper() or "?"
+        _run(pq, ini, size=10, bold=True, color=_ACCENT)
+
+    def _cover_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _rule(slide, 0.92, 2.0, 1.0)
+        tf = _box(slide, Inches(0.9), Inches(2.15), W - Inches(1.8), Inches(3.4))
+        _mono_run(_run(tf.paragraphs[0], (s.get("eyebrow", "") or "").upper(),
+                       size=_TS["eyebrow"], bold=True, color=_ACCENT))
+        p1 = tf.add_paragraph(); p1.space_before = Pt(10)
+        _run(p1, s.get("title", title), size=_TS["display"], bold=True)
+        if s.get("subtitle"):
+            p2 = tf.add_paragraph(); p2.space_before = Pt(12)
+            _run(p2, s["subtitle"], size=16, color=_MUTED)
+        if s.get("meta"):
+            mt = _box(slide, Inches(0.9), H - Inches(1.0), W - Inches(4.4), Inches(0.4))
+            _mono_run(_run(mt.paragraphs[0], s["meta"], size=11, color=_FAINT))
+        if s.get("date"):
+            dt = _box(slide, W - Inches(3.4), H - Inches(1.0), Inches(2.5), Inches(0.4))
+            pd = dt.paragraphs[0]; pd.alignment = PP_ALIGN.RIGHT
+            _run(pd, s["date"], size=11, color=_MUTED)
+
+    def _agenda_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s, "Contents")
+        for i, item in enumerate(s.get("items") or []):
+            y = 1.95 + i * 0.62
+            nt = _text(slide, 0.9, y, 0.55, 0.5, str(i + 1).zfill(2), size=14, bold=True, color=_ACCENT)
+            _mono_run(nt.text_frame.paragraphs[0].runs[0])
+            _text(slide, 1.5, y, W.inches - 2.6, 0.5, str(item), size=16)
+        _footer(slide)
+
+    def _section_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        bt = _text(slide, 0.85, 1.0, W.inches - 1.8, 2.6, s.get("num", ""),
+                   size=_TS["bignum"], bold=True, color=_ACCENT_WEAK, anchor=MSO_ANCHOR.TOP)
+        if s.get("num"):
+            _mono_run(bt.text_frame.paragraphs[0].runs[0])
+        _rule(slide, 0.92, 3.95, 0.85)
+        tf = _box(slide, Inches(0.9), Inches(4.15), W - Inches(1.8), Inches(2.2))
+        _run(tf.paragraphs[0], s.get("title", ""), size=32, bold=True)
+        if s.get("subtitle"):
+            p2 = tf.add_paragraph(); p2.space_before = Pt(10)
+            _run(p2, s["subtitle"], size=_TS["subtitle"], color=_MUTED)
+        _footer(slide)
+
+    def _summary_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s, "Executive summary")
+        items = s.get("items") or []
+        for it, (cx, cy, cw, ch) in zip(items, _grid_cells(items)):
+            _rrect(slide, cx, cy, cw, ch, _PANEL, radius=0.05, line=_LINE)
+            _rrect(slide, cx + 0.26, cy + 0.27, 0.05, 0.21, _ACCENT, radius=0.3)
+            tt = _box(slide, Inches(cx + 0.42), Inches(cy + 0.18), Inches(cw - 0.68), Inches(0.4))
+            _run(tt.paragraphs[0], it.get("title", ""), size=15, bold=True)
+            bf = _box(slide, Inches(cx + 0.26), Inches(cy + 0.62), Inches(cw - 0.52), Inches(ch - 0.8))
+            _run(bf.paragraphs[0], it.get("text", ""), size=12, color=_MUTED)
+        _footer(slide)
+
+    def _insight_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        tone = _TONES.get(s.get("tone") or s.get("kind") or "insight") or _TONES["insight"]
+        tc = _PALETTE.get(tone.get("color", "accent"), _ACCENT)
+        et = _box(slide, Inches(0.7), Inches(0.55), W - Inches(1.4), Inches(0.4))
+        ep = et.paragraphs[0]
+        _mono_run(_run(ep, str(tone.get("label", "Insight")).upper(), size=_TS["eyebrow"], bold=True, color=tc))
+        if s.get("num"):
+            _mono_run(_run(ep, "  ·  " + s["num"], size=_TS["eyebrow"], bold=True, color=_FAINT))
+        body_w = 6.9 if s.get("chart") else W.inches - 1.4
+        _rrect(slide, 0.7, 1.02, 0.055, 1.7, tc, radius=0.3)
+        tf = _box(slide, Inches(0.95), Inches(1.05), Inches(body_w - 0.25), Inches(1.75))
+        _run(tf.paragraphs[0], s.get("statement", ""), size=_TS["statement"], bold=True)
+        sf = _box(slide, Inches(0.95), Inches(2.95), Inches(body_w - 0.25), H - Inches(3.8))
+        first = True
+        for t in s.get("support") or []:
+            sp = sf.paragraphs[0] if first else sf.add_paragraph()
+            first = False
+            sp.space_after = Pt(8)
+            _run(sp, "•  ", size=13, bold=True, color=tc)
+            _run(sp, str(t), size=13)
+        if s.get("chart"):
+            _chart(slide, s["chart"], Inches(7.9), Inches(1.65), Inches(4.7), Inches(4.3))
+        if s.get("meta"):
+            mt = _box(slide, Inches(0.7), H - Inches(0.85), Inches(7.0), Inches(0.3))
+            _mono_run(_run(mt.paragraphs[0], s["meta"], size=11, bold=True, color=tc))
+        if s.get("footnote"):
+            ft = _box(slide, Inches(0.7), H - Inches(0.6), W - Inches(1.4), Inches(0.3))
+            _run(ft.paragraphs[0], s["footnote"], size=10, color=_FAINT, italic=True)
+        _footer(slide)
+
+    def _quote_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _text(slide, 1.5, 1.45, 1.2, 1.2, "“", size=80, bold=True, color=_ACCENT_WEAK,
+              anchor=MSO_ANCHOR.TOP)
+        _text(slide, 1.9, 2.35, W.inches - 3.8, 2.6, s.get("text", ""), size=_TS["quote"],
+              anchor=MSO_ANCHOR.TOP)
+        _initials_chip(slide, 1.9, 5.45, 0.34, s.get("attribution"))
+        nt = _text(slide, 2.36, 5.45, W.inches - 4.3, 0.34, s.get("attribution", ""), size=12, bold=True)
+        _run(nt.text_frame.paragraphs[0], "   " + s.get("role", ""), size=11, color=_MUTED)
+        _footer(slide)
+
+    _SENTIMENT = {"support": _GREEN, "conditional": _AMBER, "opposed": _RED}
+
+    def _voices_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s, "Voices")
+        items = s.get("items") or []
+        for it, (cx, cy, cw, ch) in zip(items, _grid_cells(items)):
+            _rrect(slide, cx, cy, cw, ch, _PANEL, radius=0.05, line=_LINE)
+            _initials_chip(slide, cx + 0.24, cy + 0.18, 0.3, it.get("name"))
+            nt = _text(slide, cx + 0.62, cy + 0.16, cw - 2.3, 0.34, it.get("name", ""), size=12, bold=True)
+            _run(nt.text_frame.paragraphs[0], "   " + it.get("role", ""), size=10, color=_MUTED)
+            sc = _SENTIMENT.get((it.get("sentiment") or "").lower(), _MUTED)
+            st = _text(slide, cx + cw - 1.85, cy + 0.16, 1.6, 0.34, (it.get("sentiment") or "").upper(),
+                       size=9, bold=True, color=sc, align=PP_ALIGN.RIGHT)
+            if it.get("sentiment"):
+                _mono_run(st.text_frame.paragraphs[0].runs[0])
+            bf = _box(slide, Inches(cx + 0.24), Inches(cy + 0.62), Inches(cw - 0.48), Inches(ch - 0.8))
+            _run(bf.paragraphs[0], it.get("text", ""), size=12)
+        _footer(slide)
+
+    def _stats_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s)
+        items = s.get("items") or []
+        n = max(len(items), 1); gap = 0.25
+        tw = (W.inches - 1.4 - gap * (n - 1)) / n
+        for i, it in enumerate(items):
+            tx = 0.7 + i * (tw + gap)
+            _rrect(slide, tx, 2.5, tw, 2.3, _PANEL, radius=0.05, line=_LINE)
+            tf = _box(slide, Inches(tx + 0.24), Inches(2.74), Inches(tw - 0.48), Inches(1.9))
+            _run(tf.paragraphs[0], str(it.get("label", "")), size=_TS["kpiLabel"], color=_MUTED)
+            p1 = tf.add_paragraph(); p1.space_before = Pt(4)
+            v = it.get("value")
+            _run(p1, v if isinstance(v, str) else _num(v or 0), size=_TS["kpi"], bold=True)
+            if it.get("sub"):
+                p2 = tf.add_paragraph(); p2.space_before = Pt(4)
+                _run(p2, str(it["sub"]), size=9, color=_FAINT)
+        _footer(slide)
+
+    def _chart_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s)
+        if s.get("chart"):
+            _chart(slide, s["chart"], Inches(0.7), Inches(1.8), Inches(W.inches - 1.4), Inches(H.inches - 2.9))
+        if s.get("footnote"):
+            ft = _box(slide, Inches(0.7), H - Inches(0.72), W - Inches(1.4), Inches(0.4))
+            _run(ft.paragraphs[0], s["footnote"], size=10, color=_FAINT, italic=True)
+        _footer(slide)
+
+    def _comparison_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s)
+        gap = 0.3
+        cw = (W.inches - 1.4 - gap) / 2
+        cy = 1.75; ch = H.inches - cy - 0.85
+        for j, (col, accent) in enumerate(((s.get("left") or {}, False), (s.get("right") or {}, True))):
+            cx = 0.7 + j * (cw + gap)
+            _rrect(slide, cx, cy, cw, ch, _PANEL if accent else _SURFACE2, radius=0.04,
+                   line=_ACCENT if accent else _LINE)
+            tf = _box(slide, Inches(cx + 0.3), Inches(cy + 0.26), Inches(cw - 0.6), Inches(ch - 0.5))
+            _run(tf.paragraphs[0], col.get("title", ""), size=14, bold=True,
+                 color=_ACCENT if accent else _MUTED)
+            tf.paragraphs[0].space_after = Pt(12)
+            for t in col.get("items") or []:
+                cp = tf.add_paragraph(); cp.space_after = Pt(7)
+                _run(cp, "•  ", size=12, bold=True, color=_ACCENT if accent else _FAINT)
+                _run(cp, str(t), size=12)
+        _footer(slide)
+
+    def _timeline_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s, "Next steps")
+        steps = s.get("steps") or []
+        n = max(len(steps), 1)
+        x0, x1, ly = 1.0, W.inches - 1.0, 3.1
+        _connector(slide, x0, ly, x1, ly, _LINE, width=1.2)
+        for i, st in enumerate(steps):
+            cx = x0 + (i + 0.5) * ((x1 - x0) / n)
+            _oval(slide, cx - 0.1, ly - 0.1, 0.2, _ACCENT)
+            if st.get("label"):
+                lt = _text(slide, cx - 1.3, ly - 0.55, 2.6, 0.3, str(st["label"]).upper(),
+                           size=10, bold=True, color=_ACCENT, align=PP_ALIGN.CENTER)
+                _mono_run(lt.text_frame.paragraphs[0].runs[0])
+            _text(slide, cx - 1.3, ly + 0.25, 2.6, 0.5, st.get("title", ""), size=13, bold=True,
+                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.TOP)
+            _text(slide, cx - 1.3, ly + 0.72, 2.6, 1.4, st.get("text", ""), size=11, color=_MUTED,
+                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.TOP)
+        _footer(slide)
+
+    def _closing_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _rule(slide, 0.92, 2.0, 1.0)
+        tf = _box(slide, Inches(0.9), Inches(2.2), Inches(8.6), Inches(3.6))
+        _run(tf.paragraphs[0], s.get("title", ""), size=32, bold=True)
+        if s.get("text"):
+            p1 = tf.add_paragraph(); p1.space_before = Pt(16)
+            _run(p1, s["text"], size=14)
+        if s.get("contact"):
+            p2 = tf.add_paragraph(); p2.space_before = Pt(20)
+            _run(p2, s["contact"], size=13, bold=True, color=_ACCENT)
+        if s.get("meta"):
+            mt = _box(slide, Inches(0.9), H - Inches(1.0), W - Inches(1.8), Inches(0.4))
+            _mono_run(_run(mt.paragraphs[0], s["meta"], size=10, color=_FAINT))
+
+    painters = {"title": _title_slide, "cover": _cover_slide, "agenda": _agenda_slide,
+                "section": _section_slide, "summary": _summary_slide,
+                "insight": _insight_slide, "recommendation": _insight_slide, "risk": _insight_slide,
+                "quote": _quote_slide, "voices": _voices_slide, "stats": _stats_slide,
+                "chart": _chart_slide, "comparison": _comparison_slide, "timeline": _timeline_slide,
+                "closing": _closing_slide, "image": _image_slide}
     for s in slides:
-        kind = s.get("kind")
-        if kind == "title":
-            _title_slide(s)
-        elif kind == "image":
-            _image_slide(s)
-        else:
-            _content_slide(s)
+        painters.get(s.get("kind"), _content_slide)(s)
 
     buf = io.BytesIO()
     prs.save(buf)
