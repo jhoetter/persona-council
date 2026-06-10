@@ -185,10 +185,14 @@ def test_stance_shape_always_names_the_canonical_terms():
     from sonaloop import artifacts
     vocab = "|".join(r["term"] for r in artifacts.stance_terms())
     canonical = f"value -2..2, label?: {vocab}"
-    bare = re.compile(r"value -2\.\.2(?!" + re.escape(f", label?: {vocab}") + r")")
+    # Accepted continuations: the canonical vocabulary literal, or the source-level seam that splices
+    # it live from stance_terms() (suggestions.py builds the note from the data — it can't go stale).
+    bare = re.compile(r"value -2\.\.2(?!" + re.escape(f", label?: {vocab}")
+                      + r"|" + re.escape(', label?: " + ') + r")")
     pkg = pathlib.Path(artifacts.__file__).parent
     offenders = []
-    for f in sorted((pkg / "mcp_server").glob("*.py")) + sorted((pkg / "services").glob("*.py")):
+    for f in (sorted(pkg.glob("*.py")) + sorted((pkg / "mcp_server").glob("*.py"))
+              + sorted((pkg / "services").glob("*.py")) + sorted((pkg / "llm_simulation").glob("*.py"))):
         flat = " ".join(f.read_text(encoding="utf-8").split())   # docstrings wrap; compare flattened
         if bare.search(flat):
             offenders.append(str(f.relative_to(pkg.parent)))

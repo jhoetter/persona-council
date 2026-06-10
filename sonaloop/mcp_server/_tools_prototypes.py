@@ -111,8 +111,11 @@ def register_prototypes(mcp):
     def record_prototype_session(persona_id: str, prototype_id: str, session_id: str, date: str,
                                  reaction: dict[str, Any], key: str | None = None) -> dict[str, Any]:
         """Persist a persona's grounded prototype use as an experience + memory + artifact; rejects
-        claims with no matching observed state in the session log. Pass a stable `key` for a
-        DETERMINISTIC id so re-running the step is an idempotent upsert (resumable runs, ESV)."""
+        claims with no matching observed state in the session log. `reaction.statements` is the ONE
+        voice shape: {persona_id, text, stance:{value -2..2,
+        label?: support|conditional|neutral|skeptical|oppose} (the closed scale — see
+        suggest_stances), about, refs}. Pass a stable `key` for a DETERMINISTIC id so re-running the
+        step is an idempotent upsert (resumable runs, ESV)."""
         t = time.perf_counter()
         return _env("record_prototype_session",
                     services.record_prototype_session(persona_id, prototype_id, session_id, date, reaction, key), t)

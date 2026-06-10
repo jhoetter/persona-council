@@ -66,6 +66,7 @@ from ..llm_simulation import (
 
 
 from ._common import *  # noqa: F401,F403  (shared helpers + constants)
+from ._authoring import PRIMITIVES_CONTRACT  # noqa: E402
 
 
 from ..methodology import (  # noqa: E402
@@ -401,7 +402,7 @@ def brief_prototype_session(persona_id, prototype_id, store: Store | None = None
                          "(proto_act click/type/select on refs from the latest snapshot), observe the REAL "
                          "state, then author a grounded reaction. Anti-steering: only praise what you actually "
                          "exercised; honest friction and rejection are first-class. Cite the states you saw in "
-                         "observed_state_refs."),
+                         "observed_state_refs.") + PRIMITIVES_CONTRACT,
     }
 
 
