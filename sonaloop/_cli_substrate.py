@@ -7,7 +7,7 @@ from typing import Any
 from . import services
 
 COMMANDS = ("substrate-schema", "query-personas", "query-projects", "query-councils",
-            "query-syntheses", "study-result", "predictions-aggregate", "calibration-report", "calibration-trend", "chat-brief", "chat-record", "chat-get", "chat-list")
+            "query-syntheses", "study-result", "predictions-aggregate", "calibration-report", "calibration-trend", "flow-define", "flows-list", "flow-funnel", "chat-brief", "chat-record", "chat-get", "chat-list")
 
 
 def add_substrate_parsers(sub) -> None:
@@ -29,6 +29,13 @@ def add_substrate_parsers(sub) -> None:
     p.add_argument("--project")
     p = sub.add_parser("calibration-trend", help="Calibration quality over time (the Brier delta).")
     p.add_argument("--project")
+    p = sub.add_parser("flow-define", help="Define an ordered screenshot flow from a JSON file: {project_id, title, steps:[{asset_id, caption?}], key?}.")
+    p.add_argument("file")
+    p = sub.add_parser("flows-list")
+    p.add_argument("project_id")
+    p = sub.add_parser("flow-funnel", help="Where the cohort abandons a flow, and why.")
+    p.add_argument("project_id")
+    p.add_argument("flow_id")
     p = sub.add_parser("chat-brief", help="Gather context to author a persona's chat reply (host-authored).")
     p.add_argument("persona_id")
     p.add_argument("message")
@@ -66,6 +73,14 @@ def run_substrate_command(args) -> Any:
         return services.calibration_report(args.project)
     if args.command == "calibration-trend":
         return services.calibration_trend(args.project)
+    if args.command == "flow-define":
+        import json
+        from pathlib import Path
+        return services.define_flow(**json.loads(Path(args.file).read_text(encoding="utf-8")))
+    if args.command == "flows-list":
+        return services.list_flows(args.project_id)
+    if args.command == "flow-funnel":
+        return services.flow_funnel(args.project_id, args.flow_id)
     if args.command == "chat-brief":
         return services.chat_with_persona(args.persona_id, args.message, args.chat_id)
     if args.command == "chat-record":

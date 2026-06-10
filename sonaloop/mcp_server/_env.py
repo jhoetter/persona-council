@@ -105,6 +105,10 @@ _NEXT: dict[str, dict[str, Any]] = {
     "calibration_report": {"name": "brief_calibration", "reason": "gather the misses and author the corrections"},
     "brief_calibration": {"name": "record_calibration_round", "reason": "stamp the corrections you applied so the trend can judge them"},
     "record_calibration_round": {"name": "calibration_trend", "reason": "did the loop improve? the Brier delta answers"},
+    # --- screenshot flows: walkthrough with drop-off (docs/flow-walkthrough.md) ---
+    "define_flow": {"name": "brief_flow_walkthrough", "reason": "walk a persona through the flow's real screens (artifact-first, no browser)"},
+    "brief_flow_walkthrough": {"name": "record_usability_session", "reason": "author the dual timeline you walked, then persist (same flow subject → the funnel aggregates)"},
+    "flow_funnel": {"name": "brief_synthesis", "reason": "fold the drop-off story (steps, reasons, personas) into the answer"},
     "record_chat_turn": {"name": "chat_with_persona", "reason": "continue the conversation with full history (pass chat_id)"},
 }
 

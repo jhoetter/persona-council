@@ -28,6 +28,7 @@ from ._tools_substrate import register_substrate
 from ._tools_grounding import register_grounding
 from ._tools_predictions import register_predictions
 from ._tools_calibration import register_calibration
+from ._tools_flows import register_flows
 
 
 def _load_tool_extensions(mcp) -> int:
@@ -80,6 +81,7 @@ def build_server():
     register_grounding(mcp)
     register_predictions(mcp)
     register_calibration(mcp)
+    register_flows(mcp)
     register_prompts(mcp)
     _load_tool_extensions(mcp)
 

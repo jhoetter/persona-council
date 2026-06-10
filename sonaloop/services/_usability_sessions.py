@@ -121,6 +121,13 @@ def brief_usability_session(persona_id, subject, fidelity, project_id=None, stor
         profile, fidelity, " ".join(str(subject.get(k) or "") for k in ("label", "url", "id")))
     if gate:
         brief["warnings"] = gate
+    if subject["kind"] == "flow" and subject.get("id") and project_id:
+        # An asset-backed defined flow (ticket prototype-walkthrough-dropoff): the brief carries
+        # the ordered screens; brief_flow_walkthrough adds the full artifact-first how_to_drive.
+        try:
+            brief["flow_screens"] = flow_screens_brief(project_id, subject["id"], store=store)  # noqa: F821 (bound)
+        except KeyError:
+            pass
     if subject["kind"] in ("prototype", "flow") and subject.get("id"):
         proto, screens = _concept_screens(subject["id"], store)
         if proto:

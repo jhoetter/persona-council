@@ -131,6 +131,11 @@ Core MCP tools:
   `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
   `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
   `hooks-list`, `hook-test`, `hook-remove`.
+- Screenshot flows — walkthrough with drop-off, artifact-first (docs/flow-walkthrough.md):
+  attach the screens as assets → `define_flow(project, title, steps=[{asset_id}])` →
+  `brief_flow_walkthrough` (view_asset every screen, author the timeline, dropoff_step +
+  reason, predicted_behaviors) → `flow_funnel` (where the segment abandons and why). No
+  live browser. CLI: `flow-define`, `flows-list`, `flow-funnel`.
 - The calibration backtest loop (docs/calibration.md): `record_prediction_outcome`
   (match a real outcome to a prediction; Brier derived) → `calibration_report` (mean Brier,
   hit rate, reliability curve; persisted) → `calibration_trend` (the Brier delta over time) →
