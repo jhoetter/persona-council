@@ -22,7 +22,7 @@ from .._components import (
     _display_title,
 )
 from .._synthesis import (
-    _area, _vote_label, _sentiment_section, _synthesis_html, _persona_voices_html,
+    _area, _sentiment_section, _synthesis_html, _persona_voices_html,
 )
 from .._graph import _graph_interactive, _plan_html, _outline_html
 from .._detail import _relations_html, _properties_html, detail_page

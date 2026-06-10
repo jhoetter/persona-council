@@ -75,6 +75,37 @@ def stance_meta(value: int) -> dict[str, str]:
             "color": (rec or {}).get("color", "var(--muted)")}
 
 
+def stance_terms() -> list[dict[str, Any]]:
+    """The scale's items ({term,value,label_key,color}) ordered +2 → −2 — the ONE order/color/label
+    source for vote analytics (charts iterate this; no hardcoded vote vocabulary in web code)."""
+    return sorted((dict(r) for r in _stance_scale()["by_term"].values()), key=lambda r: -r["value"])
+
+
+def vote_stance(v: Any) -> dict[str, Any] | None:
+    """A council vote IS a stance. Resolve a stored vote — normalized ({vote: term, stance: {...}}) or
+    legacy ({vote: "SUPPORT"}) — onto the scale; None for an empty vote. No token can vanish: an
+    unresolvable one buckets at neutral with `label_raw` (resolve_stance contract)."""
+    if not isinstance(v, dict):
+        return resolve_stance(v)
+    if isinstance(v.get("stance"), dict):
+        return validate_stance(v["stance"])
+    return resolve_stance(v.get("vote") or v.get("stance") or v.get("label"))
+
+
+def vote_tally(votes: list | None) -> dict[str, int]:
+    """Tally votes by canonical stance term — every term present (+2 → −2 order, legend-stable),
+    legacy tokens resolved via the scale's aliases, so no vote can vanish from a tally."""
+    out = {r["term"]: 0 for r in stance_terms()}
+    by_value = _stance_scale()["by_value"]
+    for v in votes or []:
+        st = vote_stance(v)
+        if st is None:
+            continue
+        term = (by_value.get(st["value"]) or {}).get("term", str(st["value"]))
+        out[term] = out.get(term, 0) + 1
+    return out
+
+
 @lru_cache(maxsize=1)
 def _finding_kinds() -> dict[str, dict[str, Any]]:
     """Load suggestions/finding_kinds.json → {kind: {id, label_key}}. The section id/label vocabulary for

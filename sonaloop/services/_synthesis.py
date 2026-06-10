@@ -85,8 +85,7 @@ def _council_brief_row(store: Store, cid: str) -> dict[str, Any]:
     return {
         "council_id": cid, "prompt": c.get("prompt"), "created_at": c.get("created_at"),
         "exec_summary": c.get("exec_summary") or c.get("summary"),
-        "vote_tally": {v: sum(1 for x in c.get("votes", []) if x.get("vote") == v)
-                       for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]},
+        "vote_tally": _A.vote_tally(c.get("votes", [])),   # canonical stance terms (votes ARE stances)
         "turns": turns, "votes": votes,
         "proposal": c.get("proposal"),
     }

@@ -84,7 +84,8 @@ Optional moderated back-and-forth (rich topics): after the openings, author a me
 (strategy: positive-deepdive | pain-discovery | tension | goal); use hand-raising to stop when the
 energy is spent (never loop unbounded).
 
-Then (host): author proposal, votes (SUPPORT/MAYBE/ABSTAIN/OPPOSE), a short summary, and a rich
+Then (host): author proposal, votes (stance-scale terms: support/conditional/neutral/skeptical/oppose),
+a short summary, and a rich
 Markdown exec_summary, and persist with record_council(...). brief_council(prompt) returns candidate
 personas; brief_council(prompt, persona_ids) returns each one's loaded context to author against.
 Modes: DISCOVERY (questions + one statement per persona*question), EVALUATION (proposal + stances),

@@ -151,8 +151,8 @@ def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = 
             "hypothesis and do NOT collect votes — you are LISTENING. Leave proposal/votes empty.\n"
             "• EVALUATION (reacting to a concept/prototype): set `proposal`; each statement reacts with "
             "about={kind:'prompt', id:'proposal'} + a `stance` ({value -2..2}); no hard votes.\n"
-            "• DECISION (rare — an explicit choice): set `proposal` + `votes` (SUPPORT/MAYBE/ABSTAIN/"
-            "OPPOSE) for the tally.\n"
+            "• DECISION (rare — an explicit choice): set `proposal` + `votes` (the stance-scale terms: "
+            "support/conditional/neutral/skeptical/oppose) for the tally.\n"
             "On each statement set persona_id, text (the persona's words, in voice), stance where "
             "applicable, about (the prompt it answers), and refs (the memories/sources drawn on, incl. "
             "{kind:'memory', text}). Ground every statement in agent_context, honest + anti-steering. "
@@ -271,9 +271,13 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
     cid = stable_id("council", key) if key else stable_id("council", prompt, utc_now_iso())
 
     def _nvote(v):
+        # A vote IS a stance (stance_scale.json — the ONE positivity vocabulary): `vote` stores the
+        # canonical term, `stance` the resolved {value,label}; an unresolvable token survives as
+        # stance.label_raw — never silently dropped or coerced without trace.
         v = dict(v) if isinstance(v, dict) else {"vote": str(v)}
-        if not v.get("vote"):
-            v["vote"] = v.get("stance") or v.get("label") or ""   # keep a displayable value
+        st = _artifacts.validate_stance(v.get("vote") or v.get("stance") or v.get("label"))
+        if st:
+            v["vote"], v["stance"] = st["label"], st
         return v
 
     votes = [_nvote(v) for v in (votes or [])]
@@ -325,7 +329,7 @@ def list_councils(store: Store | None = None) -> list[dict[str, Any]]:
     store = store or Store()
     return [{"id": c["id"], "prompt": c["prompt"], "created_at": c["created_at"],
              "personas": len(c.get("persona_ids", [])), "turns": len(_artifacts.council_statements(c)),
-             "votes": {v: sum(1 for x in c.get("votes", []) if x.get("vote") == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}}
+             "votes": _artifacts.vote_tally(c.get("votes", []))}
             for c in store.list_council_sessions()]
 
 

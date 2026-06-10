@@ -130,7 +130,7 @@ def test_every_vocabulary_label_key_is_defined_in_every_language():
 # enum (vote order, council mode, severity, artifact kind, …), NEVER by stored free text. Do not add to
 # this list for stored data: resolve a vocabulary `label_key` instead (parity-tested above).
 _WEB_DYN_PREFIX_ALLOWLIST = {
-    "vote_", "h2h_decisive_", "rt_sev_", "council_kicker_", "council_mode_",
+    "h2h_decisive_", "rt_sev_", "council_kicker_", "council_mode_",
     "artifact_kind_", "coverage_level_",
 }
 
