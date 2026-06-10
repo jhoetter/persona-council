@@ -360,6 +360,19 @@ CREATE TABLE IF NOT EXISTS hypotheses (
 );
 CREATE INDEX IF NOT EXISTS idx_hypotheses_project ON hypotheses(project_id);
 
+-- Decision records: ADR-style nodes — what was decided, on which evidence (based_on refs),
+-- rejecting what (rejected refs + why-not notes). Superseding links both directions
+-- (superseded_by on the old record, supersedes on the successor); details live in `data`.
+CREATE TABLE IF NOT EXISTS decision_records (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_decision_records_project ON decision_records(project_id);
+
 -- Usability sessions: the durable, replayable per-step session trace (one schema across the
 -- artifact/prototype/live fidelity rungs; supersedes prototype_sessions for new recordings).
 -- subject_key = subject.id or subject.url, so the funnel can aggregate sessions of one subject.

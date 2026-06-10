@@ -5,7 +5,23 @@ PDF / PPTX export is an MCP tool (export_synthesis) + the CLI, not a UI action."
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .._render import render_ref
 from .._report import render_report
+
+
+def _informed_decisions_html(synthesis_id: str, store) -> str:
+    """The reverse edge of a decision's based_on/rejected refs: the decisions THIS synthesis
+    informed, as chips deep-linking into the project's decisions section (ticket
+    decision-record-artifact). Empty when nothing cites the synthesis."""
+    informed = [d for d in store.list_decisions()
+                if any(r.get("kind") == "synthesis" and r.get("id") == synthesis_id
+                       for r in (d.get("based_on") or []) + (d.get("rejected") or []))]
+    if not informed:
+        return ""
+    chips = fragment(*(raw(render_ref({"kind": "decision", "id": d["id"]}, store))
+                       for d in informed))
+    return h("p", {"class_": "muted small turn-refs", "style": "margin:14px 0 0"},
+             t("dec_informed_h"), ": ", chips)
 
 
 def register_syntheses(app) -> None:
@@ -48,6 +64,7 @@ def register_syntheses(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
-        body = h("div", {"class_": "page"}, raw(render_report(syn, store)))
+        body = h("div", {"class_": "page"}, raw(render_report(syn, store)),
+                 raw(_informed_decisions_html(synthesis_id, store)))
         actions = raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}"))
         return _layout(short_title, body, store, crumbs=crumbs, active="syntheses", actions=actions)

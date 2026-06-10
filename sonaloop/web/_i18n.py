@@ -78,6 +78,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "hyp_status_refuted": "Widerlegt", "hyp_status_inconclusive": "Unentschieden",
         "hyp_status_dropped": "Verworfen",
         "hyp_dir_increase": "steigt", "hyp_dir_decrease": "fällt",
+        # decisions (what we decided, on which evidence, rejecting what)
+        "decisions_h": "Entscheidungen",
+        "dec_status_proposed": "Vorgeschlagen", "dec_status_adopted": "Beschlossen",
+        "dec_status_superseded": "Abgelöst",
+        "dec_rejected": "Verworfen", "dec_superseded_by": "Abgelöst durch",
+        "dec_supersedes": "Löst ab",
+        "dec_informed_h": "Floss in Entscheidungen ein",
         # generic / not-found
         "not_found": "Nicht gefunden",
         "no_personas": "Noch keine Personas.",
@@ -302,6 +309,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "hyp_status_refuted": "Refuted", "hyp_status_inconclusive": "Inconclusive",
         "hyp_status_dropped": "Dropped",
         "hyp_dir_increase": "increases", "hyp_dir_decrease": "decreases",
+        # decisions (what we decided, on which evidence, rejecting what)
+        "decisions_h": "Decisions",
+        "dec_status_proposed": "Proposed", "dec_status_adopted": "Adopted",
+        "dec_status_superseded": "Superseded",
+        "dec_rejected": "Rejected", "dec_superseded_by": "Superseded by",
+        "dec_supersedes": "Supersedes",
+        "dec_informed_h": "Informed decisions",
         # generic / not-found
         "not_found": "Not found",
         "no_personas": "No personas yet.",

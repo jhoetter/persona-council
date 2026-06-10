@@ -231,6 +231,11 @@ def ref_backlinks(project_id: str, store: Store | None = None) -> dict[str, list
             for r in (s.get("refs") or []):
                 if r.get("kind") in ("council", "synthesis", "note"):
                     add(r, c.get("prompt", ""), f'/councils/{c["id"]}#{s.get("id", "")}')
+    # decisions citing evidence (based_on) and naming alternatives (rejected) — so a synthesis
+    # learns it "informed decision <title>" (ticket decision-record-artifact)
+    for d in store.list_decisions(proj["id"]):
+        for r in (d.get("based_on") or []) + (d.get("rejected") or []):
+            add(r, d.get("title", ""), f'/decisions/{d["id"]}')
     return idx
 
 

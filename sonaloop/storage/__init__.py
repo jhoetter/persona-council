@@ -9,6 +9,7 @@ from ..config import DATA_DIR, database_path, utc_now_iso
 from ._base import StoreBase
 from ._chats import ChatsMixin
 from ._councils import CouncilsMixin
+from ._decisions import DecisionsMixin
 from ._hooks import HooksMixin
 from ._hypotheses import HypothesesMixin
 from ._memory import MemoryMixin
@@ -29,6 +30,7 @@ class Store(
     PrototypesMixin,
     SurveysMixin,
     HypothesesMixin,
+    DecisionsMixin,
     UsabilitySessionsMixin,
     ChatsMixin,
     HooksMixin,

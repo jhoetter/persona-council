@@ -317,7 +317,11 @@ def export_plan_md(project_id: str, store: Store | None = None) -> str:
     p = _plan.get_plan(project_id, store=store)
     if not p:
         raise PlanError("NO_PLAN", f"project {project_id} has no plan")
-    return _plan.render_plan_md(p)
+    md = _plan.render_plan_md(p)
+    # The decisions taken on this research (with citations) close the plan document — what the
+    # work led to, on which evidence, rejecting what (ticket decision-record-artifact).
+    dec = decisions_section_md(project_id, store=store)  # noqa: F821 (bound)
+    return md + ("\n" + dec if dec else "")
 
 
 # --- Prototypes + Playwright harness seam (spec §6/§7) -------------------------

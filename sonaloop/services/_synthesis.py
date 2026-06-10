@@ -521,6 +521,11 @@ def export_report(project_id: str, report_id: str | None = None, format: str = "
             lines += ["", "_" + ("Quellen" if de else "Sources") + ": " +
                       ", ".join(_ref_title(x) for x in sec["source_study_ids"]) + "_"]
         lines += [""]
+    # Decisions taken on this research close the report — what the work led to, on which
+    # evidence, rejecting what (ticket decision-record-artifact).
+    dec = decisions_section_md(project["id"], store=store, de=de)  # noqa: F821 (bound)
+    if dec:
+        lines += [dec.rstrip(), ""]
     return "\n".join(lines) + "\n"
 
 

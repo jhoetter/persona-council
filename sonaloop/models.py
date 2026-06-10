@@ -459,6 +459,34 @@ class Hypothesis:
 
 
 @dataclass
+class DecisionRecord:
+    """An ADR-style node that captures the moment a human ACTS on the research: "we decided X,
+    based on syntheses A and B, rejecting alternative C." Closes the research loop — months later
+    the graph can answer "why does the product look like this?".
+
+    based_on: Ref[] — the syntheses / findings / hypotheses the decision rests on;
+    record_decision REJECTS a decision without at least one resolvable based_on ref (decisions
+    must cite evidence, that is the point). rejected: Ref[] — the alternatives considered, each
+    may carry a why-not `note`; those refs must resolve too. Superseding is recorded in BOTH
+    directions: the old record is demoted to status=superseded and points forward via
+    `superseded_by`; the successor points back via `supersedes`."""
+    id: str
+    project_id: str
+    title: str
+    decision: str
+    status: str                  # proposed | adopted | superseded
+    based_on: list[Json]
+    rejected: list[Json]
+    superseded_by: str | None
+    supersedes: str | None
+    created_at: str
+    updated_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
 class Evidence:
     id: str
     persona_id: str

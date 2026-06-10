@@ -111,6 +111,68 @@ def _hypotheses_html(project_id: str, store) -> str:
              strip, fragment(*groups))
 
 
+# Decision lifecycle pill colors (proposed → adopted → superseded; labels are i18n keys below).
+_DEC_STATUS_COLORS = {"proposed": "var(--accent)", "adopted": "var(--green)",
+                      "superseded": "var(--muted)"}
+
+
+def _dec_status_label(status: str) -> str:
+    """Resolved per request so the labels follow the active UI language."""
+    labels = {"proposed": t("dec_status_proposed"), "adopted": t("dec_status_adopted"),
+              "superseded": t("dec_status_superseded")}
+    return labels.get(status, status)
+
+
+def _decision_row(d: dict, store, by_id: dict) -> str:
+    """One decision: status pill + title, the decision text, evidence chips (render_ref deep-links
+    into the source studies), rejected alternatives with their why-not notes, and the supersede
+    links in both directions."""
+    based = h("p", {"class_": "muted small turn-refs", "style": "margin:4px 0 0"},
+              t("rel_based_on"), ": ",
+              fragment(*(raw(render_ref(r, store)) for r in d.get("based_on") or [])))
+    rejected = fragment(*(
+        h("p", {"class_": "muted small turn-refs", "style": "margin:4px 0 0"},
+          t("dec_rejected"), ": ", raw(render_ref(r, store)),
+          (f' — {r["note"]}' if r.get("note") else ""))
+        for r in d.get("rejected") or []))
+    def _link(oid: str, label: str) -> str:
+        return h("p", {"class_": "muted small", "style": "margin:4px 0 0"}, label, ": ",
+                 h("a", {"href": f"#dec-{oid}"}, (by_id.get(oid) or {}).get("title", oid)))
+
+    links = []
+    if d.get("superseded_by"):
+        links.append(_link(d["superseded_by"], t("dec_superseded_by")))
+    if d.get("supersedes"):
+        links.append(_link(d["supersedes"], t("dec_supersedes")))
+    status = d.get("status", "proposed")
+    return h("div", {"class_": "hyp", "id": f'dec-{d["id"]}'},
+             h("div", {}, raw(_label(_dec_status_label(status),
+                                     _DEC_STATUS_COLORS.get(status, "var(--muted)"))),
+               " ", h("b", {}, d.get("title", ""))),
+             h("p", {"style": "margin:4px 0 0"}, d.get("decision", "")),
+             based, rejected, fragment(*links))
+
+
+def _decisions_html(project_id: str, store) -> str:
+    """The project's decision records, grouped adopted / proposed / superseded — what the research
+    led to, on which evidence, rejecting what (ticket decision-record-artifact)."""
+    decs = services.list_decisions(project_id, store=store)
+    if not decs:
+        return ""
+    by_id = {d["id"]: d for d in decs}
+    groups = []
+    for status in ("adopted", "proposed", "superseded"):
+        rows = [d for d in decs if d.get("status") == status]
+        if not rows:
+            continue
+        groups.append(h("div", {"class_": "oqp-h", "style": "margin-top:10px"},
+                        f'{_dec_status_label(status)} ({len(rows)})'))
+        groups += [_decision_row(d, store, by_id) for d in rows]
+    return h("div", {"class_": "outlinecard", "id": "decisions", "style": "margin-top:14px"},
+             h("h2", {"style": "margin:0 0 6px"}, f'{t("decisions_h")} ({len(decs)})'),
+             fragment(*groups))
+
+
 def register_projects(app) -> None:
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
@@ -324,7 +386,8 @@ def register_projects(app) -> None:
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
                    h("p", {"class_": "lead"}, proj.get("goal", "")), head_tools),
-                 main_view, raw(sessions_html), raw(_hypotheses_html(proj["id"], store)))
+                 main_view, raw(sessions_html), raw(_hypotheses_html(proj["id"], store)),
+                 raw(_decisions_html(proj["id"], store)))
         actions = fragment(top_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
@@ -342,6 +405,20 @@ def register_projects(app) -> None:
                                                      icon="projects"),
                                         store, active="projects"))
         return RedirectResponse(f'/projects/{hx["project_id"]}#hyp-{hx["id"]}')
+
+    # ---- A decision lives on its project page (the decisions list); the canonical Ref route
+    #      /decisions/{id} deep-links into that section (artifacts.ref_href). ----
+    @app.get("/decisions/{decision_id}")
+    def decision_detail(decision_id: str):
+        store = Store()
+        try:
+            dec = services.get_decision(decision_id, store=store)
+        except KeyError:
+            return HTMLResponse(_layout(t("not_found"),
+                                        _empty_state(t("decisions_h"), t("runtime_maybe_cleared"),
+                                                     icon="projects"),
+                                        store, active="projects"))
+        return RedirectResponse(f'/projects/{dec["project_id"]}#dec-{dec["id"]}')
 
     # ---- A report is a project-scope synthesis; its canonical URL is /syntheses/{id} (+ .pdf).
     #      /projects/{id}/meta is a convenience → the project's latest report. ----
