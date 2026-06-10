@@ -46,6 +46,29 @@ def register_council(mcp):
 
     # ================= Council =================
     @mcp.tool()
+    def suggest_stances() -> dict[str, Any]:
+        """The CANONICAL stance vocabulary — call this before authoring statement stances, votes, or
+        head-to-head/red-team reactions. Every stance is
+        {value -2..2, label?: support|conditional|neutral|skeptical|oppose}:
+        the five terms in scale order (+2 support … −2 oppose) with each
+        term's value, i18n label_key and accepted aliases (EN/DE legacy tokens). Unlike the other
+        suggest_* vocabularies this set is CLOSED: `label` is optional when `value` is given, a known
+        alias resolves to its term, and an unknown label buckets at neutral but is preserved as
+        `label_raw` — never invent stance words when these five fit. Derived live from the scale data
+        (suggestions/stance_scale.json); council votes use the same terms."""
+        t = time.perf_counter()
+        return _env("suggest_stances", services.suggest_stances(), t)
+
+    @mcp.tool()
+    def suggest_finding_kinds() -> dict[str, Any]:
+        """SUGGESTED Finding kinds (summary/key_problem/pain_solver/open_question/recommendation/
+        cluster/segment/shortlist/ranking/pain_point) for a `findings` item's `kind`, with the section
+        id + label each renders under. Recommendations only — an invented kind still renders with a
+        generic fallback."""
+        t = time.perf_counter()
+        return _env("suggest_finding_kinds", services.suggest_finding_kinds(), t)
+
+    @mcp.tool()
     def brief_council(project_id: str, prompt: str, persona_ids: list[str] | None = None, filters: dict[str, Any] | None = None,
                       count: int = 3, context: str | None = None, artifact_ids: list[str] | None = None) -> dict[str, Any]:
         """Gather a council. A council is scoped to a research project, so `project_id` is
@@ -73,7 +96,8 @@ def register_council(mcp):
         `proposal` (a concept reacted to) + stances; DECISION = `proposal` + `votes`.
 
         Author the voices as `statements` (the ONE voice primitive): one per persona utterance —
-        {persona_id, text, stance:{value -2..2}, about:{kind:'prompt', id:'q0'|'proposal'},
+        {persona_id, text, stance:{value -2..2, label?: support|conditional|neutral|skeptical|oppose}
+        (the closed scale — see suggest_stances), about:{kind:'prompt', id:'q0'|'proposal'},
         refs:[{kind,id,anchor,role}|{kind:'memory',text}]}. For a DISCOVERY council set each
         statement's about.id to the question it answers ('q0','q1',…) so the page renders a moderated
         Q→A transcript. `findings` is the optional analysis ({text, kind, score, refs}); `prompts` are
@@ -110,7 +134,8 @@ def register_council(mcp):
                             findings: list[dict[str, Any]] | None = None, key: str | None = None) -> dict[str, Any]:
         """Persist a host-authored HEAD-TO-HEAD (stored as a CouncilSession with a `head_to_head` block).
         Pass the labelled `options`, each persona's `preferences` ([{persona_id, choice (an option label
-        'A'|'B'|…), reason}]), the authored `statements` (one per persona+option, stance:{value -2..2},
+        'A'|'B'|…), reason}]), the authored `statements` (one per persona+option, stance:{value -2..2,
+        label?: support|conditional|neutral|skeptical|oppose} — see suggest_stances,
         about={kind:'prompt', id:'opt:A'|'opt:B'}), and the prose verdict in exec_summary/summary. The
         SERVER deterministically tallies overall preference + margin (how decisive) + segment-splits (who
         prefers what, by persona segment) — you author the qualitative synthesis. Returns the session incl.
@@ -151,7 +176,9 @@ def register_council(mcp):
         """Persist a host-authored RED-TEAM (stored as a CouncilSession with a `red_team` block). Pass the
         per-persona `objections` ([{persona_id, theme (a short blocker label), text (the objection in voice),
         severity 'low'|'medium'|'high'|'critical'}]) — the case AGAINST — plus the authored `statements`
-        (about={kind:'prompt', id:'red_team'}) and the prose verdict in exec_summary/summary. The SERVER
+        (about={kind:'prompt', id:'red_team'},
+        stance:{value -2..2, label?: support|conditional|neutral|skeptical|oppose} — see
+        suggest_stances) and the prose verdict in exec_summary/summary. The SERVER
         deterministically groups objections by theme into the structured case-against (how many personas
         raise each blocker + worst severity) — you author the qualitative synthesis. With stance='both', pass
         `endorsements` ([{persona_id, theme, text}]) to also store the case FOR side by side. Returns the

@@ -59,6 +59,8 @@ def test_expected_tools_registered():
         "run_prototype", "stop_prototype", "delete_prototype",
         "proto_open", "proto_act", "proto_read", "proto_close", "list_proto_sessions",
         "brief_prototype_session", "record_prototype_session",
+        # authoring vocabularies (the stance scale is the CLOSED set every stance resolves onto):
+        "suggest_stances", "suggest_finding_kinds",
     }
     missing = expected - names
     assert not missing, f"MCP tools missing: {sorted(missing)}"
@@ -142,6 +144,65 @@ def test_register_methodology_errors_carry_stable_code_over_mcp():
         asyncio.run(server.call_tool("register_methodology", {"spec": {
             "key": "double_diamond", "name": "Shadow", "description": "d", "when_to_use": "w",
             "steps": [{"id": "a", "name": "A"}, {"id": "b", "name": "B", "consumes": ["a"]}]}}))
+
+
+def test_suggest_stances_matches_scale_data():
+    """suggest_stances over MCP returns EXACTLY the scale's terms/values/aliases in +2→−2 order —
+    derived live from suggestions/stance_scale.json (drift-proof: edit the JSON, the tool follows)."""
+    import json
+    from sonaloop import artifacts
+    from sonaloop.config import suggestions_dir
+    env = _call(build_server(), "suggest_stances", {})
+    items = env["data"]["items"]
+    assert [(i["term"], i["value"]) for i in items] == \
+        [(r["term"], r["value"]) for r in artifacts.stance_terms()]
+    assert [i["value"] for i in items] == sorted((i["value"] for i in items), reverse=True)
+    raw = json.loads((suggestions_dir() / "stance_scale.json").read_text(encoding="utf-8"))
+    for it in items:                                   # every JSON alias surfaces under its term
+        expect = {a for a, t in raw["aliases"].items() if t == it["term"]}
+        assert expect.issubset(set(it["aliases"])), it["term"]
+        assert it["label_key"]                         # i18n key only — the engine stays web-free
+    # The note teaches the authoring contract (optional label, label_raw preservation).
+    note = env["data"]["note"]
+    assert "label_raw" in note and "|".join(i["term"] for i in items) in note
+
+
+def test_suggest_finding_kinds_matches_data():
+    """suggest_finding_kinds returns the finding_kinds.json vocabulary verbatim."""
+    import json
+    from sonaloop.config import suggestions_dir
+    raw = json.loads((suggestions_dir() / "finding_kinds.json").read_text(encoding="utf-8"))
+    env = _call(build_server(), "suggest_finding_kinds", {})
+    assert [i["tag"] for i in env["data"]["items"]] == [i["tag"] for i in raw["items"]]
+
+
+def test_stance_shape_always_names_the_canonical_terms():
+    """Docstring drift guard: wherever host-facing text states the stance SHAPE (`value -2..2`), it
+    must also name the label vocabulary — one consistent phrasing, derived from the scale data so a
+    JSON edit fails this test until every docstring/brief is updated. Hosts invented labels exactly
+    because the shape used to appear bare."""
+    import pathlib, re
+    from sonaloop import artifacts
+    vocab = "|".join(r["term"] for r in artifacts.stance_terms())
+    canonical = f"value -2..2, label?: {vocab}"
+    # Accepted continuations: the canonical vocabulary literal, or the source-level seam that splices
+    # it live from stance_terms() (suggestions.py builds the note from the data — it can't go stale).
+    bare = re.compile(r"value -2\.\.2(?!" + re.escape(f", label?: {vocab}")
+                      + r"|" + re.escape(', label?: " + ') + r")")
+    pkg = pathlib.Path(artifacts.__file__).parent
+    offenders = []
+    for f in (sorted(pkg.glob("*.py")) + sorted((pkg / "mcp_server").glob("*.py"))
+              + sorted((pkg / "services").glob("*.py")) + sorted((pkg / "llm_simulation").glob("*.py"))):
+        flat = " ".join(f.read_text(encoding="utf-8").split())   # docstrings wrap; compare flattened
+        if bare.search(flat):
+            offenders.append(str(f.relative_to(pkg.parent)))
+    assert not offenders, f"bare stance shape (without '{canonical}') in: {offenders}"
+    # And the live tool surface: any tool description stating the shape carries the vocabulary.
+    tools = asyncio.run(build_server().list_tools())
+    undocumented = [t.name for t in tools
+                    if "value -2..2" in " ".join((t.description or "").split())
+                    and canonical not in " ".join((t.description or "").split())]
+    assert not undocumented, f"tool docstrings missing the stance vocabulary: {undocumented}"
 
 
 def test_every_tool_documented():

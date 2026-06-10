@@ -38,6 +38,8 @@ _NEXT: dict[str, dict[str, Any]] = {
     "brief_synthesis": {"name": "record_synthesis", "reason": "persist the cross-council synthesis you authored"},
     "record_synthesis": {"name": "export_synthesis", "reason": "render the stakeholder report"},
     "brief_council": {"name": "record_council", "reason": "author the turns + synthesis, then persist the council"},
+    "suggest_stances": {"name": "record_council", "reason": "author every stance/vote with the canonical terms, then persist"},
+    "suggest_finding_kinds": {"name": "record_council", "reason": "author the findings with a suggested (or invented) kind, then persist (or record_synthesis — findings are the one analysis shape in both)"},
     "record_council": {"name": "brief_synthesis", "reason": "fold this council into a synthesis when you have several"},
     # --- jobs = the taxonomy's JOB layer: presets + the sharpen-the-question helper ---
     "list_job_presets": {"name": "get_job_preset", "reason": "read one Job's full recipe card before seeding from it"},
