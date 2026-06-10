@@ -49,6 +49,24 @@ def test_assess_project_complete_when_plan_done(store):
     assert a["complete"] is True and a["recommendation"] == "complete"
 
 
+def test_frame_intent_is_one_step_and_phase_ambitions_ride_the_act_lane(store):
+    """The seeded frame task asks for record_frame ONLY; the phase's build/ideation ambitions
+    (lenses, prototype ladder, dark horse) live in `phase_intent` and surface via next_action's
+    act lane — a frame instruction that read like a whole new project made a real run balk at
+    the phase boundary."""
+    pid = S.start_project("Deep", "hmw?", "double_diamond_deep", persona_ids=["p1"], store=store)["id"]
+    plan = S.get_plan(pid, store=store)
+    ideate = next(t for t in plan["tasks"] if t["id"] == "frame__ideate")
+    assert "record_frame" in ideate["intent"]
+    assert "DIVERSE IN KIND" not in ideate["intent"] and "dark-horse" not in ideate["intent"]
+    assert "DIVERSE IN KIND" in ideate["phase_intent"]          # the ambitions are kept, not lost
+    # once the frame is recorded, the act lane (the short verify's act guidance) carries them
+    S.record_frame(pid, "frame__discover", ["q?"], memory_refs=["m"], store=store)
+    n = S.next_action(pid, store=store)                          # verify__define, fan short → act guidance
+    assert n["bucket"] == "verify" and "phase_intent" in n["act"]
+    assert "DISTINCT ANGLES" in n["act"]["phase_intent"]         # discover's phase ambitions, in place
+
+
 def test_run_state_nudge_when_loop_is_ungoverned(store):
     """A multi-task plan with open work and NO active run must say so in-band (the stalled Codex
     run freestyled next_action and never saw 'you are not done'); the nudge disappears once
