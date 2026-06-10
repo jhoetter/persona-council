@@ -62,6 +62,9 @@ def test_expected_tools_registered():
         # usability sessions (the durable, replayable trace):
         "brief_usability_session", "record_usability_session", "get_usability_session",
         "list_usability_sessions", "suggest_friction_levels", "get_session_funnel",
+        # surveys (the outbound instrument: author → export → import real responses → evidence):
+        "brief_survey", "record_survey", "get_survey", "list_surveys", "export_survey",
+        "import_survey_responses", "survey_results", "attach_survey_evidence",
         # authoring vocabularies (the stance scale is the CLOSED set every stance resolves onto):
         "suggest_stances", "suggest_finding_kinds",
     }

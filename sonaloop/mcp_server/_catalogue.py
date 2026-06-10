@@ -15,6 +15,7 @@ _DOMAIN_LABELS = {
     "council": "Councils & syntheses",
     "prototypes": "Prototypes & proband sessions",
     "usability": "Usability sessions (replayable traces)",
+    "surveys": "Surveys (outbound instruments — real responses back)",
     "sections": "Sections, notes & organization",
     "research": "Research projects, graph & report",
     "jobs": "Jobs (presets + sharpen-the-question)",
@@ -23,8 +24,8 @@ _DOMAIN_LABELS = {
     "simulation": "Simulation & memory (days/months/recall/timeline)",
     "eval": "Evaluation & critics",
 }
-_ORDER = ["plan", "council", "prototypes", "usability", "sections", "research", "jobs", "methodology",
-          "personas", "simulation", "eval"]
+_ORDER = ["plan", "council", "prototypes", "usability", "surveys", "sections", "research", "jobs",
+          "methodology", "personas", "simulation", "eval"]
 
 
 def _deco_name(d: ast.expr) -> str:

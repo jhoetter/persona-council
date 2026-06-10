@@ -58,6 +58,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "sessions": "Sessions", "no_sessions": "keine Sessions",
         "grounded_yes": "grounded", "grounded_no": "unbestätigt",
         "open_in_new_tab": "In neuem Tab öffnen",
+        # surveys (the outbound instrument)
+        "surveys_h": "Umfragen",
+        "surveys_lead": "Versandfertige Instrumente — echte Antworten fließen als Evidenz zurück.",
+        "no_surveys": "Noch keine Umfragen.",
+        "n_questions": "{n} Fragen", "n_responses": "{n} Antworten",
+        "survey_status_draft": "Entwurf", "survey_status_open": "Offen", "survey_status_closed": "Geschlossen",
+        "survey_stance_mapped": "Stance-gemappt",
+        "survey_predicted": "Council-Prognose", "survey_actual": "Echte Antworten",
+        "no_survey_responses": "Noch keine echten Antworten importiert (import_survey_responses).",
         # generic / not-found
         "not_found": "Nicht gefunden",
         "no_personas": "Noch keine Personas.",
@@ -244,6 +253,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "sessions": "Sessions", "no_sessions": "no sessions",
         "grounded_yes": "grounded", "grounded_no": "unconfirmed",
         "open_in_new_tab": "Open in new tab",
+        # surveys (the outbound instrument)
+        "surveys_h": "Surveys",
+        "surveys_lead": "Sendable instruments — real responses flow back as evidence.",
+        "no_surveys": "No surveys yet.",
+        "n_questions": "{n} questions", "n_responses": "{n} responses",
+        "survey_status_draft": "Draft", "survey_status_open": "Open", "survey_status_closed": "Closed",
+        "survey_stance_mapped": "stance-mapped",
+        "survey_predicted": "Council prediction", "survey_actual": "Real answers",
+        "no_survey_responses": "No real responses imported yet (import_survey_responses).",
         # generic / not-found
         "not_found": "Not found",
         "no_personas": "No personas yet.",

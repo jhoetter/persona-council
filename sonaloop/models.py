@@ -387,6 +387,51 @@ class UsabilitySession:
 
 
 @dataclass
+class Survey:
+    """An outbound survey instrument — the first artifact that COLLECTS data instead of presenting
+    it. Authored from simulation findings (open questions, contested council stances) via
+    brief_survey → record_survey, exported as a sendable static HTML form (export_survey), and the
+    real responses flow back through import_survey_responses as calibration evidence.
+
+    questions: [{id, text, kind (single|multi|scale|text), options[], stance_mapped}] —
+    `stance_mapped` scale questions map their options onto suggestions/stance_scale.json so real
+    answers are directly comparable to persona stances (the predicted-vs-actual strip).
+    derived_from: Ref[] — the synthesis findings / open questions / council prompts this instrument
+    operationalizes (validated to resolve on record)."""
+    id: str
+    slug: str
+    project_id: str
+    title: str
+    intro: str
+    status: str                  # draft | open | closed
+    questions: list[Json]
+    derived_from: list[Json]
+    created_at: str
+    updated_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
+class SurveyResponse:
+    """One real human's answers to a Survey — its OWN table row, never embedded in the survey
+    document (response counts grow unbounded). `respondent_key` is an opaque token (no PII);
+    `answers` is [{question_id, value}] (value: option string, option list for multi, or free
+    text); `source` labels the import batch (e.g. 'html_form', a panel name)."""
+    id: str
+    survey_id: str
+    respondent_key: str
+    submitted_at: str
+    answers: list[Json]
+    source: str
+    created_at: str
+
+    def to_dict(self) -> Json:
+        return asdict(self)
+
+
+@dataclass
 class Evidence:
     id: str
     persona_id: str

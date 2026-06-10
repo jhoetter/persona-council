@@ -64,6 +64,12 @@ _NEXT: dict[str, dict[str, Any]] = {
     "proto_open": {"name": "proto_act", "reason": "act on the snapshot (click/type), or proto_read"},
     "brief_prototype_session": {"name": "proto_open", "reason": "drive the app as the persona, then record the session"},
     "record_prototype_session": {"name": "brief_council", "reason": "fold the grounded reaction into a test council"},
+    # --- surveys (the outbound instrument: author → send out → real responses back) ---
+    "brief_survey": {"name": "record_survey", "reason": "author the questions (+ derived_from refs), then persist the instrument"},
+    "record_survey": {"name": "export_survey", "reason": "render the sendable, self-contained HTML form"},
+    "export_survey": {"name": "import_survey_responses", "reason": "when the real responses come back, ingest the batch"},
+    "import_survey_responses": {"name": "survey_results", "reason": "aggregate per question — predicted-vs-actual for stance_mapped"},
+    "survey_results": {"name": "attach_survey_evidence", "reason": "loop the real responses back onto a persona as calibration evidence"},
     # --- usability sessions (the durable, replayable trace) ---
     "brief_usability_session": {"name": "record_usability_session", "reason": "author the per-step dual timeline, then persist the replayable trace"},
     "suggest_friction_levels": {"name": "record_usability_session", "reason": "author every step's friction with the canonical levels, then persist"},

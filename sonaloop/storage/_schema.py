@@ -316,6 +316,30 @@ CREATE TABLE IF NOT EXISTS prototype_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_protosess_proto ON prototype_sessions(prototype_id);
 
+-- Outbound surveys: the instrument document (questions + derived_from refs in `data`).
+CREATE TABLE IF NOT EXISTS surveys (
+  id TEXT PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  project_id TEXT,
+  status TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_surveys_project ON surveys(project_id);
+
+-- Survey responses: OWN table, never embedded in the survey document — response counts grow
+-- unbounded. One row per real respondent submission (answers live in `data`).
+CREATE TABLE IF NOT EXISTS survey_responses (
+  id TEXT PRIMARY KEY,
+  survey_id TEXT NOT NULL,
+  respondent_key TEXT NOT NULL,
+  submitted_at TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_survey_responses_survey ON survey_responses(survey_id);
+
 -- Usability sessions: the durable, replayable per-step session trace (one schema across the
 -- artifact/prototype/live fidelity rungs; supersedes prototype_sessions for new recordings).
 -- subject_key = subject.id or subject.url, so the funnel can aggregate sessions of one subject.

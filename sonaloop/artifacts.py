@@ -267,7 +267,8 @@ def _clean(d: dict) -> dict:
     return {k: v for k, v in d.items() if v not in (None, "", [], {})}
 
 
-_REF_ROUTES = {"council": "/councils/", "synthesis": "/syntheses/", "persona": "/personas/"}
+_REF_ROUTES = {"council": "/councils/", "synthesis": "/syntheses/", "persona": "/personas/",
+               "survey": "/surveys/"}
 
 
 def ref_href(r: dict) -> str | None:
@@ -353,7 +354,7 @@ def resolve_ref(r: dict, store: Any) -> dict[str, Any]:
         return out
     getter = {"council": "get_council_session", "synthesis": "get_synthesis",
               "prototype": "get_prototype", "persona": "get_persona",
-              "session": "get_usability_session"}.get(kind)
+              "session": "get_usability_session", "survey": "get_survey"}.get(kind)
     art = getattr(store, getter)(rid) if (getter and hasattr(store, getter)) else None
     if not art:
         return out
