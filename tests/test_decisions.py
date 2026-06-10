@@ -352,3 +352,22 @@ def test_export_flattens_multiline_host_text(store):
     assert not any(ln.startswith(("## Injected", "# another", "- **fake**"))
                    for ln in md.splitlines())
     assert "Honest title ## Injected heading" in md
+
+
+def test_project_head_chips_jump_to_hypotheses_and_decisions(store):
+    """The sections live below the outline — the header carries count chips (anchor jumps) so they
+    stay visible above the fold and can't be scrolled past unnoticed."""
+    from starlette.testclient import TestClient
+    from sonaloop import web
+    proj = _project(store)
+    council = _council(store, proj["id"])
+    _record(store, proj["id"], council=council, key="a", status="adopted")
+    _record(store, proj["id"], council=council, key="b")
+    client = TestClient(web.create_app())
+    html = client.get(f'/projects/{proj["id"]}?lang=en').text
+    assert 'href="#decisions"' in html and "2 · Decisions" in html
+    assert 'href="#hypotheses"' not in html              # no hypotheses → no chip
+    # ... and a project with neither shows no jump chips at all
+    other = _project(store, "Quiet study")
+    other_html = client.get(f'/projects/{other["id"]}?lang=en').text
+    assert 'href="#decisions"' not in other_html and 'href="#hypotheses"' not in other_html
