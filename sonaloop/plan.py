@@ -36,6 +36,7 @@ def _norm_task(raw: dict[str, Any]) -> dict[str, Any]:
         "id": raw.get("id"),
         "title": raw.get("title", raw.get("id") or ""),
         "intent": raw.get("intent", ""),
+        "phase_intent": raw.get("phase_intent", ""),  # the PHASE's ambitions (surfaced on the act lane)
         "plan_note": raw.get("plan_note", ""),
         "bucket": raw.get("bucket", ""),            # analyze | act | verify (free tag)
         "capability": raw.get("capability", ""),    # frame | explore | cluster | decide | … (free tag)
@@ -137,11 +138,19 @@ def seed_plan_from_methodology(project_id: str, goal: str, spec: dict[str, Any])
                 "requires": s["requires"], "loop_back": map_target(s.get("loop_back", "")),
                 "produces": [], "presentation": s.get("presentation") or {}})
         else:
+            # The frame task's intent describes ONLY the framing step — a modest record_frame. The
+            # phase's full ambitions (ideation lenses, prototype ladder, breadth) ride along as
+            # `phase_intent` and surface on the ACT lane via next_action; packing them into the
+            # frame instruction made the next step read like a whole new project at exactly the
+            # phase boundary where a host decides whether to continue (a real run balked there).
             tasks.append({
                 "id": fan_frame[sid], "title": f"Frame · {s['name']}", "bucket": "analyze",
                 "capability": "frame", "step": sid, "consumes": cons,
                 "intent": f"Frame the questions/angles for '{s['name']}' before acting — read persona "
-                          f"memory + prior evidence; do not conclude early. {s['intent']}",
+                          f"memory + prior evidence, then record_frame(questions, hypotheses, "
+                          f"memory_refs). Do not conclude early; the phase's build/ideation ambitions "
+                          f"surface on the act lane once this frame is recorded.",
+                "phase_intent": s["intent"],
                 "produces": [], "presentation": s.get("presentation") or {}})
     return new_plan(project_id, goal, spec["key"], tasks)
 
@@ -554,11 +563,15 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
         }
     elif b["bucket"] == "act":
         questions: list[str] = []
+        phase: list[str] = []
         for c in t["consumes"]:
             f = task(plan, c)
             if f and f.get("frame"):
                 questions += f["frame"].get("questions", [])
+            if f and f.get("phase_intent"):
+                phase.append(f["phase_intent"])
         out["act"] = {
+            "phase_intent": " ".join(phase),
             "framed_questions": questions[:6],
             "suggested_participants": _diverse_participants(store, persona_ids, k=6),
             "artifact_palette": _artifact_palette(),
@@ -588,12 +601,16 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
         # surface the consuming frames' questions + diverse participants so the host adds act tasks.
         if short:
             questions: list[str] = []
+            phase: list[str] = []
             for c in t["consumes"]:
                 f = task(plan, c)
                 if f and f.get("frame"):
                     questions += f["frame"].get("questions", [])
+                if f and f.get("phase_intent"):
+                    phase.append(f["phase_intent"])
             out["act"] = {
                 "for_frame": t["consumes"], "framed_questions": questions[:6],
+                "phase_intent": " ".join(phase),
                 "suggested_participants": _diverse_participants(store, persona_ids, k=6),
                 "guidance": ("This verify's fan is incomplete — do ACT work first: add an act task "
                              "per ANGLE consuming the frame, run real councils / build+test prototypes, "
