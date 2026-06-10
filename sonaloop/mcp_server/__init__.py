@@ -25,6 +25,7 @@ from ._tools_sections import register_sections
 from ._tools_hooks import register_hooks
 from ._tools_assets import register_assets
 from ._tools_substrate import register_substrate
+from ._tools_grounding import register_grounding
 
 
 def _load_tool_extensions(mcp) -> int:
@@ -74,6 +75,7 @@ def build_server():
     register_hooks(mcp)
     register_assets(mcp)
     register_substrate(mcp)
+    register_grounding(mcp)
     register_prompts(mcp)
     _load_tool_extensions(mcp)
 

@@ -131,6 +131,13 @@ Core MCP tools:
   `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
   `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
   `hooks-list`, `hook-test`, `hook-remove`.
+- Grounding in REAL material (docs/grounding.md): `ingest_corpus` (transcript/tickets/
+  reviews → deduped citable chunks) → `brief_grounding` (author a persona or patch FROM
+  the chunks, with provenance) → `record_grounding` (claim → chunk-id traceability;
+  emits `persona.grounded`). Sessions then carry the task-relevant chunks and cite them
+  as refs {kind:'evidence', id, quote}; `trace_evidence`/`search_corpus` resolve and
+  pull signal. CLI: `corpus-ingest`, `corpora-list`, `corpus-search`, `grounding-record`,
+  `evidence-trace`.
 - The queryable substrate (docs/substrate.md): versioned, paginated programmatic reads —
   `substrate_schema` (pin the contract) → `query_personas`/`query_projects`/`query_councils`/
   `query_syntheses` (filters: q, since, status; stable ordering) → `get_study_result` (the

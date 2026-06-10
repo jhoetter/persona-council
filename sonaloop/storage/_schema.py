@@ -71,6 +71,19 @@ CREATE TABLE IF NOT EXISTS evidence (
   data TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS corpora (
+  id TEXT PRIMARY KEY,
+  data TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS corpus_chunks (
+  id TEXT PRIMARY KEY,
+  corpus_id TEXT NOT NULL,
+  idx INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  data TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS persona_chats (
   id TEXT PRIMARY KEY,
   persona_id TEXT NOT NULL,

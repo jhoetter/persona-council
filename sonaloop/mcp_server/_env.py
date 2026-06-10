@@ -93,6 +93,10 @@ _NEXT: dict[str, dict[str, Any]] = {
     "substrate_schema": {"name": "query_projects", "reason": "pin the contract, then page through the projects"},
     "query_projects": {"name": "get_study_result", "reason": "pull one project's full structured result (the automation shape)"},
     "chat_with_persona": {"name": "record_chat_turn", "reason": "author the in-character reply, then persist the exchange"},
+    # --- grounding in real material (docs/grounding.md) ---
+    "ingest_corpus": {"name": "brief_grounding", "reason": "author a persona (or a patch) from the real chunks, with provenance"},
+    "brief_grounding": {"name": "record_grounding", "reason": "persist the provenance (claim -> chunk ids) you authored (record_persona first for a NEW persona)"},
+    "record_grounding": {"name": "prepare_persona_agent_context", "reason": "sessions now carry the grounded chunks — cite them as evidence refs"},
     "record_chat_turn": {"name": "chat_with_persona", "reason": "continue the conversation with full history (pass chat_id)"},
 }
 

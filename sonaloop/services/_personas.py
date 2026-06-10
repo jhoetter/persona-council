@@ -498,6 +498,9 @@ def prepare_persona_agent_context(
     recall_block = "\n".join(
         f"- [{h['obj_type']}] {h['when'] or ''}: {h['text']}" for h in recall_hits
     ) or "- (nichts spezifisch Relevantes gefunden)"
+    # Real-material grounding (docs/grounding.md): the task-relevant source chunks ride
+    # the context with their ids, so the persona's words cite REAL signal, not vibes.
+    grounded_block = grounding_context_block(persona, task, store)  # noqa: F821 (bound)
 
     agent_context = f"""# Persona Subagent Context
 
@@ -527,7 +530,10 @@ authoritative persona identity and simulation rules.
 
 ## Relevant Memory (recalled for this task — background, use only if it fits)
 {recall_block}
-
+{f'''
+## Grounded Source Material (REAL signal from this persona's corpora)
+{grounded_block}
+''' if grounded_block else ''}
 ## Task
 {task or 'No task supplied. Use this context for persona-grounded reasoning.'}
 
@@ -538,6 +544,7 @@ authoritative persona identity and simulation rules.
   genuinely calls for it — do not recite memories unprompted.
 - When uncertain, say what is inferred or synthetic.
 - Cite concrete calendar moments, tools, people, projects, and open loops when relevant.
+{"- Prefer the REAL signal in Grounded Source Material over synthetic detail and cite its chunk ids in refs." if grounded_block else ""}
 """
     return {
         "persona_id": persona["id"],

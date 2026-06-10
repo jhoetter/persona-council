@@ -49,6 +49,10 @@ LIFECYCLE_EVENTS: dict[str, dict[str, Any]] = {
         "description": "A real-world source (doc/url/note) was attached to a persona.",
         "payload": {"persona_id": "id", "evidence_id": "id", "source_type": "doc|url|user_note|…"},
     },
+    "persona.grounded": {
+        "description": "A persona was grounded in real source material (provenance recorded).",
+        "payload": {"persona_id": "id", "corpus_ids": ["corpus ids"], "claims": "new claim count"},
+    },
     "asset.attached": {
         "description": "A file/image/screenshot was attached to a project as evidence.",
         "payload": {"project_id": "id", "asset_id": "id", "kind": "image|screenshot|document|file",

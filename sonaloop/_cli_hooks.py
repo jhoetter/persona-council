@@ -13,7 +13,8 @@ from . import services
 
 COMMANDS = ("evidence-attach", "hooks-events", "hooks-list",
             "hook-register", "hook-remove", "hook-test",
-            "asset-attach", "asset-list", "asset-get", "asset-remove")
+            "asset-attach", "asset-list", "asset-get", "asset-remove",
+            "corpus-ingest", "corpora-list", "corpus-search", "grounding-record", "evidence-trace")
 
 
 def add_hook_parsers(sub) -> None:
@@ -50,6 +51,21 @@ def add_hook_parsers(sub) -> None:
     p.add_argument("project_id")
     p.add_argument("asset_id")
 
+    p = sub.add_parser("corpus-ingest", help="Ingest a real document (transcript/tickets/reviews) as citable chunks.")
+    p.add_argument("content_or_path")
+    p.add_argument("source_type")
+    p.add_argument("--title")
+    p.add_argument("--notes")
+    sub.add_parser("corpora-list")
+    p = sub.add_parser("corpus-search")
+    p.add_argument("query")
+    p.add_argument("--corpus", action="append", dest="corpora")
+    p.add_argument("--limit", type=int, default=12)
+    p = sub.add_parser("grounding-record", help="Persist authored grounding from a JSON file: {persona_id, corpus_ids, provenance, patch?, reason?}.")
+    p.add_argument("file")
+    p = sub.add_parser("evidence-trace", help="Resolve a cited chunk id back to its source + grounded claims.")
+    p.add_argument("chunk_id")
+
 
 def run_hook_command(args) -> Any:
     if args.command == "evidence-attach":
@@ -71,4 +87,16 @@ def run_hook_command(args) -> Any:
         return services.list_assets(args.project_id)
     if args.command == "asset-get":
         return services.get_asset(args.project_id, args.asset_id)
-    return services.remove_asset(args.project_id, args.asset_id)
+    if args.command == "asset-remove":
+        return services.remove_asset(args.project_id, args.asset_id)
+    if args.command == "corpus-ingest":
+        return services.ingest_corpus(args.content_or_path, args.source_type, args.title, args.notes)
+    if args.command == "corpora-list":
+        return services.list_corpora()
+    if args.command == "corpus-search":
+        return services.search_corpus(args.query, args.corpora, args.limit)
+    if args.command == "grounding-record":
+        import json
+        from pathlib import Path
+        return services.record_grounding(**json.loads(Path(args.file).read_text(encoding="utf-8")))
+    return services.trace_evidence(args.chunk_id)
