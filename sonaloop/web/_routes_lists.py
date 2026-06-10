@@ -34,7 +34,10 @@ def _first_steps_html() -> str:
     steps = (
         (True, t("fs_step_install_h"), fragment(t("fs_step_install_d"), " ",
                                                 h("code", {}, REGISTER_CLAUDE_CODE))),
-        (False, t("fs_step_project_h"), t("fs_step_project_d")),
+        # The create-project step links the REAL create form (web CRUD) as the no-agent path.
+        (False, t("fs_step_project_h"), fragment(t("fs_step_project_d"), " ",
+                                                 h("a", {"href": "/projects/new"},
+                                                   t("fs_step_project_link")))),
         (False, t("fs_step_council_h"), t("fs_step_council_d")),
     )
     rows = fragment(*(
@@ -71,8 +74,11 @@ def _projects_page() -> str:
         # Truly fresh database (no projects AND no personas): orient instead of an empty list.
         return _layout(t("first_steps_h"), _first_steps_html(), store,
                        crumbs=[(t("projects"), None)], active="projects")
+    new_btn = h("a", {"class_": "sl-btn sl-btn--primary", "href": "/projects/new"},
+                raw(_icon("plus")), " ", t("new_project"))
     return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
-                      empty_icon="projects", empty_msg=t("no_projects"), active="projects")
+                      empty_icon="projects", empty_msg=t("no_projects"), active="projects",
+                      actions=new_btn, empty_action=(t("new_project"), "/projects/new", "plus"))
 
 
 def _persona_row(p: dict, store: Store) -> str:

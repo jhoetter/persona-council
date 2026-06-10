@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .sessions import _sessions_section
+from .._forms import danger_zone, delete_button_form, edit_button
 from .._render import render_statements
 from ... import artifacts as _artifacts
 
@@ -35,7 +36,8 @@ def register_library(app) -> None:
             icon="squareGrid", sub=sec_sub, body=body,
             prop_rows=[("dot", t("type_h"), pr.get("short", sec.get("kind", ""))),
                        ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]))],
-            star=("section", sec["id"], sec["title"], f'/sections/{sec["id"]}'))
+            star=("section", sec["id"], sec["title"], f'/sections/{sec["id"]}'),
+            actions=edit_button(f'/sections/{sec["id"]}/edit'))
 
     @app.get("/notes/{note_id}", response_class=HTMLResponse)
     def note_view(note_id: str) -> str:
@@ -56,7 +58,8 @@ def register_library(app) -> None:
                        ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]))],
             rel_study_id=f"note:{note_id}", rel_proj_id=proj["id"],
             rail_sections=[("sec-content", klabel)],
-            star=("note", note_id, ntitle, f'/notes/{note_id}'))
+            star=("note", note_id, ntitle, f'/notes/{note_id}'),
+            actions=edit_button(f'/notes/{note_id}/edit'))
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:
@@ -102,7 +105,10 @@ def register_library(app) -> None:
             raw(replay_html),
             h("div", {"class_": "sec", "id": "sec-sessions", "style": "margin-top:22px"},
               h("h2", {}, f'{t("prototypes_h")} · {t("sessions")} ({len(sessions)})'),
-              h("div", {"style": "margin-top:8px"}, sessions_html)))
+              h("div", {"style": "margin-top:8px"}, sessions_html)),
+            # delete-only (no content editing): prototypes are recorded artifacts
+            raw(danger_zone(raw(delete_button_form(f'/prototypes/{slug}/delete',
+                                                   t("delete_prototype"))))))
         concept_in = []
         if proj:                                              # the concept that realises this prototype
             try:

@@ -220,9 +220,11 @@ def register_personas(app) -> None:
                  + [("caps", t("capabilities_h")),
                     ("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
                     ("bez", t("relationships")), ("sec-properties", t("properties"))])
+        from .._forms import edit_button   # metadata edit + delete; persona CREATE stays MCP-only
         return _layout(p["display_name"], _doc(main, rail=props) + _page_rail(prail), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
-                       actions=_star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}'))
+                       actions=fragment(raw(edit_button(f'/personas/{p["id"]}/edit')),
+                                        _star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}')))
 
     @app.get("/personas/{persona_id}/memory", response_class=HTMLResponse)
     def persona_memory(persona_id: str, as_of: str | None = Query(default=None), q: str | None = Query(default=None)) -> str:

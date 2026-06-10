@@ -81,6 +81,11 @@ def create_app():
             set_ui_language(lang)
         return response
 
+    # Write-path support (web CRUD): the double-submit CSRF cookie middleware. The
+    # form/validation helpers live in web/_forms.py; routes in web/pages/edit.py.
+    from ._forms import install_forms
+    install_forms(app)
+
     register_pages(app)
     register_lists(app)
     register_api(app)

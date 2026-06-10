@@ -36,6 +36,7 @@ def event_labels() -> dict[str, str]:
         "council.recorded": t("evt_council_recorded"),
         "synthesis.recorded": t("evt_synthesis_recorded"),
         "project.created": t("evt_project_created"),
+        "project.updated": t("evt_project_updated"),
         "run.finished": t("evt_run_finished"),
     }
 

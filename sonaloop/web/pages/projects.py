@@ -250,7 +250,16 @@ def register_projects(app) -> None:
                  raw(open_questions_section_html(graph["open_questions"])),
                  raw(assets_section_html(assets)),
                  raw(surveys_section_html(surveys)))
-        actions = fragment(top_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
+        # Write affordances (web CRUD): create a note/section in THIS project, edit the
+        # project's structural metadata (the edit page also hosts the typed-confirm delete).
+        from .._forms import edit_button
+        new_note_btn = h("a", {"class_": "sl-btn", "href": f'/projects/{proj["id"]}/notes/new'},
+                         raw(_icon("plus")), " ", t("new_note"))
+        new_sec_btn = h("a", {"class_": "sl-btn", "href": f'/projects/{proj["id"]}/sections/new'},
+                        raw(_icon("plus")), " ", t("new_section"))
+        actions = fragment(top_btn, new_note_btn, new_sec_btn,
+                           raw(edit_button(f'/projects/{proj["id"]}/edit')),
+                           raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
 

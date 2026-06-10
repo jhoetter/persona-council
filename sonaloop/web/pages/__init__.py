@@ -16,10 +16,12 @@ from .hypotheses import register_hypotheses
 from .decisions import register_decisions
 from .sessions import register_sessions
 from .activity import register_activity
+from .edit import register_edit
 from .._routes_lists import _projects_page  # noqa: F401  (re-export preserved)
 
 
 def register_pages(app) -> None:
+    register_edit(app)          # write routes FIRST: /projects/new must beat /projects/{id}
     register_projects(app)      # owns "/" (home = projects index)
     register_personas(app)
     register_councils(app)

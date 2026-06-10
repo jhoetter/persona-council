@@ -187,9 +187,13 @@ def register_councils(app) -> None:
         rt_block = (h("div", {"class_": "sec", "id": "red-team"}, h("h2", {}, t("rt_title")),
                       h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, t("rt_lead")),
                       raw(rt_html)) if is_rt else "")
+        from .._forms import danger_zone, delete_button_form
         body = fragment(
             summary_lead, raw(_study_lead(exec_html, vm["answer_label"])), h2h_block, rt_block, raw(sentiment),
-            h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices")), intro, raw(voices_html)))
+            h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices")), intro, raw(voices_html)),
+            # delete-only (no content editing): the statements are generated prose
+            raw(danger_zone(raw(delete_button_form(f'/councils/{session_id}/delete',
+                                                   t("delete_council"))))))
         prop_rows = [("councils", t("type_h"), t("council_mode_" + mode)), ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
             # value-bucketed via the scale (votes ARE stances; legacy tokens resolve through the aliases)

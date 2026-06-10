@@ -64,7 +64,11 @@ def register_syntheses(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
+        from .._forms import danger_zone, delete_button_form
         body = h("div", {"class_": "page"}, raw(render_report(syn, store)),
-                 raw(_informed_decisions_html(synthesis_id, store)))
+                 raw(_informed_decisions_html(synthesis_id, store)),
+                 # delete-only (no content editing): report prose is authored/generated
+                 raw(danger_zone(raw(delete_button_form(f'/syntheses/{synthesis_id}/delete',
+                                                        t("delete_synthesis"))))))
         actions = raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}"))
         return _layout(short_title, body, store, crumbs=crumbs, active="syntheses", actions=actions)

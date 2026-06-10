@@ -79,7 +79,8 @@ def detail_page(store, *, title: str, active: str, crumbs: list, body,
                 prop_rows: list | None = None,
                 rel_study_id: str | None = None, rel_proj_id: str | None = None,
                 rel_extra_in: list | None = None, rel_extra_out: list | None = None,
-                rail_sections: list | None = None, star: tuple | None = None) -> str:
+                rail_sections: list | None = None, star: tuple | None = None,
+                actions: str = "") -> str:
     """The ONE detail-page shell every artifact page extends — consistency by construction.
 
     Assembles: hero · content column (`body`) · Properties→Relations aside (always that order) · the
@@ -91,6 +92,7 @@ def detail_page(store, *, title: str, active: str, crumbs: list, body,
     - `prop_rows`: `[(icon, label, value), …]` for Properties (empty values are skipped).
     - `rel_study_id`/`rel_proj_id`/`rel_extra_*`: build the Relations panel from the project graph.
     - `star`: `(kind, ident, label, href)` for the topbar favourite.
+    - `actions`: extra topbar HTML (e.g. the Edit affordance) rendered before the star.
     """
     hero_html = hero if hero is not None else _hero(title, icon=icon, sub=sub, hid=hid)
     main = fragment(raw(hero_html), body)
@@ -103,5 +105,5 @@ def detail_page(store, *, title: str, active: str, crumbs: list, body,
     # the aside, not the scrolling column, so they must NOT appear as TOC ticks.
     rail = list(rail_sections or [])
     page = _doc(main, rail=raw(props) + raw(rel)) + _page_rail(rail)
-    actions = raw(_star(*star)) if star else ""
-    return _layout(title, page, store, crumbs=crumbs, active=active, actions=actions)
+    acts = fragment(raw(actions), raw(_star(*star)) if star else "")
+    return _layout(title, page, store, crumbs=crumbs, active=active, actions=acts)
