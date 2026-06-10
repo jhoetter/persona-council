@@ -6,7 +6,7 @@ from .. import services
 from ..storage import Store
 from ._i18n import t
 from ._components import (
-    _esc, _icon, _avatar, _label, _stance_color, _md, _srcchips, _prose, _rec_row_n,
+    _esc, _icon, _avatar, _label, _status_color, _md, _srcchips, _prose, _rec_row_n,
     _effort_impact, _star, _study_lead,
 )
 from ._render import render_findings, render_statement
@@ -167,20 +167,6 @@ def _area(points: list[tuple], w: int = 560, ht: int = 140) -> str:
         h("div", {"class_": "axis"}, h("span", {}, first), h("span", {}, last)))
 
 
-def _stance_bucket(s: str) -> tuple[str, str]:
-    """Classify a free-text stance into (label, color) for distribution charts."""
-    s = (s or "").lower()
-    if any(k in s for k in ["begeist", "positiv", "stark", "support", "befürwort"]):
-        return (t("stance_positive"), "var(--green)")
-    if any(k in s for k in ["skept", "ableh", "oppose", "negativ", "kaum", "gar nicht"]):
-        return (t("stance_skeptical"), "var(--red)")
-    if any(k in s for k in ["neutral", "abstain", "enthalt"]):
-        return (t("stance_neutral"), "var(--muted)")
-    if any(k in s for k in ["bedingt", "maybe", "teilweise", "passt", "tangiert", "hebel", "conditional"]):
-        return (t("stance_conditional"), "var(--amber)")
-    return (t("stance_other"), "var(--accent)")
-
-
 # --------------------- contextual analytics (council / synthesis) --------------------- #
 # Charts live ON the council and the synthesis, computed from that scope's sessions.
 def _vote_parts(sessions: list[dict]) -> tuple[Counter, list[tuple]]:
@@ -229,7 +215,7 @@ def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
         av = _avatar(p, 22) if p else ""
         _, parts = (None, [(cnt.get(k, 0), _VOTE_COLOR[k], _vote_label(k)) for k in _VOTE_ORDER])
         pct = round(score * 100)
-        col = _stance_color("positiv" if pct >= 33 else "skept" if pct < 0 else "bedingt")
+        col = _status_color("positiv" if pct >= 33 else "skept" if pct < 0 else "bedingt")
         rows.append(h("div", {"class_": "prow"},
                       h("a", {"class_": "pn", "href": f'/personas/{pid}'}, av, h("span", {}, name)),
                       _stacked(parts, thin=True),
@@ -238,15 +224,16 @@ def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
 
 
 def _stance_dist_html(sessions: list[dict]) -> str:
-    sb: Counter = Counter(); colors: dict = {}
+    # Bucketed by the canonical stance VALUE (the five scale buckets via artifacts.stance_meta) —
+    # stored label strings (legacy free labels, label_raw tokens) never classify a contribution.
+    sb: Counter = Counter()
     for s in sessions:
         for st in _A.council_statements(s):
             stv = st.get("stance")
             if not stv:
                 continue
-            lbl, col = _stance_bucket(stv.get("label", ""))
-            sb[lbl] += 1; colors[lbl] = col
-    rows = [(lbl, v, colors[lbl]) for lbl, v in sb.most_common()]
+            sb[int(stv.get("value") or 0)] += 1
+    rows = [(t(_A.stance_meta(v)["label_key"]), n, _A.stance_meta(v)["color"]) for v, n in sb.most_common()]
     return _hbars(rows) if rows else ""
 
 

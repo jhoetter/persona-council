@@ -56,13 +56,17 @@ def test_stance_display_labels_round_trip_via_aliases():
     # echoing the system's own EN/DE display labels (web/_i18n.py stance_*) must not corrupt the scale —
     # the labels are read from i18n so the aliases can never drift from what the UI shows
     from sonaloop.web._i18n import STRINGS
-    expect = {"stance_support": 2, "stance_positive": 2, "stance_conditional": 1, "stance_neutral": 0,
+    expect = {"stance_support": 2, "stance_conditional": 1, "stance_neutral": 0,
               "stance_skeptical": -1, "stance_oppose": -2}
     for lang in ("en", "de"):
         for key, val in expect.items():
             st = A.validate_stance(STRINGS[lang][key])
             assert st["value"] == val and "label_raw" not in st, (lang, key)
     assert A.resolve_stance("  skeptical / OPPOSED ")["value"] == -1   # case/whitespace-insensitive lookup
+    # retired bucket labels (the old stance_positive/stance_other UI keys) still resolve via aliases —
+    # a host echoing the historic display wording must not corrupt the scale
+    assert A.validate_stance("Positiv / begeistert")["value"] == 2
+    assert A.validate_stance("Positive / enthusiastic")["value"] == 2
 
 
 def test_stance_meta_is_data_driven():

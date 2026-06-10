@@ -5,11 +5,16 @@ These guard the invariants documented in sonaloop/web/_i18n.py:
   - every language defines the SAME key set with the SAME {placeholders}.
   - every t("literal") in the codebase resolves to a defined key.
   - no key is defined-but-unused (no legacy strings lingering).
+  - every vocabulary `label_key` (suggestions/*.json) is defined in every language —
+    keys resolved from data (t(meta["label_key"])) are invisible to the literal scan.
+  - the web layer never ASSEMBLES a t() key (prefix + value); the frozen prefix
+    allowlist below is the complete set of legitimate dynamic calls.
 
-The last two scan the source so the table cannot drift from its call sites.
+The scans read the source so the tables cannot drift from their call sites.
 """
 from __future__ import annotations
 
+import json
 import re
 import pathlib
 
@@ -45,6 +50,27 @@ def _scan_sources() -> tuple[set[str], set[str]]:
     return literals, prefixes
 
 
+def _vocab_label_keys() -> set[str]:
+    """Every `label_key` declared in the data-driven vocabularies (sonaloop/suggestions/*.json).
+    These reach t() as data (t(meta["label_key"])) — invisible to the literal scan above."""
+    keys: set[str] = set()
+
+    def walk(node):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k == "label_key" and isinstance(v, str):
+                    keys.add(v)
+                else:
+                    walk(v)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    for path in (_PKG / "suggestions").glob("*.json"):
+        walk(json.loads(path.read_text(encoding="utf-8")))
+    return keys
+
+
 def test_languages_match_supported():
     assert set(STRINGS) == set(SUPPORTED_LANGUAGES)
     assert FALLBACK_LANGUAGE in STRINGS
@@ -76,6 +102,7 @@ def test_every_used_literal_key_is_defined():
 
 def test_no_legacy_unused_keys():
     literals, prefixes = _scan_sources()
+    literals |= _vocab_label_keys()                          # resolved as data: t(meta["label_key"])
     defined = set(STRINGS[FALLBACK_LANGUAGE])
 
     def is_used(key: str) -> bool:
@@ -87,6 +114,38 @@ def test_no_legacy_unused_keys():
 
     unused = sorted(k for k in defined if not is_used(k))
     assert not unused, f"defined but never used via t() (legacy — remove): {unused}"
+
+
+def test_every_vocabulary_label_key_is_defined_in_every_language():
+    # label_keys reach t() as DATA (e.g. t(stance_meta(v)["label_key"])) — the literal scan can't see
+    # them, so a missing key would paint the raw key into the UI (the `stance_mixed` chip bug class).
+    keys = _vocab_label_keys()
+    assert keys, "no vocabulary label_keys found — did suggestions/*.json move?"
+    for lang, table in STRINGS.items():
+        missing = sorted(k for k in keys if k not in table)
+        assert not missing, f"vocabulary label_keys missing from {lang!r}: {missing}"
+
+
+# The complete set of legitimate dynamic t() prefixes in the web layer — each one is bounded by a code
+# enum (vote order, council mode, severity, artifact kind, …), NEVER by stored free text. Do not add to
+# this list for stored data: resolve a vocabulary `label_key` instead (parity-tested above).
+_WEB_DYN_PREFIX_ALLOWLIST = {
+    "vote_", "h2h_decisive_", "rt_sev_", "council_kicker_", "council_mode_",
+    "artifact_kind_", "coverage_level_",
+}
+
+
+def test_web_never_assembles_t_keys_outside_the_allowlist():
+    # Guards the `stance_mixed` bug class: t("prefix" + stored_value) builds keys the parity tests can't
+    # see, and t()'s raw-key fallback paints them into the UI. New dynamic keys must not appear.
+    offenders = []
+    for path in (_PKG / "web").rglob("*.py"):
+        src = path.read_text()
+        for prefix in set(_DYN_PREFIX.findall(src)) | set(_DYN_FPREFIX.findall(src)):
+            if prefix not in _WEB_DYN_PREFIX_ALLOWLIST:
+                offenders.append(f"{path.relative_to(_PKG)}: t(\"{prefix}\" + …)")
+    assert not offenders, ("assembled t() keys in the web layer — resolve a vocabulary label_key "
+                           "instead:\n  " + "\n  ".join(sorted(offenders)))
 
 
 def test_t_translates_formats_and_falls_back():

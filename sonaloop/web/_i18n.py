@@ -121,11 +121,10 @@ STRINGS: dict[str, dict[str, str]] = {
         # vote labels
         "vote_support": "Befürwortend", "vote_maybe": "Bedingt",
         "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
-        # stance buckets
-        "stance_positive": "Positiv / begeistert", "stance_skeptical": "Skeptisch / ablehnend",
-        "stance_support": "Befürwortend", "stance_oppose": "Ablehnend",
-        "stance_neutral": "Neutral", "stance_conditional": "Bedingt / teils",
-        "stance_other": "Sonstige",
+        # stance scale labels (the five canonical buckets — stance_scale.json label_keys)
+        "stance_support": "Befürwortend", "stance_conditional": "Bedingt / teils",
+        "stance_neutral": "Neutral", "stance_skeptical": "Skeptisch / ablehnend",
+        "stance_oppose": "Ablehnend",
         # sentiment section
         "sentiment_block": "Stimmungsbild",
         "sentiment_scope_chain": "die Council-Kette", "sentiment_scope_session": "diese Sitzung",
@@ -297,11 +296,10 @@ STRINGS: dict[str, dict[str, str]] = {
         # vote labels
         "vote_support": "For", "vote_maybe": "Conditional",
         "vote_abstain": "Abstain", "vote_oppose": "Against",
-        # stance buckets
-        "stance_positive": "Positive / enthusiastic", "stance_skeptical": "Skeptical / opposed",
-        "stance_support": "Support", "stance_oppose": "Oppose",
-        "stance_neutral": "Neutral", "stance_conditional": "Conditional / partly",
-        "stance_other": "Other",
+        # stance scale labels (the five canonical buckets — stance_scale.json label_keys)
+        "stance_support": "Support", "stance_conditional": "Conditional / partly",
+        "stance_neutral": "Neutral", "stance_skeptical": "Skeptical / opposed",
+        "stance_oppose": "Oppose",
         # sentiment section
         "sentiment_block": "Sentiment",
         "sentiment_scope_chain": "the council chain", "sentiment_scope_session": "this session",
