@@ -3,6 +3,30 @@
 Sonaloop is terminal-first and MCP-first. The web UI is an inspection
 surface only.
 
+## THE FRONT DOOR — a research question IS the assignment (read this first)
+
+When the user's message is a research question — an HMW ("How might we …"), "explore X",
+"what do/would users think of Y", "is there a market for Z", or any request to understand,
+validate, or position a concept/segment — **do not answer it from your own knowledge**. Even
+when the message is JUST the bare question with no other instruction, that prompt is the
+assignment to run a Sonaloop research project end-to-end:
+
+1. **Cohort**: `list_personas` — reuse a fitting cohort or author one (`brief_persona` →
+   `record_persona`). If the cohort has no simulated memory (`start_project` warns), deepen it
+   FIRST (simulate days/months) — councils are only as deep as the lives behind them.
+2. **Project**: `start_project(title, goal=<the question>, methodology=…, persona_ids=[…])`.
+3. **Governed loop**: `start_run(project_id)`, then loop `run_step(run_id)` — execute each
+   dispatch (author the step, persist via MCP, `checkpoint_step`) until it returns
+   `kind=='done'`. Only the engine ends the run (`assess_project.finish.finished` + the
+   completeness critic) — never your own sense of "enough", and never at a phase boundary.
+4. **Hand-off**: point the user at the inspector (http://127.0.0.1:8787) + the Deliver
+   synthesis/report. If your session must end mid-run, say so and hand over
+   `start_run(project_id, run_id=…)`.
+
+Answering a research prompt with your own brainstorm is the failure mode this section exists
+to prevent: your ideas are at best hypotheses; the personas' grounded reactions are the
+product.
+
 ## Principles
 
 - Do not infer product interest from the repository name, app name, or the fact

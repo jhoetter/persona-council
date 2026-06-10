@@ -20,6 +20,11 @@ design-research syntheses. It is MCP-first; the web inspector (sonaloop-web, htt
 is read-only.
 
 How to operate (every host):
+- THE FRONT DOOR: when the user asks a research question (an HMW, "explore X", "what would \
+users think of Y"), that question IS the assignment to run a research project end-to-end \
+(personas -> start_project -> the governed run loop below) — never answer it from your own \
+knowledge, even if it arrives as a bare one-line prompt. Your brainstorm is a hypothesis; the \
+personas' grounded reactions are the product.
 - YOU (the agent) author ALL text. Sonaloop never calls a text LLM. Each generative step follows one \
 contract: call a `brief_*` tool to gather context -> you author the JSON -> call the matching \
 `record_*`/`put_*` tool to validate + persist. OPENAI_API_KEY (optional) is used only for avatar \
