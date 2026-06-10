@@ -229,9 +229,21 @@ def register_projects(app) -> None:
         card_cls = "outlinecard" + ("" if n_rows > 8 else " ol-compact")
         main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
                      if is_graph else h("div", {"class_": card_cls}, raw(_outline_html(graph, sessions=sess_groups))))
+        # Hypotheses/decisions live BELOW the outline — surface their counts as header chips
+        # (anchor-jumps) so they stay visible above the fold and can't be scrolled past unnoticed.
+        n_hyp = len(services.list_hypotheses(proj["id"], store=store))
+        n_dec = len(services.list_decisions(proj["id"], store=store))
+        jump_chips = [c for c in (
+            (h("a", {"class_": "pill projjump", "href": "#hypotheses"},
+               raw(_icon("target")), f' {n_hyp} · {t("hypotheses_h")}') if n_hyp else None),
+            (h("a", {"class_": "pill projjump", "href": "#decisions"},
+               raw(_icon("flag")), f' {n_dec} · {t("decisions_h")}') if n_dec else None),
+        ) if c]
+        jump_html = (h("div", {"class_": "pills", "style": "margin-top:8px"}, *jump_chips)
+                     if jump_chips else "")
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
-                   h("p", {"class_": "lead"}, proj.get("goal", "")), head_tools),
+                   h("p", {"class_": "lead"}, proj.get("goal", "")), jump_html, head_tools),
                  main_view, raw(_hypotheses_html(proj["id"], store)),
                  raw(_decisions_html(proj["id"], store)))
         actions = fragment(top_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
