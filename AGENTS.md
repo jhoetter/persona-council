@@ -17,7 +17,7 @@ assignment to run a Sonaloop research project end-to-end:
 2. **Project**: `start_project(title, goal=<the question>, methodology=…, persona_ids=[…])`.
 3. **Governed loop**: `start_run(project_id)`, then loop `run_step(run_id)` — execute each
    dispatch (author the step, persist via MCP, `checkpoint_step`) until it returns
-   `kind=='done'`. Only the engine ends the run (`assess_project.finish.finished` + the
+   `kind=='done'` (CLI: `run-start` / `run-step` / `run-checkpoint`). Only the engine ends the run (`assess_project.finish.finished` + the
    completeness critic) — never your own sense of "enough", and never at a phase boundary.
 4. **Hand-off**: point the user at the inspector (http://127.0.0.1:8787) + the Deliver
    synthesis/report. If your session must end mid-run, say so and hand over
@@ -50,6 +50,12 @@ product.
   `set_language`/`set-language`). Override content language only if asked.
 
 ## CLI
+
+In this checkout, invoke the CLI as **`uv run sonaloop …`** (or `python -m sonaloop.cli …`);
+the bare `sonaloop` is only on PATH after an install. Don't probe — go straight to `uv run`.
+The MCP tools and the CLI are the same service surface; prefer MCP when your host has the
+`sonaloop` server connected, the CLI otherwise. The governed run loop exists on both:
+`run-start` / `run-step` / `run-checkpoint` / `run-critic-round` / `run-finish` / `run-journal`.
 
 ```bash
 # Persona creation is host-authored (no server-side text generation):

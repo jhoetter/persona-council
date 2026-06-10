@@ -355,6 +355,17 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("project-start")
     p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--methodology")
     p.add_argument("--persona", action="append", dest="personas"); p.add_argument("--description", default="")
+    # Governed run loop (ESV) — CLI parity with the MCP tools, so a CLI-driven host can follow
+    # the front door (AGENTS.md) instead of freestyling plan-next until it "feels answered".
+    p = sub.add_parser("run-start")
+    p.add_argument("project_id"); p.add_argument("--budget", type=int); p.add_argument("--run-id", dest="run_id")
+    p = sub.add_parser("run-step"); p.add_argument("run_id")
+    p = sub.add_parser("run-checkpoint")
+    p.add_argument("run_id"); p.add_argument("file")  # file = {task_id, bucket, key, evidence, summary}
+    p = sub.add_parser("run-critic-round")
+    p.add_argument("run_id"); p.add_argument("--passed", default="false"); p.add_argument("--missing", type=int, default=0)
+    p = sub.add_parser("run-finish"); p.add_argument("run_id"); p.add_argument("--status", default="finished")
+    p = sub.add_parser("run-journal"); p.add_argument("run_id")
     p = sub.add_parser("plan-get"); p.add_argument("project_id")
     p = sub.add_parser("plan-md"); p.add_argument("project_id")
     p = sub.add_parser("plan-brief"); p.add_argument("project_id")
@@ -681,6 +692,18 @@ def main(argv: list[str] | None = None) -> int:
                                             args.decided.lower() == "true", args.rationale, args.refs))
         elif args.command == "project-start":
             _print(services.start_project(args.title, args.goal, args.methodology, args.personas, args.description))
+        elif args.command == "run-start":
+            _print(services.start_run(args.project_id, args.budget, args.run_id))
+        elif args.command == "run-step":
+            _print(services.run_step(args.run_id))
+        elif args.command == "run-checkpoint":
+            _print(services.checkpoint_step(args.run_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
+        elif args.command == "run-critic-round":
+            _print(services.record_critic_round(args.run_id, args.passed.lower() == "true", args.missing))
+        elif args.command == "run-finish":
+            _print(services.finish_run(args.run_id, args.status))
+        elif args.command == "run-journal":
+            _print(services.run_journal(args.run_id))
         elif args.command == "plan-get":
             _print(services.get_plan(args.project_id))
         elif args.command == "plan-md":
