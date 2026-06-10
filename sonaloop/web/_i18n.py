@@ -126,6 +126,16 @@ STRINGS: dict[str, dict[str, str]] = {
         # friction levels (usability-session steps — friction_levels.json label_keys)
         "friction_none": "Reibungslos", "friction_hesitation": "Zögern",
         "friction_confusion": "Verwirrung", "friction_blocked": "Blockiert",
+        # capability profile (rungs + tech comfort — tech_comfort.json label_keys)
+        "capabilities_h": "Fähigkeiten",
+        "cap_rung_see": "Ansehen", "cap_rung_walk": "Durchklicken",
+        "cap_rung_drive": "Selbst bedienen", "cap_rung_login": "Login",
+        "cap_tech_comfort": "Tech-Komfort", "cap_devices": "Geräte",
+        "cap_accessibility": "Barrierefreiheit",
+        "cap_derived": "abgeleitet", "cap_authored": "deklariert", "cap_evidence": "evidenzbasiert",
+        "tech_comfort_novice": "Neuling", "tech_comfort_cautious": "Vorsichtig",
+        "tech_comfort_comfortable": "Sicher", "tech_comfort_fluent": "Versiert",
+        "tech_comfort_expert": "Experte",
         # sentiment section
         "sentiment_block": "Stimmungsbild",
         "sentiment_scope_chain": "die Council-Kette", "sentiment_scope_session": "diese Sitzung",
@@ -302,6 +312,16 @@ STRINGS: dict[str, dict[str, str]] = {
         # friction levels (usability-session steps — friction_levels.json label_keys)
         "friction_none": "None", "friction_hesitation": "Hesitation",
         "friction_confusion": "Confusion", "friction_blocked": "Blocked",
+        # capability profile (rungs + tech comfort — tech_comfort.json label_keys)
+        "capabilities_h": "Capabilities",
+        "cap_rung_see": "See", "cap_rung_walk": "Walk",
+        "cap_rung_drive": "Drive", "cap_rung_login": "Login",
+        "cap_tech_comfort": "Tech comfort", "cap_devices": "Devices",
+        "cap_accessibility": "Accessibility",
+        "cap_derived": "derived", "cap_authored": "authored", "cap_evidence": "evidence-backed",
+        "tech_comfort_novice": "Novice", "tech_comfort_cautious": "Cautious",
+        "tech_comfort_comfortable": "Comfortable", "tech_comfort_fluent": "Fluent",
+        "tech_comfort_expert": "Expert",
         # sentiment section
         "sentiment_block": "Sentiment",
         "sentiment_scope_chain": "the council chain", "sentiment_scope_session": "this session",

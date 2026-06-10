@@ -37,10 +37,39 @@ register_css(r"""
 .mem-pane{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);padding:12px 15px;margin:0 0 16px}
 .mem-pane-h{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin:0 0 8px}
 .mem-hit{padding:7px 0;font-size:var(--t-sm)}.mem-hit+.mem-hit{border-top:1px solid var(--line-2)}
+.cap-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
 """)
 
 
 _MEM_KINDS = [("project", "briefcase"), ("person", "contact"), ("topic", "tag"), ("tool", "settings")]
+
+
+def _cap_provenance_label(prov: str) -> str:                # explicit t() calls so the i18n usage scan sees them
+    return {"derived": t("cap_derived"), "authored": t("cap_authored"),
+            "evidence": t("cap_evidence")}.get(prov, prov)
+
+
+def _capabilities_html(caps: dict) -> str:
+    """The capability profile card: rung badges (which session fidelities are on/off), the
+    tech-comfort chip (data-driven label/color/hint via tech_comfort.json), devices, accessibility
+    notes — with the derived-vs-authored provenance marked."""
+    rungs = caps.get("rungs") or {}
+    rung_labels = [("see", t("cap_rung_see")), ("walk", t("cap_rung_walk")),
+                   ("drive", t("cap_rung_drive")), ("login", t("cap_rung_login"))]
+    badges = [raw(_label(lbl, "var(--green)" if rungs.get(k) else "var(--muted)",
+                         "soft" if rungs.get(k) else "outline", title=f"rungs.{k}"))
+              for k, lbl in rung_labels]
+    meta = _artifacts.tech_comfort_meta(caps.get("tech_comfort"))
+    chip = raw(_label(f'{t("cap_tech_comfort")}: {t(meta["label_key"])} · {caps.get("tech_comfort", "—")}/5',
+                      meta["color"], title=meta["hint"]))
+    prov = h("span", {"class_": "muted small"}, _cap_provenance_label(caps.get("provenance") or ""))
+    return h("div", {"class_": "sec", "id": "caps"},
+             h("h2", {}, t("capabilities_h")),
+             h("div", {"class_": "cap-row"}, fragment(*badges), chip, prov),
+             h("p", {"class_": "muted small"},
+               f'{t("cap_devices")}: {", ".join(caps.get("devices") or []) or "—"}'),
+             (h("p", {}, h("strong", {}, t("cap_accessibility")), ": ", caps["accessibility"])
+              if caps.get("accessibility") else None))
 
 
 def _mem_kind_label(kind: str) -> str:                      # explicit t() calls so the i18n usage scan sees them
@@ -166,6 +195,7 @@ def register_personas(app) -> None:
             # snapshot, before the analysis voices.
             cal_section,
             raw(voices),
+            _capabilities_html(p.get("capabilities") or {}),
             h("div", {"class_": "sec", "id": "ziele"}, h("h2", {}, t("goals")), raw(_pills(p["goals"]))),
             h("div", {"class_": "sec", "id": "pains"}, h("h2", {}, t("pain_points")),
               # structured observations (issue + opportunity + severity/evidence) → the SAME finding row
@@ -180,7 +210,7 @@ def register_personas(app) -> None:
             ("dot", t("size"), p["company_context"].get("size", "")),
             ("memory", t("memory"), h("a", {"class_": "sl-breadcrumb__link", "href": f'/personas/{p["id"]}/memory'}, raw(_icon("memory")), " ", t("open"))),
         ], aside=True)
-        prail = [("cal", t("calendar")),
+        prail = [("cal", t("calendar")), ("caps", t("capabilities_h")),
                  ("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
                  ("bez", t("relationships")), ("sec-properties", t("properties"))]
         return _layout(p["display_name"], _doc(main, rail=props) + _page_rail(prail), store,

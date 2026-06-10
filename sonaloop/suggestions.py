@@ -84,6 +84,29 @@ def suggest_friction_levels() -> dict[str, Any]:
                       "record — never invent friction words when these fit."}
 
 
+def suggest_tech_comfort() -> dict[str, Any]:
+    """The CANONICAL tech-comfort vocabulary for a persona's capability profile (suggestions/
+    tech_comfort.json) in comfort order (novice → expert). Like suggest_friction_levels this set is
+    CLOSED: each item is {term, value, label_key, hint, aliases}; an alias resolves onto its level,
+    and an UNKNOWN level is rejected on write instead of bucketed. The behavioral `hint` is what the
+    session briefs weave into the anti-steering context. Derived live via
+    artifacts.tech_comfort_terms() so the JSON is the single source — no level is hardcoded here."""
+    from . import artifacts
+    raw = _load("tech_comfort")
+    alias_of: dict[str, list[str]] = {}
+    for alias, term in (raw.get("aliases") or {}).items():
+        alias_of.setdefault(term, []).append(alias)
+    items = [{"term": r["term"], "value": r["value"], "label_key": r["label_key"], "hint": r["hint"],
+              "aliases": sorted(alias_of.get(r["term"], []), key=str.lower)}
+             for r in artifacts.tech_comfort_terms()]
+    return {"kind": "tech_comfort", "items": items,
+            "note": "Author capabilities.tech_comfort as a value 1-5 (or a term: "
+                    + "|".join(i["term"] for i in items)
+                    + "). A known alias resolves to its level; an unknown one is REJECTED on write — "
+                      "never invent comfort words when these fit. The `hint` is the behavioral "
+                      "contract a session simulated at this level must honor."}
+
+
 def suggest_blocker_themes() -> dict[str, Any]:
     """Suggested starter `theme` labels for red-team objections (suggestions/blocker_themes.json) — the
     common blocker families (price / trust / switching cost / …). Recommendations only: brief_red_team

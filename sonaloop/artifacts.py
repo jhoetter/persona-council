@@ -168,6 +168,70 @@ def friction_terms() -> list[dict[str, Any]]:
 
 
 @lru_cache(maxsize=1)
+def _tech_comfort_scale() -> dict[str, Any]:
+    """Load suggestions/tech_comfort.json → the same shape as _friction_scale(): {"by_term": {...},
+    "by_value": {...}, "aliases": {...}}. The ONE tech-comfort vocabulary for a persona's capability
+    profile (1 novice … 5 expert); each rec also carries the behavioral `hint` session briefs surface.
+    No comfort words hardcoded in engine/UI."""
+    p = suggestions_dir() / "tech_comfort.json"
+    by_term: dict[str, dict] = {}
+    by_value: dict[int, dict] = {}
+    aliases: dict[str, str] = {}
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        for it in data.get("items", []) or []:
+            term = it.get("tag")
+            if not term:
+                continue
+            pres = it.get("presentation") or {}
+            rec = {"value": int(it.get("value", 0)), "term": term,
+                   "label_key": it.get("label_key") or term, "hint": it.get("hint") or "",
+                   "color": pres.get("color") or "var(--muted)"}
+            by_term[term] = rec
+            by_value[rec["value"]] = rec
+            aliases[term] = term
+        for alias, term in (data.get("aliases") or {}).items():
+            aliases[str(alias).strip().lower()] = term     # lookup is case/whitespace-insensitive
+    return {"by_term": by_term, "by_value": by_value, "aliases": aliases}
+
+
+def resolve_tech_comfort(term: Any) -> dict[str, Any] | None:
+    """Map a tech-comfort token (or its numeric 1-5 value) onto a canonical level {value, label, hint};
+    aliases resolve case/whitespace-insensitively like resolve_friction. Like friction there is NO
+    silent fallback: an unknown token returns None so the writer can REJECT it — calling a novice
+    'comfortable' would corrupt every session simulated from the profile."""
+    if term in (None, "", []):
+        return None
+    sc = _tech_comfort_scale()
+    if isinstance(term, (int, float)) and not isinstance(term, bool):
+        rec = sc["by_value"].get(int(term))
+        return {"value": rec["value"], "label": rec["term"], "hint": rec["hint"]} if rec else None
+    canon = sc["aliases"].get(str(term).strip().lower())
+    rec = sc["by_term"].get(canon) if canon else None
+    return {"value": rec["value"], "label": rec["term"], "hint": rec["hint"]} if rec else None
+
+
+def tech_comfort_terms() -> list[dict[str, Any]]:
+    """The tech-comfort scale's items ({term,value,label_key,hint,color}) in comfort order
+    (novice → expert) — the ONE order/color/label/hint source for capability rendering (mirror of
+    friction_terms)."""
+    return sorted((dict(r) for r in _tech_comfort_scale()["by_term"].values()), key=lambda r: r["value"])
+
+
+def tech_comfort_meta(value: Any) -> dict[str, str]:
+    """Render fields for a tech-comfort value: an i18n `label_key` + `color` + the behavioral `hint`.
+    Data-driven via the scale; the web layer resolves label_key through t() (this module stays
+    web-free). Mirror of stance_meta."""
+    rec = _tech_comfort_scale()["by_value"].get(int(value)) if isinstance(value, (int, float)) else None
+    return {"label_key": (rec or {}).get("label_key", "tech_comfort_comfortable"),
+            "color": (rec or {}).get("color", "var(--muted)"),
+            "hint": (rec or {}).get("hint", "")}
+
+
+@lru_cache(maxsize=1)
 def _finding_kinds() -> dict[str, dict[str, Any]]:
     """Load suggestions/finding_kinds.json → {kind: {id, label_key}}. The section id/label vocabulary for
     Finding lists (the synthesis minimap anchors come from here)."""

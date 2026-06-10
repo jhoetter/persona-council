@@ -53,9 +53,23 @@ def register_personas(mcp):
 
     @mcp.tool()
     def update_persona(persona_id: str, patch: dict[str, Any], reason: str) -> dict[str, Any]:
-        """Apply a host-authored patch to a persona's profile; records a revision with the reason."""
+        """Apply a host-authored patch to a persona's profile; records a revision with the reason.
+        A `capabilities` patch ({rungs:{see,walk,drive,login}, tech_comfort: 1-5 (see
+        suggest_tech_comfort), devices, accessibility, provenance}) is validated (shape +
+        vocabulary) and merged into a full normalized profile, marked authored."""
         t = time.perf_counter()
         return _env("update_persona", services.update_persona(persona_id, patch, reason), t)
+
+    @mcp.tool()
+    def suggest_tech_comfort() -> dict[str, Any]:
+        """The CANONICAL tech-comfort vocabulary for a persona's capability profile
+        (capabilities.tech_comfort) — call this before declaring/patching one. Each item is
+        {term, value, label_key, hint, aliases} in comfort order (novice → expert); the behavioral
+        `hint` is the pace/voice contract session briefs weave into their anti-steering context.
+        Like the friction scale this set is CLOSED: a known alias resolves to its level, but an
+        unknown one is REJECTED on write. Derived live from suggestions/tech_comfort.json."""
+        t = time.perf_counter()
+        return _env("suggest_tech_comfort", services.suggest_tech_comfort(), t)
 
     @mcp.tool()
     def refresh_persona_from_source(persona_id: str) -> dict[str, Any]:

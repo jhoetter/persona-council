@@ -69,6 +69,7 @@ from ..llm_simulation import (
 # --- Submodules (order matters only for *binding*, not for import-time safety:
 #     no submodule references another submodule at import time) ----------------
 from . import _common
+from . import _capabilities
 from . import _personas
 from . import _simulation
 from . import _consolidation
@@ -88,7 +89,7 @@ from . import _usability_sessions
 from . import _sections
 
 _SUBMODULES = (
-    _common, _personas, _simulation, _consolidation, _memory, _evaluation,
+    _common, _capabilities, _personas, _simulation, _consolidation, _memory, _evaluation,
     _snapshots, _councils, _artifacts_service, _head_to_head, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _usability_sessions, _sections,
 )
 
@@ -133,7 +134,7 @@ _REGISTRY["record_judgment"] = _engines.record_judgment
 for _eng_name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
     "set_project_methodology",
-    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies", "suggest_stances", "suggest_finding_kinds", "suggest_friction_levels",
+    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies", "suggest_stances", "suggest_finding_kinds", "suggest_friction_levels", "suggest_tech_comfort",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser",
@@ -160,7 +161,7 @@ for _name, _value in _REGISTRY.items():
 for _name in (
     "MethodologyError", "list_methodologies", "get_methodology", "register_methodology",
     "set_project_methodology",
-    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies", "suggest_stances", "suggest_finding_kinds", "suggest_friction_levels",
+    "suggest_capabilities", "suggest_roles", "suggest_artifact_types", "suggest_section_kinds", "suggest_chart_kinds", "suggest_methodologies", "suggest_stances", "suggest_finding_kinds", "suggest_friction_levels", "suggest_tech_comfort",
     "PlanError", "new_plan", "validate_plan", "seed_plan_from_methodology", "ready_tasks",
     "is_complete", "render_plan_md",
     "_plan", "_proto", "_browser",

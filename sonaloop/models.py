@@ -31,6 +31,12 @@ class Persona:
     soul: Json | None
     created_at: str
     updated_at: str
+    # Capability profile — which session fidelities this persona can be simulated at + how it
+    # actually moves through an interface: {rungs:{see,walk,drive,login}, tech_comfort: 1-5
+    # (vocabulary: suggestions/tech_comfort.json), devices:[…], accessibility: str,
+    # provenance: authored|derived|evidence}. None = never declared: reads return a DERIVED
+    # profile (services/_personas.capability_profile) without rewriting the stored persona.
+    capabilities: Json | None = None
 
     def to_dict(self) -> Json:
         return asdict(self)
