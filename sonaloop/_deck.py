@@ -155,7 +155,7 @@ LAYOUTS: list = [
   {
     "key": "cover",
     "title": "Cover",
-    "desc": "The brand moment — study title, scope line and date. Every customer deck opens here."
+    "desc": "The brand moment — logo, study title, scope line and date, with an optional painterly canvas band on the right. Every customer deck opens here."
   },
   {
     "key": "agenda",
@@ -166,6 +166,11 @@ LAYOUTS: list = [
     "key": "section",
     "title": "Section divider",
     "desc": "A breathing-room slide between chapters: oversized numeral, chapter title, one-line framing."
+  },
+  {
+    "key": "canvas-section",
+    "title": "Canvas section",
+    "desc": "The cinematic divider: a full-bleed brand canvas with the chapter card floating bottom-left — section art instead of whitespace."
   },
   {
     "key": "summary",
@@ -201,6 +206,11 @@ LAYOUTS: list = [
     "key": "stats",
     "title": "Stats",
     "desc": "A KPI row — the study (or a finding) in four big numbers with quiet sublines."
+  },
+  {
+    "key": "pillars",
+    "title": "Pillars",
+    "desc": "Three or four capability columns, each led by a hi-fi icon chip — the “how this study worked” slide, and the natural home of the icon library in a deck."
   },
   {
     "key": "chart",
@@ -240,6 +250,8 @@ DECK_TITLE: str = "Healthy eating without effort"
 SAMPLE_SLIDES: list = [
   {
     "kind": "cover",
+    "logo": True,
+    "canvas": "dawn",
     "eyebrow": "Research Report",
     "title": "Healthy eating without effort",
     "subtitle": "What keeps busy people from eating well — and what would actually change it",
@@ -263,6 +275,13 @@ SAMPLE_SLIDES: list = [
     "num": "02",
     "title": "Decision fatigue, not knowledge",
     "subtitle": "Why the 6 pm question defeats every meal plan the panel has tried"
+  },
+  {
+    "kind": "canvas-section",
+    "canvas": "meadow",
+    "num": "04",
+    "title": "Three product directions",
+    "subtitle": "What the panel would actually adopt — ranked by leverage"
   },
   {
     "kind": "summary",
@@ -400,6 +419,32 @@ SAMPLE_SLIDES: list = [
     ]
   },
   {
+    "kind": "pillars",
+    "heading": "How this study worked",
+    "items": [
+      {
+        "icon": "personas",
+        "title": "Grounded personas",
+        "text": "Four panel members with durable identities, memories and provenance — not improvised characters."
+      },
+      {
+        "icon": "calendar",
+        "title": "Simulated days",
+        "text": "124 lived evenings: commutes, fridge stares, takeaway temptations — friction observed, not asked about."
+      },
+      {
+        "icon": "councils",
+        "title": "Structured councils",
+        "text": "Six moderated debates with votes on the record, including two red-team rounds against our own thesis."
+      },
+      {
+        "icon": "syntheses",
+        "title": "Inspectable evidence",
+        "text": "Every claim in this deck links back to a session you can open and read end-to-end."
+      }
+    ]
+  },
+  {
     "kind": "chart",
     "num": "02",
     "heading": "Weeknight cooking collapses after Tuesday",
@@ -493,6 +538,7 @@ SAMPLE_SLIDES: list = [
   },
   {
     "kind": "closing",
+    "logo": True,
     "title": "Thank you",
     "text": "Built with the Sonaloop research engine: grounded personas, simulated days, structured councils — every statement in this deck traces back to an inspectable session.",
     "meta": "Full report, persona sessions and evidence: Sonaloop workspace · Healthy eating without effort",

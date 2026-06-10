@@ -46,6 +46,7 @@ Chart shapes (one per design-system chart `of`):
 """
 from __future__ import annotations
 
+import base64
 import io
 from typing import Any
 
@@ -304,6 +305,42 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
     def _chart(slide, ch, x, y, cx, cy):
         _pc.draw(_ctx, slide, ch, x, y, cx, cy)
 
+    # ── brand assets — vendored _deck_assets (icons/logos rasterized + canvases recompressed
+    # at design time by sonaloop-design/scripts/gen-deck.mjs; PPTX can't embed SVG). Unknown
+    # asset names degrade to the unbranded layout. ─────────────────────────────────────
+    from . import _deck_assets as _da
+
+    def _pic(slide, b64, l, t, w, h):
+        pic = slide.shapes.add_picture(io.BytesIO(base64.b64decode(b64)),
+                                       Inches(l), Inches(t), Inches(w), Inches(h))
+        _noshadow(pic)
+        return pic
+
+    def _pic_cover(slide, b64, l, t, w, h):
+        """Aspect-preserving fill (CSS `background: cover`): crop the source to the box ratio."""
+        pic = _pic(slide, b64, l, t, w, h)
+        try:
+            iw, ih = pic.image.size
+            sa, ta = iw / ih, w / h
+            if sa > ta:
+                pic.crop_left = pic.crop_right = (1 - ta / sa) / 2
+            elif sa < ta:
+                pic.crop_top = pic.crop_bottom = (1 - sa / ta) / 2
+        except Exception:
+            pass
+        return pic
+
+    def _logo_row(slide, x, y, mark=0.42):
+        """The brand moment: mark + wordmark ("sona" ink · "loop" muted)."""
+        b64 = _da.LOGOS.get("sonaloop")
+        if b64:
+            _pic(slide, b64, x, y + 0.04, mark, mark)
+        tf = _box(slide, Inches(x + mark + 0.14), Inches(y), Inches(2.6), Inches(mark + 0.08))
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        p = tf.paragraphs[0]
+        _run(p, "sona", size=16, bold=True)
+        _run(p, "loop", size=16, bold=True, color=_MUTED)
+
     # ── master-template painters — geometry mirrors sonaloop-design site/deck.preview.mjs
     # painter-for-painter (single source: deck.data.mjs / vendored _deck.py), so the docs
     # previews at #/deck and the exported deck look the same. ──────────────────────────
@@ -345,8 +382,14 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
 
     def _cover_slide(s):
         slide = prs.slides.add_slide(blank); _bg(slide)
+        canvas = _da.CANVASES.get(s.get("canvas") or "")
+        text_w = W.inches - (4.2 + 1.3 if canvas else 1.8)
+        if canvas:
+            _pic_cover(slide, canvas, W.inches - 4.2, 0, 4.2, H.inches)
+        if s.get("logo"):
+            _logo_row(slide, 0.9, 0.55)
         _rule(slide, 0.92, 2.0, 1.0)
-        tf = _box(slide, Inches(0.9), Inches(2.15), W - Inches(1.8), Inches(3.4))
+        tf = _box(slide, Inches(0.9), Inches(2.15), Inches(text_w), Inches(3.4))
         _mono_run(_run(tf.paragraphs[0], (s.get("eyebrow", "") or "").upper(),
                        size=_TS["eyebrow"], bold=True, color=_ACCENT))
         p1 = tf.add_paragraph(); p1.space_before = Pt(10)
@@ -355,10 +398,10 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             p2 = tf.add_paragraph(); p2.space_before = Pt(12)
             _run(p2, s["subtitle"], size=16, color=_MUTED)
         if s.get("meta"):
-            mt = _box(slide, Inches(0.9), H - Inches(1.0), W - Inches(4.4), Inches(0.4))
+            mt = _box(slide, Inches(0.9), H - Inches(1.0), Inches(text_w - 2.6), Inches(0.4))
             _mono_run(_run(mt.paragraphs[0], s["meta"], size=11, color=_FAINT))
         if s.get("date"):
-            dt = _box(slide, W - Inches(3.4), H - Inches(1.0), Inches(2.5), Inches(0.4))
+            dt = _box(slide, Inches(0.9 + text_w - 2.5), H - Inches(1.0), Inches(2.5), Inches(0.4))
             pd = dt.paragraphs[0]; pd.alignment = PP_ALIGN.RIGHT
             _run(pd, s["date"], size=11, color=_MUTED)
 
@@ -384,6 +427,43 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         if s.get("subtitle"):
             p2 = tf.add_paragraph(); p2.space_before = Pt(10)
             _run(p2, s["subtitle"], size=_TS["subtitle"], color=_MUTED)
+        _footer(slide)
+
+    def _canvas_section_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        canvas = _da.CANVASES.get(s.get("canvas") or "")
+        if canvas:
+            _pic_cover(slide, canvas, 0, 0, W.inches, H.inches)
+        y0 = H.inches - 2.65
+        _rrect(slide, 0.9, y0, 6.4, 1.75, _PANEL, radius=0.09)
+        if s.get("num"):
+            nt = _text(slide, 1.24, y0 + 0.22, 5.7, 0.28, s["num"], size=13, bold=True,
+                       color=_ACCENT, anchor=MSO_ANCHOR.TOP)
+            _mono_run(nt.text_frame.paragraphs[0].runs[0])
+        _text(slide, 1.24, y0 + 0.52, 5.7, 0.55, s.get("title", ""), size=_TS["title"],
+              bold=True, anchor=MSO_ANCHOR.TOP)
+        if s.get("subtitle"):
+            _text(slide, 1.24, y0 + 1.12, 5.7, 0.5, s["subtitle"], size=12, color=_MUTED,
+                  anchor=MSO_ANCHOR.TOP)
+
+    def _pillars_slide(s):
+        slide = prs.slides.add_slide(blank); _bg(slide)
+        _heading_band(slide, s)
+        items = s.get("items") or []
+        n = max(len(items), 1)
+        gap = 0.3
+        cw = (W.inches - 1.4 - gap * (n - 1)) / n
+        cy = 2.0
+        for i, it in enumerate(items):
+            x = 0.7 + i * (cw + gap)
+            _rrect(slide, x, cy, 0.72, 0.72, _ACCENT_WEAK, radius=0.19)
+            icon = _da.ICONS.get(it.get("icon") or "", {}).get("accent")
+            if icon:
+                _pic(slide, icon, x + 0.13, cy + 0.13, 0.46, 0.46)
+            _text(slide, x, cy + 0.9, cw, 0.4, it.get("title", ""), size=14, bold=True,
+                  anchor=MSO_ANCHOR.TOP)
+            _text(slide, x, cy + 1.32, cw, H.inches - cy - 2.3, it.get("text", ""), size=11.5,
+                  color=_MUTED, anchor=MSO_ANCHOR.TOP)
         _footer(slide)
 
     def _summary_slide(s):
@@ -532,6 +612,8 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
 
     def _closing_slide(s):
         slide = prs.slides.add_slide(blank); _bg(slide)
+        if s.get("logo"):
+            _logo_row(slide, 0.9, 1.15)
         _rule(slide, 0.92, 2.0, 1.0)
         tf = _box(slide, Inches(0.9), Inches(2.2), Inches(8.6), Inches(3.6))
         _run(tf.paragraphs[0], s.get("title", ""), size=32, bold=True)
@@ -546,7 +628,8 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             _mono_run(_run(mt.paragraphs[0], s["meta"], size=10, color=_FAINT))
 
     painters = {"title": _title_slide, "cover": _cover_slide, "agenda": _agenda_slide,
-                "section": _section_slide, "summary": _summary_slide,
+                "section": _section_slide, "canvas-section": _canvas_section_slide,
+                "pillars": _pillars_slide, "summary": _summary_slide,
                 "insight": _insight_slide, "recommendation": _insight_slide, "risk": _insight_slide,
                 "quote": _quote_slide, "voices": _voices_slide, "stats": _stats_slide,
                 "chart": _chart_slide, "comparison": _comparison_slide, "timeline": _timeline_slide,

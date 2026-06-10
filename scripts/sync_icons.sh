@@ -110,3 +110,14 @@ Vendored so the PyPI package has no local-path dependency."""'
 else
   echo "warn: deck module not found at $dsrc (run 'node scripts/gen-deck.mjs' in ../sonaloop-design)" >&2
 fi
+
+# Deck brand assets (rasterized icons/logos/canvases as base64), generated alongside deck.py.
+# Copied verbatim — its generated docstring already carries the vendoring note.
+asrc="$here/../sonaloop-design/py/sonaloop_icons/deck_assets.py"
+adst="$here/sonaloop/_deck_assets.py"
+if [[ -f "$asrc" ]]; then
+  cp "$asrc" "$adst"
+  echo "synced $asrc -> $adst ($(wc -c < "$adst") bytes)"
+else
+  echo "warn: deck assets module not found at $asrc (run 'node scripts/gen-deck.mjs' in ../sonaloop-design)" >&2
+fi

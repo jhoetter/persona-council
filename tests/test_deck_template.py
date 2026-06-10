@@ -16,7 +16,7 @@ def _slide_text(slide) -> str:
 def test_sample_slides_cover_every_layout():
     """The placeholder deck demonstrates the FULL taxonomy — one sample per layout, in deck order."""
     assert [s["kind"] for s in _deck.SAMPLE_SLIDES] == [l["key"] for l in _deck.LAYOUTS]
-    assert len(_deck.LAYOUTS) >= 14  # cover … closing + content/image fallbacks
+    assert len(_deck.LAYOUTS) >= 18  # cover … closing + brand layouts + content/image fallbacks
 
 
 def test_master_template_renders_one_slide_per_sample():
@@ -49,6 +49,40 @@ def test_key_sample_copy_lands_on_the_right_slides():
     assert "Mehmet" in by_kind["quote"]
     assert "SUPPORT" in by_kind["voices"]                   # sentiment chip
     assert "124" in by_kind["stats"]
+
+
+def test_brand_assets_land_as_pictures():
+    """Cover (logo + canvas band), canvas-section (full-bleed art), pillars (icon chips) and
+    closing (logo) embed the vendored _deck_assets rasters as real PICTURE shapes."""
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    data = _pptx.render(_deck.SAMPLE_SLIDES, title=_deck.DECK_TITLE)
+    prs = Presentation(io.BytesIO(data))
+    pics = {spec["kind"]: sum(1 for sh in slide.shapes if sh.shape_type == MSO_SHAPE_TYPE.PICTURE)
+            for spec, slide in zip(_deck.SAMPLE_SLIDES, prs.slides)}
+    assert pics["cover"] == 2          # logo mark + canvas band
+    assert pics["canvas-section"] == 1  # full-bleed canvas
+    n_pillars = len(next(s for s in _deck.SAMPLE_SLIDES if s["kind"] == "pillars")["items"])
+    assert pics["pillars"] == n_pillars
+    assert pics["closing"] == 1        # logo mark
+
+
+def test_brand_slides_carry_their_copy():
+    data = _pptx.render(_deck.SAMPLE_SLIDES, title=_deck.DECK_TITLE)
+    prs = Presentation(io.BytesIO(data))
+    by_kind = {spec["kind"]: _slide_text(slide)
+               for spec, slide in zip(_deck.SAMPLE_SLIDES, prs.slides)}
+    assert "sona" in by_kind["cover"] and "loop" in by_kind["cover"]  # wordmark
+    assert "Three product directions" in by_kind["canvas-section"]
+    assert "Grounded personas" in by_kind["pillars"]
+
+
+def test_unknown_brand_assets_degrade_silently():
+    """A canvas/icon name outside the curated set must not crash the renderer."""
+    slides = [{"kind": "cover", "title": "T", "logo": True, "canvas": "nope"},
+              {"kind": "canvas-section", "title": "S", "canvas": "nope"},
+              {"kind": "pillars", "heading": "H", "items": [{"icon": "nope", "title": "x"}]}]
+    prs = Presentation(io.BytesIO(_pptx.render(slides)))
+    assert len(prs.slides) == 3
 
 
 def test_palette_and_tones_come_from_the_design_system():
