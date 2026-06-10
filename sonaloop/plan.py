@@ -561,6 +561,17 @@ def next_action(project_id: str, store: Store | None = None) -> dict[str, Any]:
             "open_questions": oqs[:8], "persona_pool": persona_ids,
             "guidance": "record_frame: >=1 research question grounded in CITED persona memory / prior evidence.",
         }
+        # cohort-depth pre-flight: while the cohort has ~no memory, every frame repeats the warning
+        # ("grounded in persona memory" cannot bind to empty lives) — it disappears once depth exists.
+        try:
+            if persona_ids:
+                m = store.count_memory_for_personas(persona_ids)
+                if (m["facts"] + m["events"]) / max(1, len(persona_ids)) < 1:
+                    out["grounding"]["cohort_warning"] = (
+                        "cohort memory is ~empty — councils will be ungrounded; deepen with "
+                        "simulate-cohort (or ground personas from real material) before acting")
+        except Exception:
+            pass
     elif b["bucket"] == "act":
         questions: list[str] = []
         phase: list[str] = []

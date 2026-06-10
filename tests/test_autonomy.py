@@ -49,6 +49,29 @@ def test_assess_project_complete_when_plan_done(store):
     assert a["complete"] is True and a["recommendation"] == "complete"
 
 
+def test_cohort_depth_preflight_warns_before_discover(store):
+    """A memoryless cohort must be flagged at start_project and on every frame's grounding —
+    BEFORE Discover runs ungrounded (a real run gate-passed Discover+Define in 7 minutes over
+    5 personas with 0 facts/events). Non-blocking; disappears once memory exists."""
+    proj = S.start_project("Pre", "hmw?", "double_diamond", persona_ids=["p1", "p2"], store=store)
+    assert any("ungrounded" in w for w in proj["warnings"])
+    n = S.next_action(proj["id"], store=store)
+    assert "ungrounded" in n["grounding"]["cohort_warning"]
+    # record_council over zero-memory participants: a soft warning rides the response (not stored)
+    c = S.record_council(proj["id"], "frage?", ["p1", "p2"], statements=[], store=store)
+    assert any("ungrounded" in w for w in c["warnings"])
+    assert "warnings" not in (store.get_council_session(c["id"]) or {})
+    # seed memory → the pre-flight goes quiet
+    for i in range(3):
+        store.insert_experience_event({"id": f"ev{i}", "persona_id": "p1", "timestamp": f"2026-01-0{i+1}T09:00:00",
+                                       "event_type": "work", "summary": "did things"})
+        store.insert_experience_event({"id": f"ev{i}b", "persona_id": "p2", "timestamp": f"2026-01-0{i+1}T10:00:00",
+                                       "event_type": "work", "summary": "did things"})
+    proj2 = S.start_project("Pre2", "hmw?", "double_diamond", persona_ids=["p1", "p2"], store=store)
+    assert "warnings" not in proj2
+    assert "cohort_warning" not in S.next_action(proj2["id"], store=store)["grounding"]
+
+
 def test_project_run_state_active_stalled_finished(store):
     """A ready step with no driver must be visible: stalled immediately (no open run), active
     while a run is checkpointing, finished when the plan is done — computed on read."""

@@ -122,7 +122,22 @@ def start_project(title: str, goal: str, methodology: str | None = None,
                           "questions/hypotheses this inquiry needs before any council runs."}
         plan = _plan.new_plan(project["id"], goal, "", [root])
     _plan.save_plan(plan, store=store)
-    return store.get_research_project(project["id"])
+    out = store.get_research_project(project["id"])
+    # Cohort-depth pre-flight: warn BEFORE Discover, not after Define has gate-passed — a real run
+    # produced an entire ungrounded Discover+Define over 0-memory personas before the thin-cohort
+    # gap surfaced. Non-blocking (a thin cohort can be intentional); the warning rides the response.
+    if persona_ids:
+        try:
+            d = cohort_memory_depth(persona_ids, store=store)
+            if d["facts"] + d["events"] == 0:
+                out = dict(out)
+                out["warnings"] = [
+                    f"cohort memory is EMPTY ({d['personas']} persona(s), 0 facts/events) — councils "
+                    f"will be ungrounded; deepen with simulate-cohort (or ground personas from real "
+                    f"material) before Discover"]
+        except Exception:
+            pass
+    return out
 
 
 
