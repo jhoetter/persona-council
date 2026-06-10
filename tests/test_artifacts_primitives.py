@@ -52,6 +52,21 @@ def test_validate_stance_dict_path_canonicalizes_free_labels():
     assert A.validate_stance({"value": 1, "label": "conditional"}) == {"value": 1, "label": "conditional"}
 
 
+def test_validate_stance_off_scale_values_never_lose_signal():
+    # an off-scale value is an invalid signal: a resolvable label decides instead, the value survives raw
+    assert A.validate_stance({"value": 7, "label": "mixed"}) == \
+        {"value": 1, "label": "conditional", "value_raw": 7}
+    # no usable label → clamp to the nearest endpoint, value survives raw
+    assert A.validate_stance({"value": 7}) == {"value": 2, "label": "support", "value_raw": 7}
+    assert A.resolve_stance(-5) == {"value": -2, "label": "oppose", "value_raw": -5}
+    # off-scale value AND unresolvable label → both raw signals survive
+    st = A.validate_stance({"value": 9, "label": "kinda meh"})
+    assert st == {"value": 2, "label": "support", "value_raw": 9, "label_raw": "kinda meh"}
+    assert A.validate_stance(st) == st                       # re-validation is idempotent (read-normalizer)
+    # the stored value is always on-scale → stance_meta/charts can never miss a bucket
+    assert A.stance_meta(A.validate_stance({"value": 7})["value"])["label_key"] == "stance_support"
+
+
 def test_stance_display_labels_round_trip_via_aliases():
     # echoing the system's own EN/DE display labels (web/_i18n.py stance_*) must not corrupt the scale —
     # the labels are read from i18n so the aliases can never drift from what the UI shows

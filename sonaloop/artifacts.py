@@ -49,16 +49,26 @@ def _canon_term(label: Any) -> str | None:
     return _stance_scale()["aliases"].get(str(label).strip().lower())
 
 
+def _clamp_value(v: int) -> int:
+    """Snap an off-scale numeric value onto the nearest scale endpoint (data-driven, no -2/+2 literal)."""
+    vals = sorted(_stance_scale()["by_value"]) or [0]
+    return max(vals[0], min(vals[-1], v))
+
+
 def resolve_stance(term: Any) -> dict[str, Any] | None:
     """Map any legacy stance/sentiment/vote token (or a numeric value) onto a canonical Stance dict
-    {value,label}. An unknown non-empty token falls back to neutral (value 0) but is NEVER dropped
-    silently — the original survives as `label_raw`. Returns None for empty input."""
+    {value,label}. Nothing degrades silently: an unknown non-empty token falls back to neutral (value 0)
+    with the original kept as `label_raw`; an off-scale numeric clamps to the nearest endpoint with the
+    original kept as `value_raw`. Returns None for empty input."""
     if term in (None, "", []):
         return None
     sc = _stance_scale()
     if isinstance(term, (int, float)) and not isinstance(term, bool):
         rec = sc["by_value"].get(int(term))
-        return {"value": int(term), "label": (rec or {}).get("term", str(term))}
+        if rec is None:
+            v = _clamp_value(int(term))
+            return {"value": v, "label": sc["by_value"][v]["term"], "value_raw": int(term)}
+        return {"value": int(term), "label": rec["term"]}
     canon = _canon_term(term)
     rec = sc["by_term"].get(canon) if canon else None
     if rec is None:
@@ -232,14 +242,24 @@ def resolve_ref(r: dict, store: Any) -> dict[str, Any]:
 
 
 def stance(value: int, *, label: str | None = None) -> dict:
-    """A point on the one positivity scale (-2 oppose … +2 support). The stored label is ALWAYS the
-    canonical term for `value` (a free label is alias-resolved; on disagreement the explicit value wins);
-    an unresolvable label is kept as `label_raw` — never silently dropped."""
-    rec = _stance_scale()["by_value"].get(int(value))
-    canonical = (rec or {}).get("term", str(int(value)))
-    if label is None or _canon_term(label) is not None:
-        return {"value": int(value), "label": canonical}
-    return _clean({"value": int(value), "label": canonical, "label_raw": str(label).strip()})
+    """A point on the one positivity scale (-2 oppose … +2 support). The stored value is ALWAYS on-scale
+    and the label ALWAYS its canonical term: a free label is alias-resolved; on disagreement the explicit
+    (on-scale) value wins. An OFF-scale value is an invalid signal, so a resolvable label decides instead;
+    failing that the value clamps to the nearest endpoint. Whatever loses survives as `label_raw` /
+    `value_raw` — never silently dropped."""
+    sc = _stance_scale()
+    rec = sc["by_value"].get(int(value))
+    canon = _canon_term(label) if label is not None else None
+    if rec is None:                          # off-scale value: the resolvable label is the better signal
+        if canon is not None:
+            term = sc["by_term"][canon]
+            return {"value": term["value"], "label": term["term"], "value_raw": int(value)}
+        v = _clamp_value(int(value))
+        return _clean({"value": v, "label": sc["by_value"][v]["term"], "value_raw": int(value),
+                       "label_raw": str(label).strip() if label is not None else None})
+    if label is None or canon is not None:
+        return {"value": int(value), "label": rec["term"]}
+    return _clean({"value": int(value), "label": rec["term"], "label_raw": str(label).strip()})
 
 
 def prompt(text: str, *, kind: str = "question", id: str | None = None) -> dict:
@@ -298,8 +318,9 @@ def validate_stance(d) -> dict | None:
         return None
     if isinstance(d, dict) and "value" in d:
         out = stance(int(d["value"]), label=d.get("label"))
-        if d.get("label_raw") and "label_raw" not in out:   # idempotent: re-validating keeps the raw token
-            out["label_raw"] = d["label_raw"]
+        for raw in ("label_raw", "value_raw"):              # idempotent: re-validating keeps the raw signals
+            if d.get(raw) is not None and raw not in out:
+                out[raw] = d[raw]
         return out
     return resolve_stance(d)
 
