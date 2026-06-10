@@ -63,6 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("persona-list")
     p.add_argument("--filter")
+    p.add_argument("--full", action="store_true")  # full profiles; default is the compact summary (F1)
 
     p = sub.add_parser("persona-get")
     p.add_argument("persona_id")
@@ -460,7 +461,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "persona-bulk":
             _print(services.bulk_create_personas(_read_descriptions(args.file), args.segment, args.avatar))
         elif args.command == "persona-list":
-            _print(services.list_personas({"q": args.filter} if args.filter else None))
+            _print(services.list_personas({"q": args.filter} if args.filter else None,
+                                          compact=not args.full))
         elif args.command == "persona-get":
             _print(services.get_persona(args.persona_id))
         elif args.command == "persona-soul":
