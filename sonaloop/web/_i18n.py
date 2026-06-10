@@ -51,7 +51,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "graph_zoom_in": "Zoom in (+)", "graph_zoom_out": "Zoom out (−)",
         # sections / prototype detail
         "section": "Abschnitt", "no_members": "Keine Mitglieder.", "n_nodes": "{n} Knoten",
-        "pulse": "Pulse", "gaps": "Gaps", "saturation": "Sättigung",
+        "pulse": "Pulse", "gaps": "Gaps", "saturation": "Sättigung", "stalled": "stockt",
         "coverage_h": "Abdeckung", "coverage_panel": "Panel",
         "coverage_level_thin": "dünn", "coverage_level_ok": "ok", "coverage_level_strong": "stark",
         "coverage_recommend": "Empfehlung",
@@ -224,7 +224,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "graph_zoom_in": "Zoom in (+)", "graph_zoom_out": "Zoom out (−)",
         # sections / prototype detail
         "section": "Section", "no_members": "No members.", "n_nodes": "{n} nodes",
-        "pulse": "Pulse", "gaps": "Gaps", "saturation": "Saturation",
+        "pulse": "Pulse", "gaps": "Gaps", "saturation": "Saturation", "stalled": "stalled",
         "coverage_h": "Coverage", "coverage_panel": "Panel",
         "coverage_level_thin": "thin", "coverage_level_ok": "ok", "coverage_level_strong": "strong",
         "coverage_recommend": "Recommendation",

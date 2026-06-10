@@ -33,7 +33,10 @@ def _projects_page() -> str:
             h("span", {}, f'{p["studies"]} {t("syntheses")}') if p["studies"] else None,
             h("span", {}, f'{p["prototypes"]} {t("prototypes_h")}') if p.get("prototypes") else None,
             h("span", {}, f'{p["notes"]} {t("notes")}') if p.get("notes") else None)
-        meta = fragment(counts, raw(_star("project", p["id"], p["title"], f'/projects/{p["id"]}')))
+        # a project with open work and no driver is invisible-silent otherwise — badge it
+        stalled = (p.get("run_state") or {}).get("state") == "stalled"
+        meta = fragment(_label(t("stalled"), "var(--amber)") if stalled else None,
+                        counts, raw(_star("project", p["id"], p["title"], f'/projects/{p["id"]}')))
         rows.append(_row(f'/projects/{p["id"]}', "projects", p["title"], meta, color="var(--accent)"))
     return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
                       empty_icon="projects", empty_msg=t("no_projects"), active="projects")

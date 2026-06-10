@@ -98,8 +98,13 @@ def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
     out = []
     for p in store.list_research_projects():
         graph = get_project_graph(p["id"], store=store)
+        try:
+            rs = _plan.project_run_state(p["id"], store=store)
+        except Exception:
+            rs = None
         out.append({"id": p["id"], "slug": p["slug"], "title": p["title"], "goal": p.get("goal", ""),
                     "status": p.get("status", "active"),
+                    **({"run_state": rs} if rs else {}),
                     "studies": sum(1 for n in graph["nodes"] if n.get("kind") == "synthesis"),
                     "councils": sum(1 for n in graph["nodes"] if n.get("kind") == "council"),
                     "notes": sum(1 for n in graph["nodes"] if n.get("kind") == "note"),
