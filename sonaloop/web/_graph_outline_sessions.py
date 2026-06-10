@@ -8,9 +8,8 @@ from __future__ import annotations
 
 from urllib.parse import quote, urlsplit
 
-from .. import artifacts as _A_art
 from .. import services
-from ._components import _avatar, _label
+from ._components import _avatar
 from ._i18n import t
 
 
@@ -66,7 +65,8 @@ def _subject_parent_item(group: dict, key: str, pk, pmeta: dict) -> dict:
     po, plabel = pmeta.get(pk, (99, ""))
     it = {"oid": f"subject:{key}", "color": "#9aa0a6", "title": subj.get("label") or key,
           "kind": t("fidelity_artifact"), "href": "", "plabel": plabel, "po": po, "round": 0,
-          "order": ts, "ts": ts, "indent": 0, "last_child": False}
+          "order": ts, "ts": ts, "indent": 0, "last_child": False,
+          "rkind": subj.get("kind", "")}      # chip contract: live_url/flow/prototype, all declared
     if subj.get("kind") == "live_url":
         title = next((st["state"]["title"] for s in sessions for st in (s.get("steps") or [])
                       if (st.get("state") or {}).get("title")), "")
@@ -77,31 +77,19 @@ def _subject_parent_item(group: dict, key: str, pk, pmeta: dict) -> dict:
     return it
 
 
-def _friction_count(sess: dict) -> int:
-    # mirror of pages/sessions.py:_friction_count (importing pages from here would cycle)
-    return sum(1 for s in sess.get("steps") or []
-               if next((r["value"] for r in _A_art.friction_terms()
-                        if r["term"] == (s.get("friction") or {}).get("level")), 0) > 0)
-
-
 def _session_child_item(sess: dict, parent: dict, seq: int, last: bool) -> dict:
     """One session as an indented child row under its subject: persona avatar lead + display name,
-    the fidelity as the kind label, outcome + friction chips, the replay as the row target. The
-    order borrows the parent's slot (the note→prototype pairing trick) so it nests right under it."""
+    the fidelity as the kind label, the replay as the row target. The outcome/friction chips come
+    from the chip-contract registry (_outline_chips: rkind 'session' reads the `session` payload).
+    The order borrows the parent's slot (the note→prototype pairing trick) so it nests right under it."""
     fid = sess.get("fidelity", "")
     kind = (t("session_kind_live") if fid == "live" else
             t("session_kind_artifact") if fid == "artifact" else t("session_kind_prototype"))
-    out = sess.get("outcome") or {}
-    chips = [_label(t("completed"), "var(--green)") if out.get("completed")
-             else _label(t("outcome_dropped", n=out.get("dropoff_step", 0)), "var(--red)")]
-    n_fr = _friction_count(sess)
-    if n_fr:
-        chips.append(_label(t("friction_n", n=n_fr), "var(--amber)"))
     return {"oid": sess["id"], "color": "#9aa0a6", "title": sess["persona"]["display_name"],
             "kind": kind, "href": f'/sessions/{sess["id"]}', "plabel": parent["plabel"],
             "po": parent["po"], "round": parent["round"], "order": f'{parent["order"]}#s{seq:03d}',
             "ts": sess.get("created_at", ""), "indent": parent["indent"] + 1, "last_child": last,
-            "lead": _avatar(sess["persona"], 18), "chips": "".join(str(c) for c in chips)}
+            "lead": _avatar(sess["persona"], 18), "rkind": "session", "session": sess}
 
 
 def merge_session_items(items: list[dict], groups: dict[str, dict], ideation, pmeta: dict,
