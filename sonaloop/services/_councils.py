@@ -313,6 +313,17 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
         council_ids.append(cid)
         project["updated_at"] = utc_now_iso()
         store.upsert_research_project(project)
+    # Soft pre-flight on the RESPONSE only (never stored, never blocking — a thin cohort can be
+    # intentional): a "memory-grounded" council over participants with zero simulated memory is
+    # ungrounded by construction; say so at record time, not first in assess_project's gap tail.
+    try:
+        m = store.count_memory_for_personas(persona_ids)
+        if persona_ids and m["facts"] + m["events"] == 0:
+            return {**session, "warnings": [
+                "participants have ZERO simulated memory (0 facts/events) — this council is "
+                "ungrounded; deepen the cohort (simulate-cohort) before relying on it"]}
+    except Exception:
+        pass
     return session
 
 
