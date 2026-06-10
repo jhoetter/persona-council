@@ -1,0 +1,123 @@
+"""Usability sessions IN the project outline (tracker: project-page-sessions-live-under-their-
+subject-in-the-outlin). The outline is the page: each session renders as an indented child row under
+its SUBJECT row (the note→prototype tree mechanics), never as an appended flat section. The page
+route GROUPS (outline_session_groups — it holds the Store); _outline_html stays pure rendering and
+folds the prepared groups in via merge_session_items. Split out of _graph_outline.py (the LOC bar,
+tests/test_loc_budget.py)."""
+from __future__ import annotations
+
+from urllib.parse import quote, urlsplit
+
+from .. import artifacts as _A_art
+from .. import services
+from ._components import _avatar, _label
+from ._i18n import t
+
+
+def outline_session_groups(sessions: list[dict], store) -> dict[str, dict]:
+    """Group a project's recorded usability sessions by subject key — the route-side seam. Each
+    group: the subject, its sessions chronological (each enriched with a persona card for the
+    child row's avatar chip), and at ≥2 walks the cross-session funnel (services.get_session_funnel)
+    that powers the parent row's aggregate chip."""
+    groups: dict[str, dict] = {}
+    for s in sorted(sessions, key=lambda x: x.get("created_at", "")):
+        subj = s.get("subject") or {}
+        key = str(subj.get("id") or subj.get("url") or "")
+        if not key:
+            continue
+        g = groups.setdefault(key, {"subject": subj, "sessions": []})
+        p = store.get_persona(s.get("persona_id", "")) or {}
+        sess = dict(s)
+        sess["persona"] = {"id": p.get("id") or s.get("persona_id", "x"),
+                           "display_name": p.get("display_name") or s.get("persona_id", "—"),
+                           "avatar": p.get("avatar")}
+        g["sessions"].append(sess)
+    for key, g in groups.items():
+        if len(g["sessions"]) >= 2:
+            g["funnel"] = services.get_session_funnel(g["subject"].get("kind", ""), key, store=store)
+    return groups
+
+
+def _funnel_chip(group: dict, key: str) -> dict | None:
+    """The compact aggregate chip for the parent row (Linear's progress-chip affordance): session
+    count + the drop-off read, linking to the filtered /sessions list. None below 2 sessions."""
+    f = group.get("funnel")
+    if not f:
+        return None
+    drops = [(r["step"], r["dropped"]) for r in f["rows"] if r["dropped"]]
+    if not drops:
+        tail = t("no_dropoffs")
+    elif len(drops) == 1:
+        tail = t("drop_at_step", n=drops[0][1], s=drops[0][0])
+    else:
+        tail = t("dropoffs_n", n=sum(d for _, d in drops))
+    href = (f'/sessions?subject_kind={quote(group["subject"].get("kind", ""))}'
+            f'&subject={quote(key)}')
+    return {"text": f'{t("sessions_n", n=f["sessions"])} · {tail}', "href": href}
+
+
+def _subject_parent_item(group: dict, key: str, pk, pmeta: dict) -> dict:
+    """A synthesized artifact-style parent row for a subject the outline doesn't already show: a
+    live_url gets the page title from the first recorded step (else the URL host), the live-surface
+    kind label and an external link; a flow (or an unstored prototype) a plain row carrying
+    subject.label. Sits in the slot prototypes use (the ideation phase, round 0)."""
+    subj, sessions = group["subject"], group["sessions"]
+    ts = sessions[0].get("created_at", "")
+    po, plabel = pmeta.get(pk, (99, ""))
+    it = {"oid": f"subject:{key}", "color": "#9aa0a6", "title": subj.get("label") or key,
+          "kind": t("fidelity_artifact"), "href": "", "plabel": plabel, "po": po, "round": 0,
+          "order": ts, "ts": ts, "indent": 0, "last_child": False}
+    if subj.get("kind") == "live_url":
+        title = next((st["state"]["title"] for s in sessions for st in (s.get("steps") or [])
+                      if (st.get("state") or {}).get("title")), "")
+        it.update({"title": title or urlsplit(subj.get("url", "")).netloc or subj.get("url", ""),
+                   "kind": t("live_surface"), "color": "var(--green)",
+                   "href": subj.get("url", ""), "external": True})
+    it["plabel"] = it["plabel"] or it["kind"]      # plan-less: the kind stands in for the phase column
+    return it
+
+
+def _friction_count(sess: dict) -> int:
+    # mirror of pages/sessions.py:_friction_count (importing pages from here would cycle)
+    return sum(1 for s in sess.get("steps") or []
+               if next((r["value"] for r in _A_art.friction_terms()
+                        if r["term"] == (s.get("friction") or {}).get("level")), 0) > 0)
+
+
+def _session_child_item(sess: dict, parent: dict, seq: int, last: bool) -> dict:
+    """One session as an indented child row under its subject: persona avatar lead + display name,
+    the fidelity as the kind label, outcome + friction chips, the replay as the row target. The
+    order borrows the parent's slot (the note→prototype pairing trick) so it nests right under it."""
+    fid = sess.get("fidelity", "")
+    kind = (t("session_kind_live") if fid == "live" else
+            t("session_kind_artifact") if fid == "artifact" else t("session_kind_prototype"))
+    out = sess.get("outcome") or {}
+    chips = [_label(t("completed"), "var(--green)") if out.get("completed")
+             else _label(t("outcome_dropped", n=out.get("dropoff_step", 0)), "var(--red)")]
+    n_fr = _friction_count(sess)
+    if n_fr:
+        chips.append(_label(t("friction_n", n=n_fr), "var(--amber)"))
+    return {"oid": sess["id"], "color": "#9aa0a6", "title": sess["persona"]["display_name"],
+            "kind": kind, "href": f'/sessions/{sess["id"]}', "plabel": parent["plabel"],
+            "po": parent["po"], "round": parent["round"], "order": f'{parent["order"]}#s{seq:03d}',
+            "ts": sess.get("created_at", ""), "indent": parent["indent"] + 1, "last_child": last,
+            "lead": _avatar(sess["persona"], 18), "chips": "".join(str(c) for c in chips)}
+
+
+def merge_session_items(items: list[dict], groups: dict[str, dict], ideation, pmeta: dict,
+                        proto_of: dict[str, str]) -> None:
+    """Fold the session groups into the outline items IN PLACE: a prototype subject's sessions nest
+    under the existing prototype row (matched by id or slug); live_url/flow subjects get a
+    synthesized parent row first; at ≥2 sessions the parent carries the funnel chip."""
+    for key, grp in groups.items():
+        oid = proto_of.get(key, "")
+        parent = next((it for it in items if oid and it["oid"] == oid), None)
+        if parent is None:
+            parent = _subject_parent_item(grp, key, ideation, pmeta)
+            items.append(parent)
+        chip = _funnel_chip(grp, key)
+        if chip:
+            parent["chip"] = chip
+        n = len(grp["sessions"])
+        for j, s in enumerate(grp["sessions"]):
+            items.append(_session_child_item(s, parent, j, j == n - 1))

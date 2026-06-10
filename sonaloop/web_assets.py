@@ -139,9 +139,26 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
    the next sibling; stops at center for the last child). ::after is the rounded elbow into the node.
    Splitting spine (straight) from elbow (curved) avoids the notch where a curved segment meets a
    straight one. Uniform colour (no hover recolour) so the spine never reads as two-tone. */
-.olrow.ol-tw::before{content:"";position:absolute;left:26px;top:-3px;bottom:-3px;border-left:1.6px solid var(--line-2)}
+.olrow.ol-tw::before{content:"";position:absolute;left:calc(var(--ti,1)*26px);top:-3px;bottom:-3px;border-left:1.6px solid var(--line-2)}
 .olrow.ol-tw.ol-last::before{bottom:auto;height:calc(50% + 3px)}
-.olrow.ol-tw::after{content:"";position:absolute;left:26px;top:calc(50% - 6px);width:9px;height:6px;border-left:1.6px solid var(--line-2);border-bottom:1.6px solid var(--line-2);border-bottom-left-radius:6px}
+.olrow.ol-tw::after{content:"";position:absolute;left:calc(var(--ti,1)*26px);top:calc(50% - 6px);width:9px;height:6px;border-left:1.6px solid var(--line-2);border-bottom:1.6px solid var(--line-2);border-bottom-left-radius:6px}
+/* sessions nest under their subject (tracker: project-page-sessions-live-under-their-subject):
+   avatar lead + outcome/friction chips on the child rows; the parent's funnel aggregate is a REAL
+   link, so that row is a <div> with a stretched overlay link and the chip layered above it. */
+.olrow{position:relative}
+.ol-stretch{position:absolute;inset:0;border-radius:var(--radius-sm)}
+.ol-funnel{position:relative;z-index:1;flex-shrink:0;white-space:nowrap;font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--radius-full);background:var(--panel-2);padding:1px 9px;text-decoration:none}
+.ol-funnel:hover{color:var(--accent);border-color:var(--accent)}
+.olrow .lbl{flex-shrink:0}
+/* near-empty outlines (plan-less / young projects) size to content so the sections below rise
+   above the fold (tracker: outline-drops-study-nodes-on-plan-less-projects); a full outline
+   still fills the viewport. */
+.outlinecard.ol-compact{flex:0 1 auto}
+.proj:has(.outlinecard.ol-compact){overflow-y:auto}
+/* hypotheses/decisions remain sections for now (pending their own outline-row treatment) but read
+   WITH the page, not as bolt-ons: the outline's centered measure + the quiet .sec heading idiom. */
+#hypotheses,#decisions{flex:none;width:100%;max-width:900px;margin:14px auto 0;padding:8px 24px 24px}
+#hypotheses>h2,#decisions>h2{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
 /* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
 .outline .olrow.rel{background:var(--accent-weak)}

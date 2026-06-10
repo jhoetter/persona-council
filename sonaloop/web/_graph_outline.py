@@ -4,16 +4,19 @@ from __future__ import annotations
 
 from .. import artifacts as _A_art
 from ._components import _avatar
+from ._graph_outline_sessions import merge_session_items
 from ._html import h, raw, fragment
 from ._i18n import t
 
 
-def _outline_html(graph: dict) -> str:
+def _outline_html(graph: dict, sessions: dict | None = None) -> str:
     """Linear-style ROUND-grouped outline — the single primary project view. Always chronological by
     iteration (Runde 1 full pass → Runde 2 …; flat when there's only one round). Relationships are shown
-    the Linear way: HIERARCHY via indentation + tree connector (concept → its prototype), and CROSS-LINKS
-    via HOVER-HIGHLIGHT (hover a row → its related rows light up, the rest dim) — never permanent edges.
-    Concepts + their prototypes get a definitive home under the ideation phase."""
+    the Linear way: HIERARCHY via indentation + tree connector (concept → its prototype, subject → its
+    usability sessions), and CROSS-LINKS via HOVER-HIGHLIGHT (hover a row → its related rows light up,
+    the rest dim) — never permanent edges. Concepts + their prototypes get a definitive home under the
+    ideation phase. `sessions` = the prepared subject groups (outline_session_groups, built by the page
+    route which holds the Store) — optional so other callers keep the bare signature."""
     nodes = graph["nodes"]
     steps = (graph.get("methodology_state") or {}).get("steps") or []
     by_id = {s["key"]: s for s in steps}
@@ -61,20 +64,30 @@ def _outline_html(graph: dict) -> str:
 
     items: list[dict] = []
 
-    def add(oid, color, title, kind, href, pk, r, order, ts, indent=0, last_child=False):
+    def add(oid, color, title, kind, href, pk, r, order, ts, indent=0, last_child=False, plabel=None):
         # `order` = the SORT key (a built note's prototype borrows the note's slot via a '#seq' suffix so it
         # nests right under it); `ts` = the row's OWN created_at, shown to the reader. `last_child` ends the
         # tree spine (the connector continues down through earlier siblings, stops at the last).
-        po, plabel = pmeta.get(pk, (99, ""))
+        po, pl = pmeta.get(pk, (99, ""))
         items.append({"oid": oid, "color": color or "#9aa0a6", "title": title, "kind": kind, "href": href,
-                      "plabel": plabel, "po": po, "round": r, "order": order, "ts": ts, "indent": indent,
-                      "last_child": last_child})
+                      "plabel": plabel if plabel is not None else pl, "po": po, "round": r, "order": order,
+                      "ts": ts, "indent": indent, "last_child": last_child})
 
+    # Plan-less projects (hand-built data / the study_ids report path) have NO methodology steps, so
+    # pmeta is empty — their nodes must still render (parity with ?view=graph): one flat chronological
+    # round, the kind label standing in for the phase column (tracker: outline-drops-study-nodes-on-
+    # plan-less-projects). A phase-less legacy study node IS a synthesis (services._study_node).
+    planless = not pmeta
     for n in nodes:
-        if n.get("phase", "") not in pmeta:        # councils/syntheses; notes (phase-free) added below
+        if str(n["study_id"]).startswith("note:"):  # notes (phase-free) added below
             continue
-        add(n["study_id"], n.get("color", ""), n.get("title", ""), n.get("kind_label", n.get("kind", "")),
-            n.get("href", ""), n.get("phase", ""), node_round[n["study_id"]], n.get("created_at", ""), n.get("created_at", ""))
+        if n.get("phase", "") not in pmeta and not planless:   # plan graphs: phase-less rows have no slot
+            continue
+        kind = n.get("kind_label") or n.get("kind") or (t("synthesis_kind") if planless else "")
+        href = n.get("href") or (f'/syntheses/{n["study_id"]}' if planless else "")
+        add(n["study_id"], n.get("color", ""), n.get("title", ""), kind, href,
+            n.get("phase", ""), node_round[n["study_id"]], n.get("created_at", ""), n.get("created_at", ""),
+            plabel=kind if planless else None)
     for p in protos:                               # prototypes NOT paired under a built note → standalone
         if p["id"] not in used:
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
@@ -92,7 +105,8 @@ def _outline_html(graph: dict) -> str:
         is_concept = bool(built) or nt.get("artifact_kind")
         add(nt["study_id"], nt.get("color", "#f29900"), nt.get("title", "") or "—",
             nt.get("kind_label", ""), nt.get("href", ""), ideation if is_concept else notes_phase, cr,
-            f'{nt.get("created_at", "")}#{seq:04d}', nt.get("created_at", ""))
+            f'{nt.get("created_at", "")}#{seq:04d}', nt.get("created_at", ""),
+            plabel=nt.get("kind_label", "") if planless else None)
         seq += 1
         for i, p in enumerate(built):
             add(p["id"], "#00897b", p["name"], f'Prototyp · {p.get("fidelity", "")}',
@@ -107,6 +121,13 @@ def _outline_html(graph: dict) -> str:
                       "kind": t("synthesis_kind"), "href": f'/syntheses/{mr["id"]}', "plabel": t("synthesis_kind"),
                       "po": 99, "round": max(nrounds - 1, 0), "order": f'~{mr.get("created_at", "")}',
                       "ts": mr.get("created_at", ""), "indent": 0, "last_child": False})
+
+    # Usability sessions nest under their SUBJECT row (tracker: project-page-sessions-live-under-
+    # their-subject-in-the-outlin): prototype subjects under the existing prototype row (matched by
+    # id or slug), live_url/flow subjects under a synthesized artifact-style parent.
+    if sessions:
+        proto_of = {k: p["id"] for p in protos for k in (p.get("id"), p.get("slug")) if k}
+        merge_session_items(items, sessions, ideation, pmeta, proto_of)
 
     # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
     # "Prototypen-Leiter", "Konzepte (Ideation)" … (phase/journal sections are skipped — phase already
@@ -162,19 +183,35 @@ def _outline_html(graph: dict) -> str:
             h("span", {"class_": "olth-pill", "title": themes[i]["title"]},
               h("i", {"style": f'background:{th_color[themes[i]["id"]]}'}), th_short[i])
             for i in tis]
+        # --ti feeds the tree-spine x-offset so a depth-2 child (session under a paired prototype)
+        # draws its connector one indent step deeper than a depth-1 child.
         attrs = {"class_": f"olrow {tw}", "data-oid": it["oid"], "data-th": " ".join(map(str, tis)),
-                 "style": f'padding-left:{10 + it["indent"] * 26}px'}
-        if it["href"]:
-            attrs["href"] = it["href"]
+                 "style": f'padding-left:{10 + it["indent"] * 26}px'
+                          + (f';--ti:{it["indent"]}' if it["indent"] else "")}
         ts_short, ts_full = _fmt_ts(it["ts"])
-        return h("a", attrs,
-                 h("span", {"class_": "ol-dot", "style": f'background:{it["color"]}'}),
+        lead = (raw(it["lead"]) if it.get("lead")           # session child rows: persona avatar lead
+                else h("span", {"class_": "ol-dot", "style": f'background:{it["color"]}'}))
+        cells = (lead,
                  h("span", {"class_": "ol-ptag"}, it["plabel"]),
                  h("span", {"class_": "ol-title"}, it["title"]),
                  h("span", {"class_": "olth-pills"}, fragment(*pills)),
                  crew,
+                 raw(it.get("chips", "")),                  # outcome/friction chips (session rows)
                  h("span", {"class_": "ol-ts", "title": ts_full}, ts_short),
                  h("span", {"class_": "ol-kind"}, it["kind"]))
+        ext = {"target": "_blank", "rel": "noopener"} if it.get("external") else {}
+        chip = it.get("chip")
+        if chip:
+            # the funnel chip is a REAL link and <a> cannot nest — the row becomes a positioned <div>
+            # whose main target is a stretched overlay link (.ol-stretch) layered UNDER the chip.
+            link = (h("a", {"class_": "ol-stretch", "href": it["href"], "aria-label": it["title"], **ext})
+                    if it["href"] else "")
+            chip_a = h("a", {"class_": "ol-funnel", "href": chip["href"]}, chip["text"])
+            return h("div", attrs, *cells[:6], chip_a, *cells[6:], link)
+        if it["href"]:
+            attrs["href"] = it["href"]
+            attrs.update(ext)
+        return h("a", attrs, *cells)
 
     # ROUND CAPTION (Linear: a group header should carry MEANING) — the essence of each round's most
     # converged output (its highest-depth synthesis, else its highest-depth node). Derived from the

@@ -10,7 +10,7 @@ from __future__ import annotations
 from starlette.testclient import TestClient
 
 from conftest import create_persona
-from sonaloop import artifacts, config, services, web
+from sonaloop import artifacts, config, prototypes, services, web
 
 
 _PROTO = {"kind": "prototype", "id": "proto-signup", "label": "Signup prototype"}
@@ -167,3 +167,89 @@ def test_project_page_lists_its_sessions(store):
     sess = _record(store, project_id=proj["id"])
     html = _client().get(f'/projects/{proj["id"]}?lang=en').text
     assert f'/sessions/{sess["id"]}' in html
+
+
+# ----------------------------------------------------------------- sessions IN the project outline
+# (tickets project-page-sessions-live-under-their-subject-in-the-outlin + outline-drops-study-nodes-
+# on-plan-less-projects): sessions render as indented child rows under their SUBJECT row inside the
+# outline; the appended flat section is gone from the project page (it stays on /sessions and the
+# persona/prototype pages — covered by the cross-link tests above).
+
+
+def _proto_project(store, title="Q"):
+    proj = services.create_research_project(title, store=store)
+    proto = prototypes.register_prototype("proto-signup", "Signup prototype", "prototypes/signup",
+                                          project_id=proj["id"], store=store)
+    return proj, proto
+
+
+def test_project_outline_nests_sessions_under_their_subject(store):
+    proj, proto = _proto_project(store)
+    pid = create_persona(store, "Greta Tester")
+    sess = _record(store, persona_id=pid, project_id=proj["id"],
+                   subject={"kind": "prototype", "id": proto["id"], "label": "Signup prototype"})
+    html = _client().get(f'/projects/{proj["id"]}?lang=en').text
+    # the appended flat section is gone — sessions live IN the outline now
+    assert 'id="sec-sessions"' not in html
+    # the subject (prototype) row precedes its session child row, which carries the tree-connector
+    # indent classes (the note→prototype nesting mechanics)
+    assert html.index(f'data-oid="{proto["id"]}"') < html.index(f'data-oid="{sess["id"]}"')
+    assert f'class="olrow ol-tw ol-last" data-oid="{sess["id"]}"' in html
+    # child row content: persona name, fidelity kind label, outcome chip, replay href
+    assert "Greta Tester" in html and "Prototype session" in html and "Completed" in html
+    assert f'href="/sessions/{sess["id"]}"' in html
+    # a single session earns no funnel chip (the class still appears in the inlined CSS)
+    assert 'class="ol-funnel"' not in html
+
+
+def test_project_outline_parent_row_carries_funnel_chip(store):
+    proj, proto = _proto_project(store)
+    subj = {"kind": "prototype", "id": proto["id"], "label": "Signup prototype"}
+    _record(store, key="A", project_id=proj["id"], subject=subj,
+            steps=[_step(0), _step(1), _step(2)])
+    _record(store, key="B", project_id=proj["id"], subject=subj,
+            steps=[_step(0), _step(1, friction="blocked", would_continue=False, reason="lost")],
+            outcome={"completed": False, "dropoff_step": 1, "summary": "gave up",
+                     "predicted_behaviors": []})
+    html = _client().get(f'/projects/{proj["id"]}?lang=en').text
+    # the aggregate chip on the parent row: count + the drop-off read (services.get_session_funnel)
+    assert "2 sessions · 1× drop @ step 1" in html
+    # it links to the filtered cross-session list; the row keeps its own stretched-link target
+    assert f'href="/sessions?subject_kind=prototype&amp;subject={proto["id"]}"' in html
+    assert 'class="ol-stretch"' in html
+    # the dropped walk's child row shows the red outcome chip and the friction pill
+    assert "Dropped at step 1" in html and "1× friction" in html
+
+
+def test_project_outline_synthesizes_live_url_parent_row(store):
+    proj = services.create_research_project("L", store=store)
+    pid = create_persona(store, "Lena Live")
+    subj = {"kind": "live_url", "url": "https://example.test/checkout", "label": "Checkout live"}
+    sess = services.record_usability_session(
+        pid, subj, "live", "2026-06-10",
+        [_step(0, url="https://example.test/checkout", title="Checkout Example"), _step(1)],
+        {"completed": True, "dropoff_step": None, "summary": "done", "predicted_behaviors": []},
+        project_id=proj["id"], store=store)["usability_session"]
+    html = _client().get(f'/projects/{proj["id"]}?lang=en').text
+    # synthesized parent row: the recorded page title, the live-surface kind, an external target
+    assert "Checkout Example" in html and "Live surface" in html
+    assert 'href="https://example.test/checkout" target="_blank"' in html
+    # its child row deep-links into the replay with the live fidelity kind label
+    assert f'href="/sessions/{sess["id"]}"' in html and "Live session" in html
+
+
+def test_planless_project_outline_shows_study_nodes_and_compacts(store):
+    # hand-built plan-less project (no methodology plan): a synthesis attached via study_ids must
+    # still render as an outline row — parity with the ?view=graph view.
+    store.upsert_synthesis({
+        "id": "syn0", "title": "Pains", "created_at": "2026-06-01T00:00:00+00:00",
+        "council_ids": [], "gesamtbild": "big picture", "statements": [], "findings": [],
+        "status": "done"})
+    proj = services.create_research_project("Plan-less", store=store)
+    p = store.get_research_project(proj["id"])
+    p["study_ids"] = ["syn0"]
+    store.upsert_research_project(p)
+    html = _client().get(f'/projects/{proj["id"]}?lang=en').text
+    assert "Pains" in html and 'href="/syntheses/syn0"' in html
+    # a near-empty outline sizes to content instead of pinning a viewport-high dead zone
+    assert "ol-compact" in html

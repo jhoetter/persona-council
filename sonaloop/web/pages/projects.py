@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi.responses import RedirectResponse
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
-from .sessions import _sessions_section
+from .._graph_outline_sessions import outline_session_groups
 # The bet/decision section renderers live with their artifact's page module (which also serves the
 # cross-project /hypotheses and /decisions lists) — the project page embeds the same cards.
 from .hypotheses import _hypotheses_html
@@ -216,15 +216,23 @@ def register_projects(app) -> None:
         # by URL (?view=graph) — code kept, just unlinked — so nothing is destroyed and it's reversible.
         is_graph = view == "graph"
         head_tools = toolbar if is_graph else ""   # graph view keeps the type-filter toolbar; list view has none
+        # The project's recorded usability sessions live IN the outline, nested under their subject
+        # row (tracker: project-page-sessions-live-under-their-subject-in-the-outlin) — grouped here
+        # (the route owns the Store), rendered by _outline_html. The flat section stays on /sessions
+        # and the persona/prototype pages only.
+        sess_groups = outline_session_groups(
+            services.list_usability_sessions(project_id=proj["id"], store=store), store)
+        # A near-empty outline sizes to content instead of pinning a viewport-high dead zone (the
+        # sections below rise above the fold); a full outline keeps filling the viewport.
+        n_rows = (len(graph["nodes"]) + len(protos) + len(graph.get("reports") or [])
+                  + sum(1 + len(g["sessions"]) for g in sess_groups.values()))
+        card_cls = "outlinecard" + ("" if n_rows > 8 else " ol-compact")
         main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
-                     if is_graph else h("div", {"class_": "outlinecard"}, raw(_outline_html(graph))))
-        # The project's recorded usability sessions — each row deep-links into the replay view.
-        sessions_html = _sessions_section(
-            store, services.list_usability_sessions(project_id=proj["id"], store=store))
+                     if is_graph else h("div", {"class_": card_cls}, raw(_outline_html(graph, sessions=sess_groups))))
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
                    h("p", {"class_": "lead"}, proj.get("goal", "")), head_tools),
-                 main_view, raw(sessions_html), raw(_hypotheses_html(proj["id"], store)),
+                 main_view, raw(_hypotheses_html(proj["id"], store)),
                  raw(_decisions_html(proj["id"], store)))
         actions = fragment(top_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
         return _layout(proj["title"], body, store, active="projects",
