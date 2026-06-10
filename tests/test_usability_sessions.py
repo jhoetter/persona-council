@@ -186,6 +186,31 @@ def test_missing_screenshot_file_is_rejected_and_present_one_accepted(store, tmp
     assert res["usability_session"]["steps"][0]["state"]["screenshot"] == "step-0.png"
 
 
+def test_screenshot_path_escaping_the_data_dir_is_rejected(store, tmp_path, monkeypatch):
+    from sonaloop import config
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    # an absolute path to a real file outside the data dir is not a session screenshot
+    absolute = _step(0)
+    absolute["state"]["screenshot"] = "/etc/passwd"
+    with pytest.raises(ValueError, match="escapes the data dir"):
+        _record(store, _FLOW, "artifact", steps=[absolute])
+    # ... and neither is a relative path that traverses out of it
+    traversal = _step(0)
+    traversal["state"]["screenshot"] = "../" * 12 + "etc/passwd"
+    with pytest.raises(ValueError, match="escapes the data dir"):
+        _record(store, _FLOW, "artifact", steps=[traversal])
+
+
+def test_completed_session_with_a_dropoff_step_is_rejected(store):
+    with pytest.raises(ValueError, match="dropoff_step must be null"):
+        _record(store, _FLOW, "artifact", outcome=_outcome(completed=True, dropoff=1))
+
+
+def test_bool_step_index_is_rejected(store):
+    with pytest.raises(ValueError, match="contiguous"):
+        _record(store, _FLOW, "artifact", steps=[_step(0), {**_step(1), "index": True}])
+
+
 # --------------------------------------------------------------- groundedness vs. the browser log
 
 def test_prototype_states_verify_against_session_log(store, monkeypatch):

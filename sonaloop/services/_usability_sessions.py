@@ -131,7 +131,7 @@ def brief_usability_session(persona_id, subject, fidelity, project_id=None, stor
 def _validate_step(raw: Any, i: int) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise ValueError(f"steps[{i}] must be a dict")
-    if raw.get("index") != i:
+    if type(raw.get("index")) is not int or raw["index"] != i:
         raise ValueError(f"step indices must be ordered & contiguous from 0: steps[{i}].index "
                          f"is {raw.get('index')!r}")
     action = raw.get("action") or {}
@@ -172,6 +172,8 @@ def _validate_outcome(raw: Any, n_steps: int) -> dict[str, Any]:
         raise ValueError(f"outcome.dropoff_step must reference an existing step (0..{n_steps - 1}) or null")
     if raw["completed"] is False and drop is None:
         raise ValueError("outcome.dropoff_step must be set when completed=false (where did the persona drop?)")
+    if raw["completed"] is True and drop is not None:
+        raise ValueError("outcome.dropoff_step must be null when completed=true (a completed session has no drop-off)")
     preds = []
     for j, p in enumerate(raw.get("predicted_behaviors") or []):
         step = p.get("step")
@@ -224,9 +226,11 @@ def _validate_statements(raw_statements, sess_id: str, n_steps: int, store: Stor
 def _require_screenshots(steps: list[dict[str, Any]], sess_id: str) -> None:
     """Referenced screenshot files must exist under the data dir (convention:
     data/sessions/<session_id>/step-<index>.png; relative paths resolve against the session's dir,
-    then the data dir)."""
+    then the data dir). Paths that resolve OUTSIDE the data dir are rejected — the trace may only
+    claim files the store actually owns."""
     from ..config import DATA_DIR
     base = sessions_dir() / sess_id
+    data_root = DATA_DIR.resolve()
     missing = []
     for s in steps:
         shot = (s.get("state") or {}).get("screenshot")
@@ -234,7 +238,11 @@ def _require_screenshots(steps: list[dict[str, Any]], sess_id: str) -> None:
             continue
         p = Path(shot)
         candidates = [p] if p.is_absolute() else [base / p, DATA_DIR / p]
-        if not any(c.exists() for c in candidates):
+        contained = [c for c in candidates if c.resolve().is_relative_to(data_root)]
+        if not contained:
+            raise ValueError(f"screenshot path escapes the data dir ({data_root}): {shot!r} "
+                             "(convention: data/sessions/<session_id>/step-<index>.png)")
+        if not any(c.exists() for c in contained):
             missing.append(shot)
     if missing:
         raise ValueError(f"screenshot files not found under {base} "
