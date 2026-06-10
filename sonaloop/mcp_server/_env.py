@@ -74,6 +74,9 @@ _NEXT: dict[str, dict[str, Any]] = {
     "brief_hypothesis": {"name": "record_hypothesis", "reason": "author the falsifiable statement + checkable prediction, then persist the open bet"},
     "record_hypothesis": {"name": "record_hypothesis_result", "reason": "when reality answers, attach the observation — the status derives from observed vs predicted"},
     "record_hypothesis_result": {"name": "eval_scorecard", "reason": "aggregate the hit-rate across resolved hypotheses into the calibration record"},
+    # --- live walkthroughs (rung 3: policy-guarded real-SaaS sessions; one harness with proto_*) ---
+    "walk_policy_defaults": {"name": "walk_open", "reason": "open the live walkthrough under the (possibly tweaked) safety policy"},
+    "walk_open": {"name": "proto_act", "reason": "drive the live app on snapshot refs — policy refusals come back structured, never as crashes"},
     # --- usability sessions (the durable, replayable trace) ---
     "brief_usability_session": {"name": "record_usability_session", "reason": "author the per-step dual timeline, then persist the replayable trace"},
     "suggest_friction_levels": {"name": "record_usability_session", "reason": "author every step's friction with the canonical levels, then persist"},

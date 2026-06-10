@@ -86,6 +86,8 @@ data/sonaloop.db-wal
 data/settings.json
 data/avatars/
 data/personas/
+# Per-step walkthrough/session screenshots (harness-written runtime artifacts).
+data/sessions/
 # Export snapshot (your personas / councils / syntheses) — keep private.
 data/export/
 # Canonical persona source prompts — your own profiles; keep private.

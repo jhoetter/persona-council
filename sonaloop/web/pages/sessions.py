@@ -117,11 +117,15 @@ def _subject_link(store: Store, subject: dict):
 def _screenshot_url(sess_id: str, shot: str) -> str | None:
     """Resolve a stored screenshot reference to a servable URL — only for files that really exist
     under the sessions dir (→ /sessions-files) or the data dir (→ /data). Mirrors the resolution
-    order of services._require_screenshots; anything else renders as the text screen instead."""
+    order of services._require_screenshots (session dir, then the sessions dir — the harness writes
+    <browser_session_id>/step-<n>.png relative to it — then the data dir); anything else renders as
+    the text screen instead."""
     sessions_root = _config.sessions_dir().resolve()
     data_root = Path(_config.DATA_DIR).resolve()
     p = Path(shot)
-    candidates = [p] if p.is_absolute() else [_config.sessions_dir() / sess_id / p, Path(_config.DATA_DIR) / p]
+    candidates = ([p] if p.is_absolute() else
+                  [_config.sessions_dir() / sess_id / p, _config.sessions_dir() / p,
+                   Path(_config.DATA_DIR) / p])
     for c in candidates:
         try:
             r = c.resolve()

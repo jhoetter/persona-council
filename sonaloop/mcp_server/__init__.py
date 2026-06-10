@@ -19,6 +19,7 @@ from ._tools_surveys import register_surveys
 from ._tools_hypotheses import register_hypotheses
 from ._tools_decisions import register_decisions
 from ._tools_usability import register_usability
+from ._tools_walkthrough import register_walkthrough
 from ._tools_council import register_council
 from ._tools_sections import register_sections
 from ._tools_hooks import register_hooks
@@ -67,6 +68,7 @@ def build_server():
     register_hypotheses(mcp)
     register_decisions(mcp)
     register_usability(mcp)
+    register_walkthrough(mcp)
     register_council(mcp)
     register_sections(mcp)
     register_hooks(mcp)

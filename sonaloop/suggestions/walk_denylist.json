@@ -1,0 +1,18 @@
+{
+  "kind": "walk_denylist",
+  "note": "Deny-by-default risk classes for LIVE walkthrough sessions (WalkPolicy.blocked_actions — docs/live-walkthrough-safety.md). Each category carries EN+DE term lists; a click/select/key(Enter-on-submit) whose target element's accessible name/text contains one of the enabled categories' terms (case-insensitive substring) is REFUSED and logged as a policy_block. All categories are enabled by default; a policy may disable one explicitly via blocked_categories. Add a term, no code change — but never narrow this file to make a session 'work': over-blocking is the intended failure mode.",
+  "items": [
+    {"category": "payment", "terms": {
+      "en": ["pay", "buy", "purchase", "checkout", "place order", "order now", "subscribe", "add to cart", "credit card", "billing", "upgrade plan"],
+      "de": ["bezahlen", "kaufen", "zur kasse", "jetzt bestellen", "bestellung abschicken", "zahlungspflichtig", "abonnieren", "in den warenkorb", "kreditkarte", "rechnungsdaten", "tarif upgraden"]}},
+    {"category": "destructive", "terms": {
+      "en": ["delete", "remove", "destroy", "erase", "wipe", "deactivate", "discard", "permanently"],
+      "de": ["löschen", "entfernen", "vernichten", "deaktivieren", "verwerfen", "unwiderruflich", "endgültig"]}},
+    {"category": "outbound", "terms": {
+      "en": ["send", "publish", "post", "share", "invite", "broadcast", "reply", "tweet"],
+      "de": ["senden", "absenden", "veröffentlichen", "teilen", "einladen", "antworten", "freigeben"]}},
+    {"category": "account", "terms": {
+      "en": ["close account", "delete account", "cancel subscription", "change password", "reset password", "change email", "unsubscribe", "deactivate account"],
+      "de": ["konto schließen", "konto löschen", "abo kündigen", "kündigen", "passwort ändern", "passwort zurücksetzen", "e-mail ändern", "konto deaktivieren"]}}
+  ]
+}
