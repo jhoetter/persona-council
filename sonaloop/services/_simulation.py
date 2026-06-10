@@ -322,6 +322,8 @@ def simulate_day(
         store.upsert_pain_point(pain_obs)
 
     store.commit()
+    emit_lifecycle_event("day.recorded", {"persona_id": persona["id"], "date": day.isoformat(),  # noqa: F821 (bound)
+                                          "events": len(experience)}, store)
     return SimulationResult(
         persona=persona,
         date=day.isoformat(),

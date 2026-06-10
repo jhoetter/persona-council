@@ -125,6 +125,8 @@ def start_project(title: str, goal: str, methodology: str | None = None,
         plan = _plan.new_plan(project["id"], goal, "", [root])
     _plan.save_plan(plan, store=store)
     out = store.get_research_project(project["id"])
+    emit_lifecycle_event("project.created", {"project_id": project["id"], "title": title,  # noqa: F821 (bound)
+                                             "goal": goal, "methodology": methodology or ""}, store)
     # Cohort-depth pre-flight: warn BEFORE Discover, not after Define has gate-passed — a real run
     # produced an entire ungrounded Discover+Define over 0-memory personas before the thin-cohort
     # gap surfaced. Non-blocking (a thin cohort can be intentional); the warning rides the response.
@@ -608,6 +610,8 @@ def finish_run(run_id: str, status: str = "finished", store: Store | None = None
     r["status"] = status
     r["updated_at"] = utc_now_iso()
     store.upsert_run(r)
+    emit_lifecycle_event("run.finished", {"run_id": run_id, "project_id": r["project_id"],  # noqa: F821 (bound)
+                                          "status": status, "steps": len(r["steps"])}, store)
     return {"run_id": run_id, "status": status, "steps": len(r["steps"])}
 
 

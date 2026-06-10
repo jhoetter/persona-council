@@ -313,6 +313,9 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
         council_ids.append(cid)
         project["updated_at"] = utc_now_iso()
         store.upsert_research_project(project)
+    emit_lifecycle_event("council.recorded", {"council_id": cid, "project_id": project["id"],  # noqa: F821 (bound)
+                                              "prompt": prompt, "persona_ids": persona_ids,
+                                              "statements": len(statements_out), "votes": len(votes)}, store)
     # Soft pre-flight on the RESPONSE only (never stored, never blocking — a thin cohort can be
     # intentional): a "memory-grounded" council over participants with zero simulated memory is
     # ungrounded by construction; say so at record time, not first in assess_project's gap tail.

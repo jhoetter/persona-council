@@ -127,6 +127,10 @@ Core MCP tools:
 - `get_language`, `set_language` (UI + generated-content language, de|en)
 - `attach_evidence`
 - `export_persona`, `export_logs`, `export_council_session`
+- Lifecycle hooks (docs/lifecycle-hooks.md): `list_lifecycle_events` →
+  `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
+  `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
+  `hooks-list`, `hook-test`, `hook-remove`.
 
 Memory & multi-resolution simulation (gather → author → write-back):
 

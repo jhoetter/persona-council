@@ -8,6 +8,7 @@ from typing import Any
 from ..config import DATA_DIR, database_path, utc_now_iso
 from ._base import StoreBase
 from ._councils import CouncilsMixin
+from ._hooks import HooksMixin
 from ._memory import MemoryMixin
 from ._personas import PersonasMixin
 from ._prototypes import PrototypesMixin
@@ -24,6 +25,7 @@ class Store(
     ResearchMixin,
     PrototypesMixin,
     UsabilitySessionsMixin,
+    HooksMixin,
     MemoryMixin,
     StoreBase,
 ):

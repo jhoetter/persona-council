@@ -8,7 +8,7 @@ from typing import Any
 
 from .avatar import generate_persona_avatar
 from .config import load_env
-from . import services
+from . import services, _cli_hooks
 
 
 def _pkg_version() -> str:
@@ -141,11 +141,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("prompt")
     p.add_argument("personas", nargs="+")
 
-    p = sub.add_parser("evidence-attach")
-    p.add_argument("persona_id")
-    p.add_argument("source_type")
-    p.add_argument("content_or_path")
-    p.add_argument("--notes")
+    _cli_hooks.add_hook_parsers(sub)
 
     p = sub.add_parser("export-persona")
     p.add_argument("persona_id")
@@ -508,8 +504,8 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.ask_persona(args.persona_id, args.question))
         elif args.command == "compare":
             _print(services.compare_personas(args.prompt, args.personas))
-        elif args.command == "evidence-attach":
-            _print(services.attach_evidence(args.persona_id, args.source_type, args.content_or_path, args.notes))
+        elif args.command in _cli_hooks.COMMANDS:
+            _print(_cli_hooks.run_hook_command(args))
         elif args.command == "export-persona":
             content = services.export_persona(args.persona_id, args.format)
             _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out))

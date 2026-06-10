@@ -341,6 +341,8 @@ def record_persona(
         persona["avatar"] = avatar
         persona["updated_at"] = utc_now_iso()
         store.upsert_persona(persona, reason="generated avatar")
+    emit_lifecycle_event("persona.created", {"persona_id": persona["id"], "slug": persona["slug"],  # noqa: F821 (bound)
+                                             "display_name": persona.get("display_name", "")}, store)
     return persona
 
 
@@ -434,6 +436,7 @@ def update_persona(persona_id: str, patch: dict[str, Any], reason: str, store: S
     persona["updated_at"] = utc_now_iso()
     persona["soul"] = write_soul(persona, store)
     store.upsert_persona(persona, reason=reason)
+    emit_lifecycle_event("persona.updated", {"persona_id": persona["id"], "reason": reason}, store)  # noqa: F821 (bound)
     return persona
 
 
@@ -565,6 +568,8 @@ def attach_evidence(persona_id: str, source_type: str, content_or_path: str, not
         created_at=utc_now_iso(),
     ).to_dict()
     store.insert_evidence(evidence)
+    emit_lifecycle_event("evidence.attached", {"persona_id": persona["id"], "evidence_id": evidence["id"],  # noqa: F821 (bound)
+                                               "source_type": source_type}, store)
     return evidence
 
 

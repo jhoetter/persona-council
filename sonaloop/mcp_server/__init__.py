@@ -18,6 +18,7 @@ from ._tools_prototypes import register_prototypes
 from ._tools_usability import register_usability
 from ._tools_council import register_council
 from ._tools_sections import register_sections
+from ._tools_hooks import register_hooks
 
 
 def build_server():
@@ -39,6 +40,7 @@ def build_server():
     register_usability(mcp)
     register_council(mcp)
     register_sections(mcp)
+    register_hooks(mcp)
     register_prompts(mcp)
 
     from ._catalogue import catalogue_md

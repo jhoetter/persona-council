@@ -188,6 +188,8 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
     ).to_dict()
     rec["updated_at"] = utc_now_iso()
     store.upsert_synthesis(rec)
+    emit_lifecycle_event("synthesis.recorded", {"synthesis_id": sid, "title": title,  # noqa: F821 (bound)
+                                                "status": rec["status"], "council_ids": council_ids}, store)
     # Soft honesty signal (GAP-3): the synthesis IS the answer — flag (don't block) when it persists with
     # no prose AND no findings AND no voices, so the host notices a hollow answer node.
     out = dict(rec)
