@@ -8,7 +8,7 @@ from typing import Any
 
 from .avatar import generate_persona_avatar
 from .config import load_env
-from . import services, _cli_hooks
+from . import services, _cli_hooks, _cli_substrate
 
 
 def _pkg_version() -> str:
@@ -142,6 +142,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("personas", nargs="+")
 
     _cli_hooks.add_hook_parsers(sub)
+    _cli_substrate.add_substrate_parsers(sub)
 
     p = sub.add_parser("export-persona")
     p.add_argument("persona_id")
@@ -506,6 +507,8 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.compare_personas(args.prompt, args.personas))
         elif args.command in _cli_hooks.COMMANDS:
             _print(_cli_hooks.run_hook_command(args))
+        elif args.command in _cli_substrate.COMMANDS:
+            _print(_cli_substrate.run_substrate_command(args))
         elif args.command == "export-persona":
             content = services.export_persona(args.persona_id, args.format)
             _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out))

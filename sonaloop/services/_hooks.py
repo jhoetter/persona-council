@@ -54,6 +54,10 @@ LIFECYCLE_EVENTS: dict[str, dict[str, Any]] = {
         "payload": {"project_id": "id", "asset_id": "id", "kind": "image|screenshot|document|file",
                     "filename": "name"},
     },
+    "chat.recorded": {
+        "description": "A persona chat exchange was persisted (one authored turn pair).",
+        "payload": {"chat_id": "id", "persona_id": "id", "turns": "total turn count"},
+    },
     "day.recorded": {
         "description": "One simulated day was persisted (calendar + experience + summary).",
         "payload": {"persona_id": "id", "date": "YYYY-MM-DD", "events": "experience-event count"},

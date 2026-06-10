@@ -22,6 +22,7 @@ from ._tools_council import register_council
 from ._tools_sections import register_sections
 from ._tools_hooks import register_hooks
 from ._tools_assets import register_assets
+from ._tools_substrate import register_substrate
 
 
 def build_server():
@@ -47,6 +48,7 @@ def build_server():
     register_sections(mcp)
     register_hooks(mcp)
     register_assets(mcp)
+    register_substrate(mcp)
     register_prompts(mcp)
 
     from ._catalogue import catalogue_md

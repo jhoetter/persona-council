@@ -71,6 +71,13 @@ CREATE TABLE IF NOT EXISTS evidence (
   data TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS persona_chats (
+  id TEXT PRIMARY KEY,
+  persona_id TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  data TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS lifecycle_hooks (
   id TEXT PRIMARY KEY,
   event TEXT NOT NULL,

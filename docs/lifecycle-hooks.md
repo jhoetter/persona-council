@@ -32,6 +32,7 @@ version-stamped envelope. This shape is the stable surface connectors depend on:
 | `persona.created` | a host-authored profile is validated + persisted | `persona_id`, `slug`, `display_name` |
 | `persona.updated` | a profile patch lands (audit reason included) | `persona_id`, `reason` |
 | `evidence.attached` | a real-world source is attached to a persona | `persona_id`, `evidence_id`, `source_type` |
+| `chat.recorded` | a persona chat exchange is persisted (docs/substrate.md) | `chat_id`, `persona_id`, `turns` |
 | `asset.attached` | a file/image/screenshot is attached to a project as evidence (docs/project-assets.md) | `project_id`, `asset_id`, `kind`, `filename` |
 | `day.recorded` | one simulated day is persisted | `persona_id`, `date`, `events` |
 | `council.recorded` | a council session finishes inside its project — the **"session finished"** moment | `council_id`, `project_id`, `prompt`, `persona_ids`, `statements`, `votes` |

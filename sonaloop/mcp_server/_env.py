@@ -86,6 +86,11 @@ _NEXT: dict[str, dict[str, Any]] = {
     "attach_asset": {"name": "view_asset", "reason": "look at what you just attached (images render as pixels) before citing it"},
     "attach_prototype_shot": {"name": "view_asset", "reason": "look at the captured shot before citing it"},
     "view_asset": {"name": "brief_council", "reason": "the evidence is in the room — councils ground reactions in it automatically"},
+    # --- the queryable substrate (docs/substrate.md) ---
+    "substrate_schema": {"name": "query_projects", "reason": "pin the contract, then page through the projects"},
+    "query_projects": {"name": "get_study_result", "reason": "pull one project's full structured result (the automation shape)"},
+    "chat_with_persona": {"name": "record_chat_turn", "reason": "author the in-character reply, then persist the exchange"},
+    "record_chat_turn": {"name": "chat_with_persona", "reason": "continue the conversation with full history (pass chat_id)"},
 }
 
 

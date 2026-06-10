@@ -131,6 +131,13 @@ Core MCP tools:
   `register_hook` (command/webhook on e.g. `council.recorded`, `run.finished`) →
   `test_hook`; `list_hooks`, `unregister_hook`. CLI: `hooks-events`, `hook-register`,
   `hooks-list`, `hook-test`, `hook-remove`.
+- The queryable substrate (docs/substrate.md): versioned, paginated programmatic reads —
+  `substrate_schema` (pin the contract) → `query_personas`/`query_projects`/`query_councils`/
+  `query_syntheses` (filters: q, since, status; stable ordering) → `get_study_result` (the
+  one-call structured result automations poll). Durable persona chat: `chat_with_persona`
+  (gather context + history) → author the reply → `record_chat_turn` (persists, emits
+  `chat.recorded`); `get_chat`, `list_chats`. CLI: `query-*`, `study-result`,
+  `substrate-schema`, `chat-brief`/`chat-record`/`chat-get`/`chat-list`.
 - Project assets — files/images/screenshots as evidence (docs/project-assets.md):
   `attach_asset` (path or base64) → `view_asset` (images return as REAL pixels — look
   before citing), `attach_prototype_shot`, `list_assets`, `get_asset`, `remove_asset`.
