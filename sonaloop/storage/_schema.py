@@ -104,6 +104,20 @@ CREATE TABLE IF NOT EXISTS lifecycle_hooks (
   data TEXT NOT NULL
 );
 
+-- Cross-process event bus (docs/lifecycle-hooks.md): one lean row per emitted lifecycle
+-- event, appended by the services-layer '*' subscriber in WHICHEVER process records data
+-- (MCP server / CLI) and tailed by the web inspector's SSE stream + Activity feed.
+-- Monotonic AUTOINCREMENT id = the SSE cursor; the table is capped on append (~1000 rows).
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT NOT NULL,
+  event TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  project_id TEXT,
+  data TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   entity_type TEXT NOT NULL,
