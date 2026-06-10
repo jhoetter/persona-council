@@ -36,11 +36,13 @@ in-session. It is the SAME harness as prototype sessions — `proto_act` / `prot
 
 ## The guarantees
 
-1. **Origin containment.** Every navigation result — direct, link-click, redirect — is
-   checked against `allowed_origins`. An action that lands off-origin is undone (the
-   harness navigates back to the last on-policy URL) and comes back as a structured
-   refusal; a redirect at OPEN refuses the whole session (there is no on-policy state to
-   fall back to). An unparseable / non-http(s) landing URL counts as off-origin.
+1. **Origin containment.** Every observed page state is checked against
+   `allowed_origins` — after every action AND on every read, so direct navigations,
+   link-clicks, redirects and *delayed* JS redirects that fire while the session is idle
+   are all caught. An off-origin landing is undone (the harness navigates back to the
+   last on-policy URL) and comes back as a structured refusal; a redirect at OPEN refuses
+   the whole session (there is no on-policy state to fall back to). An unparseable /
+   non-http(s) landing URL counts as off-origin.
 2. **No risky actions.** A `click`/`select` on an element whose accessible name/text
    matches an enabled denylist category (case-insensitive substring), or an Enter keypress
    whose focused element / form-submit control matches, is refused before it runs.

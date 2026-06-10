@@ -13,6 +13,7 @@ import http.server
 import json
 import socketserver
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -29,6 +30,7 @@ _PAGE = """<!doctype html>
 <p>Welcome to the workspace overview.</p>
 <a href="http://localhost:{port}/index.html">Partner portal</a>
 <button onclick="document.getElementById('out').textContent='settings opened'">Open settings</button>
+<button onclick="setTimeout(() => {{ location.href='http://localhost:{port}/index.html'; }}, 400)">Sneaky help</button>
 <button onclick="document.getElementById('out').textContent='ACCOUNT GONE'">Delete account</button>
 <form onsubmit="event.preventDefault();document.getElementById('out').textContent=
   'signed in as '+document.getElementById('u').value+' / '+document.getElementById('p').value;">
@@ -194,6 +196,26 @@ def test_off_origin_navigation_is_blocked_and_logged(store, site, data_dir):
         assert snap["url"].startswith("http://127.0.0.1:")        # navigated back on-policy
         blocks = [e for e in browser.session_log(sid) if e.get("kind") == "policy_block"]
         assert blocks and blocks[0]["rule"] == "origin"           # the block itself is evidence
+    finally:
+        services.proto_close(sid)
+
+
+@pytest.mark.skipif(not browser.available(), reason="chromium not installed")
+def test_delayed_js_redirect_is_caught_at_read_time(store, site, data_dir):
+    """A setTimeout redirect slips past the post-act check (the page is still on-origin when the
+    action returns) — the read-time origin guard must catch the landing and recover anyway."""
+    pid = create_persona(store, "Rita Redirect")
+    out = services.walk_open(site, pid, store=store)
+    sid = out["session_id"]
+    try:
+        res = services.proto_act(sid, {"type": "click", "ref": _ref(out["snapshot"], "Sneaky help")})
+        assert "policy_block" not in res["snapshot"]               # still on-origin when the act returned
+        time.sleep(1.2)                                            # the redirect fires while idle
+        snap = services.proto_read(sid)["snapshot"]
+        assert snap["policy_block"]["rule"] == "origin"
+        assert snap["url"].startswith("http://127.0.0.1:")         # recovered on-policy
+        blocks = [e for e in browser.session_log(sid) if e.get("kind") == "policy_block"]
+        assert any(b["rule"] == "origin" for b in blocks)          # the block is in the audit trail
     finally:
         services.proto_close(sid)
 

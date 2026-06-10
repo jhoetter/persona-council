@@ -107,15 +107,20 @@ class _Session(threading.Thread):
                                        "the WalkPolicy cap auto-closed this session — record what you "
                                        "observed; open a new walkthrough only if more steps are genuinely needed")
                 if cmd == "read":
-                    reply.put(("ok", self._snapshot()))
+                    if self.policy and self._off_origin(self._current_url()):
+                        # a delayed/JS redirect can land off-origin BETWEEN actions; the read-time
+                        # guard keeps containment airtight no matter how the page got there
+                        reply.put(("ok", self._block_origin()))
+                    else:
+                        reply.put(("ok", self._snapshot()))
                 elif cmd == "act":
                     reply.put(("ok", self._act(payload)))
                 else:
                     reply.put(("err", f"unknown command {cmd}"))
             except HarnessError as he:
-                reply.put(("err", f"{he.code}:{he.message}"))
+                reply.put(("err", _wp.redact(f"{he.code}:{he.message}", self._secrets)))
             except Exception as e:
-                reply.put(("err", f"{type(e).__name__}: {e}"))
+                reply.put(("err", _wp.redact(f"{type(e).__name__}: {e}", self._secrets)))
 
     def _teardown(self) -> None:
         for obj, meth in ((self._browser, "close"), (self._pw, "stop")):
@@ -200,6 +205,15 @@ class _Session(threading.Thread):
             return None
 
     # ----- WalkPolicy enforcement (walk_policy.py; docs/live-walkthrough-safety.md) -----
+    def _current_url(self) -> str:
+        """The page's REAL current URL. `page.url` can be stale between calls (the sync API only
+        pumps protocol events during an active round-trip), so a delayed JS redirect that fired
+        while the session was idle would be invisible to it — evaluate forces a round-trip."""
+        try:
+            return str(self._page.evaluate("() => location.href"))
+        except Exception:
+            return self._page.url
+
     def _off_origin(self, url: str) -> bool:
         """True when a URL is outside policy.allowed_origins. An unparseable/non-http(s) URL is
         off-origin by definition — deny by default."""
@@ -318,7 +332,7 @@ class _Session(threading.Thread):
         else:
             raise HarnessError("BAD_ACTION", f"unknown action type {typ}")
         self._page.wait_for_timeout(150)
-        if self.policy and self._off_origin(self._page.url):
+        if self.policy and self._off_origin(self._current_url()):
             return self._block_origin()            # link-click results and redirects included
         return self._snapshot()
 
