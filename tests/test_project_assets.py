@@ -132,6 +132,92 @@ def test_assets_survive_the_snapshot_roundtrip(store, project, tmp_path, monkeyp
     assert data == PNG_BYTES
 
 
+# ------------------------------------------------------------------ direction in/out +
+# deliverable auto-attach (ticket project-assets-direction-deliverables-page-section)
+
+
+def test_direction_defaults_in_and_validates(store, project, tmp_path):
+    f = tmp_path / "note.txt"
+    f.write_text("evidence")
+    rec = services.attach_asset(project["id"], path=str(f), store=store)
+    assert rec["direction"] == "in"                    # evidence is the default
+    out = services.attach_asset(project["id"], path=str(f), direction="out", store=store)
+    assert out["direction"] == "out"                   # explicit deliverable
+    kept = services.attach_asset(project["id"], path=str(f), notes="refresh", store=store)
+    assert kept["direction"] == "out"                  # re-attach without direction keeps it
+    with pytest.raises(ValueError):
+        services.attach_asset(project["id"], path=str(f), direction="sideways", store=store)
+
+
+def test_directionless_legacy_records_read_as_evidence(store, project, tmp_path):
+    f = tmp_path / "old.txt"
+    f.write_text("pre-direction record")
+    rec = services.attach_asset(project["id"], path=str(f), store=store)
+    p = store.get_research_project(project["id"])      # simulate a record written before the field
+    p["assets"][0].pop("direction")
+    store.upsert_research_project(p)
+    from sonaloop.web._presence import asset_direction
+    legacy = services.get_asset(project["id"], rec["id"], store=store)
+    assert "direction" not in legacy and asset_direction(legacy) == "in"
+
+
+def _project_synthesis(store, project):
+    syn = services.record_synthesis("Component finder", "start", [], {}, store=store)
+    syn["project_id"] = project["id"]
+    store.upsert_synthesis(syn)
+    return syn
+
+
+def test_export_synthesis_deliverable_attaches_out_asset(store, project, tmp_path, monkeypatch):
+    monkeypatch.setattr(services, "export_synthesis_pptx",
+                        lambda sid, store=None: b"PK\x03\x04 fake deck bytes")
+    syn = _project_synthesis(store, project)
+    out = tmp_path / "deck.pptx"
+    res = services.export_synthesis_deliverable(syn["id"], "pptx", str(out), store=store)
+    assert res["path"] == str(out) and out.read_bytes().startswith(b"PK")
+    assert res["project_id"] == project["id"]
+    rec = services.get_asset(project["id"], res["asset_id"], store=store)
+    assert rec["direction"] == "out" and rec["kind"] == "document"
+    assert rec["source"] == f'synthesis:{syn["id"]}'
+    assert rec["title"] == "Component finder (PPTX)"
+    with pytest.raises(ValueError):
+        services.export_synthesis_deliverable(syn["id"], "docx", store=store)
+
+
+def test_export_synthesis_deliverable_relative_path_lands_in_data_exports(store, project, tmp_path, monkeypatch):
+    # the CWD fix: a relative/omitted out path goes to DATA_DIR/exports/, not the caller's CWD
+    from sonaloop import config as config_mod
+    monkeypatch.setattr(config_mod, "DATA_DIR", tmp_path / "dd")
+    monkeypatch.setattr(services, "export_synthesis_pdf", lambda sid, store=None: b"%PDF-1.7 fake")
+    syn = _project_synthesis(store, project)
+    res = services.export_synthesis_deliverable(syn["id"], "pdf", store=store)
+    assert res["path"] == str(tmp_path / "dd" / "exports" / f'{syn["id"]}.pdf')
+    assert (tmp_path / "dd" / "exports" / f'{syn["id"]}.pdf').read_bytes().startswith(b"%PDF")
+
+
+def test_export_synthesis_deliverable_without_project_skips_attach(store, tmp_path, monkeypatch):
+    monkeypatch.setattr(services, "export_synthesis_pptx", lambda sid, store=None: b"PK bytes")
+    syn = services.record_synthesis("Standalone", "start", [], {}, store=store)
+    res = services.export_synthesis_deliverable(syn["id"], "pptx", str(tmp_path / "d.pptx"), store=store)
+    assert "asset_id" not in res and "project_id" not in res
+
+
+def test_assets_section_renders_deliverables_first(store, project, tmp_path, monkeypatch):
+    monkeypatch.setattr(services, "export_synthesis_pptx", lambda sid, store=None: b"PK deck")
+    evidence = tmp_path / "field-note.txt"
+    evidence.write_text("observed in the field")
+    services.attach_asset(project["id"], path=str(evidence), title="Field note", store=store)
+    syn = _project_synthesis(store, project)
+    services.export_synthesis_deliverable(syn["id"], "pptx", str(tmp_path / "finder.pptx"), store=store)
+    from sonaloop.web._presence import assets_section_html
+    html = assets_section_html(services.list_assets(project["id"], store=store))
+    assert 'id="assets"' in html and "download" in html
+    # deliverables group first, evidence group after it; direction pills on the rows
+    assert html.index("Deliverables (1)") < html.index("Evidence (1)")
+    assert html.index("Component finder (PPTX)") < html.index("Field note")
+    assert "Deliverable" in html and "Evidence" in html
+
+
 def test_attach_prototype_shot_uses_capture(store, project, monkeypatch, tmp_path):
     # capture_prototype_shot is Playwright-backed; stub it to a stored file like the real one.
     from sonaloop import assets as assets_mod

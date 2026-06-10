@@ -624,11 +624,9 @@ def main(argv: list[str] | None = None) -> int:
             if args.format == "html":   # shareable read-only bundle: data/export/share/<token>/index.html
                 _print(services.export_synthesis_html(args.synthesis_id, args.out))
             elif args.format in ("pptx", "pdf"):
-                out = args.out or f"{args.synthesis_id}.{args.format}"
-                data = (services.export_synthesis_pptx(args.synthesis_id) if args.format == "pptx"
-                        else services.export_synthesis_pdf(args.synthesis_id))
-                Path(out).write_bytes(data)
-                _print({"path": out})
+                # one deliverable seam: data/exports/ for relative paths + a direction:out
+                # asset on the owning project (ticket project-assets-direction-…-section)
+                _print(services.export_synthesis_deliverable(args.synthesis_id, args.format, args.out))
             else:
                 content = services.export_synthesis(args.synthesis_id, args.format)
                 _print({"path": services.write_export(content, args.out)} if args.out else content, as_json=bool(args.out) or args.format == "json")

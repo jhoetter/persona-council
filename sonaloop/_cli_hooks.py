@@ -36,12 +36,14 @@ def add_hook_parsers(sub) -> None:
     p = sub.add_parser("hook-test", help="Fire a sample envelope through one hook to verify delivery.")
     p.add_argument("hook_id")
 
-    p = sub.add_parser("asset-attach", help="Attach a file/image/screenshot to a project as evidence.")
+    p = sub.add_parser("asset-attach", help="Attach a file to a project: evidence in (default) or a deliverable out.")
     p.add_argument("project_id")
     p.add_argument("path")
     p.add_argument("--kind", choices=["image", "screenshot", "document", "file"])
     p.add_argument("--title")
     p.add_argument("--notes")
+    p.add_argument("--direction", choices=["in", "out"],
+                   help="in = evidence brought into the project (default) · out = deliverable produced from it")
     p = sub.add_parser("asset-list")
     p.add_argument("project_id")
     p = sub.add_parser("asset-get")
@@ -82,7 +84,8 @@ def run_hook_command(args) -> Any:
         return services.test_hook(args.hook_id)
     if args.command == "asset-attach":
         return services.attach_asset(args.project_id, path=args.path, kind=args.kind,
-                                     title=args.title or "", notes=args.notes or "")
+                                     title=args.title or "", notes=args.notes or "",
+                                     direction=args.direction)
     if args.command == "asset-list":
         return services.list_assets(args.project_id)
     if args.command == "asset-get":

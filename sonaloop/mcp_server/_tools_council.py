@@ -252,10 +252,10 @@ def register_council(mcp):
         t = time.perf_counter()
         fmt = (format or "md").lower()
         if fmt in ("pdf", "pptx"):
-            data = (services.export_synthesis_pdf(synthesis_id) if fmt == "pdf"
-                    else services.export_synthesis_pptx(synthesis_id))
-            path = services.write_export_bytes(data, out_path or f"{synthesis_id}.{fmt}")
-            return _env("export_synthesis", {"path": path, "format": fmt, "bytes": len(data)}, t)
+            # the one deliverable seam: relative paths land under data/exports/, and the file is
+            # recorded on the owning project as a direction:out asset (deliverables on the page).
+            return _env("export_synthesis",
+                        services.export_synthesis_deliverable(synthesis_id, fmt, out_path), t)
         content = services.export_synthesis(synthesis_id, fmt)
         if out_path:
             return _env("export_synthesis", {"path": services.write_export(content, out_path), "format": fmt}, t)

@@ -1,6 +1,11 @@
 """PPTX export — the DOMAIN logic for a native PowerPoint deck of any report (which slides, which
 data); the slide→.pptx mechanics live in sonaloop/_pptx.py. Split out of services/_synthesis.py to
 keep both modules under the LOC bar (spec/refactor-plan.md), behaviour-preserving.
+
+Also home to export_synthesis_deliverable — the ONE binary-deliverable seam (pptx|pdf) the CLI and
+MCP export route through: it writes via write_export_bytes (relative paths land under
+DATA_DIR/exports/, never the caller's CWD) and records the file ON the owning project as a
+`direction: out` asset (ticket project-assets-direction-deliverables-page-section).
 """
 from __future__ import annotations
 
@@ -230,6 +235,32 @@ def export_template_deck(out: str = "master-template.pptx") -> dict:
     data = _pptx.render(_deck.SAMPLE_SLIDES, title=_deck.DECK_TITLE)
     return {"path": write_export_bytes(data, out), "slides": len(_deck.SAMPLE_SLIDES),
             "title": _deck.DECK_TITLE}
+
+
+def export_synthesis_deliverable(synthesis_id: str, fmt: str, out: str | None = None,
+                                 store: Store | None = None) -> dict:
+    """Render a synthesis as a presentation-grade deliverable file (`pptx`|`pdf`), write it via
+    write_export_bytes (a relative/omitted `out` lands under DATA_DIR/exports/ — CWD-independent),
+    and — when the synthesis belongs to a project (its own `project_id`, or the plan/graph parent)
+    — record the file ON that project as a `direction: out` asset (`source: synthesis:<id>`), so
+    what went OUT of the project shows on its page next to the evidence that came in."""
+    store = store or Store()
+    fmt = (fmt or "").lower()
+    if fmt not in ("pptx", "pdf"):
+        raise ValueError(f"Unsupported deliverable format {fmt!r} (pptx|pdf).")
+    syn = get_synthesis(synthesis_id, store)
+    data = (export_synthesis_pptx(synthesis_id, store=store) if fmt == "pptx"
+            else export_synthesis_pdf(synthesis_id, store=store))           # noqa: F821 (bound)
+    path = write_export_bytes(data, out or f"{synthesis_id}.{fmt}")         # noqa: F821 (bound)
+    result = {"synthesis_id": syn["id"], "format": fmt, "path": path, "bytes": len(data)}
+    proj = (store.get_research_project(syn["project_id"]) if syn.get("project_id")
+            else parent_project_of_synthesis(synthesis_id, store=store))    # noqa: F821 (bound)
+    if proj:
+        rec = attach_asset(proj["id"], path=path, kind="document",          # noqa: F821 (bound)
+                           title=f'{syn.get("title") or synthesis_id} ({fmt.upper()})',
+                           source=f"synthesis:{synthesis_id}", direction="out", store=store)
+        result["project_id"], result["asset_id"] = proj["id"], rec["id"]
+    return result
 
 
 def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> bytes:

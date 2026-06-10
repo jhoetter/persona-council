@@ -75,7 +75,8 @@ REGISTRY: dict[str, Declared] = {
     "hypothesis": Declared(SECTION_WITH_HEADER_CHIP, "#hypotheses section below the outline + header jump-chip"),
     "decision": Declared(SECTION_WITH_HEADER_CHIP, "#decisions section below the outline + header jump-chip"),
     "open_question": Declared(SECTION_WITH_HEADER_CHIP, "#open-questions section + header jump-chip (open count)"),
-    "asset": Declared(SECTION_WITH_HEADER_CHIP, "#assets thumbnail section + header jump-chip"),
+    "asset": Declared(SECTION_WITH_HEADER_CHIP, "#assets thumbnail section + header jump-chip "
+                                                "(deliverables out first, then evidence in)"),
     "survey": Declared(SECTION_WITH_HEADER_CHIP, "#surveys section (rows → /surveys/{id}) + header jump-chip"),
 }
 
@@ -179,36 +180,61 @@ def survey_status_pill(status: str) -> str:
     return _label(label, color)
 
 
+def asset_direction(asset: dict) -> str:
+    """An asset record's flow direction: `out` (deliverable produced from the project) or `in`
+    (evidence brought into it). Direction-less records predate the field and ARE evidence —
+    back-compat without a migration (ticket project-assets-direction-deliverables-page-section)."""
+    return "out" if asset.get("direction") == "out" else "in"
+
+
 def asset_rows(assets: list) -> str:
-    """Evidence-asset rows (files/images/screenshots, ticket attach-evidence-files-mcp): image
-    assets render a thumbnail from the static /data mount. Shared by the default-view #assets
-    section and the retired graph view's floating panel."""
+    """Asset rows (files/images/screenshots, ticket attach-evidence-files-mcp): image assets
+    render a thumbnail from the static /data mount; every row carries kind + direction pills and
+    `filename · size`. Deliverables (direction out) link as downloads. Shared by the default-view
+    #assets section and the retired graph view's floating panel."""
     rows = []
     for a in assets:
         is_img = a.get("kind") in ("image", "screenshot")
-        thumb = (h("a", {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"},
+        is_out = asset_direction(a) == "out"
+        link = {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"}
+        if is_out:  # a deliverable file: hand it to the user, don't render it in a tab
+            link = {"href": a.get("url", "#"), "download": a.get("filename", "")}
+        thumb = (h("a", dict(link),
                    h("img", {"src": a.get("url", ""), "alt": a.get("title", ""), "loading": "lazy",
                              "style": "max-height:64px;max-width:120px;border-radius:6px;display:block"}))
-                 if is_img else raw(_icon("external")))
+                 if is_img else raw(_icon("download" if is_out else "external")))
         size_kb = f'{max(1, int(a.get("bytes", 0)) // 1024)} KB'
+        dir_pill = (h("span", {"class_": "pill", "style": "border-color:var(--green);color:var(--green)"},
+                      t("asset_dir_out")) if is_out else h("span", {"class_": "pill"}, t("asset_dir_in")))
         rows.append(h("div", {"class_": "strow"},
                       thumb, " ",
-                      h("a", {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"},
-                        h("b", {}, a.get("title") or a.get("filename", ""))), " ",
+                      h("a", dict(link), h("b", {}, a.get("title") or a.get("filename", ""))), " ",
                       h("span", {"class_": "pill"}, t("asset_kind_" + (a.get("kind") or "file"))), " ",
+                      dir_pill, " ",
                       h("span", {"class_": "muted small"}, f'{a.get("filename", "")} · {size_kb}'
                         + (f' · {a.get("notes")}' if a.get("notes") else ""))))
     return "".join(rows)
 
 
 def assets_section_html(assets: list) -> str:
-    """The project's evidence assets as a default-view section (anchor #assets) — formerly only
-    the ?view=graph floating panel showed them. Empty string when there are none (no empty chrome)."""
+    """The project's assets as a default-view section (anchor #assets): the deliverables that went
+    OUT of the project first (download links), then the evidence that came in — each group with its
+    own sub-heading when both exist, plain rows when only one direction is present. Empty string
+    when there are none (no empty chrome)."""
     if not assets:
         return ""
+    outgoing = [a for a in assets if asset_direction(a) == "out"]
+    incoming = [a for a in assets if asset_direction(a) == "in"]
+    if outgoing and incoming:
+        body = fragment(h("div", {"class_": "oqp-h"}, f'{t("asset_deliverables_h")} ({len(outgoing)})'),
+                        raw(asset_rows(outgoing)),
+                        h("div", {"class_": "oqp-h", "style": "margin-top:10px"},
+                          f'{t("asset_evidence_h")} ({len(incoming)})'),
+                        raw(asset_rows(incoming)))
+    else:
+        body = raw(asset_rows(outgoing + incoming))
     return h("div", {"class_": "outlinecard", "id": "assets", "style": "margin-top:14px"},
-             h("h2", {"style": "margin:0 0 6px"}, f'{t("assets_h")} ({len(assets)})'),
-             raw(asset_rows(assets)))
+             h("h2", {"style": "margin:0 0 6px"}, f'{t("assets_h")} ({len(assets)})'), body)
 
 
 def open_questions_section_html(oqs: list) -> str:

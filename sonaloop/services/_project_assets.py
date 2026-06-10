@@ -2,12 +2,19 @@
 (ticket attach-evidence-files-mcp — the generic multimodal Assets foundation the
 council-artifacts module points at).
 
-An asset is REAL MATERIAL brought into a project — a screenshot, a PDF, an
-interview note, a photo — stored once in the content-addressed binary store
-(ROOT/data/assets, the same dir the web app serves at /data/assets/…) and
-recorded on the project (`project["assets"]`, the same JSON-blob-per-row model
-artifacts use; no new table). Ids are stable (content-addressed per project) so
-personas/councils can cite them and re-attaching the same bytes is idempotent.
+An asset is REAL MATERIAL on a project — stored once in the content-addressed
+binary store (ROOT/data/assets, the same dir the web app serves at
+/data/assets/…) and recorded on the project (`project["assets"]`, the same
+JSON-blob-per-row model artifacts use; no new table). Ids are stable
+(content-addressed per project) so personas/councils can cite them and
+re-attaching the same bytes is idempotent.
+
+Direction (ticket project-assets-direction-deliverables-page-section): an asset
+flows `in` (evidence brought INTO the project — a screenshot, a PDF, an
+interview note; the default, and what every pre-direction record means) or
+`out` (a deliverable PRODUCED from the project — the exported PPTX/PDF a
+synthesis renders; attached by export_synthesis_deliverable with
+source `synthesis:<id>`). No migration: a record without the field is `in`.
 
 Multimodal contract: image assets are not merely stored — `get_asset_content`
 hands back the bytes, and the MCP `view_asset` tool returns them as an actual
@@ -33,6 +40,7 @@ IMAGE_EXTS = {"png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"}
 DOCUMENT_EXTS = {"pdf", "md", "txt", "csv", "json", "html", "docx", "rtf"}
 TEXT_EXCERPT_EXTS = {"md", "txt", "csv", "json", "html", "rtf"}
 ASSET_KINDS = ("image", "screenshot", "document", "file")
+ASSET_DIRECTIONS = ("in", "out")   # in = evidence brought into the project · out = deliverable produced from it
 MAX_ASSET_BYTES = 25 * 1024 * 1024
 _EXCERPT_CHARS = 4000
 
@@ -68,15 +76,20 @@ def _text_excerpt(data: bytes, ext: str) -> str:
 
 def attach_asset(project_id: str, path: str | None = None, content_base64: str | None = None,
                  filename: str | None = None, kind: str | None = None, title: str = "",
-                 notes: str = "", source: str = "", store: Store | None = None) -> dict[str, Any]:
-    """Attach a file/image/screenshot to a project as citable evidence. Pass EITHER
+                 notes: str = "", source: str = "", direction: str | None = None,
+                 store: Store | None = None) -> dict[str, Any]:
+    """Attach a file/image/screenshot to a project as a citable asset. Pass EITHER
     `path` (a local file — e.g. a screenshot captured during the project) OR
     `content_base64` (+ `filename` for the extension). The binary lands in the
     content-addressed store; the record (stable id, kind, media type, excerpt for
-    text documents) lands on the project. Re-attaching identical bytes is an
-    idempotent upsert (title/notes refresh). Emits `asset.attached`."""
+    text documents) lands on the project. `direction` is `in` (evidence, the
+    default) or `out` (a deliverable produced from the project). Re-attaching
+    identical bytes is an idempotent upsert (title/notes/direction refresh).
+    Emits `asset.attached`."""
     store = store or Store()
     project = _require_research_project(store, project_id)  # noqa: F821 (bound)
+    if direction is not None and direction not in ASSET_DIRECTIONS:
+        raise ValueError(f"direction must be one of {ASSET_DIRECTIONS}, got {direction!r}")
     if bool(path) == bool(content_base64):
         raise ValueError("Pass exactly one of `path` or `content_base64`.")
     if path:
@@ -110,6 +123,8 @@ def attach_asset(project_id: str, path: str | None = None, content_base64: str |
         "title": (title or (existing or {}).get("title") or name).strip(),
         "notes": notes or (existing or {}).get("notes", ""),
         "source": source or (existing or {}).get("source", ""),
+        # in (evidence; also every pre-direction record) | out (deliverable). Kept on re-attach.
+        "direction": direction or (existing or {}).get("direction") or "in",
         "media_type": mimetypes.guess_type(name)[0] or "application/octet-stream",
         "bytes": len(data),
         "asset_path": f"data/assets/{sha}.{ext}",
