@@ -393,6 +393,37 @@ def proto_close(session_id, store: Store | None = None):
 
 
 
+def proto_drive(prototype_id=None, url=None, persona_id=None, actions=None,
+                reaction=None, date_value=None, store: Store | None = None):
+    """A complete proband session in ONE process: open → scripted actions → read → close —
+    and, when `reaction` is given, record_prototype_session against the still-warm log.
+    This exists because browser sessions (and their retained logs) live in process memory:
+    stateless CLI invocations can never act on / verify a session another process opened."""
+    store = store or Store()
+    opened = proto_open(prototype_id, url, persona_id, store=store)
+    sid = opened["session_id"]
+    steps = []
+    try:
+        for a in (actions or []):
+            steps.append(proto_act(sid, a, store=store))
+        final = proto_read(sid, store=store)
+    finally:
+        proto_close(sid, store=store)
+    out = {"session_id": sid, "opened": opened.get("snapshot"), "steps": steps,
+           "final": final.get("snapshot")}
+    if reaction is not None:
+        rec = record_prototype_session(persona_id, prototype_id, sid,
+                                       date_value or date.today().isoformat(), reaction, store=store)
+        out["recorded"] = {"id": rec["prototype_session"]["id"],
+                           "grounded_verified": rec.get("grounded_verified")}
+    else:
+        out["note"] = ("groundedness: the session log lives in THIS process — record the reaction in "
+                       "the same proto_drive call (reaction=…) or this same process; a later "
+                       "session-record from a fresh CLI process records UNVERIFIED")
+    return out
+
+
+
 def list_proto_sessions(store: Store | None = None):
     return _browser.list_sessions()
 

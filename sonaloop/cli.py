@@ -399,6 +399,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("prototype-stop"); p.add_argument("prototype_id")
     p = sub.add_parser("prototype-delete"); p.add_argument("prototype_id")
     p = sub.add_parser("proto-open"); p.add_argument("--prototype"); p.add_argument("--url"); p.add_argument("--persona")
+    p = sub.add_parser("proto-drive")  # one-process proband session: open → actions → read → close (+record)
+    p.add_argument("script")  # JSON file: [{type,ref,…},…] or {"actions":[…]}
+    p.add_argument("--prototype"); p.add_argument("--url"); p.add_argument("--persona")
+    p.add_argument("--record")  # reaction JSON file → record_prototype_session in-process (grounded)
+    p.add_argument("--date", default="")
     p = sub.add_parser("proto-act"); p.add_argument("session_id"); p.add_argument("action")
     p = sub.add_parser("proto-read"); p.add_argument("session_id")
     p = sub.add_parser("proto-close"); p.add_argument("session_id")
@@ -747,6 +752,12 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.delete_prototype_artifact(args.prototype_id))
         elif args.command == "proto-open":
             _print(services.proto_open(args.prototype, args.url, args.persona))
+        elif args.command == "proto-drive":
+            script = json.loads(Path(args.script).read_text(encoding="utf-8"))
+            actions = script.get("actions") if isinstance(script, dict) else script
+            reaction = json.loads(Path(args.record).read_text(encoding="utf-8")) if args.record else None
+            _print(services.proto_drive(args.prototype, args.url, args.persona, actions,
+                                        reaction=reaction, date_value=args.date or None))
         elif args.command == "proto-act":
             _print(services.proto_act(args.session_id, json.loads(args.action)))
         elif args.command == "proto-read":
