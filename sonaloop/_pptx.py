@@ -19,9 +19,13 @@ Chart shapes (one per design-system chart `of`):
   {"type": "diverging_bar", "rows": [{"label": str, "positive": num, "negative": num}],
      "positive_label": str, "negative_label": str}
   {"type": "gauge", "items": [{"label": str, "value": num, "max": num}]}
-  {"type": "dot_plot", "rows": [{"label": str, "values": [num]}], "min": num, "max": num}
+  {"type": "dot_plot", "rows": [{"label": str, "values": [num]}], "min": num, "max": num, "unit": str}
   {"type": "heatmap", "columns": [str], "rows": [{"label": str, "values": [num]}]}
-  {"type": "line", "series": [{"label": str, "points": [num]}], "labels": [str]}
+  {"type": "line", "series": [{"label": str, "points": [num]}], "labels": [str], "target": num}
+  {"type": "stacked_area", "series": [{"label": str, "points": [num]}], "labels": [str]}
+  {"type": "column", "items": [{"label": str, "value": num} | {"label": str, "segments": […]}]}
+  {"type": "progress_strip", "items": [{"label": str, "value": num}]}
+  {"type": "stats", "items": [{"label": str, "value": num|str, "sub": str}]}
   {"type": "scatter", "points": [{"x":num,"y":num,"label":str}], "x_label": str, "y_label": str}
 """
 from __future__ import annotations
@@ -460,6 +464,7 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
 
     def _dot_plot_chart(slide, ch, bx, by, bw, bh):
         rows = ch.get("rows") or []
+        u = str(ch.get("unit") or "")
         mn = float(ch.get("min", 1)); mx = float(ch.get("max", 5)); span = (mx - mn) or 1
         n = max(len(rows), 1)
         label_w = min(1.6, bw * 0.32); value_w = 0.42; scale_h = 0.3
@@ -481,9 +486,9 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
                 ov.fill.solid(); ov.fill.fore_color.rgb = rgb(tint); ov.line.fill.background(); _noshadow(ov)
             mh = 0.22
             _rrect(slide, xof(mean) - 0.025, cyc - mh / 2, 0.05, mh, col, radius=0.3)
-            _text(slide, tx + tw + 0.05, ry, value_w, row_h, _num(mean), size=10, color=_MUTED)
-        _text(slide, tx, by + bh - scale_h + 0.02, 0.6, scale_h, _num(mn), size=9, color=_FAINT)
-        _text(slide, tx + tw - 0.6, by + bh - scale_h + 0.02, 0.6, scale_h, _num(mx), size=9, color=_FAINT, align=PP_ALIGN.RIGHT)
+            _text(slide, tx + tw + 0.05, ry, value_w, row_h, _num(mean) + u, size=10, color=_MUTED)
+        _text(slide, tx, by + bh - scale_h + 0.02, 0.6, scale_h, _num(mn) + u, size=9, color=_FAINT)
+        _text(slide, tx + tw - 0.6, by + bh - scale_h + 0.02, 0.6, scale_h, _num(mx) + u, size=9, color=_FAINT, align=PP_ALIGN.RIGHT)
 
     def _heatmap_chart(slide, ch, bx, by, bw, bh):
         cols = [str(c) for c in (ch.get("columns") or [])]
@@ -527,7 +532,13 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         for s in lines:
             pts = [float(p) if isinstance(p, (int, float)) else None for p in (s.get("points") or [])]
             cd.add_series(s.get("label", ""), tuple(pts + [None] * (maxlen - len(pts))))
-        multi = len(lines) > 1; legend_h = 0.0
+        # Burn-up ideal line — a straight dashed series from the first point up to the target.
+        tgt = ch.get("target")
+        has_target = isinstance(tgt, (int, float)) and not isinstance(tgt, bool) and maxlen > 1
+        if has_target:
+            first = next((float(p) for p in (lines[0].get("points") or []) if isinstance(p, (int, float))), 0.0)
+            cd.add_series("Target", tuple(first + (float(tgt) - first) * i / (maxlen - 1) for i in range(maxlen)))
+        multi = len(lines) > 1 or has_target; legend_h = 0.0
         chart = slide.shapes.add_chart(XL_CHART_TYPE.LINE_MARKERS, Inches(bx), Inches(by),
                                        Inches(bw), Inches(bh - legend_h), cd).chart
         chart.has_title = False; chart.has_legend = multi
@@ -536,10 +547,16 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             chart.legend.font.size = Pt(9); chart.legend.font.name = "Geist"; chart.legend.font.color.rgb = rgb(_MUTED)
         _clean_area(chart)
         for i, ser in enumerate(chart.series):
-            col = _SERIES[i % len(_SERIES)]
+            is_target = has_target and i == len(lines)
+            col = _MUTED if is_target else _SERIES[i % len(_SERIES)]
             try:
-                ser.format.line.color.rgb = rgb(col); ser.format.line.width = Pt(2)
+                ser.format.line.color.rgb = rgb(col); ser.format.line.width = Pt(1.25 if is_target else 2)
                 ser.smooth = False
+                if is_target:
+                    from pptx.enum.chart import XL_MARKER_STYLE
+                    from pptx.enum.line import MSO_LINE
+                    ser.format.line.dash_style = MSO_LINE.DASH
+                    ser.marker.style = XL_MARKER_STYLE.NONE
             except Exception:
                 pass
         try:
@@ -550,6 +567,129 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             chart.value_axis.has_major_gridlines = False
         except Exception:
             pass
+
+    def _area_chart(slide, ch, bx, by, bw, bh):
+        """Stacked area / cumulative flow — a native AREA_STACKED chart, series-palette filled."""
+        from pptx.chart.data import CategoryChartData
+        from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+        bands = [s for s in (ch.get("series") or []) if (s.get("points") or [])]
+        if not bands:
+            return
+        maxlen = max(len(s.get("points") or []) for s in bands)
+        labels = ch.get("labels") or []
+        cats = [str(x) for x in labels] if len(labels) == maxlen else [str(i + 1) for i in range(maxlen)]
+        cd = CategoryChartData(); cd.categories = cats
+        for s in bands:
+            pts = [float(p) if isinstance(p, (int, float)) else 0.0 for p in (s.get("points") or [])]
+            cd.add_series(s.get("label", ""), tuple(pts + [0.0] * (maxlen - len(pts))))
+        chart = slide.shapes.add_chart(XL_CHART_TYPE.AREA_STACKED, Inches(bx), Inches(by),
+                                       Inches(bw), Inches(bh), cd).chart
+        chart.has_title = False; chart.has_legend = True
+        chart.legend.position = XL_LEGEND_POSITION.BOTTOM; chart.legend.include_in_layout = False
+        chart.legend.font.size = Pt(9); chart.legend.font.name = "Geist"; chart.legend.font.color.rgb = rgb(_MUTED)
+        _clean_area(chart)
+        for i, ser in enumerate(chart.series):
+            col = _SERIES[i % len(_SERIES)]
+            try:
+                ser.format.fill.solid(); ser.format.fill.fore_color.rgb = rgb(_mix(col, _BG, 0.35))
+                ser.format.line.color.rgb = rgb(col); ser.format.line.width = Pt(1.25)
+            except Exception:
+                pass
+        try:
+            for ax in (chart.category_axis, chart.value_axis):
+                ax.tick_labels.font.size = Pt(9); ax.tick_labels.font.name = "Geist"
+                ax.tick_labels.font.color.rgb = rgb(_MUTED)
+                ax.format.line.color.rgb = rgb(_LINE)
+            chart.value_axis.has_major_gridlines = False
+        except Exception:
+            pass
+
+    def _column_chart(slide, ch, bx, by, bw, bh):
+        """Vertical bars (the DS column chart) — plain or segment-stacked, value + category labels."""
+        items = ch.get("items") or []
+        keys = []
+        for it in items:
+            for seg in it.get("segments") or []:
+                if seg.get("label") not in keys:
+                    keys.append(seg.get("label"))
+        col_of = lambda lbl: _SERIES[(keys.index(lbl) if lbl in keys else 0) % len(_SERIES)]
+
+        def _total(it):
+            if it.get("segments"):
+                return sum(float(s.get("value") or 0) for s in it["segments"])
+            return float(it.get("value") or 0)
+
+        totals = [_total(it) for it in items]
+        if not totals:
+            return
+        mx = max(totals + [1]) or 1
+        n = max(len(items), 1)
+        label_h, val_h = 0.26, 0.2
+        legend_h = 0.32 if keys else 0.0
+        plot_h = max(0.8, bh - label_h - val_h - legend_h)
+        gap = min(0.3, bw / n * 0.4)
+        cw = (bw - gap * (n - 1)) / n; bar_w = min(cw, 0.55)
+        base_y = by + val_h + plot_h
+        _connector(slide, bx, base_y, bx + bw, base_y, _LINE, width=1)
+        for i, (it, tot) in enumerate(zip(items, totals)):
+            cx0 = bx + i * (cw + gap)
+            bx0 = cx0 + (cw - bar_w) / 2
+            h = plot_h * tot / mx
+            if it.get("segments"):
+                sy = base_y
+                for seg in it["segments"]:
+                    v = float(seg.get("value") or 0)
+                    if v <= 0:
+                        continue
+                    sh = h * (v / tot) if tot else 0
+                    sy -= sh
+                    _rrect(slide, bx0, sy, bar_w, sh, col_of(seg.get("label")), radius=0)
+            elif h > 0:
+                _rrect(slide, bx0, base_y - h, bar_w, max(0.02, h), _SERIES[0], radius=0)
+            _text(slide, cx0, base_y - h - val_h, cw, val_h, _num(tot), size=9, color=_MUTED, align=PP_ALIGN.CENTER)
+            _text(slide, cx0, base_y + 0.03, cw, label_h, str(it.get("label", "")), size=9, color=_MUTED, align=PP_ALIGN.CENTER)
+        if keys:
+            _legend_row(slide, [(k, col_of(k)) for k in keys], bx, base_y + label_h + 0.06, bw)
+
+    def _progress_strip_chart(slide, ch, bx, by, bw, bh):
+        """One full-width segmented status bar + a count/% legend (the DS progress strip)."""
+        items = [it for it in (ch.get("items") or []) if float(it.get("value") or 0) > 0]
+        total = sum(float(it["value"]) for it in items)
+        if not items or total <= 0:
+            return
+        bar_h = 0.24; bar_y = by + min(0.4, bh * 0.2)
+        _rrect(slide, bx, bar_y, bw, bar_h, _SURFACE2)
+        sx = bx
+        for i, it in enumerate(items):
+            w = bw * float(it["value"]) / total
+            _rrect(slide, sx, bar_y, max(0.02, w), bar_h, _SERIES[i % len(_SERIES)], radius=0)
+            sx += w
+        x = bx; ly = bar_y + bar_h + 0.14
+        for i, it in enumerate(items):
+            v = float(it["value"])
+            lbl = f'{it.get("label", "")}  {_num(v)} · {round(v / total * 100)}%'
+            w = min(2.3, 0.07 * len(lbl) + 0.25)
+            if x + 0.19 + w > bx + bw:
+                x = bx; ly += 0.24
+            _rrect(slide, x, ly + 0.03, 0.13, 0.13, _SERIES[i % len(_SERIES)], radius=0.28)
+            _text(slide, x + 0.19, ly, w, 0.2, lbl, size=9, color=_MUTED)
+            x += 0.19 + w + 0.16
+
+    def _stats_chart(slide, ch, bx, by, bw, bh):
+        """KPI number row — label · big value · optional sub, one tile per item."""
+        items = ch.get("items") or []
+        if not items:
+            return
+        n = len(items)
+        tile_w = bw / n
+        for i, it in enumerate(items):
+            gx = bx + i * tile_w
+            v = it.get("value")
+            txt = v if isinstance(v, str) else _num(float(v or 0))
+            _text(slide, gx, by + 0.05, tile_w - 0.12, 0.22, str(it.get("label", "")), size=10, color=_MUTED)
+            _text(slide, gx, by + 0.28, tile_w - 0.12, 0.5, str(txt), size=24, bold=True)
+            if it.get("sub"):
+                _text(slide, gx, by + 0.8, tile_w - 0.12, 0.22, str(it["sub"]), size=9, color=_FAINT)
 
     def _chart(slide, ch, x, y, cx, cy):
         bx, by, bw, bh = x.inches, y.inches, cx.inches, cy.inches
@@ -571,6 +711,14 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
                 _heatmap_chart(slide, ch, bx, by, bw, bh)
             elif kind == "line" and ch.get("series"):
                 _line_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "stacked_area" and ch.get("series"):
+                _area_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "column" and ch.get("items"):
+                _column_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "progress_strip" and ch.get("items"):
+                _progress_strip_chart(slide, ch, bx, by, bw, bh)
+            elif kind == "stats" and ch.get("items"):
+                _stats_chart(slide, ch, bx, by, bw, bh)
             elif kind == "scatter" and ch.get("points"):
                 _effort_chart(slide, ch, bx, by, bw, bh)
         except Exception:

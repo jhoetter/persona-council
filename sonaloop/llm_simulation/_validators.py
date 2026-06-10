@@ -331,10 +331,12 @@ def validate_synthesis_section_payload(payload: dict[str, Any]) -> dict[str, Any
                               "quote": str(c.get("quote", "")).strip()[:600]})
     # figures (spec/meta-report-presentation-and-pdf §2): typed refs the renderer resolves to visuals —
     # {kind: asset|prototype|chart|avatar|graph, id|of|source_id, caption}. A chart figure carries an
-    # author-supplied `series` whose per-item shape depends on `of` (see web/_report.py): value+color
-    # (bar/pie), +max (gauge), nested segments (stacked_bar), positive/negative (diverging_bar), a
-    # numeric `values` list (dot_plot, heatmap rows), or a `points` list (line). of="line"/"heatmap" also
-    # read figure-level `labels`/`columns`. of="effort_impact" derives from source_id's synthesis.
+    # author-supplied `series` whose per-item shape depends on `of` (see charts_catalogue): value+color
+    # (bar/pie/column/progress_strip), +max (gauge), +sub (stats), nested segments (stacked_bar/column),
+    # positive/negative (diverging_bar), a numeric `values` list (dot_plot/strip, heatmap rows), or a
+    # `points` list (line/burnup/stacked_area). Figure-level keys: `labels`/`columns` (x ticks & headers),
+    # `target`/`now` (burnup), `min`/`max`/`unit` (strip), `table` (column).
+    # of="effort_impact" derives from source_id's synthesis.
     def _series_item(s: dict) -> dict:
         return {"label": str(s.get("label", "")).strip()[:120], "value": s.get("value"),
                 "color": str(s.get("color", "")).strip()[:40]}
@@ -351,6 +353,8 @@ def validate_synthesis_section_payload(payload: dict[str, Any]) -> dict[str, Any
                     item = _series_item(s)
                     if s.get("max") is not None:  # gauge scale
                         item["max"] = s.get("max")
+                    if str(s.get("sub", "")).strip():  # stats secondary line
+                        item["sub"] = str(s["sub"]).strip()[:80]
                     if s.get("positive") is not None or s.get("negative") is not None:  # diverging_bar
                         item["positive"], item["negative"] = s.get("positive"), s.get("negative")
                     if isinstance(s.get("segments"), list):  # stacked-bar composition
@@ -368,8 +372,15 @@ def validate_synthesis_section_payload(payload: dict[str, Any]) -> dict[str, Any
             if cols:  # heatmap column headers
                 fig["columns"] = cols
             labs = [str(x).strip()[:40] for x in (f.get("labels") or [])[:60]]
-            if labs:  # line x-axis labels
+            if labs:  # line/burnup/stacked_area x-axis labels
                 fig["labels"] = labs
+            for k in ("target", "now", "min", "max"):  # burnup ideal/today · strip scale
+                if isinstance(f.get(k), (int, float)) and not isinstance(f.get(k), bool):
+                    fig[k] = f[k]
+            if str(f.get("unit", "")).strip():  # strip unit suffix
+                fig["unit"] = str(f["unit"]).strip()[:8]
+            if f.get("table"):  # column breakdown table
+                fig["table"] = True
             figures.append(fig)
     return {"markdown": str(payload.get("markdown", "")).strip()[:20000],
             "citations": citations[:50], "figures": figures[:20]}

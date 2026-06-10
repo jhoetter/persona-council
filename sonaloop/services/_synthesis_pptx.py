@@ -121,6 +121,60 @@ def _figure_to_chart(fig: dict, store: Store) -> dict | None:
         lines = [ln for ln in lines if len(ln["points"]) > 1]
         labels = [_strip_md(str(x)) for x in (fig.get("labels") or [])]
         return {"type": "line", "series": lines, "labels": labels} if lines else None
+    if of == "burnup":
+        lines = [{"label": _strip_md(s.get("label", "")),
+                  "points": [p for p in (s.get("points") or []) if isinstance(p, (int, float))]}
+                 for s in series if s.get("points")]
+        lines = [ln for ln in lines if len(ln["points"]) > 1]
+        if not lines:
+            return None
+        labels = [_strip_md(str(x)) for x in (fig.get("labels") or [])]
+        # The deck reuses the native line model; the dotted ideal renders as a dashed Target series.
+        return {"type": "line", "series": lines, "labels": labels, "target": fig.get("target")}
+    if of == "stacked_area":
+        bands = [{"label": _strip_md(s.get("label", "")),
+                  "points": [p for p in (s.get("points") or []) if isinstance(p, (int, float))]}
+                 for s in series if s.get("points")]
+        bands = [b for b in bands if len(b["points"]) > 1]
+        labels = [_strip_md(str(x)) for x in (fig.get("labels") or [])]
+        return {"type": "stacked_area", "series": bands, "labels": labels} if bands else None
+    if of == "column":
+        items = []
+        for s in series:
+            if s.get("segments"):
+                items.append({"label": _strip_md(s.get("label", "")),
+                              "segments": [{"label": _strip_md(g.get("label", "")), "value": g.get("value")}
+                                           for g in s["segments"] if isinstance(g, dict)]})
+            elif s.get("value") not in (None, ""):
+                items.append({"label": _strip_md(s.get("label", "")), "value": s.get("value")})
+        return {"type": "column", "items": items} if items else None
+    if of == "strip":
+        rows = [{"label": _strip_md(s.get("label", "")),
+                 "values": [v for v in (s.get("values") or []) if isinstance(v, (int, float))]}
+                for s in series if s.get("values")]
+        rows = [r for r in rows if r["values"]]
+        if not rows:
+            return None
+        allv = [v for r in rows for v in r["values"]]
+        mn = fig.get("min") if isinstance(fig.get("min"), (int, float)) else min(allv)
+        mx = fig.get("max") if isinstance(fig.get("max"), (int, float)) else max(allv)
+        # The continuous strip reuses the dot_plot model with a data-derived scale + unit suffix.
+        return {"type": "dot_plot", "rows": rows, "min": mn, "max": mx, "unit": str(fig.get("unit") or "")}
+    if of == "progress_strip":
+        items = [{"label": _strip_md(s.get("label", "")), "value": s.get("value")}
+                 for s in series if isinstance(s.get("value"), (int, float)) and s.get("value") > 0]
+        return {"type": "progress_strip", "items": items} if items else None
+    if of == "stats":
+        items = []
+        for s in series:
+            if not (s.get("label") or s.get("value") not in (None, "")):
+                continue
+            it = {"label": _strip_md(s.get("label", "")),
+                  "value": _strip_md(s["value"]) if isinstance(s.get("value"), str) else s.get("value")}
+            if s.get("sub"):
+                it["sub"] = _strip_md(s["sub"])
+            items.append(it)
+        return {"type": "stats", "items": items} if items else None
     if of == "effort_impact":
         sid = fig.get("source_id") or fig.get("id")
         syn = store.get_synthesis(sid) if sid else None

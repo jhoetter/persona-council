@@ -41,6 +41,40 @@ def test_chart_components_render_and_are_empty_safe():
     assert _charts.dot_plot_chart([]) == "" and _charts.line_chart([{"label": "x", "points": [1]}]) == ""
 
 
+def test_new_chart_components_render_and_are_empty_safe():
+    """The Linear wave: burnup · stacked_area · column · strip · progress_strip · stats + micro
+    indicators (sparkline / progress_pie)."""
+    burnup = _charts.burnup_chart([{"label": "Done", "points": [0, 2, 5, 8]}],
+                                  labels=["W1", "W2", "W3", "W4"], target=12, now=2)
+    assert "sl-line__area" in burnup and "sl-line__ref" in burnup  # band fill + dotted ideal
+    assert "sl-line__now" in burnup and "sl-burnup__future" in burnup and "sl-burnup__hatch" in burnup
+    area = _charts.stacked_area_chart([{"label": "For", "points": [2, 4, 6]},
+                                       {"label": "Against", "points": [3, 2, 1]}])
+    assert area.count("sl-area__band") == 2 and area.count("sl-area__edge") == 2
+    assert area.count("sl-legend__item") == 2  # bands always get a legend
+    col = _charts.column_chart([{"label": "1", "value": 2}, {"label": "2", "value": 5}], table=True)
+    assert "sl-cols-axis" in col and col.count('sl-col"') == 2 and "sl-chart__table" in col
+    colseg = _charts.column_chart([{"label": "Todo", "segments": [
+        {"label": "High", "value": 7}, {"label": "Low", "value": 4}]}])
+    assert "sl-col__bar--stack" in colseg and colseg.count("sl-legend__item") == 2
+    strip = _charts.strip_chart([{"label": "WTP", "values": [9, 15, 29]}], unit="€")
+    assert strip.count("sl-dot-pt") == 3 and "9€" in strip and "29€" in strip and "19€" in strip  # min/mid/max
+    pstrip = _charts.progress_strip([{"label": "Validated", "value": 9}, {"label": "Open", "value": 3}])
+    assert pstrip.count("sl-pstrip__seg") == 2 and "· 75%" in pstrip
+    stats = _charts.stats_chart([{"label": "Personas", "value": 16},
+                                 {"label": "Agreement", "value": "72%", "sub": "+9 vs R1", "color": "var(--c1)"}])
+    assert stats.count('sl-kpi"') == 2 and "72%" in stats and "sl-kpi__sub" in stats and "sl-kpi__sw" in stats
+    spark = _charts.sparkline([3, 5, 4, 6])
+    assert "sl-spark__line" in spark and "sl-spark__fill" in spark
+    mpie = _charts.progress_pie(11, 16)
+    assert "sl-mpie" in mpie and "--p:68.8" in mpie
+    # empty / unscored inputs never fabricate a chart
+    assert _charts.burnup_chart([]) == "" and _charts.stacked_area_chart([{"label": "x", "points": [1]}]) == ""
+    assert _charts.column_chart([]) == "" and _charts.strip_chart([{"label": "x", "values": []}]) == ""
+    assert _charts.progress_strip([{"label": "x", "value": 0}]) == "" and _charts.stats_chart([]) == ""
+    assert _charts.sparkline([1]) == ""
+
+
 def test_chart_escapes_labels():
     out = _charts.bar_chart([{"label": "<script>", "value": 1}])
     assert "<script>" not in out and "&lt;script&gt;" in out
@@ -115,6 +149,46 @@ def test_section_validator_preserves_new_chart_fields():
     assert line["labels"] == ["R1", "R2"] and line["series"][0]["points"] == [2, 4]
 
 
+def test_report_embeds_new_chart_kinds(store):
+    html = render_report(_report_with_figures([
+        {"kind": "chart", "of": "burnup", "labels": ["W1", "W2", "W3"], "target": 12, "now": 1,
+         "series": [{"label": "Done", "points": [0, 3, 7]}]},
+        {"kind": "chart", "of": "stacked_area", "series": [
+            {"label": "For", "points": [2, 4, 6]}, {"label": "Against", "points": [3, 2, 1]}]},
+        {"kind": "chart", "of": "column", "table": True, "series": [{"label": "1", "value": 2}, {"label": "2", "value": 5}]},
+        {"kind": "chart", "of": "strip", "unit": "€", "series": [{"label": "WTP", "values": [9, 15, 29]}]},
+        {"kind": "chart", "of": "progress_strip", "series": [{"label": "Open", "value": 3}, {"label": "Done", "value": 9}]},
+        {"kind": "chart", "of": "stats", "series": [{"label": "Personas", "value": 16, "sub": "of 20"}]},
+    ]), store)
+    assert "sl-line__ref" in html and "sl-burnup__future" in html  # burnup target + future region
+    assert "sl-area__band" in html                                  # stacked area
+    assert "sl-cols" in html and "sl-chart__table" in html          # column + its table
+    assert "sl-dot-pt" in html and "29€" in html                    # strip with unit
+    assert "sl-pstrip__seg" in html                                 # progress strip
+    assert "sl-kpi__val" in html and "sl-kpi__sub" in html          # stats tiles
+
+
+def test_section_validator_preserves_linear_wave_fields():
+    from sonaloop.llm_simulation._validators import validate_synthesis_section_payload
+    out = validate_synthesis_section_payload({"markdown": "Body.", "figures": [
+        {"kind": "chart", "of": "burnup", "labels": ["W1", "W2"], "target": 12, "now": 1,
+         "series": [{"label": "Done", "points": [0, 3]}]},
+        {"kind": "chart", "of": "strip", "min": 0, "max": 50, "unit": "€",
+         "series": [{"label": "WTP", "values": [9, 15]}]},
+        {"kind": "chart", "of": "column", "table": True, "series": [{"label": "1", "value": 2}]},
+        {"kind": "chart", "of": "stats", "series": [{"label": "Personas", "value": 16, "sub": "of 20"}]},
+    ]})
+    burnup, strip, column, stats = out["figures"]
+    assert burnup["target"] == 12 and burnup["now"] == 1 and burnup["labels"] == ["W1", "W2"]
+    assert strip["min"] == 0 and strip["max"] == 50 and strip["unit"] == "€"
+    assert column["table"] is True
+    assert stats["series"][0]["sub"] == "of 20"
+    # booleans never sneak in as numbers; junk unit/table values are dropped or normalized
+    out2 = validate_synthesis_section_payload({"markdown": "B.", "figures": [
+        {"kind": "chart", "of": "burnup", "target": True, "series": [{"label": "D", "points": [0, 3]}]}]})
+    assert "target" not in out2["figures"][0]
+
+
 def test_chart_catalogue_is_the_single_source_of_truth():
     """The agent-facing catalogue, the renderer registry, and the report dispatch never drift:
     every author-renderable `of` is documented, and every documented `of` actually renders."""
@@ -133,9 +207,15 @@ def test_chart_catalogue_is_the_single_source_of_truth():
         "diverging_bar": [{"label": "A", "positive": 2, "negative": 1}],
         "gauge": [{"label": "A", "value": 50}], "dot_plot": [{"label": "A", "values": [1, 2, 3]}],
         "heatmap": [{"label": "A", "values": [2]}], "line": [{"label": "A", "points": [1, 2, 3]}],
+        "burnup": [{"label": "A", "points": [1, 2, 3]}],
+        "stacked_area": [{"label": "A", "points": [1, 2, 3]}],
+        "column": [{"label": "A", "value": 3}],
+        "strip": [{"label": "A", "values": [1, 2, 3]}],
+        "progress_strip": [{"label": "A", "value": 3}],
+        "stats": [{"label": "A", "value": 3}],
     }
     for of in _RENDER:
-        fig = {"columns": ["c"]} if of == "heatmap" else {"labels": ["a", "b", "c"]} if of == "line" else {}
+        fig = {"columns": ["c"]} if of == "heatmap" else {"labels": ["a", "b", "c"]} if of in ("line", "burnup", "stacked_area") else {}
         assert render_chart(of, fig, sample[of]).startswith('<figure class="sl-chart">'), of
     assert render_chart("effort_impact", {}, []) == "" and render_chart("bogus", {}, []) == ""
 
@@ -261,12 +341,24 @@ def test_figure_to_chart_maps_every_design_system_kind(store):
         "dot_plot": {"of": "dot_plot", "series": [{"label": "A", "values": [1, 2, 3]}]},
         "heatmap": {"of": "heatmap", "columns": ["c"], "series": [{"label": "A", "values": [2]}]},
         "line": {"of": "line", "labels": ["a", "b", "c"], "series": [{"label": "A", "points": [1, 2, 3]}]},
+        "burnup": {"of": "burnup", "target": 5, "series": [{"label": "A", "points": [1, 2, 3]}]},
+        "stacked_area": {"of": "stacked_area", "series": [{"label": "A", "points": [1, 2, 3]}]},
+        "column": {"of": "column", "series": [{"label": "A", "value": 3}]},
+        "strip": {"of": "strip", "unit": "€", "series": [{"label": "A", "values": [1, 2, 3]}]},
+        "progress_strip": {"of": "progress_strip", "series": [{"label": "A", "value": 3}]},
+        "stats": {"of": "stats", "series": [{"label": "A", "value": 3, "sub": "of 5"}]},
     }
     # every author-renderable design-system kind has a PPTX bridge mapping (parity with the HTML side)
     assert set(figs) == set(_RENDER)
+    # burnup reuses the native line model (dashed Target series); strip reuses dot_plot (real scale)
+    expect = {**{of: of for of in figs}, "burnup": "line", "strip": "dot_plot"}
     for of, fig in figs.items():
         model = _figure_to_chart({"kind": "chart", **fig}, store)
-        assert model and model["type"] == of, of
+        assert model and model["type"] == expect[of], of
+    assert _figure_to_chart({"kind": "chart", "of": "burnup", "series": [{"label": "A", "points": [1, 2]}]},
+                            store)["target"] is None  # target optional
+    assert _figure_to_chart({"kind": "chart", "of": "strip", "series": [{"label": "A", "values": [3, 9]}]},
+                            store)["min"] == 3  # scale derived from the data when not fixed
     assert _figure_to_chart({"kind": "asset", "id": "x"}, store) is None  # non-chart
     assert _figure_to_chart({"kind": "chart", "of": "line",  # a 1-point "line" can't be drawn
                              "series": [{"label": "A", "points": [1]}]}, store) is None
@@ -300,3 +392,38 @@ def test_pptx_export_renders_all_new_chart_kinds(store):
     assert len(prs.slides) >= len(figures) + 1  # title + one slide per section
     assert sum(_has_chart(sh) for sl in prs.slides for sh in sl.shapes) >= 2  # native gauge + line
     assert sum(len(sl.shapes) for sl in prs.slides) > 30  # the shape-drawn charts add many shapes
+
+
+def test_pptx_export_renders_linear_wave_chart_kinds(store):
+    """The Linear wave exports too: burnup (line + dashed Target), stacked_area (native AREA_STACKED),
+    column / progress_strip / stats (shape-drawn), strip (dot_plot scale)."""
+    import io
+    from pptx import Presentation
+    from sonaloop import services
+    figures = [
+        {"kind": "chart", "of": "burnup", "labels": ["W1", "W2", "W3"], "target": 12,
+         "series": [{"label": "Done", "points": [0, 3, 7]}]},
+        {"kind": "chart", "of": "stacked_area", "series": [
+            {"label": "For", "points": [2, 4, 6]}, {"label": "Against", "points": [3, 2, 1]}]},
+        {"kind": "chart", "of": "column", "series": [
+            {"label": "Todo", "segments": [{"label": "High", "value": 7}, {"label": "Low", "value": 4}]},
+            {"label": "Done", "segments": [{"label": "High", "value": 5}, {"label": "Low", "value": 2}]}]},
+        {"kind": "chart", "of": "strip", "unit": "€", "series": [{"label": "WTP", "values": [9, 15, 29]}]},
+        {"kind": "chart", "of": "progress_strip", "series": [
+            {"label": "Open", "value": 3}, {"label": "Done", "value": 9}]},
+        {"kind": "chart", "of": "stats", "series": [
+            {"label": "Personas", "value": 16}, {"label": "Agreement", "value": "72%", "sub": "+9"}]},
+    ]
+    rep = {"id": "replw", "title": "Demo — Report", "scope": "project", "project_id": "",
+           "created_at": "2026-06-10T00:00:00+00:00", "lead": "", "council_ids": [],
+           "findings": [], "statements": [], "prompts": [], "graph_snapshot": None,
+           "sections": [{"id": f"s{i}", "heading": f"Section {i}", "markdown": "Body.", "citations": [],
+                         "source_study_ids": [], "figures": [fig]} for i, fig in enumerate(figures)]}
+    store.upsert_synthesis(rep)
+    data = services.export_synthesis_pptx("replw", store=store)
+    assert data[:2] == b"PK"
+    prs = Presentation(io.BytesIO(data))
+    assert len(prs.slides) >= len(figures) + 1
+    assert sum(_has_chart(sh) for sl in prs.slides for sh in sl.shapes) >= 2  # native burnup-line + area
+    texts = " ".join(sh.text_frame.text for sl in prs.slides for sh in sl.shapes if sh.has_text_frame)
+    assert "72%" in texts and "Personas" in texts  # the stats tiles made it into the deck
