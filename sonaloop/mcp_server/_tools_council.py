@@ -261,6 +261,16 @@ def register_council(mcp):
             return _env("export_synthesis", {"path": services.write_export(content, out_path), "format": fmt}, t)
         return _env("export_synthesis", content, t)
 
+    @mcp.tool()
+    def export_synthesis_html(synthesis_id: str, out_dir: str | None = None) -> dict[str, Any]:
+        """Export a report (synthesis) as a SHAREABLE read-only static HTML bundle —
+        `data/export/share/<token>/index.html`: the exact inspector document minus app chrome, all
+        assets inlined (CSS, charts, figures, avatars), zero external requests, opens from file://.
+        Host the directory anywhere (S3, GitHub Pages, an intranet share); the unguessable token
+        directory name is the share secret. `out_dir` (optional) must stay inside the data dir."""
+        t = time.perf_counter()
+        return _env("export_synthesis_html", services.export_synthesis_html(synthesis_id, out_dir), t)
+
     # ================= Resources & prompts =================
     @mcp.resource("sonaloop://schema/memory")
     def memory_schema() -> str:

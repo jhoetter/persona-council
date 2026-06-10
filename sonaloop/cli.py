@@ -304,7 +304,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("session_id"); p.add_argument("--format", choices=["json", "md"], default="json"); p.add_argument("--out")
     p = sub.add_parser("syntheses")
     p = sub.add_parser("synthesis")
-    p.add_argument("synthesis_id"); p.add_argument("--format", choices=["md", "json", "pptx", "pdf"], default="md"); p.add_argument("--out")
+    p.add_argument("synthesis_id"); p.add_argument("--format", choices=["md", "json", "pptx", "pdf", "html"], default="md"); p.add_argument("--out")
     # Research graph (Project container + edges + tags) + Report
     p = sub.add_parser("research-create")
     p.add_argument("title"); p.add_argument("--goal", default=""); p.add_argument("--persona", action="append", dest="personas")
@@ -623,7 +623,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "syntheses":
             _print(services.list_syntheses())
         elif args.command == "synthesis":
-            if args.format in ("pptx", "pdf"):
+            if args.format == "html":   # shareable read-only bundle: data/export/share/<token>/index.html
+                _print(services.export_synthesis_html(args.synthesis_id, args.out))
+            elif args.format in ("pptx", "pdf"):
                 out = args.out or f"{args.synthesis_id}.{args.format}"
                 data = (services.export_synthesis_pptx(args.synthesis_id) if args.format == "pptx"
                         else services.export_synthesis_pdf(args.synthesis_id))

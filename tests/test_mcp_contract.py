@@ -36,6 +36,8 @@ def test_expected_tools_registered():
         "brief_day", "put_day_plan", "record_day",
         "brief_consolidation", "record_memory_deltas",
         "brief_synthesis", "record_synthesis", "export_synthesis",
+        # the shareable read-only static HTML bundle (token-in-path share secret):
+        "export_synthesis_html",
         "record_council",
         "brief_eval_critic", "record_eval_critic", "evaluate_simulation_full",
         # the tracker's new tools:

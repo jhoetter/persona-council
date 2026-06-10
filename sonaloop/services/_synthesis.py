@@ -529,6 +529,122 @@ def export_report(project_id: str, report_id: str | None = None, format: str = "
     return "\n".join(lines) + "\n"
 
 
+# ===================================================================== #
+# Shareable read-only report bundle (ticket shareable-report-bundle).    #
+# The SAME inspector document (web/_report.render_report — one render    #
+# path, also the PDF's source) exported as a self-contained static HTML  #
+# directory under an unguessable token: data/export/share/<token>/.      #
+# No auth, no server — the token-in-path is the share secret.            #
+# ===================================================================== #
+
+_SHARE_LABELS = {
+    "de": {"project": "Projekt", "generated": "erzeugt", "footer": "Schreibgeschützter Report"},
+    "en": {"project": "Project", "generated": "generated", "footer": "Read-only report"},
+}
+
+_SHARE_A_TAG = re.compile(r'<a\b[^>]*?\bhref="([^"]*)"[^>]*>(.*?)</a>', re.DOTALL)
+_SHARE_IMG_TAG = re.compile(r"<img\b[^>]*>")
+_SHARE_SRC_ATTR = re.compile(r'\bsrc="([^"]*)"')
+
+
+def _share_rewrite_links(html_text: str) -> str:
+    """Links into live inspector routes (and any other URL) become plain text — the recipient has
+    no inspector and the bundle must trigger zero requests. Internal #anchors (TOC, citations,
+    part deep-links) keep working."""
+    def _one(m: re.Match) -> str:
+        if m.group(1).startswith("#"):
+            return m.group(0)
+        return f'<span class="share-unlinked">{m.group(2)}</span>'
+    return _SHARE_A_TAG.sub(_one, html_text)
+
+
+def _share_inline_images(html_text: str) -> str:
+    """Local media (`/data/…` figures, prototype screenshots, avatars — charts are already inline
+    SVG/CSS) become data: URIs so the bundle opens from file:// with zero requests. An absolute src
+    that can't be resolved inside DATA_DIR drops honestly instead of shipping a broken ref."""
+    import base64
+    import mimetypes
+    from ..config import DATA_DIR
+    data_root = DATA_DIR.resolve()
+
+    def _one(m: re.Match) -> str:
+        tag = m.group(0)
+        sm = _SHARE_SRC_ATTR.search(tag)
+        if not sm or not sm.group(1).startswith("/"):
+            return tag                                  # data: URI / relative — already contained
+        src = sm.group(1)
+        fp = (DATA_DIR / src[len("/data/"):]).resolve() if src.startswith("/data/") else None
+        if fp is None or not fp.is_relative_to(data_root) or not fp.is_file():
+            return ""
+        mime = mimetypes.guess_type(fp.name)[0] or "application/octet-stream"
+        uri = f"data:{mime};base64,{base64.b64encode(fp.read_bytes()).decode('ascii')}"
+        return tag[:sm.start(1)] + uri + tag[sm.end(1):]
+    return _SHARE_IMG_TAG.sub(_one, html_text)
+
+
+def export_synthesis_html(synthesis_id: str, out_dir: str | None = None,
+                          store: Store | None = None) -> dict[str, Any]:
+    """Export ANY report (synthesis) as a SHAREABLE, read-only static HTML bundle:
+    `data/export/share/<token>/index.html` — the exact inspector document (one render path:
+    web/_report.render_report) minus all app chrome, every asset inlined (CSS, charts, figures,
+    avatars), zero external requests, opens from file://. Host the directory anywhere (S3, Pages,
+    an intranet share); the unguessable token directory name is the share secret. `out_dir`
+    overrides the parent directory but must stay inside DATA_DIR."""
+    store = store or Store()
+    syn = get_synthesis(synthesis_id, store)
+    # Import the web layer so render_report + every register_css() fragment it uses are live in
+    # this process — the SAME assembly the inspector page and the PDF exporter draw from.
+    from ..web import _components as _wc       # noqa: F401  (component + base CSS)
+    from ..web import _synthesis as _ws        # noqa: F401  (convergence-view CSS)
+    from ..web._report import render_report
+    from ..web._html import collect_css
+    from ..web_assets import CSS
+    from ..config import DATA_DIR
+    from .. import __version__
+    from html import escape as _h_esc
+
+    body = _share_inline_images(_share_rewrite_links(str(render_report(syn, store))))
+
+    # Footer stamp: project · generated date · sonaloop version — reproducible provenance.
+    # Project resolution mirrors the inspector page, plus the cited councils as a fallback
+    # (councils are project-scoped at creation; a decoupled synthesis inherits their project).
+    proj = (store.get_research_project(syn["project_id"]) if syn.get("project_id")
+            else parent_project_of_synthesis(synthesis_id, store))  # noqa: F821 (bound)
+    for cid in (syn.get("council_ids") or []) if not proj else []:
+        proj = parent_project_of_council(cid, store=store)          # noqa: F821 (bound)
+        if proj:
+            break
+    L = _SHARE_LABELS.get(content_language(), _SHARE_LABELS["en"])
+    stamp = " · ".join(x for x in [
+        L["footer"],
+        (f'{L["project"]}: {proj["title"]}' if proj else ""),
+        f'{L["generated"]} {utc_now_iso()[:10]}',
+        f"sonaloop {__version__}"] if x)
+    footer = f'<footer class="share-foot">{_h_esc(stamp)}</footer>'
+
+    share_css = (".share-unlinked{color:inherit}"
+                 ".share-foot{max-width:780px;margin:48px auto 0;padding:14px 0;"
+                 "border-top:1px solid var(--line);color:var(--muted);font-size:var(--t-sm)}")
+    # No font/CDN <link>s (unlike the PDF's Google-Fonts head): the bundle makes ZERO requests;
+    # Geist falls back to the system stack, the pixel font is already an inline data: woff2.
+    doc = (f'<!doctype html><html lang="{content_language()}"><head><meta charset="utf-8">'
+           f'<meta name="viewport" content="width=device-width,initial-scale=1">'
+           f'<title>{_h_esc(syn.get("title", "Report"))}</title>'
+           f"<style>{CSS}{collect_css()}{share_css}</style></head>"
+           f'<body><main class="content"><div class="page">{body}</div>{footer}</main></body></html>')
+
+    token = uuid.uuid4().hex                  # unguessable slug — the path IS the share secret
+    data_root = DATA_DIR.resolve()
+    parent = Path(out_dir) if out_dir else DATA_DIR / "export" / "share"
+    if not parent.is_absolute():
+        parent = DATA_DIR / parent
+    if not parent.resolve().is_relative_to(data_root):
+        raise ValueError(f"export path escapes the data dir ({data_root}): {out_dir!r}")
+    path = write_export(doc, parent / token / "index.html")
+    return {"synthesis_id": syn["id"], "token": token, "dir": str(parent / token), "path": path,
+            "title": syn.get("title", "")}
+
+
 # Google-Fonts links (same as the live inspector head) so a standalone PDF renders in Geist, not a
 # system fallback — keeps the PDF pixel-faithful to the web report.
 _PDF_FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com">'

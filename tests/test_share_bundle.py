@@ -1,0 +1,177 @@
+"""Shareable read-only report bundle (ticket shareable-report-bundle).
+
+export_synthesis_html renders the SAME inspector document (web/_report.render_report — the one
+render path the synthesis page and the PDF exporter also use) into
+`data/export/share/<token>/index.html`: self-contained (CSS + charts + figures + avatars inlined),
+zero external requests, opens from file://, no app chrome, internal anchors intact, footer stamped
+with project · generated date · sonaloop version. Self-containment is the TESTED invariant here.
+"""
+from __future__ import annotations
+
+import base64
+import re
+
+import pytest
+
+from conftest import create_persona
+from sonaloop import services
+
+_PNG_1X1 = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+
+# The app-chrome markers of web/_components._layout — none may leak into the bundle's MARKUP.
+# (The inlined stylesheet legitimately still carries .sl-sidebar etc. as dormant selectors.)
+_CHROME = ('class="sl-sidebar', 'class="sl-topbar', "sl-sb-search", "data-cmdk-open",
+           "data-sidebar-toggle", "<script")
+
+
+def _body(html: str) -> str:
+    """The rendered markup after the inlined <style> head — where chrome could actually leak."""
+    return html.split("</head>", 1)[1]
+
+
+def _data_dir(tmp_path, monkeypatch):
+    from sonaloop import config
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    return tmp_path
+
+
+def _assert_self_contained(html: str) -> None:
+    """Walk every reference the browser would resolve: src/href attributes and CSS url() values.
+    External (http(s)://, protocol-relative //) and absolute (/static/, /data/, …) refs are
+    forbidden; data: URIs and #anchors are fine."""
+    for m in re.finditer(r'(?:src|href)="(?!#|data:)([^"]*)"', html):
+        ref = m.group(1)
+        assert not ref.startswith(("http://", "https://", "//", "/")), f"non-self-contained ref: {ref}"
+    for m in re.finditer(r"url\(\s*['\"]?(?!data:)([^)'\"]+)", html):
+        ref = m.group(1)
+        assert not ref.startswith(("http", "//", "/")), f"non-self-contained css url: {ref}"
+
+
+def _convergence_synthesis(store, tmp_path):
+    """A convergence synthesis citing a council whose persona HAS an avatar file — exercises
+    findings, the recommendation 2×2, sentiment analytics (avatar <img>) and council ref links."""
+    proj = services.create_research_project("Pension navigator", goal="Plan retirement?", store=store)
+    pid = create_persona(store, "Ava Tester")
+    p = store.get_persona(pid)
+    av = tmp_path / "personas" / "ava" / "avatar.png"
+    av.parent.mkdir(parents=True, exist_ok=True)
+    av.write_bytes(_PNG_1X1)
+    p["avatar"] = {"path": "data/personas/ava/avatar.png"}
+    store.upsert_persona(p)
+    c = services.record_council(
+        proj["id"], "Would a digital pension check help?", [pid],
+        statements=[{"persona_id": pid, "text": "I would **try** it", "stance": {"value": 1}}],
+        votes=[{"persona_id": pid, "vote": "support"}], summary="mixed", store=store)
+    return services.record_synthesis(
+        "Pension check potential", "hmw", [c["id"]],
+        {"gesamtbild": "Overall **positive** across the chain.", "positionierung": "Niche first.",
+         "findings": [
+             {"kind": "key_problem", "text": "Evenings are the bottleneck"},
+             {"kind": "recommendation", "text": "Auto shopping list", "score": {"effort": 2, "value": 5}},
+             {"kind": "open_question", "text": "Does it survive week 3?"}]},
+        goal="Is a pension check valuable?", store=store)
+
+
+# ----------------------------------------------------------------- the bundle: content + chrome
+
+def test_bundle_renders_the_document_without_chrome_and_self_contained(store, tmp_path, monkeypatch):
+    data = _data_dir(tmp_path, monkeypatch)
+    syn = _convergence_synthesis(store, tmp_path)
+    out = services.export_synthesis_html(syn["id"], store=store)
+    # path: data/export/share/<token>/index.html, token an unguessable uuid4 hex (no timestamps)
+    assert re.fullmatch(r"[0-9a-f]{32}", out["token"])
+    bundle = data / "export" / "share" / out["token"] / "index.html"
+    assert str(bundle) == out["path"] and bundle.is_file()
+    html = bundle.read_text(encoding="utf-8")
+    # the document content is there (one render path: the report shell + findings + analytics)
+    assert "Pension check potential" in html
+    assert "Evenings are the bottleneck" in html and "Auto shopping list" in html
+    assert "<strong>positive</strong>" in html            # markdown rendered, not raw
+    assert "rp-cover" in html                             # the report shell, same as the inspector
+    # zero external/absolute refs; the avatar <img> rides inline as a data: URI
+    _assert_self_contained(html)
+    assert 'src="data:image/png;base64,' in html
+    # no nav/sidebar/search/edit chrome (and no scripts at all) in the bundle's markup
+    for marker in _CHROME:
+        assert marker not in _body(html), f"chrome leaked into the bundle: {marker}"
+    # inspector deep-links (council ref rows, persona links) became plain text, not dead routes
+    assert 'href="/' not in html
+    assert "share-unlinked" in html
+    assert "Would a digital pension check help?" in html  # the unwrapped ref kept its text
+    # footer stamps project · generated date · sonaloop version
+    from sonaloop import __version__
+    from sonaloop.config import utc_now_iso
+    foot = html.split('<footer class="share-foot">', 1)[1].split("</footer>", 1)[0]
+    assert "Pension navigator" in foot and f"sonaloop {__version__}" in foot
+    assert utc_now_iso()[:10] in foot
+
+
+def test_project_report_bundle_keeps_internal_anchors_and_inlines_figures(store, tmp_path, monkeypatch):
+    _data_dir(tmp_path, monkeypatch)
+    from sonaloop import assets
+    monkeypatch.setattr(assets, "ASSETS_DIR", tmp_path / "assets")
+    aid = assets.put_asset(_PNG_1X1, "png")
+    store.upsert_synthesis({
+        "id": "rep1", "title": "Demo — Report", "scope": "project", "project_id": "",
+        "created_at": "2026-06-08T00:00:00+00:00", "lead": "How it was built.", "council_ids": [],
+        "findings": [], "statements": [], "prompts": [], "graph_snapshot": None,
+        "sections": [
+            {"id": "s1", "heading": "Findings", "markdown": "Body one. ![[fig:1]]",
+             "citations": [{"study_id": "s_x", "quote": "verbatim quote"}], "source_study_ids": [],
+             "figures": [{"kind": "asset", "id": aid, "caption": "Shot"},
+                         {"kind": "chart", "of": "pie",
+                          "series": [{"label": "A", "value": 3}, {"label": "B", "value": 1}]}]},
+            {"id": "s2", "heading": "Next steps", "markdown": "Body two.", "citations": [],
+             "source_study_ids": [], "figures": []}]})
+    out = services.export_synthesis_html("rep1", store=store)
+    html = (tmp_path / "export" / "share" / out["token"] / "index.html").read_text(encoding="utf-8")
+    _assert_self_contained(html)
+    # TOC anchors keep working from file://: the #href and its target id both survive
+    assert 'href="#rp-s1"' in html and 'id="rp-s1"' in html
+    assert 'href="#rp-s2"' in html and 'id="rp-s2"' in html
+    # citations render (footnote-style) and the asset figure rides inline; charts are inline SVG/CSS
+    assert "verbatim quote" in html
+    assert 'src="data:image/png;base64,' in html
+    assert "conic-gradient" in html
+    for marker in _CHROME:
+        assert marker not in _body(html)
+
+
+def test_missing_media_drops_instead_of_shipping_broken_refs(store, tmp_path, monkeypatch):
+    _data_dir(tmp_path, monkeypatch)
+    store.upsert_synthesis({
+        "id": "rep2", "title": "G — Report", "scope": "project", "project_id": "",
+        "created_at": "2026-06-08T00:00:00+00:00", "lead": "", "council_ids": [],
+        "findings": [], "statements": [], "prompts": [], "graph_snapshot": None,
+        "sections": [{"id": "s1", "heading": "H", "markdown": "Body.", "citations": [],
+                      "source_study_ids": [],
+                      "figures": [{"kind": "asset", "id": "assets/nope.png", "caption": "gone"}]}]})
+    out = services.export_synthesis_html("rep2", store=store)
+    html = (tmp_path / "export" / "share" / out["token"] / "index.html").read_text(encoding="utf-8")
+    _assert_self_contained(html)
+    assert "<img" not in _body(html)                       # the unresolvable figure dropped honestly
+
+
+# ----------------------------------------------------------------- token + path containment
+
+def test_each_export_mints_a_fresh_unguessable_token(store, tmp_path, monkeypatch):
+    _data_dir(tmp_path, monkeypatch)
+    syn = _convergence_synthesis(store, tmp_path)
+    a = services.export_synthesis_html(syn["id"], store=store)
+    b = services.export_synthesis_html(syn["id"], store=store)
+    assert a["token"] != b["token"]                        # a new share link per export, never reused
+    assert re.fullmatch(r"[0-9a-f]{32}", b["token"])
+
+
+def test_out_dir_must_stay_inside_the_data_dir(store, tmp_path, monkeypatch):
+    _data_dir(tmp_path / "data", monkeypatch)
+    (tmp_path / "data").mkdir()
+    syn = _convergence_synthesis(store, tmp_path / "data")
+    with pytest.raises(ValueError, match="escapes the data dir"):
+        services.export_synthesis_html(syn["id"], out_dir=str(tmp_path / "elsewhere"), store=store)
+    with pytest.raises(ValueError, match="escapes the data dir"):
+        services.export_synthesis_html(syn["id"], out_dir="../outside", store=store)
+    # a RELATIVE dir resolves under DATA_DIR and is fine
+    out = services.export_synthesis_html(syn["id"], out_dir="export/custom", store=store)
+    assert (tmp_path / "data" / "export" / "custom" / out["token"] / "index.html").is_file()
