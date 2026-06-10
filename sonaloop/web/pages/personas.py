@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from ._calendar import _calendar_tabs, _period_calendar_html
+from .sessions import _sessions_section
 from .._render import render_findings
 from .._html import register_css
 from ... import artifacts as _artifacts
@@ -175,6 +176,9 @@ def register_personas(app) -> None:
                   if p.get("avatar") else h("div", {}, _avatar(p, 120)))
         has_sim = bool(data["daily_summaries"]) or bool(period.get("days"))
         voices = _persona_voices_html(store, p["id"])
+        # This persona's recorded usability sessions — each row deep-links into the replay view.
+        usess = services.list_usability_sessions(persona_id=p["id"], store=store)
+        sessions_html = _sessions_section(store, usess)
         rel_rows = fragment(*(h("p", {}, h("strong", {}, r["name"]), " ",
                               h("span", {"class_": "muted"}, f'— {r["type"]}: {r["friction"]}')) for r in p["relationships"]))
         cal_section = h("div", {"class_": "sec", "id": "cal"}, h("h2", {}, t("calendar")),
@@ -195,6 +199,7 @@ def register_personas(app) -> None:
             # snapshot, before the analysis voices.
             cal_section,
             raw(voices),
+            raw(sessions_html),
             _capabilities_html(p.get("capabilities") or {}),
             h("div", {"class_": "sec", "id": "ziele"}, h("h2", {}, t("goals")), raw(_pills(p["goals"]))),
             h("div", {"class_": "sec", "id": "pains"}, h("h2", {}, t("pain_points")),
@@ -210,9 +215,11 @@ def register_personas(app) -> None:
             ("dot", t("size"), p["company_context"].get("size", "")),
             ("memory", t("memory"), h("a", {"class_": "sl-breadcrumb__link", "href": f'/personas/{p["id"]}/memory'}, raw(_icon("memory")), " ", t("open"))),
         ], aside=True)
-        prail = [("cal", t("calendar")), ("caps", t("capabilities_h")),
-                 ("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
-                 ("bez", t("relationships")), ("sec-properties", t("properties"))]
+        prail = ([("cal", t("calendar"))]
+                 + ([("sec-sessions", t("sessions"))] if sessions_html else [])
+                 + [("caps", t("capabilities_h")),
+                    ("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
+                    ("bez", t("relationships")), ("sec-properties", t("properties"))])
         return _layout(p["display_name"], _doc(main, rail=props) + _page_rail(prail), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
                        actions=_star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}'))

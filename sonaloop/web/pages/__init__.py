@@ -12,6 +12,7 @@ from .syntheses import register_syntheses
 from .projects import register_projects
 from .library import register_library
 from .surveys import register_surveys
+from .sessions import register_sessions
 from .._routes_lists import _projects_page  # noqa: F401  (re-export preserved)
 
 
@@ -22,3 +23,4 @@ def register_pages(app) -> None:
     register_syntheses(app)
     register_library(app)
     register_surveys(app)
+    register_sessions(app)

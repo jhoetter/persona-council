@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi.responses import RedirectResponse
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .sessions import _sessions_section
 
 
 def register_projects(app) -> None:
@@ -191,10 +192,13 @@ def register_projects(app) -> None:
         head_tools = toolbar if is_graph else ""   # graph view keeps the type-filter toolbar; list view has none
         main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
                      if is_graph else h("div", {"class_": "outlinecard"}, raw(_outline_html(graph))))
+        # The project's recorded usability sessions — each row deep-links into the replay view.
+        sessions_html = _sessions_section(
+            store, services.list_usability_sessions(project_id=proj["id"], store=store))
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
                    h("p", {"class_": "lead"}, proj.get("goal", "")), head_tools),
-                 main_view)
+                 main_view, raw(sessions_html))
         actions = fragment(top_btn, raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
