@@ -15,9 +15,10 @@ def test_assets_present_and_app_builds():
 
 
 def test_vote_tally_is_case_robust():
-    """A council's votes display regardless of token case ('support' counts as SUPPORT) — so
-    host/subagent-authored votes aren't silently dropped to 0/0/0/0."""
+    """A council's votes display regardless of token case ('support' counts like SUPPORT) — so
+    host/subagent-authored votes aren't silently dropped. Buckets are stance VALUES (votes ARE
+    stances; legacy tokens resolve via stance_scale.json aliases)."""
     from sonaloop.web._synthesis import _vote_parts
     sessions = [{"votes": [{"vote": "support"}, {"vote": "SUPPORT"}, {"vote": "maybe"}, {"vote": "oppose"}]}]
     tot, _ = _vote_parts(sessions)
-    assert tot["SUPPORT"] == 2 and tot["MAYBE"] == 1 and tot["OPPOSE"] == 1
+    assert tot[2] == 2 and tot[1] == 1 and tot[-2] == 1

@@ -107,11 +107,13 @@ def register_councils(app) -> None:
         store = Store()
         rows = []
         for c in services.list_councils(store=store):
-            v = c["votes"]; tot = max(1, sum(v.values()))
-            bar = h("span", {"class_": "votebar", "title": f'SUPPORT {v["SUPPORT"]} · MAYBE {v["MAYBE"]} · OPPOSE {v["OPPOSE"]}'},
-                    h("i", {"style": f'width:{v["SUPPORT"]/tot*100}%;background:var(--green)'}),
-                    h("i", {"style": f'width:{v["MAYBE"]/tot*100}%;background:var(--amber)'}),
-                    h("i", {"style": f'width:{(v["OPPOSE"]+v["ABSTAIN"])/tot*100}%;background:var(--muted)'}))
+            # the tally is keyed by canonical stance term — segments/colors/labels from the scale
+            v = c["votes"]; tot = max(1, sum(v.values())); terms = _A.stance_terms()
+            bar = h("span", {"class_": "votebar",
+                             "title": " · ".join(f'{t(r["label_key"])} {v.get(r["term"], 0)}'
+                                                 for r in terms if v.get(r["term"]))},
+                    *[h("i", {"style": f'width:{v.get(r["term"], 0)/tot*100}%;background:{r["color"]}'})
+                      for r in terms if v.get(r["term"])])
             rows.append(h("a", {"class_": "row", "href": f'/councils/{c["id"]}'},
                           h("span", {"class_": "rico", "style": "color:var(--blue)"}, raw(_icon("councils"))),
                           h("span", {"class_": "title"}, c["prompt"]),
@@ -190,8 +192,9 @@ def register_councils(app) -> None:
             h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices")), intro, raw(voices_html)))
         prop_rows = [("councils", t("type_h"), t("council_mode_" + mode)), ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
-            vc = {v: sum(1 for x in session["votes"] if str(x.get("vote", "")).upper() == v) for v in ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]}
-            prop_rows += [("dot", _vote_label(k), str(vc[k])) for k in vc]
+            # value-bucketed via the scale (votes ARE stances; legacy tokens resolve through the aliases)
+            vals = [st["value"] for x in session["votes"] if (st := _A.vote_stance(x)) is not None]
+            prop_rows += [("dot", t(r["label_key"]), str(vals.count(r["value"]))) for r in _A.stance_terms()]
         prop_rows.append(("dot", created_h, session["created_at"][:10]))
         # Forward, project-rooted crumb: Projects > [Project] > [Council]. (A Discover council FEEDS
         # the Define synthesis — it is not nested under it; and the project lookup must work for

@@ -118,10 +118,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "council_input_given": "Gegebener Input (Prompt + Kontext)",
         "council_drew_on": "Stützte sich auf",
         "further_answers": "Weitere Antworten", "cited_by": "Zitiert von",
-        # vote labels
-        "vote_support": "Befürwortend", "vote_maybe": "Bedingt",
-        "vote_abstain": "Enthaltung", "vote_oppose": "Ablehnend",
-        # stance scale labels (the five canonical buckets — stance_scale.json label_keys)
+        # stance scale labels (the five canonical buckets — stance_scale.json label_keys; votes
+        # are stances too, so the vote charts/legends resolve these same keys)
         "stance_support": "Befürwortend", "stance_conditional": "Bedingt / teils",
         "stance_neutral": "Neutral", "stance_skeptical": "Skeptisch / ablehnend",
         "stance_oppose": "Ablehnend",
@@ -293,10 +291,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "council_input_given": "Input given (prompt + context)",
         "council_drew_on": "Drew on",
         "further_answers": "Further answers", "cited_by": "Cited by",
-        # vote labels
-        "vote_support": "For", "vote_maybe": "Conditional",
-        "vote_abstain": "Abstain", "vote_oppose": "Against",
-        # stance scale labels (the five canonical buckets — stance_scale.json label_keys)
+        # stance scale labels (the five canonical buckets — stance_scale.json label_keys; votes
+        # are stances too, so the vote charts/legends resolve these same keys)
         "stance_support": "Support", "stance_conditional": "Conditional / partly",
         "stance_neutral": "Neutral", "stance_skeptical": "Skeptical / opposed",
         "stance_oppose": "Oppose",

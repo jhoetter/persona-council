@@ -6,7 +6,7 @@ from .. import services
 from ..storage import Store
 from ._i18n import t
 from ._components import (
-    _esc, _icon, _avatar, _label, _status_color, _md, _srcchips, _prose, _rec_row_n,
+    _esc, _icon, _avatar, _label, _md, _srcchips, _prose, _rec_row_n,
     _effort_impact, _star, _study_lead,
 )
 from ._render import render_findings, render_statement
@@ -104,12 +104,6 @@ register_css(r"""
 
 # ----------------------------- chart primitives ----------------------------- #
 # Vanilla inline charts (CSS/conic-gradient/SVG) — no build step, dark-mode safe.
-_VOTE_ORDER = ["SUPPORT", "MAYBE", "ABSTAIN", "OPPOSE"]
-_VOTE_COLOR = {"SUPPORT": "var(--green)", "MAYBE": "var(--amber)", "ABSTAIN": "var(--muted)", "OPPOSE": "var(--red)"}
-
-
-def _vote_label(k: str) -> str:
-    return t("vote_" + k.lower())
 
 
 def _stacked(parts: list[tuple], thin: bool = False) -> str:
@@ -169,12 +163,23 @@ def _area(points: list[tuple], w: int = 560, ht: int = 140) -> str:
 
 # --------------------- contextual analytics (council / synthesis) --------------------- #
 # Charts live ON the council and the synthesis, computed from that scope's sessions.
+# Votes ARE stances (suggestions/stance_scale.json — the ONE positivity vocabulary): chart order
+# (+2 → −2), colors and labels all come from the scale; no hardcoded vote vocabulary here.
+def _vote_chart_parts(cnt: Counter) -> list[tuple]:
+    """Counter keyed by stance VALUE → [(count, color, label)] in scale order — every term representable."""
+    return [(cnt.get(r["value"], 0), r["color"], t(r["label_key"])) for r in _A.stance_terms()]
+
+
 def _vote_parts(sessions: list[dict]) -> tuple[Counter, list[tuple]]:
+    """Bucket votes by canonical stance VALUE (legacy tokens resolve via the scale's aliases; an
+    unresolvable token lands in its value bucket via label_raw — never dropped from the charts)."""
     tot: Counter = Counter()
     for s in sessions:
         for v in s.get("votes", []):
-            tot[str(v.get("vote", "")).upper()] += 1   # case-robust: 'support' counts as SUPPORT
-    return tot, [(tot.get(k, 0), _VOTE_COLOR[k], _vote_label(k)) for k in _VOTE_ORDER]
+            st = _A.vote_stance(v)
+            if st is not None:
+                tot[st["value"]] += 1
+    return tot, _vote_chart_parts(tot)
 
 
 def _overview_html(parts: list[tuple]) -> str:
@@ -195,31 +200,29 @@ def _per_council_html(sessions: list[dict]) -> str:
 
 
 def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
-    pv: dict = defaultdict(Counter)
+    pv: dict = defaultdict(list)                     # persona → resolved stance VALUES
     for s in sessions:
         for v in s.get("votes", []):
-            pv[v.get("persona_id")][str(v.get("vote", "")).upper()] += 1   # case-robust
+            st = _A.vote_stance(v)
+            if st is not None:
+                pv[v.get("persona_id")].append(st["value"])
     if not pv:
         return ""
     personas = {p["id"]: p for p in services.list_personas(store=store)}
-    data = []
-    for pid, cnt in pv.items():
-        n = sum(cnt.values()) or 1
-        score = (cnt.get("SUPPORT", 0) - cnt.get("OPPOSE", 0) + 0.4 * cnt.get("MAYBE", 0)) / n
-        data.append((pid, cnt, score))
-    data.sort(key=lambda x: x[2], reverse=True)
+    # score = the MEAN of the stance values (−2..+2) — no token-specific coefficients
+    data = sorted(((pid, Counter(vals), sum(vals) / len(vals)) for pid, vals in pv.items()),
+                  key=lambda x: x[2], reverse=True)
     rows = []
     for pid, cnt, score in data:
         p = personas.get(pid)
         name = p["display_name"] if p else pid
         av = _avatar(p, 22) if p else ""
-        _, parts = (None, [(cnt.get(k, 0), _VOTE_COLOR[k], _vote_label(k)) for k in _VOTE_ORDER])
-        pct = round(score * 100)
-        col = _status_color("positiv" if pct >= 33 else "skept" if pct < 0 else "bedingt")
+        # the score's color = the NEAREST scale value's color (value-bucketed, no keyword matching)
+        col = min(_A.stance_terms(), key=lambda r: abs(r["value"] - score))["color"]
         rows.append(h("div", {"class_": "prow"},
                       h("a", {"class_": "pn", "href": f'/personas/{pid}'}, av, h("span", {}, name)),
-                      _stacked(parts, thin=True),
-                      h("span", {"class_": "ps", "style": f"color:{col}"}, f"{pct:+d}")))
+                      _stacked(_vote_chart_parts(cnt), thin=True),
+                      h("span", {"class_": "ps", "style": f"color:{col}"}, f"{score:+.1f}")))
     return fragment(*rows)
 
 
@@ -310,8 +313,7 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
         c = store.get_council_session(cid)
         if not c:
             continue
-        tally = Counter(str(v.get("vote", "")).upper() for v in (c.get("votes") or []) if isinstance(v, dict))
-        parts = [(tally.get(k, 0), _VOTE_COLOR[k], k) for k in _VOTE_ORDER]
+        _, parts = _vote_parts([c])                 # value-bucketed via the scale (votes ARE stances)
         prompt = c.get("prompt") or cid
         ref_rows.append(h("a", {"class_": "ref-row", "href": f"/councils/{cid}"},
                           h("span", {"class_": "ref-n"}, f"C{i}"),
