@@ -382,7 +382,7 @@ def _star(kind: str, ident: str, label: str, href: str) -> str:
 _FAV_ICONS_JSON = json.dumps({
     "persona": _icon("personas"), "council": _icon("councils"), "synthesis": _icon("syntheses"),
     "project": _icon("projects"), "prototype": _icon("prototype"), "concept": _icon("bulb"),
-    "note": _icon("square"), "section": _icon("squareGrid"),
+    "note": _icon("square"), "section": _icon("squareGrid"), "session": _icon("activity"),
 })
 
 

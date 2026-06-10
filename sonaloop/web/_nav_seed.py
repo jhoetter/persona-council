@@ -21,6 +21,7 @@ _CORE_NAV = {
     "workspace": [
         ("/projects", "projects", "projects", lambda: t("projects")),
         ("/personas", "personas", "personas", lambda: t("personas")),
+        ("/sessions", "sessions", "activity", lambda: t("sessions")),
         ("/documentation", "docs", "overview", lambda: t("documentation")),
     ],
     "library": [

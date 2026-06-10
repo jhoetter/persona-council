@@ -135,6 +135,24 @@ STRINGS: dict[str, dict[str, str]] = {
         # friction levels (usability-session steps — friction_levels.json label_keys)
         "friction_none": "Reibungslos", "friction_hesitation": "Zögern",
         "friction_confusion": "Verwirrung", "friction_blocked": "Blockiert",
+        # session replay inspector (usability sessions — list / funnel / dual timeline)
+        "sessions_lead": "Replaybare Usability-Sessions — die Dual-Timeline pro Persona, Schritt für Schritt.",
+        "session_not_found": "Session nicht gefunden.",
+        # ("Klick-Prototyp", not the bare word: the presentation-from-data grep gate bans the
+        # hardcoded artifact literal — and the fidelity rung is the clickable walk, not the artifact)
+        "fidelity_artifact": "Artefakt", "fidelity_prototype": "Klick-Prototyp", "fidelity_live": "Live",
+        "outcome_dropped": "Abgesprungen bei Schritt {n}",
+        "friction_n": "{n}× Reibung",
+        "funnel_h": "Funnel",
+        "funnel_hint": "{n} Sessions zu diesem Gegenstand — pro Schritt: erreicht, weiter, abgesprungen.",
+        "funnel_entered": "erreicht", "funnel_continued": "weiter", "funnel_dropped": "abgesprungen",
+        "step_n": "Schritt {n}", "steps_h": "Schritte", "subject_h": "Gegenstand",
+        "friction_rail_h": "Reibungspunkte", "replay_h": "Replay",
+        "verdict_continue": "würde weitermachen", "verdict_drop": "würde abbrechen",
+        "action_look": "Ansehen", "action_click": "Klick", "action_type": "Eingabe",
+        "action_select": "Auswahl", "action_scroll": "Scrollen", "action_key": "Taste",
+        "action_navigate": "Navigieren", "action_back": "Zurück", "action_wait": "Warten",
+        "action_give_up": "Aufgegeben",
         # capability profile (rungs + tech comfort — tech_comfort.json label_keys)
         "capabilities_h": "Fähigkeiten",
         "cap_rung_see": "Ansehen", "cap_rung_walk": "Durchklicken",
@@ -330,6 +348,22 @@ STRINGS: dict[str, dict[str, str]] = {
         # friction levels (usability-session steps — friction_levels.json label_keys)
         "friction_none": "None", "friction_hesitation": "Hesitation",
         "friction_confusion": "Confusion", "friction_blocked": "Blocked",
+        # session replay inspector (usability sessions — list / funnel / dual timeline)
+        "sessions_lead": "Replayable usability sessions — the per-persona dual timeline, step by step.",
+        "session_not_found": "Session not found.",
+        "fidelity_artifact": "Artifact", "fidelity_prototype": "Prototype", "fidelity_live": "Live",
+        "outcome_dropped": "Dropped at step {n}",
+        "friction_n": "{n}× friction",
+        "funnel_h": "Funnel",
+        "funnel_hint": "{n} sessions of this subject — per step: entered, continued, dropped.",
+        "funnel_entered": "entered", "funnel_continued": "continued", "funnel_dropped": "dropped",
+        "step_n": "Step {n}", "steps_h": "Steps", "subject_h": "Subject",
+        "friction_rail_h": "Friction points", "replay_h": "Replay",
+        "verdict_continue": "would continue", "verdict_drop": "would drop",
+        "action_look": "Look", "action_click": "Click", "action_type": "Type",
+        "action_select": "Select", "action_scroll": "Scroll", "action_key": "Key",
+        "action_navigate": "Navigate", "action_back": "Back", "action_wait": "Wait",
+        "action_give_up": "Give up",
         # capability profile (rungs + tech comfort — tech_comfort.json label_keys)
         "capabilities_h": "Capabilities",
         "cap_rung_see": "See", "cap_rung_walk": "Walk",

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .sessions import _sessions_section
 from .._render import render_statements
 from ... import artifacts as _artifacts
 
@@ -85,11 +86,20 @@ def register_library(app) -> None:
         else:
             sessions_html = h("div", {"class_": "muted small"}, f'— {t("prototypes_h")}: {t("no_sessions")} —')
         proto_title = fragment(p["name"], " ", fid)
+        # Replayable usability sessions of THIS prototype (subject.id is the prototype id or slug) —
+        # each row deep-links into the session replay view.
+        useen, usess = set(), []
+        for key in (p["id"], p.get("slug")):
+            for s in (services.list_usability_sessions(subject=key, store=store) if key else []):
+                if s["id"] not in useen:
+                    useen.add(s["id"]); usess.append(s)
+        replay_html = _sessions_section(store, usess, sid="sec-replays")
         body = fragment(
             h("p", {"style": "margin:8px 0 16px"},
               h("a", {"class_": "sl-btn", "href": src, "target": "_blank"},
                 raw(_icon("projects")), " ", t("open_in_new_tab"), " ", raw(_icon("external")))),
             h("div", {"class_": "protoframe"}, h("iframe", {"src": src, "title": p["name"], "loading": "lazy"})),
+            raw(replay_html),
             h("div", {"class_": "sec", "id": "sec-sessions", "style": "margin-top:22px"},
               h("h2", {}, f'{t("prototypes_h")} · {t("sessions")} ({len(sessions)})'),
               h("div", {"style": "margin-top:8px"}, sessions_html)))
@@ -110,5 +120,6 @@ def register_library(app) -> None:
                        ("check", t("grounded_yes"), f"{n_grounded}/{len(sessions)}" if sessions else "—"),
                        ("projects", t("project"), proj_link)],
             rel_study_id=f"prototype:{p['id']}", rel_proj_id=p.get("project_id"), rel_extra_in=concept_in,
-            rail_sections=[("sec-sessions", t("sessions"))],
+            rail_sections=(([("sec-replays", t("sessions"))] if replay_html else [])
+                           + [("sec-sessions", t("sessions"))]),
             star=("prototype", p["id"], p["name"], f'/prototypes/{slug}'))
