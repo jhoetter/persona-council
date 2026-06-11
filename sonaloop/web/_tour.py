@@ -1,0 +1,193 @@
+"""Opt-in product tour: anchored spotlight steps over the live chrome (ticket opt-in-product-tour).
+
+Self-contained (CSS + markup + JS, the _palette.py pattern) and injected on every page —
+not by editing _layout but through the public "body_end" slot + register_css, so the
+chrome module stays plug-in shaped. Dependency-free vanilla JS: a fixed spotlight ring
+(box-shadow scrim) around the current target plus a positioned tooltip card with
+title/body, progress dots and Back/Next/Skip; Esc ends the tour.
+
+The SIX steps are declared once in tour_steps() — selector + i18n'd title/body (literal
+t() calls keep the i18n usage scan honest). Steps whose target is missing on the current
+page are AUTO-SKIPPED at start (the dots count only the available steps), so the tour
+never strands on a selector that isn't rendered. The selector-coverage canary
+(tests/test_web_tour.py) fails when a step's target disappears from the chrome — the
+palette-canary spirit: the tour cannot rot silently.
+
+Triggers — the tour NEVER auto-starts:
+  - any element with [data-tour-start] ("Take the tour" on the home page — prominent on
+    the empty-DB first-steps card — and "Restart tour" in the settings popover);
+  - the one-time OFFER toast: on a visitor's first HTML page the middleware
+    (install_tour) sees no `sl_tour_offered` cookie, the slot renders a small dismissible
+    "New here? Take the 60-second tour" toast, and the response sets the cookie
+    (1 year) — so the offer appears exactly once, dismissed or not.
+"""
+from __future__ import annotations
+
+import contextvars
+import json
+
+from ._i18n import t
+from ._html import h, raw, register_css
+from ._ext import register_slot
+
+TOUR_COOKIE = "sl_tour_offered"
+_OFFER_DUE: contextvars.ContextVar[bool] = contextvars.ContextVar("tour_offer_due", default=False)
+
+
+def tour_steps() -> list[dict]:
+    """The six anchored steps (selector + localized copy), in order. Selectors target
+    the persistent chrome (sidebar nav / search trigger) so the tour works from any
+    page; the canary test keeps them honest."""
+    return [
+        {"sel": '.sl-nav a[href="/projects"]', "title": t("tour_projects_h"), "body": t("tour_projects_d")},
+        {"sel": '.sl-nav a[href="/personas"]', "title": t("tour_personas_h"), "body": t("tour_personas_d")},
+        {"sel": '.sl-nav a[href="/councils"]', "title": t("tour_councils_h"), "body": t("tour_councils_d")},
+        {"sel": '.sl-nav a[href="/syntheses"]', "title": t("tour_syntheses_h"), "body": t("tour_syntheses_d")},
+        {"sel": ".sl-cmdk-trigger", "title": t("tour_cmdk_h"), "body": t("tour_cmdk_d")},
+        {"sel": '.sl-nav a[href="/documentation"]', "title": t("tour_docs_h"), "body": t("tour_docs_d")},
+    ]
+
+
+def install_tour(app) -> None:
+    """The offer-once middleware: expose 'is the offer due?' to the render slot via a
+    contextvar (the i18n/CSRF middleware pattern) and stamp the 1-year cookie on the
+    first HTML response so the toast never re-appears."""
+
+    @app.middleware("http")
+    async def _tour_offer_middleware(request, call_next):
+        due = TOUR_COOKIE not in request.cookies
+        token = _OFFER_DUE.set(due)
+        try:
+            response = await call_next(request)
+        finally:
+            _OFFER_DUE.reset(token)
+        if due and (response.headers.get("content-type") or "").startswith("text/html"):
+            response.set_cookie(TOUR_COOKIE, "1", max_age=60 * 60 * 24 * 365, samesite="lax")
+        return response
+
+
+def tour_link(extra_class: str = "") -> str:
+    """A 'Take the tour' trigger link (home page; prominent variant on the empty DB)."""
+    return h("a", {"class_": ("tour-take " + extra_class).strip(), "href": "#tour",
+                   "data-tour-start": True}, t("tour_take"))
+
+
+def _offer_markup() -> str:
+    """The one-time dismissible offer toast (only rendered while the cookie is absent —
+    the middleware stamps it on this very response, so this renders at most once)."""
+    if not _OFFER_DUE.get():
+        return ""
+    return h("div", {"class_": "tour-offer", "id": "tour-offer", "role": "status"},
+             h("span", {}, t("tour_offer")),
+             h("button", {"type": "button", "class_": "sl-btn sl-btn--primary", "data-tour-start": True},
+               t("tour_take")),
+             h("button", {"type": "button", "class_": "tour-offer-x", "data-tour-dismiss": True,
+                          "aria-label": t("tour_dismiss"), "title": t("tour_dismiss")}, "×"))
+
+
+def tour_markup() -> str:
+    """Per-request overlay skeleton (hidden), the offer toast when due, and the
+    localized step/label config as JSON — the same seeding pattern as the palette."""
+    cfg = json.dumps({
+        "steps": tour_steps(),
+        "labels": {"next": t("tour_next"), "back": t("tour_back"), "skip": t("tour_skip"),
+                   "done": t("tour_done")},
+    })
+    overlay = h("div", {"class_": "tourov", "id": "tourov", "hidden": True},
+                h("div", {"class_": "tour-ring", "id": "tour-ring"}),
+                h("div", {"class_": "tour-card", "id": "tour-card", "role": "dialog",
+                          "aria-modal": "false", "aria-label": t("tour_take")}))
+    return overlay + _offer_markup() + h("script", {"id": "tour-cfg", "type": "application/json"}, raw(cfg))
+
+
+register_css(r"""
+/* ---- product tour (web/_tour.py) ---- */
+.tourov[hidden]{display:none}
+.tour-ring{position:fixed;z-index:230;border:2px solid var(--accent);border-radius:10px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.5);pointer-events:none;transition:all .22s ease}
+.tour-card{position:fixed;z-index:231;width:min(320px,calc(100vw - 24px));background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 18px 50px rgba(0,0,0,.4);
+  padding:14px 16px}
+.tour-card h3{margin:0 0 6px;font-size:var(--t-md)}
+.tour-card p{margin:0 0 12px;color:var(--muted);font-size:var(--t-body);line-height:1.5}
+.tour-foot{display:flex;align-items:center;gap:8px}
+.tour-dots{display:inline-flex;gap:5px;margin-right:auto}
+.tour-dot{width:7px;height:7px;border-radius:50%;background:var(--line);transition:background .15s}
+.tour-dot.on{background:var(--accent)}
+.tour-skip{border:0;background:none;color:var(--muted);cursor:pointer;font-size:var(--t-sm);padding:4px 6px}
+.tour-skip:hover{color:var(--ink)}
+.tour-offer{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:190;display:flex;
+  align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:0 12px 36px rgba(0,0,0,.3);padding:10px 12px 10px 16px;
+  font-size:var(--t-body);color:var(--ink)}
+.tour-offer-x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:var(--t-md);
+  line-height:1;padding:2px 6px;border-radius:var(--radius-sm)}
+.tour-offer-x:hover{color:var(--ink);background:var(--hover)}
+.tour-take{font-size:var(--t-sm)}
+a.tour-take{color:var(--accent);text-decoration:none}
+.tour-take-row{display:block;text-align:center;margin:16px 0 0;color:var(--muted)}
+""")
+
+
+TOUR_JS = r"""<script>(function(){
+var ov=document.getElementById('tourov'); if(!ov) return;
+var ring=document.getElementById('tour-ring'), card=document.getElementById('tour-card');
+var CFG={steps:[],labels:{}}; try{ CFG=JSON.parse(document.getElementById('tour-cfg').textContent)||CFG; }catch(e){}
+var steps=[], i=0, on=false;
+function q(sel){ try{ return document.querySelector(sel); }catch(e){ return null; } }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function place(){
+  var st=steps[i], el=q(st.sel);
+  if(!el){ next(1); return; }                            // target vanished mid-tour: auto-skip
+  el.scrollIntoView({block:'nearest'});
+  var r=el.getBoundingClientRect(), pad=5;
+  ring.style.left=(r.left-pad)+'px'; ring.style.top=(r.top-pad)+'px';
+  ring.style.width=(r.width+2*pad)+'px'; ring.style.height=(r.height+2*pad)+'px';
+  var dots=''; for(var d=0;d<steps.length;d++){ dots+='<span class="tour-dot'+(d===i?' on':'')+'"></span>'; }
+  var L=CFG.labels;
+  card.innerHTML='<h3>'+esc(st.title)+'</h3><p>'+esc(st.body)+'</p>'
+    +'<div class="tour-foot"><span class="tour-dots">'+dots+'</span>'
+    +(i>0?'<button type="button" class="sl-btn" data-tour-back>'+esc(L.back)+'</button>':'')
+    +'<button type="button" class="sl-btn sl-btn--primary" data-tour-next>'
+    +esc(i===steps.length-1?L.done:L.next)+'</button>'
+    +'<button type="button" class="tour-skip" data-tour-end>'+esc(L.skip)+'</button></div>';
+  // card beside the target (right) when it fits, else below — clamped to the viewport
+  var cw=Math.min(320, window.innerWidth-24);
+  var x=(r.right+14+cw<=window.innerWidth-10)?(r.right+14):Math.max(10,Math.min(r.left, window.innerWidth-cw-10));
+  var y=(r.right+14+cw<=window.innerWidth-10)?r.top:(r.bottom+12);
+  card.style.left=x+'px';
+  card.style.top=Math.max(10,Math.min(y, window.innerHeight-(card.offsetHeight||180)-10))+'px';
+  var btn=card.querySelector('[data-tour-next]'); if(btn) btn.focus();
+}
+function next(d){
+  i+=d;
+  while(i>=0 && i<steps.length && !q(steps[i].sel)) i+=d;  // tolerate missing targets
+  if(i<0) i=0;
+  if(i>=steps.length){ end(); return; }
+  place();
+}
+function start(){
+  steps=CFG.steps.filter(function(s){ return q(s.sel); }); // auto-skip absent targets up front
+  if(!steps.length) return;
+  dismissOffer();
+  var pop=document.querySelector('.sl-um-pop'); if(pop) pop.hidden=true;  // leave the settings popover
+  i=0; on=true; ov.hidden=false; place();
+}
+function end(){ on=false; ov.hidden=true; }
+function dismissOffer(){ var o=document.getElementById('tour-offer'); if(o) o.remove(); }
+document.addEventListener('click',function(e){
+  if(e.target.closest&&e.target.closest('[data-tour-start]')){ e.preventDefault(); start(); return; }
+  if(e.target.closest&&e.target.closest('[data-tour-dismiss]')){ e.preventDefault(); dismissOffer(); return; }
+  if(!on) return;
+  if(e.target.closest&&e.target.closest('[data-tour-next]')){ e.preventDefault(); next(1); return; }
+  if(e.target.closest&&e.target.closest('[data-tour-back]')){ e.preventDefault(); next(-1); return; }
+  if(e.target.closest&&e.target.closest('[data-tour-end]')){ e.preventDefault(); end(); }
+});
+window.addEventListener('keydown',function(e){ if(on&&e.key==='Escape'){ e.preventDefault(); end(); } });
+window.addEventListener('resize',function(){ if(on) place(); });
+document.addEventListener('spa:load',function(){ if(on) place(); });
+})();</script>"""
+
+
+# Injected on every page through the public body_end slot (no _layout edit needed).
+register_slot("body_end", lambda store: tour_markup() + TOUR_JS)

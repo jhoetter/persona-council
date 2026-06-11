@@ -61,6 +61,8 @@ def _first_steps_html() -> str:
           h("button", {"class_": "sl-btn sl-btn--primary", "type": "submit"},
             t("load_example_btn")))
         for e in services.list_examples()))
+    # "Take the tour" sits beside the load-example card — prominent on the empty DB.
+    from ._tour import tour_link
     return h("div", {"class_": "page"},
              h("h1", {"class_": "h1"}, t("first_steps_h")),
              h("p", {"class_": "lead"}, t("first_steps_lead")),
@@ -71,7 +73,8 @@ def _first_steps_html() -> str:
              h("p", {"style": "margin-top:14px"},
                h("a", {"class_": "sl-btn", "href": DOCS_GETTING_STARTED_URL,
                        "target": "_blank", "rel": "noopener"},
-                 raw(_icon("external")), " ", t("fs_docs_link"))))
+                 raw(_icon("external")), " ", t("fs_docs_link")),
+               " ", raw(tour_link("sl-btn"))))
 
 
 def _projects_page(page: int = 1, q: str = "") -> str:
@@ -103,11 +106,14 @@ def _projects_page(page: int = 1, q: str = "") -> str:
                        crumbs=[(t("projects"), None)], active="projects")
     new_btn = h("a", {"class_": "sl-btn sl-btn--primary", "href": "/projects/new"},
                 raw(_icon("plus")), " ", t("new_project"))
+    # the quiet, always-available tour entry point on the home page (web/_tour.py)
+    from ._tour import tour_link
+    take_tour = h("p", {"class_": "tour-take-row"}, raw(tour_link()))
     return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
                       empty_icon="projects", empty_msg=t("no_projects"), active="projects",
                       actions=new_btn, empty_action=(t("new_project"), "/projects/new", "plus"),
                       pre=_list_filter_box("/projects", q) if (q or pages > 1) else "",
-                      count=len(projects), after=_pager("/projects", page, pages, q))
+                      count=len(projects), after=_pager("/projects", page, pages, q) + take_tour)
 
 
 def _persona_row(p: dict, store: Store) -> str:

@@ -87,6 +87,11 @@ def create_app():
     from ._forms import install_forms
     install_forms(app)
 
+    # Opt-in product tour (web/_tour.py): the offer-once cookie middleware; the
+    # tour chrome itself rides the public body_end slot (registered on import).
+    from ._tour import install_tour
+    install_tour(app)
+
     register_pages(app)
     register_lists(app)
     register_api(app)
