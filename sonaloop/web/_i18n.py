@@ -294,6 +294,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "fs_step_project_d": "Bitte deinen Agenten: „Starte ein Forschungsprojekt zu …“ — er legt Projekt und Plan über die MCP-Tools an.",
         "fs_step_council_h": "Erstes Council laufen lassen",
         "fs_step_council_d": "Lass 2–4 Personas anlegen und stelle dann eine Frage als Council — das Ergebnis erscheint hier live.",
+        "fs_example_h": "Oder mit einem Beispielprojekt starten",
+        "fs_example_d": "Ein Klick lädt ein vollständiges, ausgearbeitetes Forschungsprojekt — Personas, Councils, Hypothesen, Report und Entscheidung. Jederzeit rückstandsfrei entfernbar (remove_example).",
+        "load_example_btn": "Beispiel laden",
         # web CRUD (ticket web-crud-structure): forms, danger areas, write-path errors
         "new_project": "Neues Projekt", "new_note": "Neue Notiz", "new_section": "Neuer Abschnitt",
         "edit": "Bearbeiten", "create": "Erstellen", "save": "Speichern", "cancel": "Abbrechen",
@@ -586,6 +589,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "fs_step_project_d": "Ask your agent: “Start a research project on …” — it creates the project and plan through the MCP tools.",
         "fs_step_council_h": "Run a first council",
         "fs_step_council_d": "Have 2–4 personas authored, then put one question to a council — the result shows up here live.",
+        "fs_example_h": "Or start from an example project",
+        "fs_example_d": "One click loads a complete, polished research project — personas, councils, hypotheses, a report and a decision. Removable any time without residue (remove_example).",
+        "load_example_btn": "Load example",
         # web CRUD (ticket web-crud-structure): forms, danger areas, write-path errors
         "new_project": "New project", "new_note": "New note", "new_section": "New section",
         "edit": "Edit", "create": "Create", "save": "Save", "cancel": "Cancel",

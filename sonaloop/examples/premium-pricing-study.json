@@ -1,0 +1,624 @@
+{
+  "schema": "sonaloop_example/1",
+  "slug": "premium-pricing-study",
+  "tagline": "B2C pricing: a five-voice panel, a willingness-to-pay ladder, a €19 vs €49 head-to-head, and the decision they add up to.",
+  "project": {
+    "title": "Premium pricing study — Klar money coaching",
+    "goal": "Find the monthly price for Klar's premium coaching tier: where willingness-to-pay breaks across segments, and whether a €19 Lite / €49 Pro split beats a single mid-price tier.",
+    "description": "Klar is a subscription app for German private households: it connects accounts, explains pension gaps in plain language, and — in the premium tier — adds a quarterly 45-minute session with an independent, commission-free money coach. This study prices that premium tier with a five-voice panel spanning willingness-to-pay: a discovery council on what 'worth paying for' means, a €9–€79 price ladder, and a €19 Lite vs €49 Pro head-to-head, closed by a decision record. (Example project shipped with Sonaloop — reload or remove it any time: `sonaloop load-example premium-pricing-study` / `remove-example`.)"
+  },
+  "personas": [
+    {
+      "key": "maren",
+      "description": "Pediatric nurse, 34, in Lübeck; rotating shifts, €2,900 net, saves €150 a month into an ETF plan she half trusts; cancelled a Riester contract at a loss two years ago and has audited every subscription on her phone since.",
+      "profile": {
+        "display_name": "Maren Ostendorf",
+        "identity_traits": {
+          "gender_presentation": "female",
+          "gender_confidence": "high",
+          "age_range": "30-39",
+          "appearance_notes": "Practical short haircut, hospital lanyard tan line, usually in trainers because her feet hurt by Thursday.",
+          "avatar_profile": "Female-read person, mid-thirties, pediatric nurse context, natural professional studio illustration, tired but warm eyes.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "budget-tight employee",
+          "market": "B2C personal finance, Germany",
+          "region": "Germany (Lübeck)",
+          "attitude": "burned once, twice shy — audits every euro that leaves her account on a schedule"
+        },
+        "demographics": {
+          "age": 34,
+          "occupation": "pediatric nurse, children's ward",
+          "net_income_eur_month": 2900,
+          "household": "single, rents a 2-room flat, one cat"
+        },
+        "role": {
+          "title": "Pediatric nurse (Kinderstation)",
+          "responsibilities": "Three-shift rotation on a 28-bed children's ward; medication rounds, parent conversations, documentation backlog after every late shift.",
+          "seniority": "11 years on the ward, informal go-to for new colleagues",
+          "decision_power": "full authority over her own money, none over her roster"
+        },
+        "company_context": {
+          "industry": "Hospital / public health",
+          "size": "1,100-bed teaching hospital",
+          "stack": "Sparkasse banking app, paper payslips, an Excel household book she updates on the 1st, Finanztip newsletter",
+          "operating_model": "Money admin happens on the couch after late shift, twice a month, with tea and deep suspicion"
+        },
+        "goals": [
+          "Get to €20,000 in savings without thinking about money daily",
+          "Understand whether her ETF plan is actually enough for retirement",
+          "Never again sign a financial product she can't explain to her sister",
+          "Reduce to 80% hours at 40 without losing the flat"
+        ],
+        "constraints": [
+          "€150/month is the realistic savings ceiling after rent and the car",
+          "Shift work kills any appointment that needs a weekday 10am slot",
+          "The Riester exit cost her €1,400 — every advisor now starts at minus 100 trust",
+          "Annual subscription audit: anything she can't justify in one sentence gets cancelled"
+        ],
+        "tool_ids": ["banking_app", "excel", "newsletter"],
+        "tools": ["Sparkasse app", "Trade Republic", "Excel household book", "Finanztip newsletter"],
+        "relationships": [
+          {"name": "Katrin", "type": "younger sister", "friction": "keeps forwarding crypto videos Maren has asked her to stop sending"},
+          {"name": "Herr Albers", "type": "former bank advisor", "friction": "sold her the Riester contract; she still has to greet him at the branch"}
+        ],
+        "personality": {
+          "working_style": "methodical in bursts — ignores money for six weeks, then spends one Sunday putting everything in order",
+          "communication_style": "direct, slightly dry, asks 'what does that cost me in the worst case' before anything else",
+          "risk_tolerance": "low since the Riester loss; will accept boring if boring is explainable",
+          "character_notes": "Generous with people, ruthless with companies. Quotes exact euro amounts from memory."
+        },
+        "pain_points": [
+          "Can't tell whether financial content is advice or an affiliate funnel",
+          "The one free advisor session she trusts (Verbraucherzentrale) has an 11-week waiting list",
+          "Every app wants account access before it tells her anything useful",
+          "Pension statement arrives yearly and might as well be in Latin"
+        ],
+        "success_criteria": [
+          "She can explain her own setup in two sentences and mean it",
+          "No product in her life she wouldn't buy again at full price"
+        ]
+      }
+    },
+    {
+      "key": "jonas",
+      "description": "Software engineer, 29, in Munich; €5,400 net, optimizes everything from keyboard layouts to ETF TER basis points, reads r/Finanzen at lunch, distrusts anyone paid by commission, has a spreadsheet he is quietly proud of and never quite finishes.",
+      "profile": {
+        "display_name": "Jonas Brettschneider",
+        "identity_traits": {
+          "gender_presentation": "male",
+          "gender_confidence": "high",
+          "age_range": "25-34",
+          "appearance_notes": "Merch hoodie from a conference, mechanical-keyboard posture, expensive backpack he researched for nine days.",
+          "avatar_profile": "Male-read person, late twenties, software engineer context, natural professional studio illustration, alert and slightly impatient.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "high-income optimizer",
+          "market": "B2C personal finance, Germany",
+          "region": "Germany (Munich)",
+          "attitude": "wants validation from an expert, not education — he has done the reading"
+        },
+        "demographics": {
+          "age": 29,
+          "occupation": "senior software engineer, payments scale-up",
+          "net_income_eur_month": 5400,
+          "household": "lives with partner, splits a too-expensive Maxvorstadt flat"
+        },
+        "role": {
+          "title": "Senior software engineer",
+          "responsibilities": "Owns the payout service; on-call one week in six; mentors two juniors he worries about more than he admits.",
+          "seniority": "6 years, second company",
+          "decision_power": "full over his money; shared budget talks with partner every quarter"
+        },
+        "company_context": {
+          "industry": "Fintech scale-up",
+          "size": "350 employees",
+          "stack": "Scalable Capital, a 14-tab Google Sheet, r/Finanzen, Notion vault of finance bookmarks he never reopens",
+          "operating_model": "Optimizes in sprints: two weekends a year of deep finance work, then nothing — the gap bothers him"
+        },
+        "goals": [
+          "Hit €200k invested by 33 without thinking in basis points daily",
+          "Get one credentialed human to sanity-check the spreadsheet assumptions",
+          "Stop re-deriving the same Entgeltumwandlung decision every November",
+          "Buy a flat with his partner in 4–6 years without wrecking the equity plan"
+        ],
+        "constraints": [
+          "Time, not money: a €49 subscription is nothing, a 90-minute onboarding call is everything",
+          "Partner veto on any tool that needs both their account logins",
+          "Refuses commission-based advice categorically — fee-only or nothing",
+          "Gets bored of any app whose insights stop changing after month two"
+        ],
+        "tool_ids": ["broker_app", "spreadsheet", "reddit"],
+        "tools": ["Scalable Capital", "Google Sheets", "r/Finanzen", "Notion"],
+        "relationships": [
+          {"name": "Lea", "type": "partner", "friction": "finds his spreadsheet evangelism exhausting; wants one shared answer, not four scenarios"},
+          {"name": "Deniz", "type": "colleague", "friction": "pays for a fee-only advisor and won't shut up about it, which annoys Jonas because it works"}
+        ],
+        "personality": {
+          "working_style": "deep-dive sprints, then total neglect; automates anything he has done twice",
+          "communication_style": "precise, benchmarks everything, says 'source?' in regular conversation",
+          "risk_tolerance": "high on paper, medium in practice — rebalances less bravely than he posts",
+          "character_notes": "The fear under the optimizing: that one wrong assumption in row 12 quietly costs him six figures over 30 years."
+        },
+        "pain_points": [
+          "Cannot verify whether his pension-gap math is right — no one qualified has ever looked at it",
+          "Every 'free' advisor he tried turned into a Rürup pitch within 20 minutes",
+          "Generic robo-advice is beneath the spreadsheet; real advice is opaque to price-compare",
+          "His Notion finance vault is a graveyard of good intentions"
+        ],
+        "success_criteria": [
+          "An expert he respects says 'your setup is correct' — or shows him exactly where it isn't",
+          "Quarterly money admin under one hour, including the conversation with Lea"
+        ]
+      }
+    },
+    {
+      "key": "heike",
+      "description": "School secretary, 51, in Gelsenkirchen, divorced four years; part-time years in the 2000s left a pension gap she can feel in her stomach; keeps her money at the Sparkasse counter, distrusts apps that want account access, but lies awake doing retirement math she doesn't trust.",
+      "profile": {
+        "display_name": "Heike Sommerfeld",
+        "identity_traits": {
+          "gender_presentation": "female",
+          "gender_confidence": "high",
+          "age_range": "50-59",
+          "appearance_notes": "Reading glasses pushed into her hair, cardigan over the chair, handwriting that wins prizes for legibility.",
+          "avatar_profile": "Female-read person, early fifties, school office context, natural professional studio illustration, composed with a guarded smile.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "security-first planner",
+          "market": "B2C personal finance, Germany",
+          "region": "Germany (Gelsenkirchen)",
+          "attitude": "trusts people, not platforms — wants a voice and a name, fears being talked into things"
+        },
+        "demographics": {
+          "age": 51,
+          "occupation": "school secretary, Gesamtschule",
+          "net_income_eur_month": 2250,
+          "household": "divorced, adult son moved out, owns half a paid-off row house from the divorce settlement"
+        },
+        "role": {
+          "title": "School secretary",
+          "responsibilities": "Runs the front office of a 950-student school: sick lines at 7:15, parent walk-ins, the school budget spreadsheet nobody else opens.",
+          "seniority": "23 years, the institutional memory of the building",
+          "decision_power": "complete over her own finances since the divorce — which is exactly what frightens her"
+        },
+        "company_context": {
+          "industry": "Public school administration",
+          "size": "950 students, 70 staff",
+          "stack": "Sparkasse counter and online banking on the family PC, paper folder system ('Ordner Rente'), pocket calculator, the kitchen table",
+          "operating_model": "Money decisions get made slowly, in writing, after a phone call with her brother"
+        },
+        "goals": [
+          "Know — in one number she believes — whether the pension plus the house is enough",
+          "Close at least part of the gap from the part-time years before 60",
+          "Never depend on her ex-husband's pension settlement being calculated correctly",
+          "Sleep through the night before the annual Renteninformation arrives"
+        ],
+        "constraints": [
+          "€2,250 net with a settled routine — new monthly costs are felt immediately",
+          "Will not connect her bank account to an app; the Sparkasse data stays at the Sparkasse",
+          "The divorce advisor billed €190/hour and made her feel stupid; never again",
+          "Comparison anchor: Mieterverein €90 a YEAR, ADAC €54 a year — that's what membership costs"
+        ],
+        "tool_ids": ["online_banking", "paper_folder", "phone"],
+        "tools": ["Sparkasse online banking", "paper folder system", "pocket calculator", "landline phone"],
+        "relationships": [
+          {"name": "Bernd", "type": "older brother", "friction": "means well, retired Beamter, his pension advice doesn't map to her Angestellte reality"},
+          {"name": "Frau Yilmaz", "type": "colleague in the office", "friction": "swears by a finance app Heike privately thinks is reckless"}
+        ],
+        "personality": {
+          "working_style": "thorough, paper-first, finishes what she starts or doesn't start it",
+          "communication_style": "polite, then suddenly very precise when she smells a sales script",
+          "risk_tolerance": "very low for products, moderate for people she has vetted",
+          "character_notes": "The divorce taught her she can handle hard things. It also taught her what professional fees do to a settlement."
+        },
+        "pain_points": [
+          "The Renteninformation number is abstract; her fear is specific",
+          "Every retirement calculator online ends in a lead-capture form",
+          "Banks address her as 'pre-retirement planning segment' and pitch products within minutes",
+          "She has nobody financially neutral: family is opinionated, advisors are paid to sell"
+        ],
+        "success_criteria": [
+          "A person with a name walked her through HER numbers and didn't sell her anything",
+          "A written one-page plan in the Ordner that her brother can't poke holes in"
+        ]
+      }
+    },
+    {
+      "key": "tobias",
+      "description": "Self-employed master electrician, 42, in Reutlingen; four employees, irregular income between €3,000 and €8,000 a month; private and business money hopelessly intertwined; pays his tax advisor €120 an hour and considers that the going rate for anyone who saves him real money.",
+      "profile": {
+        "display_name": "Tobias Lanz",
+        "identity_traits": {
+          "gender_presentation": "male",
+          "gender_confidence": "high",
+          "age_range": "40-49",
+          "appearance_notes": "Workwear with the company name embroidered, phone in a rugged case, calluses, watches people's hands when they talk.",
+          "avatar_profile": "Male-read person, early forties, skilled-trades business owner context, natural professional studio illustration, grounded and skeptical-friendly.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "self-employed pragmatist",
+          "market": "B2C/B2B personal finance, Germany",
+          "region": "Germany (Reutlingen)",
+          "attitude": "price-insensitive, value-merciless — pays well for things that work, cancels fast when they don't"
+        },
+        "demographics": {
+          "age": 42,
+          "occupation": "master electrician (Elektromeister), owner of a 5-person business",
+          "net_income_eur_month": 5500,
+          "household": "married, two kids (9 and 12), house with a mortgage and a workshop"
+        },
+        "role": {
+          "title": "Owner, Elektro Lanz GmbH",
+          "responsibilities": "Quotes, scheduling, two apprentices, chasing unpaid invoices, and the actual electrical work nobody else can sign off.",
+          "seniority": "own business for 12 years",
+          "decision_power": "absolute and lonely — every financial decision in the company and household lands on him"
+        },
+        "company_context": {
+          "industry": "Skilled trades / electrical",
+          "size": "5 employees incl. two apprentices",
+          "stack": "Lexware, DATEV via tax advisor, Volksbank business + private accounts, WhatsApp with customers, a folder of unpaid invoices on the passenger seat",
+          "operating_model": "Cash flow is the weather: March is feast, August is famine; private savings happen in whatever month allows it"
+        },
+        "goals": [
+          "Untangle private retirement from business reserves — one clear line between the two",
+          "A pension answer that works with irregular income, not against it",
+          "Stop the Versorgungswerk vs. Rürup vs. ETF question from resurfacing every single year",
+          "Keep the option to sell the business at 58 and not need to"
+        ],
+        "constraints": [
+          "Time windows: 6:30–7:00 in the van, or Sunday morning — nothing else is real",
+          "Income volatility makes every 'fixed monthly contribution' product a bad joke",
+          "His tax advisor is excellent on taxes and explicitly refuses retirement-planning questions",
+          "Anything that smells like a bank pitch dies instantly — he's been a business customer for 12 years and knows the script"
+        ],
+        "tool_ids": ["lexware", "banking_app", "whatsapp"],
+        "tools": ["Lexware", "Volksbank app", "WhatsApp", "DATEV (via tax advisor)"],
+        "relationships": [
+          {"name": "Sandra", "type": "wife, does the office two days a week", "friction": "wants the private buffer untouchable; he keeps borrowing from it for materials"},
+          {"name": "Herr Maurer", "type": "tax advisor", "friction": "answers everything except the one question that keeps Tobias up: 'am I saving enough, in the right place?'"}
+        ],
+        "personality": {
+          "working_style": "decides fast once he trusts the source; until then, stalls for years",
+          "communication_style": "blunt, fair, allergic to jargon — 'sag's mir wie einem Kunden'",
+          "risk_tolerance": "high in business, oddly conservative in private savings",
+          "character_notes": "Measures every service against his own trade: show up, do it right, invoice transparently, stand behind it."
+        },
+        "pain_points": [
+          "The self-employed are an afterthought in every finance app — 'monthly income?' has no honest answer",
+          "Mixing of business and private accounts means he genuinely doesn't know his own savings rate",
+          "Retirement advice for Selbständige is either a Rürup ambush or a shrug",
+          "Sunday-morning research sessions end in more open tabs, never in a decision"
+        ],
+        "success_criteria": [
+          "One session that ends with a decision made, not 'options to consider'",
+          "A setup Sandra signs off on without the conversation becoming a fight"
+        ]
+      }
+    },
+    {
+      "key": "aylin",
+      "description": "Social media manager, 27, in Cologne; €2,600 net, freelance side clients now and then; pays for seven subscriptions, can name all seven and what each costs, and cancels one every quarter as a ritual; saves irregularly, invests €75 a month when the month behaves.",
+      "profile": {
+        "display_name": "Aylin Tasdemir",
+        "identity_traits": {
+          "gender_presentation": "female",
+          "gender_confidence": "high",
+          "age_range": "25-34",
+          "appearance_notes": "Sharp casual style assembled secondhand, ring light visible in video calls, types faster on a phone than most people on a keyboard.",
+          "avatar_profile": "Female-read person, late twenties, digital marketing context, natural professional studio illustration, quick-witted and appraising.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "budget-tight employee",
+          "market": "B2C personal finance, Germany",
+          "region": "Germany (Cologne)",
+          "attitude": "subscription-fatigued professional — evaluates products in churn-rate terms because that's her own job"
+        },
+        "demographics": {
+          "age": 27,
+          "occupation": "social media manager at a mid-size agency, freelance on the side",
+          "net_income_eur_month": 2600,
+          "household": "shared flat (WG) in Ehrenfeld with two friends"
+        },
+        "role": {
+          "title": "Social media manager",
+          "responsibilities": "Runs five client accounts, monthly reporting, community management; freelances brand audits on weekends when rent month demands it.",
+          "seniority": "4 years, halfway to going fully freelance and scared of exactly that",
+          "decision_power": "full over her money, heavily influenced by what survives her quarterly subscription cull"
+        },
+        "company_context": {
+          "industry": "Marketing agency",
+          "size": "45 employees",
+          "stack": "N26, Trade Republic (€75 ETF plan), Notion budget board, TikTok finance creators she watches and double-checks",
+          "operating_model": "Money happens on the phone, in gaps: tram rides, render waits, Sunday brunch admin with the WG"
+        },
+        "goals": [
+          "Build a 6-month freelance runway (currently: 6 weeks)",
+          "Stop the €75 ETF plan from being the first thing cancelled in a tight month",
+          "Understand taxes-when-freelancing before, not after, she takes the leap",
+          "A money setup she could explain on camera without embarrassment"
+        ],
+        "constraints": [
+          "Rent month vs. normal month: €100 discretionary swing decides everything",
+          "Quarterly subscription cull: anything without a recent 'moment of value' gets cut, ruthlessly",
+          "No patience for 45-minute onboarding flows — value in the first session or gone",
+          "Side-income taxes make her bank balance feel like a trap, not a number"
+        ],
+        "tool_ids": ["neobank", "broker_app", "notion"],
+        "tools": ["N26", "Trade Republic", "Notion", "TikTok"],
+        "relationships": [
+          {"name": "Selin", "type": "mother", "friction": "keeps suggesting a Bausparvertrag 'like we did it'; the conversation goes nowhere twice a year"},
+          {"name": "Marc", "type": "flatmate", "friction": "freelances full-time and makes it look easy, which makes her runway anxiety worse"}
+        ],
+        "personality": {
+          "working_style": "fast, mobile-first, batches life admin into sprints with a podcast on",
+          "communication_style": "warm, meme-fluent, asks uncomfortable questions cheerfully",
+          "risk_tolerance": "medium — will try anything for a month, commits to almost nothing",
+          "character_notes": "Professionally immune to marketing because she writes it. A product earns months one at a time."
+        },
+        "pain_points": [
+          "Finance content is either boomer-coded or crypto-bro-coded; nothing speaks her dialect honestly",
+          "Every subscription she keeps is a small bet against her own freelance runway",
+          "Tax fear is the single biggest blocker to going freelance and no app addresses it head-on",
+          "She knows what things cost but not what they're worth — and she knows that about herself"
+        ],
+        "success_criteria": [
+          "Survives three consecutive quarterly culls on merit",
+          "The freelance-runway number goes up every month she keeps it"
+        ]
+      }
+    }
+  ],
+  "open_questions": [
+    "Which segments clear €49/month, and what do they need to see before they do?",
+    "Is the human coaching session the thing people pay for, or the thing that makes them trust the app?",
+    "Where between €9 and €79 does monthly acceptance break?"
+  ],
+  "hypotheses": [
+    {
+      "key": "h-acceptance-19",
+      "text": "At €19/month, at least 4 of the 5 panel voices rate the price acceptable (bargain or getting-expensive) — €19 is below everyone's pain line, including the budget-tight segment.",
+      "prediction": {"metric": "panel voices rating €19/month acceptable (of 5)", "expected_value": 4, "tolerance": 1, "confidence": 0.7},
+      "derived_from": [{"kind": "open_question", "question": "Where between €9 and €79 does monthly acceptance break?"}]
+    },
+    {
+      "key": "h-pro-segments",
+      "text": "In a €19 Lite vs €49 Pro head-to-head, the panel splits by segment rather than converging: every self-employed and high-income-optimizer voice chooses Pro, every budget-tight voice chooses Lite.",
+      "prediction": {"metric": "Pro share among self-employed + optimizer voters in the head-to-head", "expected_value": 1.0, "tolerance": 0.0, "confidence": 0.6},
+      "derived_from": [{"kind": "open_question", "question": "Which segments clear €49/month, and what do they need to see before they do?"}]
+    },
+    {
+      "key": "h-pause-churn",
+      "text": "A one-tap pause (instead of cancel) halves voluntary churn among subscription-fatigued users in the first year — the quarterly cull spares products that offer a smaller commitment step.",
+      "prediction": {"metric": "voluntary churn among subscription-fatigued users, with vs. without one-tap pause", "expected_direction": "decrease", "confidence": 0.55},
+      "derived_from": [{"kind": "council", "key": "worth-paying"}]
+    }
+  ],
+  "councils": [
+    {
+      "key": "worth-paying",
+      "format": "council",
+      "created_at": "2026-05-18T16:30:00+00:00",
+      "prompt": "What would make money guidance worth paying for every month?",
+      "questions": [
+        "What do you do today when a money decision scares you?",
+        "What would make you cancel a money app after three months?"
+      ],
+      "personas": ["maren", "jonas", "heike", "tobias", "aylin"],
+      "selection_reason": "Five voices spanning the willingness-to-pay axis: two budget-tight employees, a high-income optimizer, a security-first planner, a self-employed owner — the segments the premium tier must price across.",
+      "statements": [
+        {"persona": "maren", "about": "q0", "stance": "skeptical", "text": "Honestly? I put it off. The Riester thing scared me into research and the research scared me into nothing. The one place I'd trust — Verbraucherzentrale — has an eleven-week waiting list. So the decision waits eleven weeks, or forever. If you want my €19, you're competing with 'forever', which is free."},
+        {"persona": "maren", "about": "q1", "stance": "conditional", "text": "Cancelling is my hobby, ask my sister. I cancel anything I can't justify in one sentence at my yearly audit. 'It told me my ETF plan is probably fine' — that's worth one sentence exactly once. What's the sentence in month four? If there isn't one, I'm gone, and I won't feel bad."},
+        {"persona": "jonas", "about": "q0", "stance": "conditional", "text": "I build a spreadsheet. That's the problem — I already have the spreadsheet, fourteen tabs of it. What scares me isn't the decision, it's that nobody qualified has ever checked my assumptions. I don't need education, I need a code review for my retirement math. That's a different product than 'money tips' and I'd pay properly for it."},
+        {"persona": "jonas", "about": "q1", "stance": "skeptical", "text": "I cancel when the insights stop changing. Month one: 'your pension gap is €840/month', great, genuinely. Month three: same number, different notification. An app that tells me what I already know is a €0 product with a paid skin. The human session is the only part that can't go stale — if the coach is actually good."},
+        {"persona": "heike", "about": "q0", "stance": "neutral", "text": "I call my brother, and then I don't fully believe him, because Beamte live on a different planet. What I did for the divorce was pay €190 an hour to a man who made me feel stupid for asking. So today the scary decisions sit in a folder called 'Rente' and I do the math at night with a pocket calculator. I'm not proud of it. But I'm also not giving an app my bank login to fix it."},
+        {"persona": "heike", "about": "q1", "stance": "skeptical", "text": "I wouldn't get to month three unless a person — a name, a voice, the same one each time — was part of it from the start. I'd cancel the moment it starts selling. I know the turn by heart now: first they explain, then they 'recommend', then there's a product. If your coach earns commission, this whole conversation never happened."},
+        {"persona": "tobias", "about": "q0", "stance": "conditional", "text": "I ask Herr Maurer, my tax advisor, and he says 'that's not tax advice' — which is correct and useless. €120 an hour and the one question that matters is out of scope. So: yes, I'd pay for the missing person. But they have to handle 'my income is €3,000 in August and €8,000 in March' without putting me in a monthly-contribution box. Every app so far has choked on that sentence."},
+        {"persona": "tobias", "about": "q1", "stance": "conditional", "text": "I cancel when nothing gets decided. I don't need a dashboard, I have Lexware, dashboards I've got. If the quarterly session ends with 'options to consider', that's a craftsman who walks the site, nods, and never sends the quote. One decision per session, written down, that Sandra can read — that's the whole job. Do that and the price is honestly secondary."},
+        {"persona": "aylin", "about": "q0", "stance": "neutral", "text": "I watch three TikToks about it, cross-check the least insane one, and then mostly don't act. The tax-when-freelancing question has been 'scary, later' for two years — it's the actual wall between me and going freelance. I'd pay real money to have exactly that one fear taken apart by a human. But 'real money' for me is a number with a one in front."},
+        {"persona": "aylin", "about": "q1", "stance": "skeptical", "text": "Three months is exactly one cull cycle, so: it gets cancelled unless it had a 'moment' that quarter — something I'd screenshot. Also, professional note, since this is literally my job: let me pause instead of cancel. The cull is about feeling in control, not about the €19. Products with a pause button survive my cull at twice the rate. I know because I'm the one culling."}
+      ],
+      "exec_summary": "Nobody on the panel wants 'money tips' — all five already have a coping mechanism (spreadsheet, brother, TikTok, tax advisor, procrastination) and each one has a specific hole the premium tier could fill: verification for Jonas, a trusted human for Heike, irregular-income competence for Tobias, one named fear (freelance taxes) for Aylin, and a one-sentence justification for Maren's yearly audit. Cancellation logic differs by segment: staleness kills it for the optimizer, sales-smell for the security-seeker, indecision for the self-employed, the quarterly cull for the subscription-fatigued. The human session is the only component every voice treats as non-stale — pricing should hang the premium on it.",
+      "summary": "Discovery council ahead of the pricing work. Q1 ('what do you do when a money decision scares you') surfaced the competing alternatives the price must beat: free-but-never (procrastination), free-but-slow (Verbraucherzentrale), trusted-but-wrong-domain (tax advisor, brother). Q2 ('what makes you cancel') produced segment-specific kill conditions and one concrete product demand — a pause option instead of cancel — flagged by the subscription-fatigued voice as churn-halving and recorded as an open hypothesis."
+    },
+    {
+      "key": "price-ladder",
+      "format": "price_ladder",
+      "created_at": "2026-05-26T15:00:00+00:00",
+      "prompt": "Klar Premium — app plus a quarterly 45-minute session with an independent, commission-free money coach. React to every monthly price on the ladder.",
+      "price_points": ["€9", "€19", "€29", "€49", "€79"],
+      "selection_reason": "Same five voices as the discovery council — the ladder needs the full willingness-to-pay spread, including the budget holder of each household.",
+      "responses": [
+        {"persona": "maren", "price": "€9", "band": "bargain", "quote": "€9 I can justify in one sentence: 'cheaper than the gym I don't go to.' That survives my audit."},
+        {"persona": "maren", "price": "€19", "band": "getting_expensive", "quote": "€19 is Netflix plus Spotify. It has to beat both every single month, and in a tight month, it won't."},
+        {"persona": "maren", "price": "€29", "band": "too_expensive", "quote": "€29 is a fifth of my monthly savings rate. The app would be eating the thing it's supposed to grow."},
+        {"persona": "maren", "price": "€49", "band": "too_expensive", "quote": "€49 a month is €588 a year. For that I can wait the eleven weeks for the Verbraucherzentrale, twice."},
+        {"persona": "maren", "price": "€79", "band": "too_expensive", "quote": "That's half my ETF rate. No sentence justifies that at my audit. Not even a paragraph."},
+        {"persona": "jonas", "price": "€9", "band": "too_cheap", "quote": "At €9 the 'coach' is a chatbot with a calendar link. Real fee-only advice costs €150 an hour — the unit economics of €9 don't contain a human."},
+        {"persona": "jonas", "price": "€19", "band": "bargain", "quote": "€19 is two office coffees a week. If the data layer alone kills my spreadsheet maintenance, fine — but at this price I assume the coach is the upsell."},
+        {"persona": "jonas", "price": "€29", "band": "bargain", "quote": "€29 with a real quarterly session is under €90 per expert-hour-equivalent. Deniz pays €180 flat with his advisor. I'd take this and feel clever about it."},
+        {"persona": "jonas", "price": "€49", "band": "getting_expensive", "quote": "€49 needs the coach to actually engage with my spreadsheet, not read me a script about the Drei-Schichten-Modell. Show me the coach's credentials and I'm in; hide them and it's €49 for vibes."},
+        {"persona": "jonas", "price": "€79", "band": "too_expensive", "quote": "€948 a year is real advisor territory — at that point I book Deniz's guy directly and own the relationship."},
+        {"persona": "heike", "price": "€9", "band": "too_cheap", "quote": "If a real person looks at my pension for €9 a month, then I'm not the customer, I'm the product. What are they selling about me to make that work?"},
+        {"persona": "heike", "price": "€19", "band": "getting_expensive", "quote": "€19 every month — that's €228 a year. My Mieterverein is €90 a year and they once saved me four hundred euros. Membership prices, I understand; this is more than double."},
+        {"persona": "heike", "price": "€29", "band": "too_expensive", "quote": "€29 monthly is the kind of cost that creeps. I'd rather pay once, properly, for one session with my numbers — a subscription assumes my pension gap changes every month. It doesn't."},
+        {"persona": "heike", "price": "€49", "band": "too_expensive", "quote": "For €49 a month I expect a person who knows my name in an office I can visit. An app cannot be that, at any price, and certainly not at this one."},
+        {"persona": "heike", "price": "€79", "band": "too_expensive", "quote": "That's almost what the divorce advisor cost, and I promised myself: never again a monthly bill I'm afraid of."},
+        {"persona": "tobias", "price": "€9", "band": "too_cheap", "quote": "€9 is suspicious. In my trade, when a quote comes in at a third of the others, the wiring is aluminum. Who's the coach who works for €9-a-month customers?"},
+        {"persona": "tobias", "price": "€19", "band": "bargain", "quote": "€19 is one breakfast at the bakery with the crew. If it sorts the private-versus-business mess even halfway, it's the cheapest tool in my van."},
+        {"persona": "tobias", "price": "€29", "band": "bargain", "quote": "€29 is nothing against the €1,400 a year Herr Maurer costs me — IF the session handles 'March €8,000, August €3,000' without a script error."},
+        {"persona": "tobias", "price": "€49", "band": "getting_expensive", "quote": "€49 I'd pay the way I price my own work: show up, decide something, put it in writing. The moment a session ends in 'options', I'm out — then it's an expensive dashboard."},
+        {"persona": "tobias", "price": "€79", "band": "too_expensive", "quote": "At €79 monthly I'd expect them to also do the Lexware reconciliation. That's an employee, not an app."},
+        {"persona": "aylin", "price": "€9", "band": "bargain", "quote": "€9 survives the cull on price alone — it's below my 'don't even think about it' line. The question is whether I'd respect it."},
+        {"persona": "aylin", "price": "€19", "band": "getting_expensive", "quote": "€19 is exactly my Adobe-after-discount trauma price. It's payable, but it's on the cull list every quarter and has to re-earn its spot with a screenshot moment."},
+        {"persona": "aylin", "price": "€29", "band": "too_expensive", "quote": "€29 is more than my ETF plan in a rent month. An app that costs more than my investing is satire."},
+        {"persona": "aylin", "price": "€49", "band": "too_expensive", "quote": "€49 monthly for me is freelance-client money. I'd sooner pay €150 once for one tax session than €49 forever."},
+        {"persona": "aylin", "price": "€79", "band": "too_expensive", "quote": "€79 is my WG electricity share. The cull wouldn't even be a decision; it'd be a reflex."}
+      ],
+      "statements": [
+        {"persona": "jonas", "about": "price:€9", "stance": "skeptical", "text": "€9 actively damages the premise. The entire premium pitch is 'a real human verifies your numbers' — a €9 price tag says the human is decorative."},
+        {"persona": "heike", "about": "price:€9", "stance": "oppose", "text": "Cheap frightens me more than expensive. The divorce taught me to ask who pays the professional — if it isn't me, it's someone with an interest in my decisions."},
+        {"persona": "tobias", "about": "price:€29", "stance": "support", "text": "€29 is the honest price for what's described. Below it I doubt the coach, above it I start comparing with Herr Maurer — and Herr Maurer has an office and liability insurance."},
+        {"persona": "maren", "about": "price:€19", "stance": "conditional", "text": "€19 is the edge of my world. Everything above it isn't 'expensive', it's simply not addressed to me — and I'd rather you knew that than pretended otherwise."}
+      ],
+      "exec_summary": "The ladder breaks in one place: directly after €19. Every voice accepts €19 (acceptance 1.0) — then acceptance collapses to 2 of 5 at €29 and €49 (the optimizer and the self-employed owner), and to zero at €79. The cliff is not gradual, it is segmental: budget-tight voices exit entirely above €19, while the two high-WTP voices stay comfortable through €29 and only start demanding proof (credentials, decisions-in-writing) at €49. €9 backfires: it reads as 'suspiciously cheap' to exactly the three voices with the most money, who price the human coach at real-world rates and conclude a €9 human is fake. The data argues against any single price and for a tier split at the cliff edge.",
+      "summary": "Willingness-to-pay ladder for the premium tier, five rungs €9–€79, four-band van-Westendorp reactions grounded in each voice's stated budget anchors (savings rate, Mieterverein dues, tax-advisor hourly rate, subscription-cull threshold, WG electricity share). Acceptance: €9 → 0.4 (dragged down by too-cheap suspicion from the three highest-WTP voices, not by affordability), €19 → 1.0, €29 → 0.4, €49 → 0.4, €79 → 0.0. Only €19 clears majority acceptance; the cliff after €19 (−0.6) is the steepest possible on this panel. Segment view: budget-tight accepts only ≤€19; optimizer and self-employed accept €19–€49 with proof conditions; security-first accepts €19 only and rejects the subscription form itself above it."
+    },
+    {
+      "key": "lite-vs-pro",
+      "format": "head_to_head",
+      "created_at": "2026-06-02T15:30:00+00:00",
+      "prompt": "Klar Lite at €19/month vs Klar Pro at €49/month — which one would you actually subscribe to, and why?",
+      "options": [
+        {"label": "A", "title": "Klar Lite — €19/month", "text": "Connected accounts with a plain-language pension-gap analysis, a weekly money digest, decision checklists, cancel or pause anytime. No human coaching."},
+        {"label": "B", "title": "Klar Pro — €49/month", "text": "Everything in Lite, plus a 45-minute video session every quarter with an independent, commission-free money coach (named, credentialed, the same person each time), a written action plan after every session, and priority chat between sessions."}
+      ],
+      "selection_reason": "Same five-voice panel; the ladder said the panel splits at the cliff — the head-to-head tests whether the split is segmental and decisive enough to justify two tiers.",
+      "preferences": [
+        {"persona": "maren", "choice": "A", "intensity": "firm", "reason": "€19 survives the yearly audit with the sentence 'it watches my pension so I don't have to.' €49 needs a paragraph, and paragraphs get cancelled."},
+        {"persona": "jonas", "choice": "B", "intensity": "firm", "reason": "The named, credentialed coach is the entire reason to pay. Lite is my spreadsheet with better fonts — Pro is the code review I can't get anywhere else for under €150/hour."},
+        {"persona": "heike", "choice": "A", "intensity": "reluctant", "reason": "If I'm honest, B is the only one I actually want — a person, the same one each time. But €49 every month is a bill I'd be afraid of, and fear is what I'm trying to pay away. So A, reluctantly, as a trial of whether I can trust them at all."},
+        {"persona": "tobias", "choice": "B", "intensity": "firm", "reason": "Four sessions a year, each ending in a written decision, for less than five hours of Herr Maurer — that's the first retirement offer that fits how I actually buy services."},
+        {"persona": "aylin", "choice": "A", "intensity": "firm", "reason": "A gets a fair shot at surviving two culls. B is freelance-client money for a problem (taxes) I'd rather solve once, in one paid session, than rent forever."}
+      ],
+      "statements": [
+        {"persona": "maren", "about": "opt:A", "stance": "conditional", "text": "Lite at €19 sits exactly on my pain line — the ladder told you that and I'll repeat it: it's payable, not safe. It survives as long as the weekly digest keeps producing the one sentence I need for my audit."},
+        {"persona": "maren", "about": "opt:B", "stance": "oppose", "text": "Pro is for people whose problem is complexity. Mine is trust and €588 a year doesn't buy trust, it consumes it — that's a Riester contract's worth of money every two and a half years."},
+        {"persona": "jonas", "about": "opt:A", "stance": "skeptical", "text": "Lite is a nicely rendered version of work I've already done. The pension-gap number won't change month to month, so by week six Lite is a €19 screensaver."},
+        {"persona": "jonas", "about": "opt:B", "stance": "support", "text": "Pro, if the coach's credentials are public and the session works on MY numbers, is underpriced — quarterly expert verification plus a written plan is what Deniz pays €720 a year for, without the data layer."},
+        {"persona": "heike", "about": "opt:A", "stance": "conditional", "text": "Lite I could try — €19 is over my Mieterverein anchor but not absurdly. What Lite cannot do is the one thing I need: be a person. A checklist doesn't notice when I'm being talked into something."},
+        {"persona": "heike", "about": "opt:B", "stance": "conditional", "text": "Pro describes exactly the person I've been looking for since the divorce — independent, named, no commission. If it were €49 once a quarter, I'd sign today. Monthly, it's a fear with a direct debit."},
+        {"persona": "tobias", "about": "opt:A", "stance": "skeptical", "text": "Lite assumes my problem is information. It isn't — it's decisions. Another dashboard joins Lexware in the pile of things that describe my mess without resolving it."},
+        {"persona": "tobias", "about": "opt:B", "stance": "support", "text": "Pro is priced like a trade service: show up quarterly, decide something, leave paper. €588 a year against €1,400 for Herr Maurer — if the coach survives one session about irregular income, this is the cheapest professional in my life."},
+        {"persona": "aylin", "about": "opt:A", "stance": "conditional", "text": "A is cull-survivable: pausable, cheap enough, and the digest could be my screenshot moment. It earns months one at a time, which is the only way anything earns months from me."},
+        {"persona": "aylin", "about": "opt:B", "stance": "skeptical", "text": "B is a commitment product sold to the commitment-averse. The coach is genuinely tempting for the tax fear — but quarterly cadence means I'd pay three months of €49 per useful hour. My math says: book one session somewhere, once."}
+      ],
+      "variant_meta": {
+        "variants": {
+          "A": {"id": "klar-lite-19", "price_eur_month": 19, "coaching": false},
+          "B": {"id": "klar-pro-49", "price_eur_month": 49, "coaching": "quarterly 45-min, independent fee-only coach"}
+        },
+        "order_shown": {
+          "maren": ["A", "B"],
+          "jonas": ["B", "A"],
+          "heike": ["B", "A"],
+          "tobias": ["A", "B"],
+          "aylin": ["B", "A"]
+        },
+        "hypothesis": "h-pro-segments"
+      },
+      "exec_summary": "Lite wins on reach, 3:2 — but the margin is the least interesting number in the room. The split is perfectly segmental, exactly as the pre-registered bet predicted: both budget-tight voices and the security-first planner choose Lite; the optimizer and the self-employed owner choose Pro, both citing the same anchor (a real advisor's hourly rate) and the same condition (the coach must be named, credentialed, and decision-oriented). The most valuable single data point is Heike's reluctant A: she wants Pro's human and can't justify Pro's billing form — a quarterly billing experiment could convert her segment without touching the price. Conclusion: don't average this panel into one tier. Tier it.",
+      "summary": "Head-to-head of the two candidate tiers with full variant metadata (variant ids, per-persona presentation order randomized as the position-bias guard, and the pre-registered segment-split hypothesis). Result 3:2 for Lite, margin 0.2 (narrow), no abstentions. Segment splits: budget-tight 2–0 Lite, high-income optimizer 1–0 Pro, self-employed 1–0 Pro, security-first 1–0 Lite (reluctant, billing-form-driven). The Pro 'yes' votes both condition on coach credentials and written per-session decisions; the Lite votes condition on pause-ability and a recurring 'audit sentence'. Hypothesis h-pro-segments resolves validated: Pro share among self-employed + optimizer voters = 1.0."
+    }
+  ],
+  "hypothesis_results": [
+    {
+      "hypothesis": "h-acceptance-19",
+      "observed_value": 5,
+      "source": {"kind": "council", "key": "price-ladder"},
+      "note": "All five voices accepted €19 (acceptance 1.0) — the bet under-called the floor, not the cliff. The informative part sits one rung higher: acceptance collapses to 2 of 5 at €29, and the two survivors are exactly the segments the Pro tier targets."
+    },
+    {
+      "hypothesis": "h-pro-segments",
+      "observed_value": 1.0,
+      "source": {"kind": "council", "key": "lite-vs-pro"},
+      "note": "Clean segment split, no crossovers: optimizer and self-employed → Pro (2/2), budget-tight → Lite (2/2). The security-first voice chose Lite but for a billing-form reason, not a value reason — recorded in the head-to-head as the strongest argument for a quarterly-billing experiment on Pro."
+    }
+  ],
+  "syntheses": [
+    {
+      "key": "pricing-story",
+      "title": "Pricing story: €19 buys reach, €49 buys trust — ship both tiers",
+      "start_input": "What can Klar charge for the premium coaching tier, and where does willingness-to-pay break?",
+      "goal": "Turn the discovery council, the price ladder and the tier head-to-head into one defensible pricing recommendation.",
+      "created_at": "2026-06-04T09:00:00+00:00",
+      "councils": ["worth-paying", "price-ladder", "lite-vs-pro"],
+      "payload": {
+        "arc_narrative": "The arc ran in three moves. The discovery council established what the price would actually be buying: not information — every voice already has a coping mechanism — but a segment-specific missing piece: verification (Jonas), a trustworthy human (Heike), irregular-income competence (Tobias), one named fear dismantled (Aylin), a one-sentence justification for the yearly audit (Maren). The price ladder then located the structural break: unanimous acceptance at €19, a collapse to 2-of-5 at €29, zero at €79 — with the twist that €9 damaged credibility precisely among the highest-WTP voices, who priced the human coach at market rates and concluded a €9 human cannot exist. The head-to-head confirmed the break is segmental, not statistical: a 3:2 surface for Lite decomposing into a perfect split — budget-tight and security-first to Lite, optimizer and self-employed to Pro — validating the pre-registered bet (h-pro-segments) at 1.0. Reading the three runs together: the panel contains two different products' customers, and a single price would mis-serve both.",
+        "gesamtbild": "There is no single right price because there is no single buyer. Below €19 the product reads as suspicious to the people with money ('who pays the professional?' — Heike; 'the unit economics don't contain a human' — Jonas); above €19 it reads as unaffordable to the people without ('a fifth of my savings rate' — Maren; 'more than my ETF plan in a rent month' — Aylin). €19 is the reach price: the most any panel voice can renew without re-deliberating. €49 is the trust price: what the high-WTP segments will pay once the coach is named, credentialed, commission-free, and the session reliably ends in a written decision — their condition, stated twice, almost word for word. The dead zone between them (€29) is real: it buys neither reach nor enough coaching to satisfy the trust buyers. Two churn-side findings ride along: a pause option materially extends survival among the subscription-fatigued (Aylin, recorded as the open bet h-pause-churn), and quarterly billing — not a lower price — is what would convert the security-first segment to Pro (Heike's reluctant Lite vote).",
+        "positionierung": "Ship two tiers and let them be honestly different products: Lite at €19/month — the watchdog, sold on 'it watches your pension so you don't have to', pausable, cancel-proof copy, the audit sentence delivered weekly. Pro at €49/month — the professional, sold exclusively on the coach: name, face, credentials, fee-only badge, 'every session ends in a written decision'. Lead all acquisition with Lite (it is the only tier with panel-wide reach) and upsell Pro behind proof, not promises: after the first pension-gap number lands, show the coach who would walk through it. Do not launch a €29 middle tier — the ladder shows it sits in the dead zone. Test quarterly billing for Pro within two quarters; it is the single highest-leverage experiment this study surfaced.",
+        "status": "done",
+        "next_council_question": "Does quarterly billing (€147/quarter) convert the security-first segment to Pro where monthly billing fails — and does it cannibalize annual-prepay willingness among optimizers?",
+        "references": [
+          {"council": "worth-paying", "role": "What the price buys per segment: verification / human trust / irregular-income competence / one named fear / the audit sentence."},
+          {"council": "price-ladder", "role": "The structural break: acceptance 1.0 at €19 → 0.4 at €29 → 0.0 at €79; €9 backfires among high-WTP voices."},
+          {"council": "lite-vs-pro", "role": "The split is segmental and pre-registered: budget-tight+security → Lite, optimizer+self-employed → Pro; margin 0.2 is reach, not preference strength."}
+        ],
+        "citations": [
+          {"council": "price-ladder", "quote": "€19 is one breakfast at the bakery with the crew. If it sorts the private-versus-business mess even halfway, it's the cheapest tool in my van."},
+          {"council": "price-ladder", "quote": "If a real person looks at my pension for €9 a month, then I'm not the customer, I'm the product."},
+          {"council": "lite-vs-pro", "quote": "Pro describes exactly the person I've been looking for since the divorce — independent, named, no commission. If it were €49 once a quarter, I'd sign today. Monthly, it's a fear with a direct debit."}
+        ],
+        "findings": [
+          {"kind": "recommendation", "text": "Launch both tiers at the tested prices: Lite €19/month (pausable, reach product) and Pro €49/month (coach-led, trust product). Lead all marketing with Lite; gate the Pro upsell behind the first delivered pension-gap number plus the coach's named profile.", "refs": [{"kind": "council", "key": "lite-vs-pro"}]},
+          {"kind": "key_problem", "text": "The €29 dead zone: a single mid-price tier is too expensive for the reach segments (ladder acceptance 0.4) and too thin to carry the coaching that justifies the trust segments' money — the seemingly safe compromise serves nobody on this panel.", "refs": [{"kind": "council", "key": "price-ladder"}]},
+          {"kind": "segment", "text": "High-WTP segments (optimizer, self-employed) buy the coach, not the app — both anchored on real advisor rates (€120–€180/h) and both conditioned on credentials and written per-session decisions. Their acceptance window is €19–€49 with proof.", "refs": [{"kind": "council", "key": "lite-vs-pro"}, {"kind": "council", "key": "price-ladder"}]},
+          {"kind": "open_question", "text": "Quarterly billing for Pro: the security-first segment wants Pro's human and refuses Pro's monthly billing form. €147/quarter may convert that segment at identical revenue — untested, highest-leverage follow-up.", "refs": [{"kind": "council", "key": "lite-vs-pro"}]}
+        ],
+        "statements": [
+          {"persona": "maren", "stance": "conditional", "relevance": "high", "text": "€19 is the edge of my world — payable, not safe. Everything above it isn't expensive, it's simply not addressed to me."},
+          {"persona": "jonas", "stance": "support", "relevance": "high", "text": "The named, credentialed coach is the entire reason to pay. Pro at €49 with public credentials is underpriced against the €150/hour alternative."},
+          {"persona": "heike", "stance": "conditional", "relevance": "high", "text": "Pro is the person I've been looking for since the divorce. Monthly billing is the only thing standing between me and it."},
+          {"persona": "tobias", "stance": "support", "relevance": "high", "text": "Priced like a trade service: show up quarterly, decide something, leave paper. Cheapest professional in my life — if the session survives irregular income."},
+          {"persona": "aylin", "stance": "conditional", "relevance": "medium", "text": "Lite earns months one at a time, which is the only way anything earns months from me. Give it a pause button and it survives the cull."}
+        ]
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "key": "ship-two-tiers",
+      "title": "Ship two tiers — Lite at €19 and Pro at €49 — and lead all marketing with Lite",
+      "decision": "Klar launches with exactly two premium prices: Lite at €19/month (full app, weekly digest, one-tap pause, no coaching) and Pro at €49/month (quarterly 45-minute session with a named, credentialed, fee-only coach plus a written action plan per session). No €29 middle tier. Acquisition leads with Lite as the reach product; the Pro upsell is shown only after the user's first pension-gap analysis, together with the coach's profile. Revisit triggers: (1) the quarterly-billing experiment for Pro (next study) changes security-first conversion, or (2) Lite's month-4 retention falls below the pause-adjusted target, which would indicate the audit-sentence value loop is not landing.",
+      "status": "adopted",
+      "based_on": [
+        {"kind": "synthesis", "key": "pricing-story"},
+        {"kind": "council", "key": "price-ladder"},
+        {"kind": "council", "key": "lite-vs-pro"},
+        {"kind": "hypothesis", "key": "h-pro-segments"}
+      ],
+      "rejected": [
+        {"kind": "council", "key": "price-ladder", "note": "Single €29 tier rejected: the ladder places €29 in the dead zone — acceptance 0.4, too expensive for both budget-tight voices and the security-first planner, while too thin to fund the quarterly human coaching that is the only thing the two high-WTP segments said they would pay for."},
+        {"kind": "council", "key": "lite-vs-pro", "note": "Leading marketing with Pro rejected: Pro's appeal is conditional on proof (credentials, a delivered first insight) that a cold visitor hasn't seen yet, and the head-to-head shows its audience is 2 of 5 voices — Pro converts best as an upsell moment, not a landing page."}
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "key": "subscription-fatigue",
+      "title": "Subscription fatigue is the real competitor",
+      "created_at": "2026-05-27T08:00:00+00:00",
+      "text": "Across all three runs, the price was never compared to value in the abstract — it was compared to the existing subscription stack and to each voice's personal cancellation ritual (Maren's yearly audit, Aylin's quarterly cull). The competitor isn't another finance app; it's the cull itself. Product implication confirmed twice: a one-tap pause converts a cancellation moment into a retention moment. Tracked as open hypothesis h-pause-churn."
+    },
+    {
+      "key": "trust-language",
+      "title": "'Independent' beats 'smart' in every trust moment",
+      "created_at": "2026-06-03T10:00:00+00:00",
+      "text": "Whenever a voice moved toward paying, the trigger word was an independence signal — 'commission-free', 'fee-only', 'named coach', 'the same person each time' — and never an intelligence signal. Nobody asked how clever the analysis is; three of five asked who pays the coach. Copy and pricing-page hierarchy should put the independence proof above the feature list, especially for the Pro tier."
+    }
+  ],
+  "sections": [
+    {
+      "title": "Willingness-to-pay evidence",
+      "kind": "theme",
+      "note": "The pricing result chain: ladder cliff after €19, segmental tier split, and the synthesis that turns both into the two-tier recommendation.",
+      "members": [
+        {"kind": "synthesis", "key": "pricing-story"},
+        {"kind": "note", "key": "subscription-fatigue"}
+      ]
+    },
+    {
+      "title": "Messaging and trust",
+      "kind": "theme",
+      "note": "What the copy must prove before either price is believable.",
+      "members": [
+        {"kind": "note", "key": "trust-language"}
+      ]
+    }
+  ]
+}

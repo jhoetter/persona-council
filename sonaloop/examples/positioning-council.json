@@ -1,0 +1,490 @@
+{
+  "schema": "sonaloop_example/1",
+  "slug": "positioning-council",
+  "tagline": "B2B positioning: a buying-coalition panel, a red-team pass on the obvious pitch, an HMW reframe with ranked ideas, and the message that survived.",
+  "project": {
+    "title": "Positioning council — Schichtwerk shift planning",
+    "goal": "Decide how Schichtwerk positions to mid-sized German care providers: compliance shield, retention engine, or time-back tool — and find the message a buying coalition can actually agree on.",
+    "description": "Schichtwerk is rostering software for German elder-care providers (3–10 homes): rule-checked Dienstpläne, a staff app for swaps, and audit-ready documentation. Care rosters are bought by a coalition — managing director, ward managers, works council, IT — and each member can veto. This study runs the three candidate positionings through that coalition: a discovery council on which story earns a meeting, a red-team pass that kills the obvious 'save time' pitch, an HMW reframe that diverges nine ideas and converges on three, and a synthesis plus a (proposed) positioning decision. (Example project shipped with Sonaloop — reload or remove it any time: `sonaloop load-example positioning-council` / `remove-example`.)"
+  },
+  "personas": [
+    {
+      "key": "friederike",
+      "description": "Managing director of a three-home elder-care group in Osnabrück, 48; 240 staff, chronic agency-staffing costs, one Heimaufsicht audit per year per home that she prepares for like an exam; reads software pitches the way she reads grant applications — for the sentence that will be untrue in practice.",
+      "profile": {
+        "display_name": "Dr. Friederike Sasse",
+        "identity_traits": {
+          "gender_presentation": "female",
+          "gender_confidence": "high",
+          "age_range": "45-54",
+          "appearance_notes": "Blazer over practical clothes, reading glasses on a chain she makes jokes about, walks fast through her own corridors.",
+          "avatar_profile": "Female-read person, late forties, healthcare management context, natural professional studio illustration, decisive and a little tired around the eyes.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "economic buyer",
+          "market": "B2B care-sector software, Germany",
+          "region": "Germany (Osnabrück)",
+          "attitude": "buys outcomes she can defend to a board and an auditor; allergic to per-seat pricing and to promises about 'efficiency'"
+        },
+        "demographics": {
+          "age": 48,
+          "occupation": "managing director (Geschäftsführerin), elder-care group",
+          "organisation": "3 homes, 240 staff, ~12,000 shifts a month"
+        },
+        "role": {
+          "title": "Managing director, Pflegeheim-Trägergruppe",
+          "responsibilities": "P&L of three homes, staffing strategy, audit readiness (Heimaufsicht, MDK), board reporting, the final signature on every contract above €5,000.",
+          "seniority": "9 years as director, former nursing-service lead — she has built rosters herself and remembers it",
+          "decision_power": "final economic decision, but in practice a coalition decision: she will not sign against the works council or her ward managers"
+        },
+        "company_context": {
+          "industry": "Elder care (stationäre Pflege)",
+          "size": "3 homes, 240 employees",
+          "stack": "Vivendi for billing, Excel rosters per ward, a fax machine that refuses to die, Outlook, DATEV via Steuerberater",
+          "operating_model": "Every home rosters differently; every audit means two weeks of document archaeology; agency staff fill the holes at 1.8× cost"
+        },
+        "goals": [
+          "Pass every audit without the two-week document scramble",
+          "Cut agency-staffing spend by keeping her own people from leaving",
+          "One rostering reality across three homes instead of three local folklores",
+          "Buy software once that the works council doesn't fight for a year"
+        ],
+        "constraints": [
+          "Budget exists, but every euro competes with care staff wages — optics matter",
+          "Per-seat pricing is unbudgetable when headcount swings with agency staff",
+          "A works-council objection adds 6–12 months to any rollout; two have died that way",
+          "She has been burned by 'efficiency' software: the last tool saved time for nobody but its own dashboard"
+        ],
+        "tool_ids": ["vivendi", "excel", "outlook"],
+        "tools": ["Vivendi", "Excel", "Outlook", "DATEV (via tax advisor)"],
+        "relationships": [
+          {"name": "Birgit Krautmann", "type": "works council chair", "friction": "respects her completely and dreads her agenda item 'IT-Systeme' in equal measure"},
+          {"name": "the board (Trägerversammlung)", "type": "supervisory board", "friction": "asks for digitalization in the abstract and questions every concrete invoice"}
+        ],
+        "personality": {
+          "working_style": "reads the contract before the brochure; pilots small, scales what survives",
+          "communication_style": "warm with staff, forensic with vendors — 'show me the sentence in writing'",
+          "risk_tolerance": "low for anything touching care documentation, medium elsewhere",
+          "character_notes": "Her nightmare isn't a bad quarter; it's a Heimaufsicht finding with her signature on the staffing plan."
+        },
+        "pain_points": [
+          "Audit preparation consumes her best people for two weeks per home per year",
+          "She cannot see roster-rule violations until the audit finds them",
+          "Software vendors pitch 'time savings' she has learned to read as 'unpaid change management'",
+          "Three homes, three Excel dialects, zero comparability"
+        ],
+        "success_criteria": [
+          "An audit where the documentation question takes an afternoon, not a fortnight",
+          "The works council co-presents the rollout instead of grieving it"
+        ]
+      }
+    },
+    {
+      "key": "marco",
+      "description": "Ward manager (Wohnbereichsleitung) in a 78-bed home, 38; builds the roster for 32 people in Excel every month, carries the phone that rings when someone calls in sick at 5:40, trades shifts over WhatsApp against his own better judgment; the roster is the most political document on his ward.",
+      "profile": {
+        "display_name": "Marco Hellwig",
+        "identity_traits": {
+          "gender_presentation": "male",
+          "gender_confidence": "high",
+          "age_range": "35-44",
+          "appearance_notes": "Scrubs with a fleece over them, lanyard with too many keys, the posture of someone who sits down four minutes per shift.",
+          "avatar_profile": "Male-read person, late thirties, nursing ward context, natural professional studio illustration, approachable, alert, slightly harried.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "daily user",
+          "market": "B2B care-sector software, Germany",
+          "region": "Germany (Lower Saxony)",
+          "attitude": "will adopt anything that survives contact with a real Monday; has buried two tools that didn't"
+        },
+        "demographics": {
+          "age": 38,
+          "occupation": "ward manager (Wohnbereichsleitung), 78-bed home",
+          "team": "32 staff across three shifts, four of them apprentices"
+        },
+        "role": {
+          "title": "Wohnbereichsleitung",
+          "responsibilities": "The monthly roster, daily staffing repairs, family conversations, medication oversight, and being the person everyone calls first.",
+          "seniority": "14 years in care, 5 as ward manager",
+          "decision_power": "owns the roster in practice; on paper, recommendations only — which is exactly the problem"
+        },
+        "company_context": {
+          "industry": "Elder care (stationäre Pflege)",
+          "size": "78-bed home within a 3-home group",
+          "stack": "Excel roster template inherited from his predecessor's predecessor, WhatsApp groups per shift, paper swap slips, the ward phone",
+          "operating_model": "The roster is published on the 20th and renegotiated daily; every sick call is a 20-minute phone cascade"
+        },
+        "goals": [
+          "A roster he doesn't have to defend person-by-person in the break room",
+          "Sick-call replacement without the 5:40 phone cascade",
+          "Apprentices scheduled to learn, not just to fill holes",
+          "His own day off actually being off"
+        ],
+        "constraints": [
+          "Whatever the tool, the roster must still flex for 32 personal realities — Frau Behrens' daycare pickup is not a 'preference', it's a fact",
+          "Anything that adds clicks to a sick-call morning is dead on arrival",
+          "He has no budget authority — he can only champion or quietly sabotage",
+          "The team reads every system change as a statement about trust"
+        ],
+        "tool_ids": ["excel", "whatsapp", "phone"],
+        "tools": ["Excel", "WhatsApp", "paper swap slips", "ward phone"],
+        "relationships": [
+          {"name": "Frau Behrens", "type": "senior nurse on his ward", "friction": "the informal fairness auditor: counts everyone's weekend shifts from memory and is never wrong"},
+          {"name": "Sefa Aydin", "type": "ops/IT coordinator", "friction": "good guy, but every tool he rolls out adds a login and assumes a desk Marco doesn't sit at"}
+        ],
+        "personality": {
+          "working_style": "fixes problems at the speed they appear; documents afterwards, if ever",
+          "communication_style": "direct, jokes as a management instrument, brutal honesty in private",
+          "risk_tolerance": "pragmatic — will try anything twice, but never on a Monday",
+          "character_notes": "Knows the roster is power: who gets Christmas off is the realest decision he makes all year."
+        },
+        "pain_points": [
+          "Roster-building costs him two full days a month, in 11pm sessions",
+          "Every roster triggers fairness disputes he has no data to settle",
+          "Sick calls cascade through his private phone, on his day off too",
+          "Head office sees roster numbers, never roster reasons"
+        ],
+        "success_criteria": [
+          "The fairness argument ends with a shared screen instead of a shouting match",
+          "One month where roster-building takes an afternoon"
+        ]
+      }
+    },
+    {
+      "key": "birgit",
+      "description": "Works council chair and geriatric nurse, 55, twenty-nine years in care; has seen three 'efficiency' systems arrive with promises and leave with grievances; reads every new tool first as a question about surveillance and fairness, and she is usually right; the co-determination paragraph (§87 BetrVG) is her home ground.",
+      "profile": {
+        "display_name": "Birgit Krautmann",
+        "identity_traits": {
+          "gender_presentation": "female",
+          "gender_confidence": "high",
+          "age_range": "55-64",
+          "appearance_notes": "Comfortable shoes with opinions, a binder with tabbed dividers, the calm of someone who has won these meetings before.",
+          "avatar_profile": "Female-read person, mid-fifties, nursing and works-council context, natural professional studio illustration, steady, warm, immovable.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "gatekeeper skeptic",
+          "market": "B2B care-sector software, Germany",
+          "region": "Germany (Lower Saxony)",
+          "attitude": "not anti-software — anti-unfairness; will champion a tool that demonstrably protects her people and block one that measures them"
+        },
+        "demographics": {
+          "age": 55,
+          "occupation": "geriatric nurse (examiniert) and works council chair",
+          "mandate": "freigestellt 50% for works-council duties, 240-employee constituency"
+        },
+        "role": {
+          "title": "Betriebsratsvorsitzende",
+          "responsibilities": "Co-determination on rostering and any system processing staff data (§87 BetrVG), grievance handling, negotiating the Betriebsvereinbarung for every new tool.",
+          "seniority": "29 years in care, 11 on the works council, 6 as chair",
+          "decision_power": "formal veto power over rostering systems — and the institutional memory to use it well"
+        },
+        "company_context": {
+          "industry": "Elder care (stationäre Pflege)",
+          "size": "3-home group, 240 employees",
+          "stack": "The binder, the works-council office PC, the law (BetrVG, ArbZG, TVöD-P), and a phone number every employee knows by heart",
+          "operating_model": "Anything touching shift data crosses her desk before it touches a single nurse's life"
+        },
+        "goals": [
+          "Rosters that follow the rules visibly — rest periods, weekend caps, apprentice protections",
+          "No system that lets anyone rank nurses by 'productivity'",
+          "Short-notice changes tracked and compensated, not absorbed silently by the willing",
+          "Being involved in month one, not month eleven when the contract is signed"
+        ],
+        "constraints": [
+          "Her approval is legally required and she will not be rushed: a proper Betriebsvereinbarung takes the time it takes",
+          "She answers to 240 people who remember every broken promise from the last three systems",
+          "Vendor demos are sales theatre to her; she trusts running systems and reference calls with other works councils",
+          "Any analytics on individuals is a red line, not a negotiating position"
+        ],
+        "tool_ids": ["paper_binder", "office_pc", "phone"],
+        "tools": ["the binder", "works-council office PC", "BetrVG commentary", "telephone"],
+        "relationships": [
+          {"name": "Dr. Friederike Sasse", "type": "managing director", "friction": "mutual respect built over hard negotiations; both know a fight costs the homes a year"},
+          {"name": "the night-shift crew", "type": "constituency", "friction": "they absorb every roster failure silently and expect her to be loud about it for them"}
+        ],
+        "personality": {
+          "working_style": "reads everything, annotates everything, never surprised in a meeting",
+          "communication_style": "measured, precise, quotes paragraph numbers from memory and then explains them kindly",
+          "risk_tolerance": "near zero for her people's data; surprisingly open where protections are structural",
+          "character_notes": "The previous 'optimization' system counted minutes-per-resident. She killed it in committee and would do it again."
+        },
+        "pain_points": [
+          "Tools arrive at her desk as finished decisions she's expected to rubber-stamp",
+          "'Optimization' has historically meant: the compliant carry the load the system squeezes out",
+          "Roster unfairness is invisible in aggregate and corrosive in person",
+          "She spends political capital blocking bad systems that better design would have made unnecessary"
+        ],
+        "success_criteria": [
+          "A Betriebsvereinbarung she can sign without a single protective clause being fought for",
+          "A system her night shift mentions positively, unprompted"
+        ]
+      }
+    },
+    {
+      "key": "sefa",
+      "description": "Operations and IT coordinator for the three-home group, 31; the one person who knows every system's password, interface and funeral date; survived a failed ERP-style care-software rollout two years ago and now scopes every vendor promise in integration-hours; quietly keeps a spreadsheet titled 'versprochen vs. geliefert'.",
+      "profile": {
+        "display_name": "Sefa Aydin",
+        "identity_traits": {
+          "gender_presentation": "male",
+          "gender_confidence": "high",
+          "age_range": "25-34",
+          "appearance_notes": "The only person in the building with two monitors, a label printer he defends like a pet, sneakers that have seen server rooms.",
+          "avatar_profile": "Male-read person, early thirties, operations/IT context in healthcare, natural professional studio illustration, friendly, precise, faintly amused.",
+          "avatar_constraints": "no logos, no readable name tag, no stereotype exaggeration"
+        },
+        "segment": {
+          "customer_type": "technical evaluator",
+          "market": "B2B care-sector software, Germany",
+          "region": "Germany (Lower Saxony)",
+          "attitude": "measures every pitch in integration-hours and support-ticket half-life; believes references, not roadmaps"
+        },
+        "demographics": {
+          "age": 31,
+          "occupation": "operations & IT coordinator, 3-home care group",
+          "scope": "every system, printer, tablet and password for 240 users"
+        },
+        "role": {
+          "title": "Koordinator Betriebsorganisation & IT",
+          "responsibilities": "Vendor evaluation, rollouts, Vivendi administration, GDPR documentation (together with the external DSB), first-and-last-line support.",
+          "seniority": "5 years in the group, the institutional memory of every IT decision and its consequences",
+          "decision_power": "no signature, total influence — nothing gets recommended to Dr. Sasse without his integration verdict"
+        },
+        "company_context": {
+          "industry": "Elder care (stationäre Pflege)",
+          "size": "3 homes, 240 employees, ~60 shared PCs and 40 tablets",
+          "stack": "Vivendi, Windows AD, a Fritzbox empire he is slowly civilizing, M365, the legacy time-clock system nobody dares touch",
+          "operating_model": "Everything must run with 1.0 FTE of IT: himself; every new system is a standing cost in his calendar, forever"
+        },
+        "goals": [
+          "Interfaces that exist in production, not on the roadmap slide",
+          "A rostering system that exports cleanly to payroll and the time clock",
+          "Rollouts measured in weeks with named vendor responsibilities",
+          "Never again being the face of a vendor's broken promise to 240 users"
+        ],
+        "constraints": [
+          "1.0 FTE: him. Every integration-hour is stolen from support",
+          "The Vivendi interface question decides everything and vendors always answer it vaguely",
+          "GDPR/DSB review adds 4–6 weeks to any system touching staff data — non-negotiable",
+          "After the ERP failure, his credibility budget with the homes is finite and he knows it"
+        ],
+        "tool_ids": ["vivendi", "ad", "m365"],
+        "tools": ["Vivendi", "Windows AD", "M365", "the label printer"],
+        "relationships": [
+          {"name": "Dr. Friederike Sasse", "type": "boss", "friction": "trusts his verdicts but forwards him vendor emails with 'kurz prüfen?' that are never kurz"},
+          {"name": "external Datenschutzbeauftragter", "type": "compliance partner", "friction": "thorough, slow, and right — a combination that wrecks every optimistic timeline"}
+        ],
+        "personality": {
+          "working_style": "documents first, pilots small, keeps rollback plans like other people keep snacks",
+          "communication_style": "plain language for users, merciless precision for vendors",
+          "risk_tolerance": "low for integrations, high for tools he can kill quietly if they fail",
+          "character_notes": "His 'versprochen vs. geliefert' spreadsheet has a column for the sales engineer's exact words."
+        },
+        "pain_points": [
+          "Vendors demo the happy path; he lives in the CSV-export-at-2am path",
+          "The failed rollout still generates support tickets and snide remarks",
+          "Every system adds a permanent line to his personal maintenance calendar",
+          "'API available' has meant four different things in four contracts"
+        ],
+        "success_criteria": [
+          "A reference call with a same-stack customer that confirms the payroll export works",
+          "Rollout retro where the homes praise the tool without him in the room"
+        ]
+      }
+    }
+  ],
+  "hmw": {
+    "problem": "Care providers don't buy 'better rostering'. The roster is a fairness contract between three parties who distrust each other's tools — management, the ward, and the works council — and our current pitch ('save time') speaks to none of them.",
+    "questions": [
+      "How might we position the roster as something the works council champions rather than audits?",
+      "How might we make compliance value visible before the first inspection, not after it?",
+      "How might we price and package so the managing director never has to count seats?"
+    ]
+  },
+  "ideas": [
+    {"persona": "birgit", "hmw": 0, "cluster": "fairness as product", "text": "Ship a works-council mode: every rule the roster enforces — rest periods, weekend caps, apprentice protections — is readable in plain language by every employee, with the legal source cited."},
+    {"persona": "marco", "hmw": 0, "cluster": "fairness as product", "text": "Lead the product with the fairness ledger: weekend shifts, holidays worked and short-notice changes per person, visible to the whole ward — Frau Behrens' memory, as a screen everyone can see."},
+    {"persona": "friederike", "hmw": 0, "cluster": "coalition proof", "text": "Pilot in one home with the works council as formal co-signatory of the success criteria — their criteria, written before the pilot starts, published to all three homes after."},
+    {"persona": "birgit", "hmw": 1, "cluster": "fairness as product", "text": "Mark every rule violation with the exact law or agreement it breaks — '§5 ArbZG rest period' — never a generic warning color. A violation with a paragraph is a conversation; a red cell is an accusation."},
+    {"persona": "sefa", "hmw": 1, "cluster": "coalition proof", "text": "One-click audit export that mirrors the Heimaufsicht checklist structure exactly, so the auditor recognizes the document before reading it."},
+    {"persona": "friederike", "hmw": 1, "cluster": "coalition proof", "text": "A monthly 'gaps and fixes' letter per home — auto-drafted, director-signed — that I can forward unedited to the board: compliance made visible twelve times a year instead of once, under audit stress."},
+    {"persona": "friederike", "hmw": 2, "cluster": "pricing shape", "text": "Price per home, flat, everything included — agency staff, apprentices, the works council's read-only seats. The moment I'm counting seats, I'm rationing fairness."},
+    {"persona": "sefa", "hmw": 2, "cluster": "pricing shape", "text": "Replace the sales demo with a paid four-week proof phase against our real Vivendi export — vendor does the integration work, we keep the migration artifacts either way. Price it; free pilots produce free effort."},
+    {"persona": "marco", "hmw": 2, "cluster": "pricing shape", "text": "The staff app is free forever and contractually stays free — the roster is paid by the organisation, never by the team. The first vendor who tries to monetize my nurses' swap requests loses the ward."}
+  ],
+  "hypotheses": [
+    {
+      "key": "h-coalition-cycle",
+      "text": "Putting the works council on page one of the pitch shortens the sale: deals where the works council is engaged in month one close at least 30 days faster than deals where it is engaged after vendor selection.",
+      "prediction": {"metric": "median days from first meeting to signature, works-council-first vs. standard pitch", "expected_direction": "decrease", "tolerance": 15, "confidence": 0.6},
+      "derived_from": [{"kind": "open_question", "question": "How might we position the roster as something the works council champions rather than audits?"}]
+    },
+    {
+      "key": "h-audit-vs-time",
+      "text": "Leading outbound with 'audit-proof, fair rosters' outperforms leading with 'halve your rostering time' for the economic buyer: the audit-led message books more first meetings with managing directors.",
+      "prediction": {"metric": "first-meeting rate with managing directors, audit-led vs. time-led outreach", "expected_direction": "increase", "confidence": 0.65},
+      "derived_from": [{"kind": "council", "key": "positioning-angles"}, {"kind": "council", "key": "red-team-time-back"}]
+    }
+  ],
+  "councils": [
+    {
+      "key": "positioning-angles",
+      "format": "council",
+      "created_at": "2026-05-20T14:00:00+00:00",
+      "prompt": "Which story makes Schichtwerk worth a meeting: compliance shield, retention engine, or time-back tool?",
+      "questions": [
+        "What problem would actually get this onto your desk this quarter?",
+        "Which vendor promise would you distrust on sight?"
+      ],
+      "personas": ["friederike", "marco", "birgit", "sefa"],
+      "selection_reason": "The full buying coalition of a care-group deal: economic buyer, daily user, works-council gatekeeper, technical evaluator — each holds a veto, so each angle must survive all four.",
+      "statements": [
+        {"persona": "friederike", "about": "q0", "stance": "conditional", "text": "The audit. Always the audit. 'Retention' is real but I can't budget against a feeling, and 'time savings' I've bought twice and received zero times. Show me that the staffing documentation the Heimaufsicht asks for falls out of the system as a by-product of normal rostering — that's a line item I can defend to the board in one sentence."},
+        {"persona": "friederike", "about": "q1", "stance": "skeptical", "text": "'Saves up to 50% of planning time.' The words 'up to' do unpaid labor in that sentence. And per-seat pricing dressed as flexibility — in a house where headcount breathes with agency staff, per-seat is a punishment for doing my job."},
+        {"persona": "marco", "about": "q0", "stance": "conditional", "text": "Monday, 5:40, Frau Koslowski calls in sick — that problem. If the system gives me three legal, fair replacement options before my coffee, you have my ward. But understand what the roster is: it's not a schedule, it's the fairness constitution of 32 people. A tool that treats it as an optimization problem will be 'accidentally' not used within a month."},
+        {"persona": "marco", "about": "q1", "stance": "skeptical", "text": "'The algorithm creates the optimal roster automatically.' The optimal roster doesn't exist — there's only the roster the ward accepts. Frau Behrens' daycare pickup, Herr Yilmaz's back, who had Christmas last year: that's not 'preferences', that's the actual constraint set. Automatic means: I rebuild it by hand and now the tool gets the credit."},
+        {"persona": "birgit", "about": "q0", "stance": "conditional", "text": "Twenty-nine years, three systems, and every one arrived with 'efficiency' and left with grievances. What would get my attention — genuinely — is a vendor whose first slide is about §87 co-determination: what the works council sees, what it can verify, what the system refuses to do by design. Rest periods enforced, short-notice changes counted and compensated. That tool I would walk into the homes myself."},
+        {"persona": "birgit", "about": "q1", "stance": "oppose", "text": "Any sentence with 'productivity' near a person's name. The last system counted minutes-per-resident; I ended it in committee. If your roster 'optimizes', I want to know exactly what it's allowed to squeeze — because historically, the answer is: my most compliant nurses, silently."},
+        {"persona": "sefa", "about": "q0", "stance": "conditional", "text": "The Vivendi export, the payroll interface, the time-clock reconciliation — in that order. A rostering system that doesn't reconcile with payroll generates an Excel layer on top of the tool that was supposed to kill Excel; I've watched it happen here. Get this on my desk with a same-stack reference customer and a written interface spec, and I'll champion it to Dr. Sasse myself."},
+        {"persona": "sefa", "about": "q1", "stance": "skeptical", "text": "'Seamless integration via open API.' I have four contracts where that sentence meant four different things, one of which was a nightly CSV over SFTP that broke on umlauts. My spreadsheet has a column for the sales engineer's exact words — say 'seamless' and you've earned a row in it."}
+      ],
+      "exec_summary": "No angle wins alone, but one loses outright: 'time-back' is actively distrusted by three of four voices — the buyer has bought it twice and received it never, the ward manager hears 'automatic' as 'I rebuild it by hand', and the works council hears 'optimization' as the squeeze on her most compliant people. The compliance angle owns the buyer (audit-as-by-product is a budgetable sentence) and, in works-council form (§87-first, violations with paragraph citations), unexpectedly owns the gatekeeper too. Retention matters to everyone but is budgetable by no one. The strongest composite: fairness/compliance as the product, retention as the consequence, time savings never spoken first. Each voice also named its proof requirement: a board-defensible line item, a 5:40-Monday demo, a co-determination-first slide, a same-stack reference with a written interface spec.",
+      "summary": "Discovery council on the three candidate positionings with the full buying coalition. Q1 ('what gets this on your desk') produced four different desks: audit documentation (buyer), the Monday-morning sick call (user), §87 co-determination by design (works council), payroll/Vivendi reconciliation (technical). Q2 ('which promise do you distrust') converged with unusual force: 'up to X% time savings', 'automatic optimal rosters', per-seat pricing, and 'seamless API' were each named as disqualifying. The time-back positioning enters the red team as the angle to falsify."
+    },
+    {
+      "key": "red-team-time-back",
+      "format": "red_team",
+      "created_at": "2026-05-27T14:00:00+00:00",
+      "stance": "against",
+      "prompt": "Position under fire: 'Schichtwerk halves the time you spend on rostering.' Make the strongest case that this pitch fails with care providers.",
+      "selection_reason": "Same coalition, adversarial lenses: each voice argues why the time-back pitch fails from their seat — the falsification pass before the positioning decision.",
+      "objections": [
+        {"persona": "friederike", "theme": "Saved time is invisible to the budget", "severity": "high", "text": "I cannot book 'saved planning time' anywhere. Marco's two roster days don't become two free days — they become other care work, instantly absorbed. So the pitch asks me to pay real euros for a benefit that produces no line item, while my actual budgeted pains — audit prep, agency premiums — go unmentioned. As CFO-by-necessity, I'd decline politely and keep the brochure for the recycling bin."},
+        {"persona": "marco", "theme": "The roster isn't slow, it's contested", "severity": "high", "text": "The pitch diagnoses the wrong disease. My two days aren't spent computing — they're spent negotiating: who carries the second weekend, whether the apprentice is being used as gap-filler again, what Frau Behrens will say. Halving the computation halves nothing that hurts. And if the tool 'wins' that time by overriding the negotiation, I inherit a mutiny with better formatting."},
+        {"persona": "marco", "theme": "Optimization reads as surveillance", "severity": "medium", "text": "The day I announce 'the new system optimizes our shift planning', my break room hears 'head office bought a machine to measure us'. I lose three months of goodwill to a sentence on a slide I didn't write."},
+        {"persona": "birgit", "theme": "Optimization reads as surveillance", "severity": "critical", "text": "'Halve the time' is the polite cover of 'do more with fewer people' — I have heard this exact pitch three times since 2009 and grieved its consequences three times. Under §87 I will demand to see what the optimizer maximizes, and if the honest answer is 'utilization', this system dies in my committee like the last one. The pitch doesn't just fail with me; it mobilizes me."},
+        {"persona": "sefa", "theme": "Integration debt eats the savings", "severity": "medium", "text": "Even granting the 50%: my realistic integration bill is 60–100 hours against Vivendi, payroll and the time clock, plus the DSB's 4–6 weeks, plus me as permanent maintenance owner. The pitch's arithmetic counts Marco's saved hours and omits mine — for a 1.0-FTE IT department, that's not an optimization, that's a transfer."}
+      ],
+      "statements": [
+        {"persona": "birgit", "about": "red_team", "stance": "oppose", "text": "Strongest single argument: this pitch recruits its own opposition. It promises management a number that can only be harvested from the ward's flexibility, and it announces that intention in the first sentence. I don't have to organize resistance — the slide does it for me."},
+        {"persona": "friederike", "about": "red_team", "stance": "skeptical", "text": "Steelmanning it: yes, Marco's 11pm Excel sessions are real and expensive in burnout terms. But the pitch monetizes the one benefit I can't book and ignores the two I can — audit exposure and agency premiums. It's not false; it's aimed at nothing."},
+        {"persona": "sefa", "about": "red_team", "stance": "skeptical", "text": "Pattern from my 'versprochen vs. geliefert' sheet: time-savings pitches are the least falsifiable and therefore the least kept. Nobody ever measured the baseline, so nobody ever proves the delta — which is precisely why vendors love the claim and I don't."}
+      ],
+      "exec_summary": "The time-back pitch doesn't merely underperform — it self-sabotages. The deterministic case-against: four blocker themes from four voices, with 'optimization reads as surveillance' reaching two personas (ward + works council) at critical severity: the pitch announces, in its own headline, the redistribution its number must be harvested from, recruiting the legally empowered gatekeeper into opposition before the demo starts. The buyer's objection is structural, not rhetorical: saved time produces no bookable line item, while the pains she actually budgets (audit prep, agency premiums) go unaddressed. The technical voice adds the unfalsifiability point — no baseline, no provable delta — making the promise cheap to make and impossible to keep. Verdict: retire 'save time' as a lead message entirely; its true content (Marco's negotiation burden) is real but must be sold as fairness tooling, not speed.",
+      "summary": "Red-team falsification pass on the strongest-sounding conventional pitch. Objections grouped server-side into four themes: surveillance-reading (2 voices, critical), budget-invisibility (high), wrong-diagnosis/contested-not-slow (high), integration-debt (medium). The 'steelman' statements concede the underlying pain is real (11pm roster sessions, burnout) while showing the framing converts it into opposition. Direct input to the HMW reframe: the pitch must speak fairness to the ward, paragraphs to the works council, line items to the buyer, and interfaces to IT."
+    },
+    {
+      "key": "converge-shortlist",
+      "format": "ideation",
+      "created_at": "2026-06-01T13:00:00+00:00",
+      "problem": "Care providers don't buy 'better rostering'. The roster is a fairness contract between three parties who distrust each other's tools — management, the ward, and the works council — and our current pitch ('save time') speaks to none of them.",
+      "selection_reason": "Converge session over the diverged idea pool: forced ranking with rationale per pick, by the same coalition that produced the ideas.",
+      "shortlist": [
+        {"idea": "Lead the product with the fairness ledger: weekend shifts, holidays worked and short-notice changes per person, visible to the whole ward — Frau Behrens' memory, as a screen everyone can see.", "rationale": "The only idea every seat endorsed unprompted: the ward gets its disputes settled by shared data, the works council gets structural fairness it can verify, the director gets the retention story made tangible, and IT gets a feature with zero integration surface. It converts the roster's most political pain into the product's first screen — and it is the anti-'optimization' statement in interface form."},
+        {"idea": "Ship a works-council mode: every rule the roster enforces — rest periods, weekend caps, apprentice protections — is readable in plain language by every employee, with the legal source cited.", "rationale": "Turns the deal's biggest veto into its loudest champion: a works council that can verify protections in plain language co-presents the rollout instead of grieving it (Birgit's own success criterion). Directly answers HMW-1 and neutralizes the red team's critical surveillance theme. Sales-cycle bet h-coalition-cycle hangs off this pick."},
+        {"idea": "One-click audit export that mirrors the Heimaufsicht checklist structure exactly, so the auditor recognizes the document before reading it.", "rationale": "The buyer's budgetable sentence: audit prep drops from a two-week scramble to an afternoon, twelve months a year. Narrow enough to demo in one minute, concrete enough for the board letter, and the foundation the 'gaps and fixes' letter idea builds on later. Compliance made visible before the inspection — HMW-2, answered literally."}
+      ],
+      "statements": [
+        {"persona": "friederike", "about": "hmw:2", "stance": "support", "text": "On pricing: flat per home, everything included, works-council seats free. The ranking above decides what we say; this decides whether I can sign it without a seat-counting argument every time agency staff surge."},
+        {"persona": "birgit", "about": "hmw:0", "stance": "support", "text": "For the record, and I don't say this often about software: if the fairness ledger and the works-council mode ship as ranked, I will present this system to my constituency myself. Hold the vendor to the paragraph citations."},
+        {"persona": "sefa", "about": "hmw:1", "stance": "conditional", "text": "The audit export wins my vote because it's testable in week one of the paid proof phase: export, lay it next to last year's Heimaufsicht checklist, count the gaps. A positioning claim you can falsify in an hour is the only kind I trust."}
+      ],
+      "exec_summary": "Nine ideas diverged across three HMW questions; the forced ranking converged on a coherent positioning stack rather than three separate features: (1) the fairness ledger as the product's face — the one idea endorsed from all four seats, settling ward disputes with shared data instead of memory; (2) works-council mode as the coalition strategy — converting the strongest veto into the rollout's champion, with every enforced rule citing its legal source; (3) the Heimaufsicht-mirrored audit export as the buyer's budgetable proof. The unranked pricing-shape ideas (flat per home, paid proof phase, contractually free staff app) survive as packaging requirements rather than message. Net: the message that survives the coalition is 'the fair, audit-proof roster' — fairness to the ward, paragraphs to the works council, line items to the buyer.",
+      "summary": "Converge step of the HMW protocol: forced ranking over the full idea pool, host-authored rationale per pick, recorded as the citable ideation summary. Cluster spread of the shortlist: fairness-as-product ×2, coalition-proof ×1; persona spread: marco, birgit, sefa — notably the buyer's own ideas ranked below the gatekeeper's, which the panel read as the point: the deal is won at the veto, not at the signature."
+    }
+  ],
+  "syntheses": [
+    {
+      "key": "positioning-synthesis",
+      "title": "Position Schichtwerk as the fair, audit-proof roster — sold to a coalition, not a buyer",
+      "start_input": "How should Schichtwerk position to mid-sized German care providers: compliance shield, retention engine, or time-back tool?",
+      "goal": "Fold the angle council, the red-team pass and the HMW convergence into one positioning recommendation the whole buying coalition can say yes to.",
+      "created_at": "2026-06-03T10:00:00+00:00",
+      "councils": ["positioning-angles", "red-team-time-back", "converge-shortlist"],
+      "payload": {
+        "arc_narrative": "The study moved falsification-first. The angle council put all three candidate positionings in front of the full buying coalition and returned an unusual unanimity: every seat named a different desk the product must land on (audit documentation, the 5:40 sick call, §87 co-determination, the payroll interface) — and three of four independently flagged the time-back pitch as the promise they distrust on sight. The red team then made that distrust precise: 'halve your rostering time' produces no bookable line item for the buyer, mis-diagnoses the ward's pain (the roster is contested, not slow), and — at critical severity, from two voices — reads as surveillance, recruiting the legally empowered works council into opposition from the headline on. The HMW reframe inverted the failure into the design question ('the roster is a fairness contract between three parties who distrust each other's tools') and the converge session ranked a coherent answer: fairness ledger as the product's face, works-council mode as the coalition strategy, Heimaufsicht-mirrored audit export as the buyer's proof. What began as a messaging A/B/C ended as a sequencing insight: the message is decided at the veto, not at the signature.",
+        "gesamtbild": "A care roster is not a logistics artifact; it is the institution's fairness constitution, and every seat at the table evaluates software as a statement about trust. That is why the conventionally strongest pitch performs worst here: 'efficiency' has a documented local history (three systems, three rounds of grievances) and its benefits are structurally unbookable — saved ward time is reabsorbed invisibly, while the buyer's real budget lines (two audit-weeks per home per year, 1.8× agency premiums) go unaddressed. The positioning that survives all four vetoes is the one that makes fairness and compliance the product itself: violations cited with their legal paragraph, the fairness ledger replacing break-room memory, audit documentation as a by-product of normal rostering. Retention — the angle everyone believes and no one can budget — belongs in the story as consequence, never as headline. And the coalition is the channel, not an obstacle: a works council that can verify protections in plain language is the single most credible salesperson this category has.",
+        "positionierung": "Primary message: 'Schichtwerk — the fair, audit-proof roster.' Per seat: to the ward, the fairness ledger ('the argument ends at a shared screen'); to the works council, co-determination by design ('every rule cites its paragraph; here is the Betriebsvereinbarung template'); to the managing director, the audit by-product ('staffing documentation falls out of normal rostering — audit prep in an afternoon'); to IT, the written interface spec and a paid four-week proof phase against the real Vivendi export. Packaging follows the unranked-but-binding ideas: flat price per home with works-council seats free, the staff app contractually free forever. The phrase 'save time' is retired from all outbound; the underlying pain (11pm roster sessions) is told as a fairness story. Sequencing: works council on page one — the open bet h-coalition-cycle prices exactly this.",
+        "status": "done",
+        "next_council_question": "Does the 'fair, audit-proof roster' message survive contact with a second coalition archetype — a church-affiliated provider (MAV instead of Betriebsrat, AVR instead of TVöD) — or does the legal framing need a confession-specific variant?",
+        "references": [
+          {"council": "positioning-angles", "role": "Four desks, four proof requirements; time-back flagged as the distrusted promise by three of four seats."},
+          {"council": "red-team-time-back", "role": "The kill: budget-invisibility (high), wrong diagnosis (high), surveillance-reading (critical, 2 voices), integration debt (medium)."},
+          {"council": "converge-shortlist", "role": "The ranked answer: fairness ledger, works-council mode, Heimaufsicht-mirrored audit export — plus binding packaging constraints."}
+        ],
+        "citations": [
+          {"council": "positioning-angles", "quote": "It's not a schedule, it's the fairness constitution of 32 people. A tool that treats it as an optimization problem will be 'accidentally' not used within a month."},
+          {"council": "red-team-time-back", "quote": "I don't have to organize resistance — the slide does it for me."},
+          {"council": "converge-shortlist", "quote": "If the fairness ledger and the works-council mode ship as ranked, I will present this system to my constituency myself."}
+        ],
+        "findings": [
+          {"kind": "recommendation", "text": "Adopt 'the fair, audit-proof roster' as the primary positioning. Lead every deal with the works-council story (mode + Betriebsvereinbarung template) before the director pitch; demo the fairness ledger first, the audit export second; never open with time savings.", "refs": [{"kind": "council", "key": "converge-shortlist"}, {"kind": "council", "key": "red-team-time-back"}]},
+          {"kind": "key_problem", "text": "The category's default pitch is self-sabotaging here: 'optimization' language carries documented institutional trauma (three systems, three grievance waves) and activates the one stakeholder with a statutory veto. The red team rated this theme critical with two-voice reach — it is the failure mode all messaging must be linted against.", "refs": [{"kind": "council", "key": "red-team-time-back"}]},
+          {"kind": "segment", "text": "Per-seat message map: ward = fairness ledger; works council = paragraphs and verifiability; director = bookable audit/agency line items; IT = written interface spec, same-stack reference, paid proof phase. A pitch deck is four pages, one per veto.", "refs": [{"kind": "council", "key": "positioning-angles"}]},
+          {"kind": "open_question", "text": "Pricing shape is constrained but unpriced: flat per home with free works-council seats and a contractually free staff app survived every voice — the actual number, and whether the paid proof phase is €0-credited on conversion, needs its own study.", "refs": [{"kind": "council", "key": "converge-shortlist"}]}
+        ],
+        "statements": [
+          {"persona": "friederike", "stance": "support", "relevance": "high", "text": "Give me the audit by-product and a flat per-home price, and this stops being an IT purchase and becomes risk management I can defend to the board in one sentence."},
+          {"persona": "marco", "stance": "support", "relevance": "high", "text": "The fairness ledger is the first feature I'd defend in the break room rather than apologize for. That's the difference between a tool that gets used and one that gets buried."},
+          {"persona": "birgit", "stance": "conditional", "relevance": "high", "text": "I'll champion what I can verify: plain-language rules, paragraph citations, nothing measuring individuals. Ship that, and I'm the rollout's loudest voice. Ship around it, and we've met before."},
+          {"persona": "sefa", "stance": "conditional", "relevance": "medium", "text": "Positioning is sales' problem until the proof phase, which is mine: written interface spec, real Vivendi export, falsifiable in week one. The message survived the panel; now it has to survive the CSV."}
+        ]
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "key": "adopt-positioning",
+      "title": "Adopt 'the fair, audit-proof roster' as primary positioning; retire 'save time' from all outbound",
+      "decision": "Schichtwerk's primary positioning becomes 'the fair, audit-proof roster', executed as a coalition pitch: works-council story on page one (works-council mode + Betriebsvereinbarung template), fairness ledger as the opening demo, Heimaufsicht-mirrored audit export as the buyer proof, written interface spec and paid four-week proof phase for IT. All 'save time / optimize your planning' language is retired from outbound, the website hero, and the demo script. Packaging constraints adopted as binding: flat per-home pricing, works-council read-only seats free, staff app contractually free. Status proposed, not adopted: confirmation gates on the open bets — h-audit-vs-time (first-meeting rate of the audit-led message) and h-coalition-cycle (works-council-first cycle length) — plus a church-provider (MAV/AVR) variant check from the synthesis's next question.",
+      "status": "proposed",
+      "based_on": [
+        {"kind": "synthesis", "key": "positioning-synthesis"},
+        {"kind": "council", "key": "converge-shortlist"},
+        {"kind": "council", "key": "red-team-time-back"},
+        {"kind": "hypothesis", "key": "h-coalition-cycle"}
+      ],
+      "rejected": [
+        {"kind": "council", "key": "red-team-time-back", "note": "'Halve your rostering time' rejected as lead message: produces no bookable line item for the buyer, mis-diagnoses the ward's pain as speed when it is contestedness, and reads as surveillance to the statutory gatekeeper — the red team rated that theme critical with two-voice reach. The underlying pain stays in the story, reframed as fairness."},
+        {"kind": "council", "key": "positioning-angles", "note": "'Retention engine' rejected as lead (kept as consequence): every seat believes it, no seat can budget it — the angle council found it universally sympathetic and universally unbookable, the worst combination for an outbound headline."}
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "key": "three-vetoes",
+      "title": "The buying coalition has three veto points, and they don't share a language",
+      "created_at": "2026-05-21T09:00:00+00:00",
+      "text": "Observation across the angle council: the same product must be described in four dialects — line items (director), Monday mornings (ward), legal paragraphs (works council), interface specs (IT). No single sentence lands on all four desks; the works council's veto is the only one written into law, which makes it the rational page one. Carried into the HMW reframe as the core problem statement."
+    },
+    {
+      "key": "word-weight",
+      "title": "Vocabulary audit: words that carry institutional trauma",
+      "created_at": "2026-06-02T08:30:00+00:00",
+      "text": "Terms that triggered immediate distrust in session, with the voice that flagged them: 'optimize/optimization' (Birgit: three grieved systems since 2009; Marco: break room hears 'measuring us'), 'up to X%' (Friederike: 'does unpaid labor in that sentence'), 'seamless/open API' (Sefa: four contracts, four meanings), 'automatic roster' (Marco: 'the optimal roster doesn't exist, only the accepted one'). Safe vocabulary observed: 'fair', 'verifiable', 'paragraph', 'by-product', 'written spec'. Treat as a lint list for all copy."
+    }
+  ],
+  "sections": [
+    {
+      "title": "Positioning bets",
+      "kind": "theme",
+      "note": "The surviving message and the evidence chain behind it: red-teamed, reframed, ranked, synthesized.",
+      "members": [
+        {"kind": "synthesis", "key": "positioning-synthesis"},
+        {"kind": "note", "key": "three-vetoes"}
+      ]
+    },
+    {
+      "title": "Language and framing",
+      "kind": "theme",
+      "note": "The copy-level residue: which words open doors and which words call meetings against you.",
+      "members": [
+        {"kind": "note", "key": "word-weight"}
+      ]
+    }
+  ]
+}

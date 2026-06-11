@@ -8,7 +8,7 @@ from typing import Any
 
 from .avatar import generate_persona_avatar
 from .config import load_env
-from . import services, _cli_hooks, _cli_substrate
+from . import services, _cli_hooks, _cli_substrate, _cli_data
 
 
 def _pkg_version() -> str:
@@ -283,11 +283,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("persona_id")
     p = sub.add_parser("record-evidence")
     p.add_argument("persona_id"); p.add_argument("file")
-    p = sub.add_parser("export-snapshot")
-    p.add_argument("--out")
-    p = sub.add_parser("import-snapshot")
-    p.add_argument("--in", dest="in_dir")
-    p.add_argument("--no-embed", action="store_true")
+    # Portable data: snapshot export/import + shipped example projects (split module).
+    _cli_data.add_data_parsers(sub)
     p = sub.add_parser("brief-synthesis")
     p.add_argument("council_ids", nargs="+")
     p.add_argument("--title"); p.add_argument("--start"); p.add_argument("--goal")
@@ -604,10 +601,8 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.brief_evidence_check(args.persona_id))
         elif args.command == "record-evidence":
             _print(services.record_evidence_check(args.persona_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
-        elif args.command == "export-snapshot":
-            _print(services.export_snapshot(args.out))
-        elif args.command == "import-snapshot":
-            _print(services.import_snapshot(args.in_dir, embed=not args.no_embed))
+        elif args.command in _cli_data.COMMANDS:
+            _print(_cli_data.run_data_command(args))
         elif args.command == "brief-synthesis":
             _print(services.brief_synthesis(args.council_ids, args.title, args.start, args.goal))
         elif args.command == "record-synthesis":

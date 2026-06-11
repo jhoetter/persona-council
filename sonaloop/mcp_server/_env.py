@@ -11,6 +11,7 @@ SERVER_VERSION = "0.2.0"
 # step so the host agent can route the simulate -> consolidate -> digest loop.
 _NEXT: dict[str, dict[str, Any]] = {
     "brief_persona": {"name": "record_persona", "reason": "persist the profile JSON you authored"},
+    "list_examples": {"name": "load_example", "reason": "load a shipped example project to explore a fully populated inspector"},
     "record_persona": {"name": "brief_day", "reason": "plan the persona's first day before simulating"},
     "brief_day": {"name": "record_day", "reason": "author day_plan + activities, then persist the whole day"},
     "record_day": {"name": "brief_consolidation", "reason": "consolidate the day into memory"},

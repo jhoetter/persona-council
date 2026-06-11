@@ -6,6 +6,8 @@ just wires its routes in alongside the global Prototypes/Notes lists.
 """
 from __future__ import annotations
 
+from fastapi import Request
+
 from .. import services
 from ..storage import Store
 from ._i18n import t
@@ -45,10 +47,26 @@ def _first_steps_html() -> str:
           h("span", {"class_": "fsmark"}, raw(_icon("check" if done else "circle"))),
           h("span", {"class_": "fsbody"}, h("b", {}, head), h("span", {"class_": "muted"}, body)))
         for done, head, body in steps))
+    # One-click example projects (ticket loadable-example-projects): POST + 303 via the
+    # _forms kit — load lands on the populated project page; removable via remove_example.
+    from ._forms import csrf_field
+    example_rows = fragment(*(
+        h("form", {"class_": "fsrow fsex", "method": "post",
+                   "action": f'/examples/{e["slug"]}/load'},
+          raw(csrf_field()),
+          h("span", {"class_": "fsmark"}, raw(_icon("projects"))),
+          h("span", {"class_": "fsbody"}, h("b", {}, e["title"]),
+            h("span", {"class_": "muted"}, e["tagline"])),
+          h("button", {"class_": "sl-btn sl-btn--primary", "type": "submit"},
+            t("load_example_btn")))
+        for e in services.list_examples()))
     return h("div", {"class_": "page"},
              h("h1", {"class_": "h1"}, t("first_steps_h")),
              h("p", {"class_": "lead"}, t("first_steps_lead")),
              h("div", {"class_": "fscard"}, rows),
+             h("h2", {"class_": "fsex-h"}, t("fs_example_h")),
+             h("p", {"class_": "muted"}, t("fs_example_d")),
+             h("div", {"class_": "fscard"}, example_rows),
              h("p", {"style": "margin-top:14px"},
                h("a", {"class_": "sl-btn", "href": DOCS_GETTING_STARTED_URL,
                        "target": "_blank", "rel": "noopener"},
@@ -100,7 +118,22 @@ def register_lists(app) -> None:
     """Library/index routes that aren't project-scoped: the documentation hub + global Prototypes/Notes."""
     from fastapi.responses import HTMLResponse
 
+    from ._forms import not_found, see_other, write_gate
+
     register_docs(app)   # /documentation + /documentation/{slug}
+
+    @app.post("/examples/{slug}/load")
+    async def example_load(slug: str, request: Request):
+        """One-click example load (the empty-DB home affordance): POST + CSRF gate +
+        303 to the freshly populated project page. Idempotent like the service call."""
+        form = await request.form()
+        if (gate := write_gate(form, "load_example", {"slug": slug})) is not None:
+            return gate
+        try:
+            out = services.load_example(slug, store=Store())
+        except KeyError:
+            return not_found()
+        return see_other(out["url"])
 
     @app.get("/prototypes", response_class=HTMLResponse)
     def prototypes_list() -> str:
@@ -160,4 +193,7 @@ register_css(r"""
 .fsdone .fsmark{color:var(--green,#34a853)}
 .fsbody{display:flex;flex-direction:column;gap:2px;min-width:0}
 .fsbody code{font-size:var(--t-sm);word-break:break-all}
+.fsex-h{font-size:var(--t-md);margin:26px 0 4px}
+.fsex{margin:0}
+.fsex .sl-btn{flex-shrink:0;align-self:center;margin-left:auto}
 """)
