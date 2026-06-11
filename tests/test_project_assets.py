@@ -195,6 +195,21 @@ def test_export_synthesis_deliverable_relative_path_lands_in_data_exports(store,
     assert (tmp_path / "dd" / "exports" / f'{syn["id"]}.pdf').read_bytes().startswith(b"%PDF")
 
 
+def test_export_synthesis_deliverable_reexport_supersedes_stale_record(store, project, tmp_path, monkeypatch):
+    # renders are not byte-stable: a re-export gets a fresh content hash, so the bytes-keyed
+    # attach upsert can't dedupe it — the deliverable seam must supersede the stale record
+    renders = iter([b"PK\x03\x04 deck v1", b"PK\x03\x04 deck v2 (new timestamps)"])
+    monkeypatch.setattr(services, "export_synthesis_pptx",
+                        lambda sid, store=None: next(renders))
+    syn = _project_synthesis(store, project)
+    first = services.export_synthesis_deliverable(syn["id"], "pptx", str(tmp_path / "d.pptx"), store=store)
+    second = services.export_synthesis_deliverable(syn["id"], "pptx", str(tmp_path / "d.pptx"), store=store)
+    assert first["asset_id"] != second["asset_id"]
+    deliverables = [a for a in services.list_assets(project["id"], store=store)
+                    if a.get("source") == f'synthesis:{syn["id"]}']
+    assert [a["id"] for a in deliverables] == [second["asset_id"]]
+
+
 def test_export_synthesis_deliverable_without_project_skips_attach(store, tmp_path, monkeypatch):
     monkeypatch.setattr(services, "export_synthesis_pptx", lambda sid, store=None: b"PK bytes")
     syn = services.record_synthesis("Standalone", "start", [], {}, store=store)

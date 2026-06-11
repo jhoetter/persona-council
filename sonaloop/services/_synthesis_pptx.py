@@ -259,6 +259,13 @@ def export_synthesis_deliverable(synthesis_id: str, fmt: str, out: str | None = 
         rec = attach_asset(proj["id"], path=path, kind="document",          # noqa: F821 (bound)
                            title=f'{syn.get("title") or synthesis_id} ({fmt.upper()})',
                            source=f"synthesis:{synthesis_id}", direction="out", store=store)
+        # A deliverable's identity is (synthesis, format), not its bytes: renders are not
+        # byte-stable, so each re-export gets a fresh content hash and attach_asset's
+        # bytes-keyed upsert can't see the previous record — supersede it here.
+        for stale in list_assets(proj["id"], store=store):                  # noqa: F821 (bound)
+            if (stale["id"] != rec["id"] and stale.get("source") == f"synthesis:{synthesis_id}"
+                    and stale.get("filename", "").lower().endswith(f".{fmt}")):
+                remove_asset(proj["id"], stale["id"], store=store)          # noqa: F821 (bound)
         result["project_id"], result["asset_id"] = proj["id"], rec["id"]
     return result
 
