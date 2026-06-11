@@ -47,6 +47,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Reports.",
         "prototypes_lead": "Lauffähige Artefakte — von Personas getestet.", "no_prototypes": "Noch keine Artefakte.",
         "notes": "Notizen", "notes_lead": "Rohe Beobachtungen aus der Forschung.", "no_notes": "Noch keine Notizen.", "library_h": "Bibliothek",
+        # list pagination (docs/pagination.md)
+        "pager_prev": "Zurück", "pager_next": "Weiter", "page_of": "Seite {n} von {m}",
+        "list_search_ph": "Liste filtern …",
         # graph canvas controls
         "graph_hint": "Ziehen · Hintergrund schieben · Pinch / ⌘+Scroll = Zoom · F = einpassen",
         "graph_fit": "Einpassen (F)", "graph_reset": "Layout zurücksetzen (R)",
@@ -367,6 +370,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "no_councils": "No councils yet.", "no_synthesis": "No reports yet.",
         "prototypes_lead": "Runnable artifacts — tested by personas.", "no_prototypes": "No artifacts yet.",
         "notes": "Notes", "notes_lead": "Raw observations from the research.", "no_notes": "No notes yet.", "library_h": "Library",
+        # list pagination (docs/pagination.md)
+        "pager_prev": "Previous", "pager_next": "Next", "page_of": "Page {n} of {m}",
+        "list_search_ph": "Filter list …",
         # graph canvas controls
         "graph_hint": "drag · pan background · pinch / ⌘+scroll to zoom · F to fit",
         "graph_fit": "Fit to view (F)", "graph_reset": "Reset layout (R)",

@@ -12,6 +12,7 @@ from .. import services
 from ..storage import Store
 from ._i18n import t
 from ._components import _icon, _avatar, _label, _star, _list_page, _layout, _artifact_present
+from ._pager import _list_filter_box, _page_window, _pager
 from ._html import h, raw, fragment, register_css
 from ._docs import register_docs
 
@@ -73,11 +74,19 @@ def _first_steps_html() -> str:
                  raw(_icon("external")), " ", t("fs_docs_link"))))
 
 
-def _projects_page() -> str:
-    """The Projects list — the app's home (project-centric IA)."""
+def _projects_page(page: int = 1, q: str = "") -> str:
+    """The Projects list — the app's home (project-centric IA). Paginated per the shared
+    convention (docs/pagination.md): ?page=N in the URL next to the ?q= filter, ~25 rows
+    per page, the h1 count over the FULL filtered set."""
     store = Store()
+    projects = services.list_research_projects(store=store)
+    if q:
+        needle = q.strip().casefold()
+        projects = [p for p in projects
+                    if needle in p.get("title", "").casefold() or needle in p.get("slug", "").casefold()]
+    visible, page, pages = _page_window(projects, page)
     rows = []
-    for p in services.list_research_projects(store=store):
+    for p in visible:
         counts = fragment(                                     # the project's real contents (non-zero only)
             h("span", {}, f'{p["councils"]} {t("councils")}') if p.get("councils") else None,
             h("span", {}, f'{p["studies"]} {t("syntheses")}') if p["studies"] else None,
@@ -88,7 +97,7 @@ def _projects_page() -> str:
         meta = fragment(_label(t("stalled"), "var(--amber)") if stalled else None,
                         counts, raw(_star("project", p["id"], p["title"], f'/projects/{p["id"]}')))
         rows.append(_row(f'/projects/{p["id"]}', "projects", p["title"], meta, color="var(--accent)"))
-    if not rows and not store.list_personas():
+    if not rows and not q and not store.list_personas():
         # Truly fresh database (no projects AND no personas): orient instead of an empty list.
         return _layout(t("first_steps_h"), _first_steps_html(), store,
                        crumbs=[(t("projects"), None)], active="projects")
@@ -96,7 +105,9 @@ def _projects_page() -> str:
                 raw(_icon("plus")), " ", t("new_project"))
     return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
                       empty_icon="projects", empty_msg=t("no_projects"), active="projects",
-                      actions=new_btn, empty_action=(t("new_project"), "/projects/new", "plus"))
+                      actions=new_btn, empty_action=(t("new_project"), "/projects/new", "plus"),
+                      pre=_list_filter_box("/projects", q) if (q or pages > 1) else "",
+                      count=len(projects), after=_pager("/projects", page, pages, q))
 
 
 def _persona_row(p: dict, store: Store) -> str:

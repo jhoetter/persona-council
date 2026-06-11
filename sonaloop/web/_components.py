@@ -516,13 +516,16 @@ def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
 def _list_page(store: Store, *, title: str, lead: str, rows: list,
                empty_icon: str, empty_msg: str, active: str,
                pre: str = "", count: int | None = None,
-               actions: str = "", empty_action: tuple | None = None) -> str:
+               actions: str = "", empty_action: tuple | None = None,
+               after: str = "") -> str:
     """One index-page shell — title + count + lead + rows (or an empty state). Every list page
     (projects, personas, councils, syntheses, prototypes, concepts) renders identically through this.
     `pre` is optional HTML between the lead and the rows (e.g. the hypotheses hit-rate strip);
-    `count` overrides the h1 count when `rows` interleaves `.group` headers with the records.
+    `count` overrides the h1 count when `rows` interleaves `.group` headers with the records
+    (and when `rows` is one PAGE of a larger filtered set — pass the set's total).
     `actions` is topbar HTML (e.g. the New-project button); `empty_action` = (label, href, icon)
-    adds the same CTA inside the empty state."""
+    adds the same CTA inside the empty state; `after` is optional HTML below the rows
+    (e.g. the pager controls)."""
     if rows:
         rows_html = raw("".join(str(r) for r in rows))
     else:
@@ -535,7 +538,8 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
     body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, title, cnt),
              h("p", {"class_": "lead"}, lead), raw(pre) if pre else None,
              # data-keynav: the keymap's j/k row-focus hook (web/_keymap.py) targets this container
-             h("div", {"class_": "rows", "data-keynav": True}, rows_html))
+             h("div", {"class_": "rows", "data-keynav": True}, rows_html),
+             raw(after) if after else None)
     return _layout(title, body, store, crumbs=[(title, None)], active=active, actions=actions)
 
 

@@ -155,11 +155,24 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
 
 def register_personas(app) -> None:
     @app.get("/personas", response_class=HTMLResponse)
-    def personas_list() -> str:
+    def personas_list(page: int = Query(default=1, ge=1), q: str = Query(default="")) -> str:
+        # Paginated per the shared convention (docs/pagination.md): ?page=N rides the URL
+        # next to ?q=, the count is the FULL filtered set, a changed filter resets the page.
+        from .._pager import _list_filter_box, _page_window, _pager
         store = Store()
-        rows = [_persona_row(p, store) for p in services.list_personas(store=store)]
+        personas = services.list_personas(store=store)
+        if q:
+            needle = q.strip().casefold()
+            personas = [p for p in personas
+                        if needle in p.get("display_name", "").casefold()
+                        or needle in (p.get("role") or {}).get("title", "").casefold()
+                        or needle in p.get("slug", "").casefold()]
+        visible, page, pages = _page_window(personas, page)
+        rows = [_persona_row(p, store) for p in visible]
         return _list_page(store, title=t("personas"), lead=t("personas_lead"), rows=rows,
-                          empty_icon="personas", empty_msg=t("no_personas"), active="personas")
+                          empty_icon="personas", empty_msg=t("no_personas"), active="personas",
+                          pre=_list_filter_box("/personas", q) if (q or pages > 1) else "",
+                          count=len(personas), after=_pager("/personas", page, pages, q))
 
     @app.get("/personas/{persona_id}", response_class=HTMLResponse)
     def persona_detail(persona_id: str, date_value: str | None = Query(default=None, alias="date"), view: str = Query(default="month")) -> str:

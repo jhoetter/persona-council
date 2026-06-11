@@ -110,10 +110,18 @@ def register_sections(mcp):
         return _env("set_note_data", services.set_note_data(note_id, patch), t)
 
     @mcp.tool()
-    def list_notes(project_id: str) -> dict[str, Any]:
-        """List a project's note nodes."""
+    def list_notes(project_id: str, limit: int = 25, cursor: str | None = None) -> dict[str, Any]:
+        """List a project's note nodes in creation order. Paginated per the shared
+        convention (docs/pagination.md): `limit` (default 25) + opaque `cursor`; answers
+        {items, total, has_more, next_cursor}. No params → the first page (backward
+        compatible)."""
         t = time.perf_counter()
-        return _env("list_notes", services.list_notes(project_id), t)
+        def key(n: dict[str, Any]) -> str:
+            return f'{n.get("created_at") or ""}\x1f{n.get("id") or ""}'
+        rows = sorted(services.list_notes(project_id), key=key)
+        page = services.paginate(rows, key, limit=limit, cursor=cursor,
+                                 filters={"project_id": project_id})
+        return _env("list_notes", page, t)
 
     @mcp.tool()
     def delete_note(project_id: str, note_id: str) -> dict[str, Any]:

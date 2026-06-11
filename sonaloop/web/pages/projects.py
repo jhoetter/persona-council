@@ -18,12 +18,12 @@ from .decisions import _decisions_html
 
 def register_projects(app) -> None:
     @app.get("/", response_class=HTMLResponse)
-    def index() -> str:
+    def index(page: int = Query(default=1, ge=1), q: str = Query(default="")) -> str:
         # Home is the Projects list (project-centric IA; Overview removed).
-        return _projects_page()
+        return _projects_page(page, q)
     @app.get("/projects", response_class=HTMLResponse)
-    def projects() -> str:
-        return _projects_page()
+    def projects(page: int = Query(default=1, ge=1), q: str = Query(default="")) -> str:
+        return _projects_page(page, q)
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
     def project_detail(project_id: str, view: str = "list") -> str:

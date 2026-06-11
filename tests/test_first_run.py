@@ -45,7 +45,9 @@ def test_mcp_boots_cold_in_a_fresh_environment(tmp_path):
     )
     assert proc.returncode == 0, proc.stderr
     env = json.loads(proc.stdout.strip().splitlines()[-1])
-    assert env["ok"] is True and env["data"] == []
+    # list tools answer the shared pagination envelope (docs/pagination.md)
+    assert env["ok"] is True and env["data"]["items"] == []
+    assert env["data"]["total"] == 0 and env["data"]["has_more"] is False
     assert "start_project" in env.get("orientation", ""), "fresh DB must orient the host"
     assert (data_dir / "sonaloop.db").exists(), "first touch must create the data dir chain"
 

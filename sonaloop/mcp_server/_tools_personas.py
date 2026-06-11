@@ -33,11 +33,22 @@ def register_personas(mcp):
         return _env("get_persona", services.get_persona(persona_id), t)
 
     @mcp.tool()
-    def list_personas(filters: dict[str, Any] | None = None, compact: bool = True) -> dict[str, Any]:
-        """Lean one-line overview of all personas (slug/name/age/role/segment) — drill in with
-        get_persona for the full profile. Pass compact=False for full profiles (large)."""
+    def list_personas(filters: dict[str, Any] | None = None, compact: bool = True,
+                      limit: int = 25, cursor: str | None = None) -> dict[str, Any]:
+        """Lean one-line overview of personas (slug/name/age/role/segment) — drill in with
+        get_persona for the full profile. Pass compact=False for full profiles (large).
+        Paginated per the shared convention (docs/pagination.md): `limit` (default 25) +
+        opaque `cursor` over a stable name/slug sort; answers {items, total, has_more,
+        next_cursor} — `total` counts the whole filtered set, `next_cursor` is present
+        exactly when has_more. A cursor only fits the filter set it was issued under;
+        no params → the first page (backward compatible)."""
         t = time.perf_counter()
-        return _env("list_personas", services.list_personas(filters, compact=compact), t)
+        def key(p: dict[str, Any]) -> str:
+            return f'{(p.get("display_name") or "").casefold()}\x1f{p.get("slug") or p.get("id", "")}'
+        rows = sorted(services.list_personas(filters, compact=compact), key=key)
+        page = services.paginate(rows, key, limit=limit, cursor=cursor,
+                                 filters={"filters": filters or {}, "compact": bool(compact)})
+        return _env("list_personas", page, t)
 
     @mcp.tool()
     def get_persona_soul(persona_id: str) -> dict[str, Any]:

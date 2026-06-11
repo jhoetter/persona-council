@@ -253,10 +253,17 @@ def register_council(mcp):
         return _env("get_red_team", services.get_red_team(session_id), t)
 
     @mcp.tool()
-    def list_councils() -> dict[str, Any]:
-        """List all council sessions (id, prompt, persona count, date) for browsing."""
+    def list_councils(limit: int = 25, cursor: str | None = None) -> dict[str, Any]:
+        """List council sessions (id, prompt, persona count, votes), newest first.
+        Paginated per the shared convention (docs/pagination.md): `limit` (default 25) +
+        opaque `cursor`; answers {items, total, has_more, next_cursor}. No params → the
+        first page (backward compatible)."""
         t = time.perf_counter()
-        return _env("list_councils", services.list_councils(), t)
+        def key(c: dict[str, Any]) -> str:
+            return f'{c.get("created_at") or ""}\x1f{c.get("id") or ""}'
+        rows = sorted(services.list_councils(), key=key, reverse=True)
+        page = services.paginate(rows, key, limit=limit, cursor=cursor, reverse=True)
+        return _env("list_councils", page, t)
 
     # M3 — attach_evidence / export_persona (persona-scoped) moved to _tools_personas.
 
