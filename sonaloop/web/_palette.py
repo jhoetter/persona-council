@@ -3,7 +3,14 @@
 Self-contained (CSS + markup + JS), injected once by _layout so it works on every
 page. Kept out of web_assets.py to respect the per-file LOC bar. Results come from
 /api/search and are grouped by type, Linear/Raycast-style (leading type dot, muted
-section headers, a footer hint bar)."""
+section headers, a footer hint bar).
+
+WHAT the palette can reach is not declared here: the coverage registry
+(web/_palette_registry.py) enumerates the searchable entity types (labels, icons,
+colors, ordering — all generated from it below) and derives the static jump commands
+from the nav registry, so core AND extension nav items appear automatically. The
+canary test (tests/test_palette_coverage.py) fails when the app grows a surface the
+registry doesn't reach."""
 from __future__ import annotations
 
 import json
@@ -11,10 +18,7 @@ import json
 from .._icons import icon as _picon       # direct import avoids a cycle (_components imports _palette)
 from ._i18n import t
 from ._html import h, raw
-
-# command type → the entity's icon (matches the nav + list-row icons; coloured per type via CSS)
-_PAL_ICON = {"go": "arrowRight", "project": "projects", "persona": "personas", "council": "councils",
-             "synthesis": "syntheses", "prototype": "prototype", "section": "squareGrid", "note": "panel"}
+from ._palette_registry import SEARCH_SOURCES, nav_commands, search_rows  # noqa: F401 (search_rows re-exported for the API)
 
 
 PALETTE_CSS = r"""
@@ -32,30 +36,23 @@ PALETTE_CSS = r"""
 .cmdk-item.sel{background:var(--hover)}
 .cmdk-ic{flex:none;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
 .cmdk-ic svg{width:16px;height:16px}
-.cmdk-ic[data-t=project]{color:#7a5ed1}.cmdk-ic[data-t=persona]{color:#3d7fc4}
-.cmdk-ic[data-t=council]{color:var(--accent)}.cmdk-ic[data-t=synthesis]{color:#9a8cff}
-.cmdk-ic[data-t=prototype]{color:#00897b}.cmdk-ic[data-t=section]{color:#3d9b6b}
-.cmdk-ic[data-t=note]{color:#b87a25}.cmdk-ic[data-t=go]{color:var(--muted)}
+.cmdk-ic[data-t=go]{color:var(--muted)}
 .cmdk-t{flex:1;min-width:0;font-size:var(--t-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-sub{flex:none;max-width:40%;color:var(--muted);font-size:var(--t-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-foot{display:flex;gap:18px;padding:8px 16px;border-top:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-size:var(--t-sm)}
 .cmdk-foot kbd{font-family:var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:0 5px;margin-right:6px;color:var(--ink);font-size:var(--t-xs)}
-"""
+""" + "".join(f".cmdk-ic[data-t={tp}]{{color:{src.color}}}"     # per-type dot colors FROM the registry
+              for tp, src in SEARCH_SOURCES.items())
 
 
 def palette_markup() -> str:
-    """Per-request overlay markup (localised). Static nav commands + group labels are seeded as JSON."""
+    """Per-request overlay markup (localised). Static nav commands, group labels, icons
+    and the grouping order are all seeded as JSON FROM the coverage registry."""
     cfg = json.dumps({
-        "cmds": [
-            {"title": t("projects"), "url": "/projects", "type": "go"},
-            {"title": t("personas"), "url": "/personas", "type": "go"},
-            # the keyboard cheat sheet (web/_keymap.py): its JS opens the overlay on this href
-            {"title": t("kbd_cheatsheet_h"), "url": "#shortcuts", "type": "go"},
-        ],
-        "labels": {"go": t("cmdk_jump"), "project": t("projects"), "persona": t("personas"),
-                   "council": t("councils"), "synthesis": t("syntheses"),
-                   "prototype": t("prototypes_h"), "section": t("sections"), "note": t("notes_h")},
-        "icons": {tp: _picon(name) for tp, name in _PAL_ICON.items()},
+        "cmds": nav_commands(),
+        "labels": {"go": t("cmdk_jump"), **{tp: src.label() for tp, src in SEARCH_SOURCES.items()}},
+        "icons": {"go": _picon("arrowRight"), **{tp: _picon(src.icon) for tp, src in SEARCH_SOURCES.items()}},
+        "order": ["go", *SEARCH_SOURCES],
     })
     foot = h("div", {"class_": "cmdk-foot"},
              h("span", {}, h("kbd", {}, "↑↓"), t("cmdk_nav")),
@@ -74,8 +71,8 @@ def palette_markup() -> str:
 PALETTE_JS = r"""<script>(function(){
 var ov=document.getElementById('cmdk'); if(!ov) return;
 var inp=document.getElementById('cmdk-in'), list=document.getElementById('cmdk-list');
-var CFG={cmds:[],labels:{}}; try{ CFG=JSON.parse(document.getElementById('cmdk-cfg').textContent)||CFG; }catch(e){}
-var ORDER=['go','project','persona','council','synthesis','prototype','section','note'];
+var CFG={cmds:[],labels:{},order:['go']}; try{ CFG=JSON.parse(document.getElementById('cmdk-cfg').textContent)||CFG; }catch(e){}
+var ORDER=CFG.order||['go'];
 var items=[], sel=0, timer=null;
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function open(){ ov.hidden=false; inp.value=''; render(CFG.cmds); inp.focus(); }
@@ -114,6 +111,10 @@ list.addEventListener('mousemove',function(e){ var a=e.target.closest&&e.target.
 ov.addEventListener('click',function(e){ if(e.target.hasAttribute('data-cmdk-close')) close(); });
 // the sidebar search trigger (under the logo) opens the palette; delegated so it survives SPA swaps
 document.addEventListener('click',function(e){ if(e.target.closest&&e.target.closest('[data-cmdk-open]')){ e.preventDefault(); open(); } });
+// the '#settings' jump command opens the sidebar's settings popover (no /settings route)
+document.addEventListener('click',function(e){
+  var a=e.target.closest&&e.target.closest('a[href="#settings"]'); if(!a) return;
+  e.preventDefault(); var tg=document.querySelector('.sl-um-trigger'); if(tg) tg.click(); });
 window.addEventListener('keydown',function(e){
   if((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K')){ e.preventDefault(); if(ov.hidden) open(); else close(); }
   else if(e.key==='Escape'&&!ov.hidden){ close(); } });
