@@ -72,6 +72,7 @@ from ..llm_simulation import (
 # --- Submodules (order matters only for *binding*, not for import-time safety:
 #     no submodule references another submodule at import time) ----------------
 from . import _common
+from . import _pagination
 from . import _hooks
 from . import _events
 from . import _capabilities
@@ -108,7 +109,7 @@ from . import _sections
 from . import _examples
 
 _SUBMODULES = (
-    _common, _hooks, _events, _capabilities, _personas, _simulation, _consolidation, _memory, _evaluation,
+    _common, _pagination, _hooks, _events, _capabilities, _personas, _simulation, _consolidation, _memory, _evaluation,
     _snapshots, _councils, _artifacts_service, _project_assets, _substrate, _grounding, _predictions, _calibration, _flows, _head_to_head, _pricing, _ideation, _red_team, _coverage, _synthesis, _synthesis_pptx, _research, _engines, _surveys, _hypotheses, _decisions, _usability_sessions, _walkthrough, _actuation, _sections, _examples,
 )
 

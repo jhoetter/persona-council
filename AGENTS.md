@@ -127,6 +127,14 @@ Core MCP tools:
 - `brief_council` (gather candidates/contexts) → `record_council` (persist authored
   turns + synthesis), `get_council`, `list_councils`, `brief_ask`
 - `get_language`, `set_language` (UI + generated-content language, de|en)
+- Persona catalog (github:jhoetter/sonaloop-data): `catalog_search` (browse: slugs/
+  names/roles + facet summary; paginated) → `catalog_recommend` (deterministic,
+  explainable persona-set recommendation; needs the sonaloop-data package) →
+  `catalog_pull` (import personas/packs into the current store with
+  `provenance.catalog` stamped; idempotent re-pulls). Search + pull also work
+  WITHOUT sonaloop-data installed, via a stdlib fallback against the published
+  catalog. The other pull paths live in sonaloop-data (in-process `load_into`,
+  `sonaloop-data pull` CLI / `pull_remote`).
 - `attach_evidence`
 - `export_persona`, `export_logs`, `export_council_session`
 - Lifecycle hooks (docs/lifecycle-hooks.md): `list_lifecycle_events` →
