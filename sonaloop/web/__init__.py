@@ -92,6 +92,11 @@ def create_app():
     from ._tour import install_tour
     install_tour(app)
 
+    # Feedback button (web/_feedback.py): modal POST + thanks + the read-only
+    # /feedback admin list; the trigger/modal chrome rides the public slots.
+    from ._feedback import register_feedback
+    register_feedback(app)
+
     register_pages(app)
     register_lists(app)
     register_api(app)

@@ -11,6 +11,7 @@ from ._chats import ChatsMixin
 from ._corpora import CorporaMixin, PredictionOutcomesMixin
 from ._councils import CouncilsMixin
 from ._decisions import DecisionsMixin
+from ._feedback import FeedbackMixin
 from ._hooks import HooksMixin
 from ._hypotheses import HypothesesMixin
 from ._memory import MemoryMixin
@@ -32,6 +33,7 @@ class Store(
     SurveysMixin,
     HypothesesMixin,
     DecisionsMixin,
+    FeedbackMixin,
     UsabilitySessionsMixin,
     ChatsMixin,
     CorporaMixin,

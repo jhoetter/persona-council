@@ -421,4 +421,19 @@ CREATE TABLE IF NOT EXISTS usability_sessions (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_usess_subject ON usability_sessions(subject_kind, subject_key);
+
+-- User feedback (ticket feedback-button): free-text submissions from the web inspector.
+-- read_at flips when an operator views them (/feedback page or `sonaloop feedback`);
+-- `sonaloop info` surfaces the unread count. page/app_version are the transparent
+-- context shown to the submitter and sent along.
+CREATE TABLE IF NOT EXISTS feedback (
+  id TEXT PRIMARY KEY,
+  message TEXT NOT NULL,
+  email TEXT,
+  page TEXT,
+  app_version TEXT,
+  created_at TEXT NOT NULL,
+  read_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at);
 """

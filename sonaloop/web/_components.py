@@ -365,7 +365,9 @@ def _user_menu() -> str:
                  h("div", {"class_": "sl-segmented sl-segmented--fill"}, lang_opts)),
                h("div", {"class_": "sl-um-sec"},
                  h("button", {"type": "button", "class_": "sl-btn", "data-tour-start": True},
-                   raw(_icon("compass")), " ", t("tour_restart")))),
+                   raw(_icon("compass")), " ", t("tour_restart")), " ",
+                 h("a", {"class_": "sl-btn", "href": "/feedback"},  # inbox: linked from HERE only
+                   raw(_icon("chat")), " ", t("feedback_h")))),
              h("button", {"type": "button", "class_": "sl-um-trigger pi-hover",
                           "aria-haspopup": "true", "aria-expanded": "false"},
                h("span", {"class_": "sl-um-ava"}, raw(_icon("settings", animate=True))),
@@ -451,7 +453,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     <div class="sl-brand"><a class="sl-logo" href="/">{_lockup}</a></div>
     <div class="sl-sb-search"><button type="button" class="sl-cmdk-trigger" data-cmdk-open aria-label="{t("search")}">{_icon("search")}<span>{t("search")}</span><kbd class="sl-kbd">⌘K</kbd></button></div>
     <div class="sl-sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
-    {keymap_hint()}
+    {render_slot("sidebar_footer", store)}{keymap_hint()}
     {_user_menu()}
   </aside>
   <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="{t("sidebar")}"></div>

@@ -121,9 +121,23 @@ def info_payload(version: str) -> dict[str, Any]:
         "embeddings_provider": _emb.active_provider(),
         "embeddings_model": _emb.provider_model(),
         "content_language": _cfg.content_language(),
+        "feedback_unread": _unread_feedback(),
         "docs": DOCS_URL,
         "mcp": mcp_wiring(),
     }
+
+
+def _unread_feedback() -> int:
+    """Unread web-feedback submissions (read them via /feedback or `sonaloop feedback`).
+    Never creates a DB just to count — a missing file is simply 0."""
+    try:
+        from .config import database_path
+        if not database_path().exists():
+            return 0
+        from .storage import Store
+        return Store().unread_feedback_count()
+    except Exception:
+        return 0
 
 
 def register_hint_text(wiring: dict[str, Any]) -> str | None:

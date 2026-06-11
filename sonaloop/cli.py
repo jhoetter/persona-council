@@ -8,7 +8,7 @@ from typing import Any
 
 from .avatar import generate_persona_avatar
 from .config import load_env
-from . import services, _cli_hooks, _cli_substrate, _cli_data
+from . import services, _cli_hooks, _cli_substrate, _cli_data, _cli_feedback
 
 
 def _pkg_version() -> str:
@@ -285,6 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("persona_id"); p.add_argument("file")
     # Portable data: snapshot export/import + shipped example projects (split module).
     _cli_data.add_data_parsers(sub)
+    _cli_feedback.add_feedback_parsers(sub)   # `sonaloop feedback` (split module)
     p = sub.add_parser("brief-synthesis")
     p.add_argument("council_ids", nargs="+")
     p.add_argument("--title"); p.add_argument("--start"); p.add_argument("--goal")
@@ -603,6 +604,8 @@ def main(argv: list[str] | None = None) -> int:
             _print(services.record_evidence_check(args.persona_id, json.loads(Path(args.file).read_text(encoding="utf-8"))))
         elif args.command in _cli_data.COMMANDS:
             _print(_cli_data.run_data_command(args))
+        elif args.command in _cli_feedback.COMMANDS:
+            _print(_cli_feedback.run_feedback_command(args))
         elif args.command == "brief-synthesis":
             _print(services.brief_synthesis(args.council_ids, args.title, args.start, args.goal))
         elif args.command == "record-synthesis":
