@@ -14,8 +14,22 @@ from ._ctx import services, t, h, fragment
 
 _EVT = {"meeting": "meeting", "focus": "focus", "admin": "admin", "interruption": "interruption",
         "decision": "meeting", "site_visit": "focus"}
-_WD = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-_MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"]
+
+
+# Day/month names follow the UI language — ONE comma-joined i18n key per table
+# (cal_wd_short / cal_mon_short / cal_mon_long), split per request.
+def _wd() -> list[str]:
+    return t("cal_wd_short").split(",")
+
+
+def _mon() -> list[str]:
+    return t("cal_mon_short").split(",")
+
+
+def _monf() -> list[str]:
+    return t("cal_mon_long").split(",")
+
+
 _POS = {"zufrieden", "produktiv", "fokussiert", "positiv", "gut"}
 _NEG = {"gehetzt", "müde", "muede", "angespannt", "gestresst", "negativ", "erschöpft"}
 
@@ -36,10 +50,6 @@ def _today() -> str:
         return ""
 
 
-_MONF = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August",
-         "September", "Oktober", "November", "Dezember"]
-
-
 def _shift(a: date, view: str, delta: int) -> date:
     if view == "week":
         return a + timedelta(days=7 * delta)
@@ -51,13 +61,14 @@ def _shift(a: date, view: str, delta: int) -> date:
 
 def _period_title(view: str, period: dict) -> str:
     s = date.fromisoformat(period["period_start"]); e = date.fromisoformat(period["period_end"])
+    monf = _monf()
     if view == "year":
         return str(s.year)
     if view == "week":
         if s.month == e.month:
-            return f"{s.day}.–{e.day}. {_MONF[s.month-1]} {s.year}"
-        return f"{s.day}. {_MONF[s.month-1]} – {e.day}. {_MONF[e.month-1]} {e.year}"
-    return f"{_MONF[s.month-1]} {s.year}"
+            return f"{s.day}.–{e.day}. {monf[s.month-1]} {s.year}"
+        return f"{s.day}. {monf[s.month-1]} – {e.day}. {monf[e.month-1]} {e.year}"
+    return f"{monf[s.month-1]} {s.year}"
 
 
 def _calendar_tabs(persona_id: str, selected_date: str, view: str, period: dict) -> str:
@@ -72,8 +83,8 @@ def _calendar_tabs(persona_id: str, selected_date: str, view: str, period: dict)
             for tab in ["week", "month", "year"]]
     return h("div", {"class_": "sl-cal-nav"},
              h("div", {"class_": "sl-cal-nav-l"},
-               h("a", {"class_": "sl-cal-arrow", "href": go(prev), "aria-label": "prev"}, "‹"),
-               h("a", {"class_": "sl-cal-arrow", "href": go(nxt), "aria-label": "next"}, "›"),
+               h("a", {"class_": "sl-cal-arrow", "href": go(prev), "aria-label": t("pager_prev")}, "‹"),
+               h("a", {"class_": "sl-cal-arrow", "href": go(nxt), "aria-label": t("pager_next")}, "›"),
                h("a", {"class_": "sl-cal-today", "href": go(_today())}, t("today")),
                h("span", {"class_": "sl-cal-title"}, _period_title(view, period))),
              h("div", {"class_": "sl-tabs sl-tabs--pill"}, *tabs))
@@ -94,7 +105,7 @@ def _week_html(persona_id: str, period: dict, summaries: dict) -> str:
         evs = sorted(days.get(dk, []), key=lambda e: e.get("timestamp", ""))
         mood = summaries.get(dk, "")
         head = h("div", {"class_": "sl-cw-h" + (" today" if dk == today else "") + (" we" if i >= 5 else "")},
-                 h("div", {"class_": "sl-cw-wd"}, _WD[i]),
+                 h("div", {"class_": "sl-cw-wd"}, _wd()[i]),
                  h("div", {"class_": "sl-cw-d"}, str(d.day)),
                  h("span", {"class_": f"sl-cw-mood {_mood_cls(mood)}", "title": mood}) if mood else "")
         body = (fragment(*(_event_chip(e) for e in evs)) if evs
@@ -109,7 +120,8 @@ def _month_html(persona_id: str, period: dict, summaries: dict, anchor: date) ->
     days = period["days"]; today = _today()
     grid_start = first - timedelta(days=first.weekday())          # Monday on/before the 1st
     grid_end = last + timedelta(days=(6 - last.weekday()))        # Sunday on/after the last
-    cells = [h("div", {"class_": "sl-cm-wd" + (" we" if i >= 5 else "")}, _WD[i]) for i in range(7)]
+    wd = _wd()
+    cells = [h("div", {"class_": "sl-cm-wd" + (" we" if i >= 5 else "")}, wd[i]) for i in range(7)]
     d = grid_start
     while d <= grid_end:
         dk = d.isoformat(); out = d.month != anchor.month; we = d.weekday() >= 5
@@ -144,14 +156,15 @@ def _year_html(persona_id: str, period: dict, anchor: date) -> str:
             lvl = 0 if n == 0 else 1 if n == 1 else 2 if n == 2 else 3 if n <= 4 else 4
             cls = f"sl-cy-cell l{lvl}" + (" today" if d.isoformat() == today else "")
             cells.append(h("a", {"class_": cls, "href": f"/personas/{persona_id}?date={d.isoformat()}&view=week",
-                                 "title": f"{d.day}. {_MON[d.month-1]} · {t('n_events', n=n)}"}))
+                                 "title": f"{d.day}. {_mon()[d.month-1]} · {t('n_events', n=n)}"}))
         d += timedelta(days=1)
     # month labels: place each at the column where its 1st day falls
     mlabels = []
     for m in range(1, 13):
         col = (date(year, m, 1) - grid_start).days // 7
-        mlabels.append(h("span", {"class_": "sl-cy-mon", "style": f"grid-column:{col+1}"}, _MON[m - 1]))
-    wdcol = h("div", {"class_": "sl-cy-wd"}, *[h("span", {}, _WD[i] if i in (0, 2, 4, 6) else "") for i in range(7)])
+        mlabels.append(h("span", {"class_": "sl-cy-mon", "style": f"grid-column:{col+1}"}, _mon()[m - 1]))
+    wd = _wd()
+    wdcol = h("div", {"class_": "sl-cy-wd"}, *[h("span", {}, wd[i] if i in (0, 2, 4, 6) else "") for i in range(7)])
     legend = h("div", {"class_": "sl-cy-legend"}, h("span", {}, t("less")),
                *[h("span", {"class_": f"sl-cy-swatch l{l}"}) for l in range(5)], h("span", {}, t("more")))
     main = h("div", {"class_": "sl-cy-main"},

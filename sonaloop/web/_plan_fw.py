@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from ._components import _icon
 from ._html import h, raw, fragment
+from ._i18n import t
 
 
 def _framework_strip(plan: dict, tasks: list) -> str:
@@ -45,7 +46,7 @@ def _framework_strip(plan: dict, tasks: list) -> str:
             cls += " is-current"
         chips.append(h("span", {"class_": cls, "title": s.get("what", "")}, s.get("name", s["id"])))
     cur_name = stages[cur_idx]["name"] if cur_idx >= 0 else ""
-    label = (f"Stufe {cur_idx + 1}/{len(stages)}" if cur_idx >= 0 else "")
+    label = (t("plan_stage_n", i=cur_idx + 1, n=len(stages)) if cur_idx >= 0 else "")
     # The JOB the study was seeded from (a preset; sonaloop/job_presets.py) — shown above the
     # framework so the Job → Framework chain is visible. Absent for freeform/off-menu studies.
     job_line = ""
@@ -54,7 +55,7 @@ def _framework_strip(plan: dict, tasks: list) -> str:
         try:
             jb = _jt.get_job(job_id)
             job_line = h("div", {"class_": "plan-fw-job", "title": jb.get("user_question", "")},
-                         raw(_icon("briefcase")), " Job · ", jb.get("name", job_id))
+                         raw(_icon("briefcase")), " ", t("plan_job"), " · ", jb.get("name", job_id))
         except KeyError:
             pass
     return h("div", {"class_": "plan-fw"},

@@ -561,7 +561,8 @@ def _plan_html(plan: dict, store) -> str:
                    sub_html, ev_html))
 
     secs = []
-    for b, label in [("analyze", "Analyze"), ("act", "Act"), ("verify", "Verify")]:
+    for b, label in [("analyze", t("plan_bucket_analyze")), ("act", t("plan_bucket_act")),
+                     ("verify", t("plan_bucket_verify"))]:
         bt = [tk for tk in tasks if tk["bucket"] == b]
         if not bt:
             continue
@@ -573,7 +574,7 @@ def _plan_html(plan: dict, store) -> str:
                       h("div", {"class_": "psec-list"}, fragment(*rrows))))
 
     pct = round(100 * done / len(tasks)) if tasks else 0
-    status_txt = ("Plan komplett" if complete else f"{done} von {len(tasks)} erledigt")
+    status_txt = (t("plan_complete") if complete else t("plan_progress", done=done, n=len(tasks)))
     fw_strip = _framework_strip(plan, tasks)
     head = h("div", {"class_": "plan-hd"},
              h("div", {"class_": "plan-goal"}, plan.get("goal", "")),
@@ -582,7 +583,7 @@ def _plan_html(plan: dict, store) -> str:
                h("div", {"class_": "plan-prog" + (" full" if complete else "")},
                  h("i", {"style": f"width:{pct}%"})),
                h("span", {"class_": "plan-prog-txt"}, status_txt)),
-             h("div", {"class_": "plan-sub"}, h("span", {"class_": "pt-cap"}, plan.get("methodology") or "freiform"),
-               h("span", {}, f"{len(tasks)} Tasks")))
+             h("div", {"class_": "plan-sub"}, h("span", {"class_": "pt-cap"}, plan.get("methodology") or t("plan_freeform")),
+               h("span", {}, t("n_tasks", n=len(tasks)))))
     # styles live in web_assets.py (.plan-*/.psec*/.ptask/.pt-*) — applied in the layout + the drawer
     return h("div", {"class_": "page"}, head, fragment(*secs))

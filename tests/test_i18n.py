@@ -103,7 +103,10 @@ def test_every_used_literal_key_is_defined():
 def test_no_legacy_unused_keys():
     literals, prefixes = _scan_sources()
     literals |= _vocab_label_keys()                          # resolved as data: t(meta["label_key"])
-    defined = set(STRINGS[FALLBACK_LANGUAGE])
+    # Namespaced ("ns.key") strings come from EXTENSIONS via register_strings() — their
+    # call sites live in other repos, so the usage scan cannot see them. Parity for them
+    # is extension_parity_problems() (tested below).
+    defined = {k for k in STRINGS[FALLBACK_LANGUAGE] if "." not in k}
 
     def is_used(key: str) -> bool:
         if key in literals:
@@ -149,6 +152,38 @@ def test_web_never_assembles_t_keys_outside_the_allowlist():
                 offenders.append(f"{path.relative_to(_PKG)}: t(\"{prefix}\" + …)")
     assert not offenders, ("assembled t() keys in the web layer — resolve a vocabulary label_key "
                            "instead:\n  " + "\n  ".join(sorted(offenders)))
+
+
+def test_register_strings_namespace_guard_and_parity():
+    """The extension i18n seam (docs/i18n.md): register_strings() only accepts
+    namespaced dotted keys (so an extension can never shadow a core string), keys
+    resolve through the normal t(), and extension_parity_problems() reports any
+    language the extension forgot."""
+    import pytest
+    from sonaloop.web._i18n import register_strings, extension_parity_problems
+
+    with pytest.raises(ValueError):
+        register_strings("fr", {"cloudx.usage_h": "Usage"})        # unsupported language
+    with pytest.raises(ValueError):
+        register_strings("en", {"settings": "hijacked"})           # flat key = core namespace
+    with pytest.raises(ValueError):
+        register_strings("en", {"cloudx.usage_h": 7})              # non-str value
+    try:
+        register_strings("en", {"cloudx.usage_h": "Usage of {n} runs"})
+        problems = extension_parity_problems()
+        assert problems and "cloudx.usage_h" in problems[0] and "de" in problems[0]
+        register_strings("de", {"cloudx.usage_h": "Verbrauch"})    # placeholder mismatch
+        assert any("placeholder" in p for p in extension_parity_problems())
+        register_strings("de", {"cloudx.usage_h": "Verbrauch über {n} Runs"})
+        assert extension_parity_problems() == []
+        token = _UI_LANG.set("de")
+        try:
+            assert t("cloudx.usage_h", n=3) == "Verbrauch über 3 Runs"
+        finally:
+            _UI_LANG.reset(token)
+    finally:                                                       # never leak into other tests
+        for table in STRINGS.values():
+            table.pop("cloudx.usage_h", None)
 
 
 def test_t_translates_formats_and_falls_back():

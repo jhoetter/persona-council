@@ -278,7 +278,7 @@ DRAWER_MARKUP = (
     '<div class="sl-drawer__scrim" data-drawer-close></div>'
     '<aside class="sl-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">'
     '<header class="sl-drawer__head"><span class="sl-drawer__title" id="drawer-title"></span>'
-    '<button class="sl-overlay-close" type="button" data-drawer-close aria-label="Close">'
+    '<button class="sl-overlay-close" type="button" data-drawer-close aria-label="__CLOSE__">'
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">'
     '<path d="M6 6l12 12M18 6L6 18"/></svg></button></header>'
     '<div class="sl-drawer__body"></div></aside></div>')
@@ -451,13 +451,13 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     {keymap_hint()}
     {_user_menu()}
   </aside>
-  <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
+  <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="{t("sidebar")}"></div>
   <div class="sl-main" id="main">
-    <header class="sl-topbar"><button class="sl-iconbtn" id="sbt" data-sidebar-toggle title="{t("sidebar")} ([)" aria-label="Sidebar">{_icon("panel")}</button>
+    <header class="sl-topbar"><button class="sl-iconbtn" id="sbt" data-sidebar-toggle title="{t("sidebar")} ([)" aria-label="{t("sidebar")}">{_icon("panel")}</button>
       {_crumbs_html(crumbs)}<span class="sl-spacer"></span>{runs_widget_markup(store)}<span class="sl-tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{keymap_markup()}{KEYMAP_JS}{live_markup()}{LIVE_JS}{RUNS_WIDGET_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
+</div>{DRAWER_MARKUP.replace("__CLOSE__", _esc(t("cmdk_close")))}{palette_markup()}{PALETTE_JS}{keymap_markup()}{KEYMAP_JS}{live_markup()}{LIVE_JS}{RUNS_WIDGET_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
 
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.

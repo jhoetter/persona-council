@@ -44,8 +44,8 @@ def register_projects(app) -> None:
         top_btn = ""
         if services.get_plan(proj["id"], store=store):
             plan_url = f'/projects/{proj["id"]}/plan'
-            top_btn = h("a", {"class_": "sl-btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": "Plan"},
-                        raw(_icon("plan")), " Plan")
+            top_btn = h("a", {"class_": "sl-btn", "href": plan_url, "data-drawer": plan_url, "data-drawer-title": t("plan_h")},
+                        raw(_icon("plan")), " ", t("plan_h"))
         protos = graph.get("prototypes") or []
         # Q4: a TYPE filter row (also the LEGEND) — every node KIND present is a colored, glyph'd,
         # toggleable chip that filters the graph by type; capability/theme tags go to a 2nd muted row.
@@ -88,16 +88,16 @@ def register_projects(app) -> None:
                     gv = _icon("check") if s.get("grounded_verified") else _icon("circle")
                     nm = r.get("persona") or (store.get_persona(s.get("persona_id", "")) or {}).get("display_name") or s.get("persona_id", "")
                     sl.append(h("li", {}, h("b", {}, nm), ": ", raw(_prose(r.get("verdict") or r.get("reaction_text") or "")),
-                                " ", h("span", {"class_": "muted small"}, raw(gv), " grounded")))
+                                " ", h("span", {"class_": "muted small"}, raw(gv), " ", t("grounded_yes"))))
                 sl_html = (h("ul", {"style": "margin:4px 0 0 18px"}, fragment(*sl)) if sl
-                           else h("div", {"class_": "muted small"}, "— keine Sessions —"))
+                           else h("div", {"class_": "muted small"}, f'— {t("no_sessions")} —'))
                 ap = _artifact_present(p)
                 pill = ap["disc"] or ap["label"]
                 rows.append(h("div", {"class_": "strow"},
                               h("a", {"href": f'/prototypes/{p["slug"]}'}, raw(_icon("projects")), h("b", {}, p["name"])), " ",
                               h("span", {"class_": "pill"}, pill), " ", h("span", {"class_": "muted small"}, p.get("version", "")), " ",
                               h("a", {"class_": "sl-btn", "style": "padding:2px 8px", "href": f'/prototypes/{p["slug"]}'},
-                                "ansehen ", raw(_icon("external"))), sl_html))
+                                t("open"), " ", raw(_icon("external"))), sl_html))
             proto_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("prototypes_h")} ({len(protos)})'),
                                   fragment(*rows))
         # Artifacts in the council pool: real URLs / prototype links / A/B variants, each with its
@@ -142,7 +142,7 @@ def register_projects(app) -> None:
                                 h("span", {"class_": "pill", "style": f'border-color:{pr["color"]};color:{pr["color"]}'},
                                   glyph, s.get("title", ""))), " ",
                               h("span", {"class_": "muted small"}, f'{pr.get("short", s.get("kind",""))} · {len(s.get("member_ids",[]))}')))
-            sec_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f"Sections ({len(secs)})"), fragment(*rows))
+            sec_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("sections")} ({len(secs)})'), fragment(*rows))
         # Project pulse (assess_project) — a self-documenting status line for in-flight long runs.
         pulse_html = ""
         try:
@@ -192,7 +192,7 @@ def register_projects(app) -> None:
             coverage_html = ""
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
         panel = h("div", {"class_": "oqpanel", "id": "oqpanel", "hidden": True}, pulse_html, coverage_html,
-                  h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("build_order_h")} (edges)'),
+                  h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("build_order_edges_h")),
                   h("div", {"class_": "pills", "style": "margin:6px 0 14px"}, edge_leg), sec_html,
                   h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("open_questions_h")),
                   h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html, arts_html, assets_html)
@@ -314,12 +314,12 @@ def register_projects(app) -> None:
         try:
             proj = services.get_research_project(project_id, store=store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state("Plan", t("runtime_maybe_cleared"), icon="plan"), store, active="projects")
+            return _layout(t("not_found"), _empty_state(t("plan_h"), t("runtime_maybe_cleared"), icon="plan"), store, active="projects")
         plan = services.get_plan(project_id, store=store)
         if not plan:
-            body = h("div", {"class_": "page"}, raw(_empty_state("Plan", "Dieses Projekt hat noch keinen Plan (Freiform/Legacy).", icon="plan")))
+            body = h("div", {"class_": "page"}, raw(_empty_state(t("plan_h"), t("no_plan_yet"), icon="plan")))
         else:
             body = _plan_html(plan, store)
-        return _layout(proj["title"] + " — Plan", body, store,
-                       crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), ("Plan", None)],
+        return _layout(f'{proj["title"]} — {t("plan_h")}', body, store,
+                       crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"), (t("plan_h"), None)],
                        active="projects")

@@ -16,7 +16,7 @@ def register_library(app) -> None:
         try:
             data = services.section_members(section_id, store=store)
         except KeyError:
-            return _layout(t("not_found"), _empty_state("Section", t("runtime_maybe_cleared"), icon="squareGrid"), store, active="projects")
+            return _layout(t("not_found"), _empty_state(t("section"), t("runtime_maybe_cleared"), icon="squareGrid"), store, active="projects")
         sec, proj, members = data["section"], data["project"], data["members"]
         pr = _pres.present(sec.get("kind", "theme"), sec.get("presentation"))
         chip = h("span", {"class_": "pill", "style": f'border-color:{pr["color"]};color:{pr["color"]}'},

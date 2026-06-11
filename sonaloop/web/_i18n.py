@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextvars
+import re
 
 from ..config import ui_language, SUPPORTED_LANGUAGES
 
@@ -18,6 +19,10 @@ from ..config import ui_language, SUPPORTED_LANGUAGES
 #   - every t("literal") used in the codebase resolves to a defined key.   #
 # Add a string by adding the key to EVERY language table, never inline.    #
 # ===================================================================== #
+
+# Extensions (sonaloop-cloud / sonaloop-research) register their OWN translated
+# strings through register_strings() below — namespaced dotted keys ("cloud.usage_h")
+# that can never shadow the core's flat keys. See docs/i18n.md.
 
 # Ultimate fallback when a key is missing in the active language (should not
 # happen — the parity test guards it — but keeps render robust in prod).
@@ -42,7 +47,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "assets_h": "Assets", "asset_kind_image": "Bild", "asset_kind_screenshot": "Screenshot", "asset_kind_document": "Dokument", "asset_kind_file": "Datei",
         "asset_dir_in": "Evidenz", "asset_dir_out": "Deliverable", "asset_deliverables_h": "Deliverables", "asset_evidence_h": "Evidenz",
         "no_projects": "Noch keine Projekte. Lege eines an oder backfille deine Reports (CLI: research-backfill).",
-        "themes_h": "Themen", "build_order_h": "Aufbau-Reihenfolge",
+        "themes_h": "Themen",
         "type_h": "Typ", "tags_h": "Tags", "clear_filter": "zurücksetzen", "legend": "Legende", "groups_toggle": "Gruppen ein/aus (Themen & Phasen-Hüllen)", "round_n": "Runde {n}", "relations": "Beziehungen", "rel_based_on": "Basiert auf", "rel_feeds_into": "Fließt ein in",
         "no_councils": "Noch keine Councils.", "no_synthesis": "Noch keine Reports.",
         "prototypes_lead": "Lauffähige Artefakte — von Personas getestet.", "no_prototypes": "Noch keine Artefakte.",
@@ -348,6 +353,23 @@ STRINGS: dict[str, dict[str, str]] = {
         "evt_project_updated": "Projekt aktualisiert",
         "fs_step_project_link": "Oder lege es direkt hier im Browser an.",
         "fs_docs_link": "Getting-started-Guide",
+        # plan drawer / framework strip (i18n leak audit — ticket i18n-full-coverage)
+        "plan_h": "Plan",
+        "no_plan_yet": "Dieses Projekt hat noch keinen Plan (Freiform/Legacy).",
+        "plan_complete": "Plan komplett",
+        "plan_progress": "{done} von {n} erledigt",
+        "plan_freeform": "freiform",
+        "n_tasks": "{n} Tasks",
+        "plan_stage_n": "Stufe {i}/{n}",
+        "plan_job": "Job",
+        "plan_bucket_analyze": "Analysieren", "plan_bucket_act": "Umsetzen",
+        "plan_bucket_verify": "Verifizieren",
+        "build_order_edges_h": "Aufbau-Reihenfolge (Kanten)",
+        # calendar day/month names (comma-joined: ONE key per table keeps parity checkable
+        # without 31 single-word keys; pages/_calendar.py splits at render)
+        "cal_wd_short": "Mo,Di,Mi,Do,Fr,Sa,So",
+        "cal_mon_short": "Jan,Feb,Mär,Apr,Mai,Jun,Jul,Aug,Sep,Okt,Nov,Dez",
+        "cal_mon_long": "Januar,Februar,März,April,Mai,Juni,Juli,August,September,Oktober,November,Dezember",
     },
     "en": {
         "personas": "Personas", "councils": "Councils",
@@ -365,7 +387,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "assets_h": "Assets", "asset_kind_image": "Image", "asset_kind_screenshot": "Screenshot", "asset_kind_document": "Document", "asset_kind_file": "File",
         "asset_dir_in": "Evidence", "asset_dir_out": "Deliverable", "asset_deliverables_h": "Deliverables", "asset_evidence_h": "Evidence",
         "no_projects": "No projects yet. Create one or backfill your reports (CLI: research-backfill).",
-        "themes_h": "Themes", "build_order_h": "Build order",
+        "themes_h": "Themes",
         "type_h": "Type", "tags_h": "Tags", "clear_filter": "clear", "legend": "Legend", "groups_toggle": "Toggle groups (theme & phase hulls)", "round_n": "Round {n}", "relations": "Relations", "rel_based_on": "Based on", "rel_feeds_into": "Feeds into",
         "no_councils": "No councils yet.", "no_synthesis": "No reports yet.",
         "prototypes_lead": "Runnable artifacts — tested by personas.", "no_prototypes": "No artifacts yet.",
@@ -669,6 +691,23 @@ STRINGS: dict[str, dict[str, str]] = {
         "evt_project_updated": "Project updated",
         "fs_step_project_link": "Or create it right here in the browser.",
         "fs_docs_link": "Getting-started guide",
+        # plan drawer / framework strip (i18n leak audit — ticket i18n-full-coverage)
+        "plan_h": "Plan",
+        "no_plan_yet": "This project has no plan yet (freeform/legacy).",
+        "plan_complete": "Plan complete",
+        "plan_progress": "{done} of {n} done",
+        "plan_freeform": "freeform",
+        "n_tasks": "{n} tasks",
+        "plan_stage_n": "Stage {i}/{n}",
+        "plan_job": "Job",
+        "plan_bucket_analyze": "Analyze", "plan_bucket_act": "Act",
+        "plan_bucket_verify": "Verify",
+        "build_order_edges_h": "Build order (edges)",
+        # calendar day/month names (comma-joined: ONE key per table keeps parity checkable
+        # without 31 single-word keys; pages/_calendar.py splits at render)
+        "cal_wd_short": "Mon,Tue,Wed,Thu,Fri,Sat,Sun",
+        "cal_mon_short": "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",
+        "cal_mon_long": "January,February,March,April,May,June,July,August,September,October,November,December",
     },
 }
 
@@ -676,6 +715,58 @@ STRINGS: dict[str, dict[str, str]] = {
 def _lang() -> str:
     """The active UI language: per-request contextvar, else the persisted setting."""
     return _UI_LANG.get() or ui_language()
+
+
+# --------------------------------------------------------------- extension seam
+# Downstream packages (sonaloop-cloud / sonaloop-research) ship their own UI
+# strings. They never edit STRINGS: they call register_strings() from their web
+# setup() (the same entry point that registers routes/nav), once per language.
+
+# A namespaced extension key: "<namespace>.<key>", e.g. "cloud.usage_h". The dot is
+# the guard — core keys are flat ([a-z0-9_]+), so an extension can never shadow one.
+_EXT_KEY = re.compile(r"^[a-z0-9_]+\.[a-z0-9_.]+$")
+
+
+def register_strings(lang: str, mapping: dict[str, str]) -> None:
+    """Merge an extension's translated strings into the catalog (docs/i18n.md).
+
+    `lang` must be one of SUPPORTED_LANGUAGES; every key in `mapping` must be
+    NAMESPACED ("<ns>.<key>", e.g. "research.panel_h") so it cannot collide with —
+    or override — a core key. Re-registering the same key is allowed (idempotent
+    setup on reload); registering a flat/core key raises. Resolve with the normal
+    t("ns.key"). Parity across languages is checked by extension_parity_problems()
+    (asserted in tests/test_i18n.py — register for EVERY supported language)."""
+    if lang not in SUPPORTED_LANGUAGES:
+        raise ValueError(f"unsupported language {lang!r}; expected one of {SUPPORTED_LANGUAGES}")
+    for key, value in mapping.items():
+        if not _EXT_KEY.match(key):
+            raise ValueError(
+                f"extension string key {key!r} must be namespaced ('<ns>.<key>', e.g. "
+                "'cloud.usage_h') — flat keys are reserved for the core catalog")
+        if not isinstance(value, str):
+            raise ValueError(f"extension string {key!r} must map to a str")
+        STRINGS[lang][key] = value
+
+
+def extension_parity_problems() -> list[str]:
+    """Parity check over the REGISTERED extension strings (namespaced keys): every
+    namespaced key must exist in every supported language with the same
+    {placeholder}s — the same contract the core parity test enforces."""
+    ph = re.compile(r"\{([a-z0-9_]+)\}")
+    ext: dict[str, dict[str, str]] = {
+        lang: {k: v for k, v in table.items() if "." in k} for lang, table in STRINGS.items()}
+    all_keys = set().union(*(set(t_) for t_ in ext.values()))
+    problems = []
+    for key in sorted(all_keys):
+        langs_with = {lang for lang, table in ext.items() if key in table}
+        if langs_with != set(SUPPORTED_LANGUAGES):
+            problems.append(f"{key!r} missing in: {sorted(set(SUPPORTED_LANGUAGES) - langs_with)}")
+            continue
+        ref = set(ph.findall(ext[FALLBACK_LANGUAGE][key]))
+        for lang, table in ext.items():
+            if set(ph.findall(table[key])) != ref:
+                problems.append(f"{key!r}: placeholder mismatch in {lang!r}")
+    return problems
 
 
 def t(key: str, **kw: object) -> str:

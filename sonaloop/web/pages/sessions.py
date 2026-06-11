@@ -212,7 +212,7 @@ def _step_html(sess: dict, step: dict) -> str:
     meta = _friction_meta(fr.get("level", ""))
     has_friction = bool(meta and meta["value"] > 0)
     shot_url = _screenshot_url(sess["id"], state["screenshot"]) if state.get("screenshot") else None
-    screen = (h("img", {"class_": "sess-shot", "src": shot_url, "alt": state.get("title") or f"step {i}",
+    screen = (h("img", {"class_": "sess-shot", "src": shot_url, "alt": state.get("title") or t("step_n", n=i),
                         "loading": "lazy"}) if shot_url
               else h("div", {"class_": "sess-screen-txt"}, state.get("screen", "")))
     caption = " · ".join(x for x in (state.get("url"), state.get("title")) if x)
