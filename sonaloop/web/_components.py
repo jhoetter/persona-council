@@ -17,6 +17,7 @@ from ._i18n import t, _lang
 from ._html import h, raw, fragment, register_css, collect_css  # noqa: F401  (component-SSR foundation)
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
 from ._live import LIVE_CSS, LIVE_JS, live_markup
+from ._runs_widget import RUNS_WIDGET_CSS, RUNS_WIDGET_JS, runs_widget_markup
 from ._ext import (  # noqa: F401  (extension seams; public surface re-exported by web/__init__)
     register_nav_section, register_nav_item, resolve_label, nav_model,
     render_slot, theme_override_css, brand_name, brand_logo, title_brand,
@@ -446,7 +447,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 <link rel="icon" type="image/svg+xml" href="{_FAVICON_HREF}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-{HEAD_JS}<style>{CSS}{PALETTE_CSS}{LIVE_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
+{HEAD_JS}<style>{CSS}{PALETTE_CSS}{LIVE_CSS}{RUNS_WIDGET_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
 <body><div class="sl-app-shell" id="app">
   <aside class="sl-sidebar">
     <div class="sl-brand"><a class="sl-logo" href="/">{_lockup}</a></div>
@@ -457,10 +458,10 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
   <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
   <div class="sl-main" id="main">
     <header class="sl-topbar"><button class="sl-iconbtn" id="sbt" data-sidebar-toggle title="{t("sidebar")} ([)" aria-label="Sidebar">{_icon("panel")}</button>
-      {_crumbs_html(crumbs)}<span class="sl-spacer"></span><span class="sl-tb-actions">{actions}</span></header>
+      {_crumbs_html(crumbs)}<span class="sl-spacer"></span>{runs_widget_markup(store)}<span class="sl-tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{live_markup()}{LIVE_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
+</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{live_markup()}{LIVE_JS}{RUNS_WIDGET_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
 
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.

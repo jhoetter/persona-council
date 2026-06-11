@@ -79,6 +79,13 @@ def register_api(app) -> None:
             _event_stream(request, last_id), media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
+    @app.get("/api/runs")
+    def api_runs():
+        """Run states across all projects (ticket agents-running-panel) — the live
+        topbar widget refetches this on SSE events; same read the /runs page uses."""
+        from ._runs_widget import collect_run_states
+        return JSONResponse(collect_run_states())
+
     @app.get("/api/personas")
     def api_personas():
         return JSONResponse(services.list_personas())

@@ -16,6 +16,7 @@ from .hypotheses import register_hypotheses
 from .decisions import register_decisions
 from .sessions import register_sessions
 from .activity import register_activity
+from .runs import register_runs, register_runs_section  # noqa: F401  (seam re-exported via web/__init__)
 from .edit import register_edit
 from .._routes_lists import _projects_page  # noqa: F401  (re-export preserved)
 
@@ -32,3 +33,4 @@ def register_pages(app) -> None:
     register_decisions(app)    # the /decisions list — after projects' /decisions/{id} redirect
     register_sessions(app)
     register_activity(app)
+    register_runs(app)

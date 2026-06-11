@@ -89,6 +89,9 @@ function concerns(d){
 var es=new EventSource('/api/events');   // auto-reconnects; replays via Last-Event-ID
 es.onmessage=function(ev){
   var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+  // Re-dispatch as a DOM event so OTHER chrome modules (e.g. the runs widget) ride
+  // this one EventSource instead of opening their own connection.
+  try{ document.dispatchEvent(new CustomEvent('sl:live-event',{detail:d})); }catch(e){}
   show(CFG.labels[d.event]||d.event, d.label||'', d.url);
   if(concerns(d)){ clearTimeout(reloadT); reloadT=setTimeout(function(){ location.reload(); },900); }
 };

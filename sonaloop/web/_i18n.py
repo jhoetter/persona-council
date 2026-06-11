@@ -285,6 +285,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "evt_asset_attached": "Asset angehängt", "evt_council_recorded": "Council erfasst",
         "evt_synthesis_recorded": "Report erfasst", "evt_project_created": "Projekt angelegt",
         "evt_run_finished": "Run beendet",
+        # runs page + live topbar widget (ticket agents-running-panel)
+        "runs_h": "Runs",
+        "runs_lead": "Driver-Status aller Projekte — wer treibt den Plan gerade wirklich?",
+        "no_runs": "Noch keine Projekte mit Plan — Run-Status erscheint, sobald ein Plan existiert.",
+        "runs_active_h": "Aktiv", "runs_stalled_h": "Stockt", "runs_finished_h": "Abgeschlossen",
+        "run_last_activity": "Letzte Aktivität", "run_next_ready": "Als Nächstes bereit",
+        "copy_btn": "Kopieren", "copied": "Kopiert",
+        "active_runs": "Aktive Runs", "runs_none_active": "Keine aktiven Runs",
+        "runs_view_all": "Alle Runs",
         # first-steps checklist on the empty-DB home (ticket one-sentence-mcp-install)
         "first_steps_h": "Erste Schritte",
         "first_steps_lead": "Sonaloop läuft — drei Schritte bis zum ersten Ergebnis.",
@@ -580,6 +589,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "evt_asset_attached": "Asset attached", "evt_council_recorded": "Council recorded",
         "evt_synthesis_recorded": "Report recorded", "evt_project_created": "Project created",
         "evt_run_finished": "Run finished",
+        # runs page + live topbar widget (ticket agents-running-panel)
+        "runs_h": "Runs",
+        "runs_lead": "Every project's driver status — who is actually moving the plan right now?",
+        "no_runs": "No projects with a plan yet — run states appear once a plan exists.",
+        "runs_active_h": "Active", "runs_stalled_h": "Stalled", "runs_finished_h": "Finished",
+        "run_last_activity": "Last activity", "run_next_ready": "Next ready",
+        "copy_btn": "Copy", "copied": "Copied",
+        "active_runs": "Active runs", "runs_none_active": "No active runs",
+        "runs_view_all": "All runs",
         # first-steps checklist on the empty-DB home (ticket one-sentence-mcp-install)
         "first_steps_h": "First steps",
         "first_steps_lead": "Sonaloop is running — three steps to a first result.",

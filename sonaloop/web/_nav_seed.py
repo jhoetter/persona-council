@@ -25,6 +25,9 @@ _CORE_NAV = {
         # The live feed of recorded events (ticket live-event-stream): a workspace
         # surface (what's happening NOW), not a produced primitive — hence not library.
         ("/activity", "activity", "clock", lambda: t("activity_h")),
+        # The runs panel (ticket agents-running-panel): driver status across projects —
+        # a live workspace surface like /activity, not a produced primitive.
+        ("/runs", "runs", "play", lambda: t("runs_h")),
         ("/documentation", "docs", "overview", lambda: t("documentation")),
     ],
     "library": [
