@@ -28,7 +28,8 @@ from ..doc_schemas import PRIM_JSON, EXAMPLES   # example JSON kept out of the w
 
 from ._docs_content import (
     DOC_PAGES, DOCS_INTRO, PRINCIPLES, DOCS, GROUPS, GROUP_MAP, PRIMITIVES, SCHEMAS, LIFECYCLE,
-    EVIDENCE_PILLS, LOOP_NOTE, RIGOUR_STEPS, DD_PHASES, RHYTHM, PLAYBOOKS, DOMAIN_META, SUPER_GROUPS)
+    EVIDENCE_PILLS, LOOP_NOTE, RIGOUR_STEPS, INSPECTOR_SECTIONS, DD_PHASES, RHYTHM, PLAYBOOKS,
+    DOMAIN_META, SUPER_GROUPS)
 
 
 # ============================ The shared shell ============================ #
@@ -194,6 +195,9 @@ def _doc_overview() -> str:
         ("/documentation/how-it-works", "panel", ("So funktioniert's", "How it works"),
          ("Der Weg von der Frage zur Antwort — und was jeden Schritt belastbar hält.",
           "The path from question to answer — and what keeps every step trustworthy.")),
+        ("/documentation/inspector", "activity", ("Live arbeiten", "Working live"),
+         ("Beispielprojekte, Live-Aktivität, Runs, Tastatur, Tour, Bearbeitungs-Grenze, Feedback.",
+          "Example projects, live activity, runs, keyboard, tour, the editing boundary, feedback.")),
         ("/documentation/methodology", "target", ("Methodik", "Methodology"),
          ("Eine Studie fährt eine austauschbare Methodik. Double Diamond ist nur eine davon.",
           "A study runs a swappable methodology. Double Diamond is just one of them.")),
@@ -357,6 +361,26 @@ def _doc_how() -> str:
     lead = ("Der Weg von der Frage zur Antwort — und was jeden Schritt belastbar hält." if de
             else "The path from question to answer — and what keeps every step trustworthy.")
     return _docs_shell("how-it-works", lead, fragment(lifecycle, rigour), subnav)
+
+
+def _doc_inspector() -> str:
+    """Working live — what the inspector itself offers the human: examples, live activity,
+    runs, keyboard/palette, tour, the edit boundary, language, feedback. Pure data render
+    over INSPECTOR_SECTIONS (the bilingual content lives in _docs_content.py)."""
+    de = _lang() == "de"
+    li = 0 if de else 1
+    blocks = [_anchor_block(aid,
+                h("div", {"class_": "doc-h", "style": "margin-bottom:10px"},
+                  h("span", {"class_": "rico", "style": "color:var(--accent)"}, raw(_icon(ic))),
+                  h("span", {"class_": "doc-name"}, title[li])),
+                h("div", {"class_": "sl-prose doc-p"}, raw(_md(body[li]))))
+              for aid, ic, title, body in INSPECTOR_SECTIONS]
+    subnav = [(aid, title[li]) for aid, _ic, title, _b in INSPECTOR_SECTIONS]
+    lead = ("Was der Inspector selbst kann, während dein Agent arbeitet — live, "
+            "per Tastatur, und mit einer klaren Bearbeitungs-Grenze." if de
+            else "What the inspector itself offers while your agent works — live, "
+            "keyboard-first, and with one clear editing boundary.")
+    return _docs_shell("inspector", lead, fragment(*blocks), subnav)
 
 
 def _doc_methodology() -> str:
@@ -582,7 +606,8 @@ def _doc_concept_detail(art: str) -> str:
 # slug -> renderer (top-level tabs).  Sub-pages opened from cards:
 _PAGES = {
     "": _doc_overview, "concepts": _doc_concepts, "how-it-works": _doc_how,
-    "methodology": _doc_methodology, "mcp": _doc_mcp, "principles": _doc_principles_page,
+    "inspector": _doc_inspector, "methodology": _doc_methodology, "mcp": _doc_mcp,
+    "principles": _doc_principles_page,
 }
 _CONCEPT_ARTS = {d["art"] for d in DOCS}
 

@@ -15,6 +15,7 @@ DOC_PAGES = [
     ("",             "compass",    ("Überblick", "Overview")),
     ("concepts",     "squareGrid", ("Konzepte", "Concepts")),
     ("how-it-works", "panel",      ("So funktioniert's", "How it works")),
+    ("inspector",    "activity",   ("Live arbeiten", "Working live")),
     ("methodology",  "target",     ("Methodik", "Methodology")),
     ("mcp",          "prototype",  ("MCP-Referenz", "MCP reference")),
 ]
@@ -278,6 +279,99 @@ RIGOUR_STEPS = [
     (("Prüfen", "Verify"),
      ("Erst schließen, wenn die Evidenz die Gates erfüllt — belegen statt behaupten.",
       "Only close once the evidence clears the gates — back it, don't assert it.")),
+]
+
+
+# ============================ Working live (the inspector page) ============================ #
+# What the inspector itself offers the human at the keyboard — the features you SEE, in plain
+# language. Shape: (anchor, icon, (title_de, title_en), (body_de, body_en)); bodies are Markdown.
+INSPECTOR_SECTIONS = [
+    ("examples", "package",
+     ("Beispielprojekte", "Example projects"),
+     ("Zwei fertige Demo-Studien liegen bei — eine B2B-Positioning-Studie und eine B2C-Pricing-Studie "
+      "(mit Preis-Leiter und Head-to-Head). Auf einer leeren Datenbank zeigt die Startseite je einen "
+      "**„Beispiel laden“**-Button; dein Agent kann sie auch per `load_example` laden, `sonaloop "
+      "load-example` ebenso. Laden ist idempotent (kein Duplizieren beim erneuten Laden), und "
+      "`remove_example` entfernt **nur** die Daten des Beispiels — nie deine eigenen.",
+      "Two finished demo studies ship with Sonaloop — a B2B positioning study and a B2C pricing study "
+      "(with a willingness-to-pay ladder and a head-to-head). On an empty database the home page shows "
+      "a **“Load example”** button for each; your agent can load them via `load_example`, or "
+      "`sonaloop load-example` from the CLI. Loading is idempotent (re-loading never duplicates), and "
+      "`remove_example` removes **only** the example's data — never yours.")),
+    ("live", "zap",
+     ("Live-Aktivität", "Live activity"),
+     ("Jede Inspector-Seite ist live verbunden: nimmt dein Agent etwas auf (ein Council, eine Persona, "
+      "einen Report), erscheint ein kleiner **Toast** mit Link — und die offene Seite lädt sich selbst "
+      "neu, wenn es sie betrifft. Der **Activity**-Feed (`g` `a`) listet alles Zuletzt-Passierte "
+      "chronologisch. Du schaust zu, während die Studie entsteht — kein manuelles Neuladen.",
+      "Every inspector page is live: when your agent records something (a council, a persona, a report) "
+      "a small **toast** appears with a link — and the page you're on reloads itself when it's "
+      "affected. The **Activity** feed (`g` `a`) lists everything recent in order. You watch the study "
+      "come together — no manual refreshing.")),
+    ("runs", "play",
+     ("Laufende Runs", "Runs panel"),
+     ("Oben in der Leiste zeigt ein Status-Punkt, ob gerade Studien **aktiv** laufen — er wird "
+      "**gelb**, wenn ein Projekt feststeckt (das stille Scheitern soll laut sein). Ein Klick öffnet "
+      "die Liste; die **Runs**-Seite (`g` `r`) zeigt jeden Projekt-Run mit letzter Aktivität.",
+      "A status dot in the top bar shows whether studies are **running** right now — it turns "
+      "**amber** when a project is stalled (the silent failure mode should be loud). Click it for the "
+      "list; the **Runs** page (`g` `r`) shows every project run with its last activity.")),
+    ("keyboard", "command",
+     ("Tastatur & Palette", "Keyboard & palette"),
+     ("`?` öffnet das Shortcut-Cheat-Sheet. **⌘K / Ctrl+K** öffnet die Befehls-Palette: Suche über "
+      "alles (Personas, Councils, Reports, Sessions, Hypothesen, Entscheidungen, Umfragen …) plus "
+      "Sprungbefehle zu jeder Seite. Navigation per Chords: `g` `h` Home, `g` `p` Personas, `g` `c` "
+      "Councils, `g` `s` Reports, `g` `a` Activity, `g` `r` Runs, `g` `d` Doku. In Listen: `j`/`k` "
+      "bewegt den Fokus, `Enter` öffnet; auf Detailseiten blättern `[`/`]` zum Nachbarn. Beim Tippen "
+      "in Felder ist alles deaktiviert.",
+      "`?` opens the shortcut cheat sheet. **⌘K / Ctrl+K** opens the command palette: search across "
+      "everything (personas, councils, reports, sessions, hypotheses, decisions, surveys …) plus jump "
+      "commands for every page. Navigate with chords: `g` `h` home, `g` `p` personas, `g` `c` "
+      "councils, `g` `s` reports, `g` `a` activity, `g` `r` runs, `g` `d` docs. In lists `j`/`k` move "
+      "focus and `Enter` opens; on detail pages `[`/`]` step to the sibling record. Everything is "
+      "disabled while you type in a field.")),
+    ("tour", "compass",
+     ("Produkt-Tour", "Product tour"),
+     ("Eine optionale 60-Sekunden-Tour zeigt die Oberfläche in sechs Schritten. Sie startet **nie von "
+      "selbst**: Beim ersten Besuch bietet ein einmaliger, schließbarer Hinweis sie an; danach findest "
+      "du **„Tour starten“** auf der Startseite und **„Tour neu starten“** im Einstellungs-Popover. "
+      "`Esc` beendet sie jederzeit.",
+      "An optional 60-second tour walks the chrome in six steps. It **never auto-starts**: on your "
+      "first visit a one-time dismissible note offers it; after that, **“Take the tour”** "
+      "lives on the home page and **“Restart tour”** in the settings popover. `Esc` ends it "
+      "any time.")),
+    ("editing", "pencil",
+     ("Was du bearbeiten kannst", "What you can edit"),
+     ("Der Inspector ist primär eine Lese-Oberfläche — mit einer klaren Grenze für Schreibzugriffe: "
+      "**Struktur ja, generierter Text nie.** Du kannst Projekte, Notizen und Sections anlegen, "
+      "umbenennen und löschen sowie Persona-Metadaten (Name, Rolle, Segment, Branche) bearbeiten. "
+      "Generierte Artefakte — Councils, Reports, Prototypen — kannst du nur **löschen** (mit "
+      "Bestätigung); ihr Inhalt entsteht ausschließlich über deinen Agenten. Erinnerungen, SOULs und "
+      "Evidenz bleiben komplett unantastbar.",
+      "The inspector is primarily a reading surface — with one clear write boundary: **structure yes, "
+      "generated text never.** You can create, rename and delete projects, notes and sections, and "
+      "edit persona metadata (name, role, segment, industry). Generated artifacts — councils, "
+      "reports, prototypes — can only be **deleted** (with confirmation); their content is authored "
+      "exclusively through your agent. Memories, SOULs and evidence stay untouchable entirely.")),
+    ("language", "globe",
+     ("Sprache", "Language"),
+     ("Die Oberfläche ist zweisprachig (Deutsch/Englisch) — der Umschalter sitzt im "
+      "Einstellungs-Popover unten links. Die UI-Sprache ist **unabhängig** von der Inhalts-Sprache: "
+      "generierte Inhalte folgen der Sprache, in der du mit deinem Agenten schreibst, und werden vom "
+      "Umschalter nie angefasst.",
+      "The chrome is bilingual (German/English) — the switcher lives in the settings popover, bottom "
+      "left. The UI language is **independent** of the content language: generated content follows "
+      "the language you write to your agent in, and the switcher never touches it.")),
+    ("feedback", "chat",
+     ("Feedback", "Feedback"),
+     ("Unten in der Seitenleiste sitzt ein **Feedback**-Knopf: kurze Nachricht, optional deine "
+      "E-Mail — die aktuelle Seite und die App-Version werden sichtbar mitgeschickt (nichts wird "
+      "still gesammelt). Eingesendetes liest der Betreiber unter `/feedback` oder per `sonaloop "
+      "feedback`; alternativ verlinkt das Formular ein vorausgefülltes GitHub-Issue.",
+      "A **feedback** button sits at the bottom of the sidebar: a short message, optionally your "
+      "email — the current page and app version are sent along visibly (nothing is collected "
+      "silently). Submissions are read at `/feedback` or via `sonaloop feedback`; the form also "
+      "links a prefilled GitHub issue as the public channel.")),
 ]
 
 
