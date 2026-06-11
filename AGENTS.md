@@ -331,3 +331,13 @@ The workflows ship in two forms, so Sonaloop works across every MCP host:
 - A workday should include mundane friction and normal progress, not only
   problems.
 - Calendar continuity matters: unresolved loops should influence later days.
+
+## Documentation
+
+A feature isn't done until the documentation surfaces are updated: the deep
+agent-facing notes in `docs/*.md`, the user-facing bilingual in-app docs hub
+(`sonaloop/web/_docs_content.py`), and — for anything product-facing — the
+canonical published docs in the **sonaloop-docs** repo (page + `mkdocs.yml` nav +
+`docs/llms.txt` index). The split rule and the discoverability map live in
+[docs/README.md](docs/README.md). Every new env var gets a one-line entry in
+[.env.example](.env.example).

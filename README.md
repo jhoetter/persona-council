@@ -42,6 +42,11 @@ council). Optional extras come later: `sonaloop setup` fetches the headless brow
 testing, and an `OPENAI_API_KEY` enables avatars + semantic recall. `sonaloop info` checks the
 wiring and prints these exact one-liners when something's missing.
 
+Want something to look at before your first study? Two complete example projects ship with the
+install — ask your agent to call `load_example` (or run `sonaloop load-example`, or click
+**Load example** on the empty home page of the inspector). `remove_example` removes exactly that
+data again. Every supported environment variable is enumerated in [.env.example](.env.example).
+
 ### Or: paste this to your AI agent
 
 No setup knowledge needed. Paste the prompt below into an **AI agent that can run commands
