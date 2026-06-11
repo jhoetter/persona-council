@@ -6,6 +6,7 @@ from ._calendar import _calendar_tabs, _period_calendar_html
 from .sessions import _sessions_section
 from .._render import render_findings
 from .._html import register_css
+from .._keymap import sibling_attrs, sibling_urls
 from ... import artifacts as _artifacts
 
 # Memory panel — a temporal knowledge graph (entities + fact timelines, superseded facts struck).
@@ -208,7 +209,11 @@ def register_personas(app) -> None:
               (raw(render_findings([_artifacts.pain_point_finding(x) for x in data["pain_points"]]))
                if data["pain_points"] else raw(_pills(p["pain_points"])))),
             h("div", {"class_": "sec", "id": "tools"}, h("h2", {}, t("tools")), raw(_pills(p["tools"]))),
-            h("div", {"class_": "sec", "id": "bez"}, h("h2", {}, t("relationships")), rel_rows))
+            h("div", {"class_": "sec", "id": "bez"}, h("h2", {}, t("relationships")), rel_rows),
+            # server-provided prev/next sibling URLs for the keymap's [ / ] bindings
+            raw(sibling_attrs(*sibling_urls(
+                [f'/personas/{pp["id"]}' for pp in services.list_personas(store=store)],
+                f'/personas/{p["id"]}'))))
         props = _properties_html([
             ("personas", t("role"), p["role"]["title"]),
             ("projects", t("industry"), p["company_context"]["industry"]),

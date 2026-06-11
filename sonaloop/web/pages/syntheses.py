@@ -5,6 +5,7 @@ PDF / PPTX export is an MCP tool (export_synthesis) + the CLI, not a UI action."
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .._keymap import sibling_attrs, sibling_urls
 from .._render import render_ref
 from .._report import render_report
 
@@ -67,6 +68,10 @@ def register_syntheses(app) -> None:
         from .._forms import danger_zone, delete_button_form
         body = h("div", {"class_": "page"}, raw(render_report(syn, store)),
                  raw(_informed_decisions_html(synthesis_id, store)),
+                 # server-provided prev/next sibling URLs for the keymap's [ / ] bindings
+                 raw(sibling_attrs(*sibling_urls(
+                     [f'/syntheses/{x["id"]}' for x in store.list_syntheses()],
+                     f'/syntheses/{synthesis_id}'))),
                  # delete-only (no content editing): report prose is authored/generated
                  raw(danger_zone(raw(delete_button_form(f'/syntheses/{synthesis_id}/delete',
                                                         t("delete_synthesis"))))))

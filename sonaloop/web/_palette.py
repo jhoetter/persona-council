@@ -49,6 +49,8 @@ def palette_markup() -> str:
         "cmds": [
             {"title": t("projects"), "url": "/projects", "type": "go"},
             {"title": t("personas"), "url": "/personas", "type": "go"},
+            # the keyboard cheat sheet (web/_keymap.py): its JS opens the overlay on this href
+            {"title": t("kbd_cheatsheet_h"), "url": "#shortcuts", "type": "go"},
         ],
         "labels": {"go": t("cmdk_jump"), "project": t("projects"), "persona": t("personas"),
                    "council": t("councils"), "synthesis": t("syntheses"),

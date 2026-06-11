@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .._keymap import sibling_attrs, sibling_urls
 from .._render import render_statements
 from .._html import register_css
 from ... import artifacts as _A
@@ -191,6 +192,10 @@ def register_councils(app) -> None:
         body = fragment(
             summary_lead, raw(_study_lead(exec_html, vm["answer_label"])), h2h_block, rt_block, raw(sentiment),
             h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices")), intro, raw(voices_html)),
+            # server-provided prev/next sibling URLs for the keymap's [ / ] bindings
+            raw(sibling_attrs(*sibling_urls(
+                [f'/councils/{c["id"]}' for c in services.list_councils(store=store)],
+                f'/councils/{session_id}'))),
             # delete-only (no content editing): the statements are generated prose
             raw(danger_zone(raw(delete_button_form(f'/councils/{session_id}/delete',
                                                    t("delete_council"))))))

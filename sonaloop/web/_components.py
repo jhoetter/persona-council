@@ -18,6 +18,7 @@ from ._html import h, raw, fragment, register_css, collect_css  # noqa: F401  (c
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
 from ._live import LIVE_CSS, LIVE_JS, live_markup
 from ._runs_widget import RUNS_WIDGET_CSS, RUNS_WIDGET_JS, runs_widget_markup
+from ._keymap import KEYMAP_CSS, KEYMAP_JS, keymap_markup, keymap_hint
 from ._ext import (  # noqa: F401  (extension seams; public surface re-exported by web/__init__)
     register_nav_section, register_nav_item, resolve_label, nav_model,
     render_slot, theme_override_css, brand_name, brand_logo, title_brand,
@@ -152,13 +153,7 @@ APP_JS = """
   document.querySelectorAll('[data-theme-set]').forEach(function(b){
     b.addEventListener('click',function(){ applyTheme(b.getAttribute('data-theme-set')); }); });
   markTheme(curTheme());
-  // ---- quick "g then o/p" jump nav ----
-  var gmode=false,gt;
-  document.addEventListener('keydown',function(e){
-    var tag=(e.target.tagName||'').toLowerCase(); if(tag==='input'||tag==='textarea'||tag==='select') return;
-    if(e.key==='g'){ gmode=true; clearTimeout(gt); gt=setTimeout(function(){gmode=false;},800); return; }
-    if(gmode){ var m={o:'/projects',p:'/personas',r:'/projects'}; if(m[e.key]) location.href=m[e.key]; gmode=false; }
-  });
+  // (the old inline "g then o/p" jump nav moved to the keymap registry — web/_keymap.py)
   var sc=document.querySelector('section'); var tocLinks=[].slice.call(document.querySelectorAll('.toc a'));
   if(sc && tocLinks.length){
     var map={}; tocLinks.forEach(function(a){ map[a.getAttribute('href').slice(1)]=a; });
@@ -447,12 +442,13 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 <link rel="icon" type="image/svg+xml" href="{_FAVICON_HREF}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-{HEAD_JS}<style>{CSS}{PALETTE_CSS}{LIVE_CSS}{RUNS_WIDGET_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
+{HEAD_JS}<style>{CSS}{PALETTE_CSS}{LIVE_CSS}{RUNS_WIDGET_CSS}{KEYMAP_CSS}{collect_css()}</style>{theme_override_css()}{render_slot("head_extra", store)}</head>
 <body><div class="sl-app-shell" id="app">
   <aside class="sl-sidebar">
     <div class="sl-brand"><a class="sl-logo" href="/">{_lockup}</a></div>
     <div class="sl-sb-search"><button type="button" class="sl-cmdk-trigger" data-cmdk-open aria-label="{t("search")}">{_icon("search")}<span>{t("search")}</span><kbd class="sl-kbd">⌘K</kbd></button></div>
     <div class="sl-sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
+    {keymap_hint()}
     {_user_menu()}
   </aside>
   <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="Sidebar resize"></div>
@@ -461,7 +457,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
       {_crumbs_html(crumbs)}<span class="sl-spacer"></span>{runs_widget_markup(store)}<span class="sl-tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{live_markup()}{LIVE_JS}{RUNS_WIDGET_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
+</div>{DRAWER_MARKUP}{palette_markup()}{PALETTE_JS}{keymap_markup()}{KEYMAP_JS}{live_markup()}{LIVE_JS}{RUNS_WIDGET_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
 
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.
@@ -538,7 +534,8 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
     cnt = h("span", {"class_": "h1cnt"}, str(count if count is not None else len(rows))) if rows else ""
     body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, title, cnt),
              h("p", {"class_": "lead"}, lead), raw(pre) if pre else None,
-             h("div", {"class_": "rows"}, rows_html))
+             # data-keynav: the keymap's j/k row-focus hook (web/_keymap.py) targets this container
+             h("div", {"class_": "rows", "data-keynav": True}, rows_html))
     return _layout(title, body, store, crumbs=[(title, None)], active=active, actions=actions)
 
 

@@ -293,7 +293,8 @@ def register_sessions(app) -> None:
         cnt = h("span", {"class_": "h1cnt"}, str(len(rows))) if rows else ""
         body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, t("sessions"), cnt),
                  h("p", {"class_": "lead"}, t("sessions_lead")), raw(funnel_html),
-                 h("div", {"class_": "rows"}, rows_html))
+                 # data-keynav: the keymap's j/k row-focus hook (web/_keymap.py)
+                 h("div", {"class_": "rows", "data-keynav": True}, rows_html))
         return _layout(t("sessions"), body, store, crumbs=[(t("sessions"), None)], active="sessions")
 
     @app.get("/sessions/{session_id}", response_class=HTMLResponse)
