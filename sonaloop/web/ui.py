@@ -145,14 +145,18 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
     project outline renders the SAME vocabulary through its olrow variant (_graph_outline's
     kind icons + the _outline_chips registry — both read this table).
 
+    The V2 craft pass (ux-contract §9 V2) capped every row at ≤2 trailing chips + the date —
+    counts that duplicate the avatars/visual or repeat the kind label moved to the detail page:
+
     | kind            | visual                | badges                  | meta right            |
     | council         | councils icon         | mode/round tag          | participants · date   |
     | report/synthesis| report icon           | `Report`                | sources count · date  |
     | decision        | flag                  | status pill             | evidence count · date |
-    | survey          | plan icon             | lifecycle pill          | n questions · n resp. |
-    | session         | activity icon         | verified check          | persona · steps · date|
+    | survey          | plan icon             | lifecycle pill          | n responses · date    |
+    | session         | activity icon         | verified check          | persona · date        |
     | prototype       | prototype icon        | fidelity tag            | sessions count        |
-    | asset           | thumb / file icon     | kind + direction pill   | size · date           |
+    | asset           | the `.sl-file--row` FILE row (V9): ext badge/thumb · filename+ext ·
+    |                 | size · date meta · direction pill · ONE download/open affordance     |
     | note / hypothesis| panel / target icon  | — / status pill         | date                  |
 
     Late imports keep this module's import graph a leaf (pages → ui, never the reverse). The
@@ -164,10 +168,8 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
     stands (e.g. the session's walked subject)."""
     from .. import presentation as _pres
     from ._components import _avatar, _display_title, _icon, _label
-    from ._presence import (asset_direction, decision_status_pill, hypothesis_status_pill,
-                            survey_status_pill)
+    from ._presence import decision_status_pill, hypothesis_status_pill, survey_status_pill
     rec = record or {}
-    action: dict | None = None
     date = _fmt_day(rec.get("created_at") or "")
     icons = dict(council="councils", synthesis="syntheses", report="syntheses", decision="flag",
                  survey="plan", session="activity", prototype="prototype", note="panel",
@@ -196,9 +198,10 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
         badges.append(raw(decision_status_pill(rec.get("status", "proposed"))))
         meta.insert(0, raw(_label(t("chip_evidence_n", n=len(rec.get("based_on") or [])))))
     elif kind == "survey":
+        # V2: status + response count (≤2 trailing chips + date) — the question count
+        # lives on the detail page.
         badges.append(raw(survey_status_pill(rec.get("status", "draft"))))
-        meta = [raw(_label(t("n_questions", n=len(rec.get("questions") or [])))),
-                raw(_label(t("n_responses", n=int(rec.get("response_count") or 0))))]
+        meta.insert(0, raw(_label(t("n_responses", n=int(rec.get("response_count") or 0)))))
     elif kind == "session":
         persona = (store.get_persona(rec.get("persona_id", "")) or {}) if store is not None else {}
         title = persona.get("display_name") or rec.get("persona_id", "")
@@ -207,37 +210,48 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
         kind_desc = (rec.get("subject") or {}).get("label", "")
         if rec.get("grounded_verified"):
             badges.append(raw(_label(t("grounded_yes"), "var(--green)")))
-        # the steps chip only when a replay exists — a reaction-only prototype session has no
-        # step timeline, and "0 steps" read as a broken recording (round-2 audit, HN)
-        n_steps = len(rec.get("steps") or [])
-        meta = [raw(_avatar(persona, 18)) if persona else None,
-                raw(_label(t("chip_steps_n", n=n_steps))) if n_steps else None] + meta
+        # V2: the step count moved to the detail/slide-over — the avatar + grounded check +
+        # date are what the row reader scans for.
+        meta = [raw(_avatar(persona, 18)) if persona else None] + meta
     elif kind == "prototype":
         if rec.get("fidelity"):
             badges.append(raw(_label(_pres.present(rec["fidelity"])["short"], "#00897b")))
         meta = [raw(_label(t("sessions_n", n=int(rec.get("n_sessions") or 0))))]
     elif kind == "asset":
-        from ._presence import asset_direction_pill, asset_kind_pill, asset_size
-        is_out = asset_direction(rec) == "out"
-        if rec.get("kind") in ("image", "screenshot") and rec.get("url"):
-            visual = h("img", {"class_": "sl-avatar", "src": rec["url"], "alt": "", "loading": "lazy"})
-        else:
-            visual = raw(_icon("download" if is_out else "file"))
-        title = rec.get("title") or rec.get("filename", "")
-        badges.append(raw(asset_kind_pill(rec)))
-        badges.append(raw(asset_direction_pill(rec)))
-        # an element, not a bare text node — adjacent text runs merge into ONE anonymous
-        # flex item, which would glue the size to the date ("269 KB12 Jun")
-        meta.insert(0, h("span", {}, asset_size(rec)))
-        if rec.get("url"):   # the direct file stays one click away in the trailing slot (U8)
-            action = {"href": rec["url"], "label": t("download"),
-                      "download": rec.get("filename", "") if is_out else None,
-                      "target": None if is_out else "_blank"}
+        # V9 (ux-contract §9): assets are FILES, not generic rows — the compact
+        # `.sl-file--row` variant (ext badge/thumb identity, filename+ext title,
+        # size · date · context meta, direction pill, ONE download/open affordance).
+        from ._presence import file_card
+        return raw(file_card(rec, store, row=True, href=href, drawer=drawer,
+                             desc="" if desc is None else _re.sub(r"<[^>]+>", "", str(desc))))
     elif kind == "hypothesis":
         badges.append(raw(hypothesis_status_pill(rec.get("status", "open"))))
     return entity_row(title, href=href, visual=visual, badges=badges,
                       desc=desc if desc is not None else kind_desc,
-                      meta=[m for m in meta if m], drawer=drawer, action=action)
+                      meta=[m for m in meta if m], drawer=drawer)
+
+
+def likelihood(term: Any) -> Safe:
+    """The vendored `.sl-likelihood` contract (ux-contract §9 V3): a labeled percentage +
+    a 40px mini-bar whose FILL encodes the probability, toned at the design-system
+    thresholds (≥70 high/green, ≥40 mid/amber, else low/red). Accepts a canonical level
+    term ("likely"), an alias, or a raw 0..1 number (the bare "0.6" the owner flagged);
+    the level's localized name rides the tooltip. An unresolvable token renders as a quiet
+    plain label — a page never crashes over a chip. Mirrors the DS Likelihood docs entry."""
+    from .. import artifacts as _A
+    if isinstance(term, dict):                  # the canonical stored shape {value, label}
+        term = term.get("value", term.get("label"))
+    res = _A.resolve_likelihood(term)
+    if res is None:
+        return h("span", {"class_": "lbl lbl-soft"}, str(term))
+    p = round(float(res["value"]) * 100)
+    tone = "high" if p >= 70 else "mid" if p >= 40 else "low"
+    meta = next((r for r in _A.likelihood_terms() if r["term"] == res.get("label")), None)
+    return h("span", {"class_": f"sl-likelihood sl-likelihood--{tone}", "style": f"--p:{p}",
+                      "title": t(meta["label_key"]) if meta else None},
+             h("span", {"class_": "sl-likelihood__val"}, f"{p} %"),
+             h("span", {"class_": "sl-likelihood__bar"},
+               h("span", {"class_": "sl-likelihood__fill"})))
 
 
 def _fmt_day(iso: str) -> str:
@@ -250,6 +264,32 @@ def _fmt_day(iso: str) -> str:
         return f"{dt.day} {dt:%b}"
     except Exception:
         return iso[:10]
+
+
+fmt_day = _fmt_day                       # public alias (palette/result rows etc.)
+
+
+def fmt_date(iso: str) -> str:
+    """'11 Jun 2026' — absolute dates outside rows (rail Created, provenance). One human
+    date language app-wide (round-3 craft pass): rows say '11 Jun', metadata adds the year,
+    nothing prints raw ISO."""
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        return f"{dt.day} {dt:%b} {dt:%Y}"
+    except Exception:
+        return iso[:10]
+
+
+def fmt_ts(iso: str) -> str:
+    """'11 Jun · 05:47' — day + time, the outline rows' timestamp idiom (_graph_outline._fmt_ts),
+    for feeds and provenance lines that need the minute."""
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        return f"{dt.day} {dt:%b} · {dt:%H:%M}"
+    except Exception:
+        return iso[:16].replace("T", " ")
 
 
 def slideover(url: str, trigger: Any, *, title: str = "") -> Safe:

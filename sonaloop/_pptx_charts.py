@@ -72,6 +72,7 @@ def _clean_area(chart):
 def _bar_chart(ctx, slide, ch, bx, by, bw, bh):
     cats = [str(c) for c in ch["categories"]]
     vals = [float(v or 0) for v in ch["values"]]
+    cols = ch.get("colors") or _SERIES         # optional semantic palette (e.g. stance roles)
     n = max(len(cats), 1); mx = max(vals + [1]) or 1
     label_w = min(1.5, bw * 0.34); value_w = 0.42
     tx = bx + label_w; tw = max(0.5, bw - label_w - value_w)
@@ -81,7 +82,7 @@ def _bar_chart(ctx, slide, ch, bx, by, bw, bh):
         ry = y0 + i * row_h; cy0 = ry + (row_h - bar_h) / 2
         ctx.text(slide, bx, ry, label_w - 0.08, row_h, c, size=11, color=_INK)
         ctx.rrect(slide, tx, cy0, tw, bar_h, _SURFACE2)
-        ctx.rrect(slide, tx, cy0, max(bar_h, tw * v / mx), bar_h, _SERIES[i % len(_SERIES)])
+        ctx.rrect(slide, tx, cy0, max(bar_h, tw * v / mx), bar_h, cols[i % len(cols)])
         ctx.text(slide, tx + tw + 0.05, ry, value_w, row_h, _num(v), size=10, color=_MUTED)
 
 
@@ -92,6 +93,7 @@ def _donut_chart(ctx, slide, ch, bx, by, bw, bh):
     from pptx.enum.chart import XL_CHART_TYPE
     cats = [str(c) for c in ch["categories"]]
     vals = [float(v or 0) for v in ch["values"]]; total = sum(vals) or 1
+    cols = ch.get("colors") or _SERIES         # optional semantic palette (e.g. stance roles)
     size = min(bw * 0.46, bh, 3.4)
     cd = CategoryChartData(); cd.categories = cats; cd.add_series("", tuple(vals))
     chart = slide.shapes.add_chart(XL_CHART_TYPE.DOUGHNUT, Inches(bx), Inches(by + (bh - size) / 2),
@@ -101,7 +103,7 @@ def _donut_chart(ctx, slide, ch, bx, by, bw, bh):
     plot = chart.plots[0]; plot.has_data_labels = False
     try:
         for j, pt in enumerate(plot.series[0].points):
-            pt.format.fill.solid(); pt.format.fill.fore_color.rgb = _rgb(_SERIES[j % len(_SERIES)])
+            pt.format.fill.solid(); pt.format.fill.fore_color.rgb = _rgb(cols[j % len(cols)])
             pt.format.line.fill.background()
         plot._element.append(plot._element.makeelement(qn("c:holeSize"), {"val": "62"}))
     except Exception:
@@ -110,7 +112,7 @@ def _donut_chart(ctx, slide, ch, bx, by, bw, bh):
     rh = min(0.36, bh / max(len(cats), 1)); ly0 = by + (bh - rh * len(cats)) / 2
     for i, (c, v) in enumerate(zip(cats, vals)):
         ry = ly0 + i * rh
-        ctx.rrect(slide, lx, ry + rh / 2 - 0.07, 0.14, 0.14, _SERIES[i % len(_SERIES)], radius=0.28)
+        ctx.rrect(slide, lx, ry + rh / 2 - 0.07, 0.14, 0.14, cols[i % len(cols)], radius=0.28)
         tb = ctx.text(slide, lx + 0.26, ry, lw - 0.26, rh, c + "  ", size=11, color=_INK)
         ctx.run(tb.text_frame.paragraphs[0], f"{_num(v)} · {round(v / total * 100)}%", size=10, color=_MUTED)
 

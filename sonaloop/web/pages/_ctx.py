@@ -30,5 +30,6 @@ from .._rail import _page_rail
 from .._routes_lists import _projects_page, _persona_row
 from .._html import raw, h, fragment
 from .._vm import study_head
+from .. import ui
 
 __all__ = [_n for _n in dir() if not _n.startswith("__")]

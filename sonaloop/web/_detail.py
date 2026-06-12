@@ -16,10 +16,12 @@ from ._html import h, raw, fragment, register_css
 # brings its own bottom margin (the _study_lead context), which the flex top slot neutralises.
 register_css(".sl-page-header__top .eyebrow{margin:0}")
 
-# The slide-over variant (§8.1): in the ~700px panel there is no second column, so the
-# Properties→Relations aside becomes a quiet in-flow card right under the header — the
-# Notion anatomy (title, properties, then the content). Same .rail chrome, static flow.
-register_css(".rail--slide{position:static;margin:2px 0 22px;padding-bottom:8px}")
+# The slide-over variant (§8.1 + §9 V5): in the ~700px panel there is no second column, so
+# the Properties→Relations aside flows right under the header — the Notion anatomy (eyebrow,
+# title, breathing room, quiet frameless properties, hairline, then the content). The
+# rhythm fix is deliberate: eyebrow→title→props sat "viel zu nah beieinander" in round 3.
+register_css(".rail--slide{position:static;margin:20px 0 28px;padding:0 0 20px;"
+             "border-bottom:1px solid var(--line-2)}")
 
 
 def detail_eyebrow(kind: str, pills=()) -> str:
@@ -79,19 +81,21 @@ def _relations_html(store, study_id: str, proj_id: str | None,
 
 
 def _properties_html(rows, aside: bool = False) -> str:
-    """Linear-style Properties panel: an icon + label + value per row (skips empty values).
-    aside=True renders a bare section (h4 + rows) to sit inside the _doc right rail."""
+    """Notion-style QUIET properties (ux-contract §9 V5): icon + label + value per row over
+    the vendored frameless `.sl-props--quiet` contract — no card box, muted label column,
+    regular-weight values, gap-token rhythm. Skips empty values. aside=True renders a bare
+    section (h4 + rows) to sit inside the detail aside / slide-over flow."""
     proprows = [h("div", {"class_": "sl-prop"},
                   h("span", {"class_": "sl-prop__k"}, raw(_icon(ic)), lbl),
                   h("span", {"class_": "sl-prop__v"}, val))            # text auto-escaped; h-built links (Safe) kept
                 for ic, lbl, val in rows if val not in (None, "", "—")]
     if not proprows:
         return ""
-    inner = fragment(*proprows)
+    inner = h("div", {"class_": "sl-props sl-props--quiet"}, fragment(*proprows))
     if aside:
         return fragment(h("h4", {"id": "sec-properties"}, t("properties")), inner)
-    return h("div", {"class_": "sl-props sl-props--card", "id": "sec-properties", "style": "margin-top:16px"},
-             h("div", {"class_": "relh"}, t("properties")), inner)
+    return h("div", {"class_": "sl-props sl-props--quiet", "id": "sec-properties"},
+             h("div", {"class_": "relh"}, t("properties")), fragment(*proprows))
 
 
 def detail_page(store, *, title: str, active: str, crumbs: list, body,
@@ -119,14 +123,23 @@ def detail_page(store, *, title: str, active: str, crumbs: list, body,
     """
     top = detail_eyebrow(kind, pills) if kind else None
     hero_html = hero if hero is not None else _hero(title, icon=icon, sub=sub, hid=hid, top=top)
+    # The palette's recents beacon (UX V6): one injection point covers EVERY artifact detail
+    # page — full page, ?slide=1 fragment and the ?d= SSR panel alike. The owning project's
+    # title rides the existing crumbs (the /projects/{id} crumb), no new parameter.
+    from ._palette import visit_marker
+    beacon = visit_marker(title, next((lbl for lbl, href in (crumbs or [])
+                                       if href and str(href).startswith("/projects/")), ""))
     props = _properties_html(prop_rows, aside=True) if prop_rows else ""
     rel = ""
     if rel_study_id:
         rel = _relations_html(store, rel_study_id, rel_proj_id, extra_in=rel_extra_in,
                               extra_out=rel_extra_out, aside=True)
+    acts = fragment(raw(actions), raw(_star(*star)) if star else "")
     # The slide-over variant (§8.1) — the SAME renderer, one flag: header, then the aside as an
     # in-flow properties card (the Notion anatomy), then the content; the fixed-position minimap
-    # is skipped (it would overlay the host page, not the panel). _layout strips the chrome.
+    # is skipped (it would overlay the host page, not the panel). _layout strips the chrome and
+    # carries `acts` (the V10 overflow + dialogs + star) as the hidden [data-slide-actions]
+    # block the drawer hoists into its header.
     if slide_mode():
         aside = (str(h("aside", {"class_": "rail rail--slide"}, raw(props), raw(rel)))
                  if (props or rel) else "")
@@ -139,12 +152,11 @@ def detail_page(store, *, title: str, active: str, crumbs: list, body,
             content = raw(body_html[:cut] + aside + body_html[cut:])
         else:
             content = raw(str(hero_html) + aside + body_html)
-        page = h("div", {"class_": "page"}, h("div", {"class_": "doc-main"}, content))
-        return _layout(title, page, store, crumbs=crumbs, active=active)
-    main = fragment(raw(hero_html), body)
+        page = h("div", {"class_": "page"}, h("div", {"class_": "doc-main"}, content), raw(beacon))
+        return _layout(title, page, store, crumbs=crumbs, active=active, actions=str(acts))
+    main = fragment(raw(hero_html), body, raw(beacon))
     # The right-edge TOC (scrollspy) indexes the MAIN-content sections only — Properties/Relations live in
     # the aside, not the scrolling column, so they must NOT appear as TOC ticks.
     rail = list(rail_sections or [])
     page = _doc(main, rail=raw(props) + raw(rel)) + _page_rail(rail)
-    acts = fragment(raw(actions), raw(_star(*star)) if star else "")
     return _layout(title, page, store, crumbs=crumbs, active=active, actions=acts)

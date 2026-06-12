@@ -34,8 +34,9 @@ def _github_issue_href(page: str = "") -> str:
 
 
 def _trigger(store) -> str:
-    """The sidebar-footer item (same quiet style as the `?` shortcut hint)."""
-    return h("button", {"type": "button", "class_": "sl-kbd-hint", "data-fb-open": True},
+    """The sidebar-footer row — rendered inside the footer `.sl-nav` cluster, so it gets
+    EXACTLY the nav-row treatment (height, hover, icon size — ux-contract §9 V7)."""
+    return h("button", {"type": "button", "class_": "pi-hover", "data-fb-open": True},
              raw(_chat_icon()), h("span", {}, t("feedback_h")))
 
 

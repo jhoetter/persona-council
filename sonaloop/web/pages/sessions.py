@@ -51,7 +51,43 @@ register_css(r"""
 .sess-frow .sfn{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .sess-freason{grid-column:2/-1;color:var(--muted);font-size:var(--t-xs);padding:0 0 4px}
 @media(max-width:760px){.sess-step{grid-template-columns:1fr}.sess-screen{border-right:0;border-bottom:1px solid var(--line)}}
+/* ---- step-shot lightbox + the first/last shot strip on session rows (ux-contract §9 V4) ---- */
+.sl-shotlink{display:block;cursor:zoom-in}
+.sl-shotlink:hover .sess-shot{border-color:var(--accent)}
+.sl-shotstrip{display:flex;gap:7px;margin:4px 0 10px;flex-wrap:wrap}
+.sl-shotstrip .sl-shotlink{cursor:zoom-in}
+.sl-shotstrip img{display:block;height:54px;width:auto;max-width:120px;object-fit:cover;object-position:top;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+.sl-shotstrip .sl-shotlink:hover img{border-color:var(--accent)}
+.sl-lightbox{border:0;padding:0;background:transparent;max-width:94vw;max-height:94vh;overflow:visible}
+.sl-lightbox::backdrop{background:rgba(0,0,0,.74)}
+.sl-lightbox img{display:block;max-width:94vw;max-height:94vh;border:1px solid var(--line);
+  border-radius:var(--radius);background:var(--panel);cursor:zoom-out}
 """)
+
+
+# The minimal image lightbox (ux-contract §9 V4): every [data-lightbox] anchor opens its href
+# (the full-resolution step shot) in a native <dialog> built lazily ON FIRST USE — Esc and any
+# click close it; without JS the anchor simply opens the file. Idempotent (the window flag), so
+# the script may ride along with every surface that renders shots (detail page, slide-over
+# fragments re-execute their scripts, the prototype page strip).
+LIGHTBOX_JS = """<script>(function(){
+if(window.__slLightbox) return; window.__slLightbox=1;
+document.addEventListener('click',function(e){
+  var a=e.target.closest&&e.target.closest('[data-lightbox]'); if(!a) return;
+  e.preventDefault();
+  var dlg=document.getElementById('sl-lightbox');
+  if(!dlg){
+    dlg=document.createElement('dialog'); dlg.id='sl-lightbox'; dlg.className='sl-lightbox';
+    dlg.appendChild(document.createElement('img'));
+    dlg.addEventListener('click',function(){ dlg.close(); });
+    document.body.appendChild(dlg);
+  }
+  var img=dlg.querySelector('img'), thumb=a.querySelector('img');
+  img.src=a.getAttribute('href'); img.alt=(thumb&&thumb.alt)||'';
+  dlg.showModal();
+});
+})();</script>"""
 
 
 # Action type → icon (the recorder's code enum; see services._usability_sessions._ACTION_TYPES).
@@ -165,7 +201,7 @@ def proto_session_vm(sess: dict, store: Store) -> dict:
     return {"id": sess["id"], "persona_id": sess.get("persona_id", ""),
             "subject": {"kind": "prototype", "id": proto.get("id") or sess.get("prototype_id", ""),
                         "label": proto.get("name") or sess.get("prototype_id", "")},
-            "fidelity": "prototype", "steps": r.get("steps") or [],
+            "fidelity": "prototype", "steps": r.get("steps") or _timeline_steps(r.get("timeline")),
             "grounded_verified": sess.get("grounded_verified"),
             "created_at": sess.get("created_at", ""), "date": sess.get("date", ""),
             "project_id": proto.get("project_id"), "outcome": {"summary": r.get("summary", "")}}
@@ -183,40 +219,93 @@ def proto_session_rows(store: Store, project_id: str | None = None,
     return vms
 
 
+# reaction.timeline is the OTHER authored walk shape (record_prototype_session accepts the
+# reaction free-form, and agents author these keys in either language): per entry the narration
+# lives under monologue|monolog, the observed screen under observed|beobachtung|screen.
+_TL_MONOLOGUE_KEYS = ("monologue", "monolog")
+_TL_OBSERVED_KEYS = ("observed", "beobachtung", "screen")
+
+
+def _timeline_steps(timeline) -> list[dict]:
+    """Adapt a free-form `reaction.timeline` onto the steps contract the replay renderer reads
+    (§9 V4 root cause: half the showcase's prototype reactions recorded their walk HERE, not
+    under reaction.steps — the replay rendered nothing and every retained step-<n>.png stayed
+    invisible). Index comes from the authored `step` number (falling back to the position), the
+    action stays free text (no typed chip), narration/observed-state map onto monologue/screen."""
+    if not isinstance(timeline, list):
+        return []
+    steps = []
+    for pos, entry in enumerate(e for e in timeline if isinstance(e, dict)):
+        try:
+            idx = int(str(entry.get("step", pos)).strip())
+        except (TypeError, ValueError):
+            idx = pos
+        monologue = next((entry[k] for k in _TL_MONOLOGUE_KEYS if entry.get(k)), "")
+        observed = next((entry[k] for k in _TL_OBSERVED_KEYS if entry.get(k)), "")
+        steps.append({"index": idx, "action": {"detail": str(entry.get("action") or "")},
+                      "monologue": str(monologue), "state": {"screen": str(observed)}})
+    return steps
+
+
 def _proto_step_shim(sess: dict) -> dict:
-    """The {id, steps} shim _step_html/_friction_rail read: steps enriched with the harness's
-    on-disk screenshot convention (data/sessions/<browser session_id>/step-<n>.png) — the id is
-    the BROWSER session dir, so _screenshot_url resolves the file when it exists and the step
-    falls back to its recorded screen text when it doesn't."""
+    """The {id, steps} shim _step_html/_friction_rail read: reaction.steps, else the adapted
+    reaction.timeline (_timeline_steps), enriched with the harness's on-disk screenshot
+    convention (data/sessions/<browser session_id>/step-<n>.png) — the id is the BROWSER
+    session dir, so _screenshot_url resolves the file when it exists and the step falls back
+    to its recorded screen text when it doesn't. The enrichment also repairs an explicitly
+    stored empty screenshot (key present but None/'' — setdefault missed those)."""
     r = sess.get("reaction") if isinstance(sess.get("reaction"), dict) else {}
     steps = []
-    for st in r.get("steps") or []:
+    for st in r.get("steps") or _timeline_steps(r.get("timeline")):
         st = dict(st)
         state = dict(st.get("state") or {})
-        state.setdefault("screenshot", f'step-{st.get("index", 0)}.png')
+        if not state.get("screenshot"):
+            state["screenshot"] = f'step-{st.get("index", 0)}.png'
         st["state"] = state
         steps.append(st)
     return {"id": sess.get("session_id") or sess["id"], "steps": steps}
 
 
-def _likelihood_label(term) -> str:
-    meta = next((r for r in _A.likelihood_terms() if r["term"] == term), None)
-    if meta:
-        return _label(t(meta["label_key"]), meta["color"])
-    res = _A.resolve_likelihood(term)
-    return _label(str(term), "var(--muted)") if res is None else _label(str(term))
+def session_shot_strip(sess: dict) -> str:
+    """The small first/last step-shot strip a session row carries on the prototype page
+    (ux-contract §9 V4): up to two resolvable screenshots as thumbnails, each opening the
+    lightbox (no-JS: the file itself). Handles BOTH session kinds — a prototype reaction
+    resolves through the shim (browser-session dir convention), a usability walk through its
+    own stored step screenshots. '' when no step file resolves."""
+    if isinstance(sess.get("reaction"), dict):
+        shim = _proto_step_shim(sess)
+    else:
+        shim = {"id": sess["id"], "steps": sess.get("steps") or []}
+    shots = []
+    for st in shim["steps"]:
+        state = st.get("state") or {}
+        if not state.get("screenshot"):
+            continue
+        url = _screenshot_url(shim["id"], state["screenshot"])
+        if url:
+            shots.append((st.get("index", 0), url, state.get("title") or ""))
+    if not shots:
+        return ""
+    picks = shots[:1] if len(shots) == 1 else [shots[0], shots[-1]]
+    thumbs = [h("a", {"class_": "sl-shotlink", "href": url, "data-lightbox": True,
+                      "title": t("step_n", n=i)},
+               h("img", {"src": url, "alt": title or t("step_n", n=i), "loading": "lazy"}))
+              for i, url, title in picks]
+    return h("div", {"class_": "sl-shotstrip"}, fragment(*thumbs))
 
 
 def _predicted_behaviors_html(behaviors: list, store: Store) -> str:
     """The session's falsifiable output (predicted_behaviors): one row per prediction —
-    likelihood pill · the expected action · its trigger · evidence ref chips. '' when none."""
+    the labeled likelihood (% + mini-bar via the vendored `.sl-likelihood` contract, V3:
+    never a bare "0.6" chip) · the expected action · its trigger · evidence refs. '' when
+    none."""
     if not behaviors:
         return ""
     rows = []
     for b in behaviors:
         refs = fragment(*(raw(render_ref(r, store)) for r in (b.get("refs") or [])))
         rows.append(h("div", {"class_": "hyp"},
-                      h("div", {}, raw(_likelihood_label(b.get("likelihood"))), " ",
+                      h("div", {}, ui.likelihood(b.get("likelihood")), " ",
                         h("b", {}, b.get("action", ""))),
                       (h("p", {"class_": "muted small"}, b["trigger"]) if b.get("trigger") else None),
                       (h("p", {"class_": "muted small turn-refs"}, refs) if b.get("refs") else None)))
@@ -237,12 +326,14 @@ def _proto_session_detail(store: Store, sess: dict) -> str:
     grounded = sess.get("grounded_verified")
     proto_link = (h("a", {"href": f'/prototypes/{proto["slug"]}'}, title) if proto.get("slug")
                   else h("span", {}, title))
-    # meta line: persona · fidelity · date — the prototype itself IS the title (and the rail
-    # carries the link), so repeating it here was pure duplication (round-2 audit, TX).
+    # meta line (V5: plain text, no pill-soup): persona · session kind · date — "Janine Wolf ·
+    # Prototyp-Session · 12 Jun". The fidelity pill was redundant with the eyebrow/properties,
+    # and the date is meta text, not a status.
     sub = h("span", {"class_": "syn-meta"},
-            _persona_chip(store, sess.get("persona_id", "")), " ",
-            raw(_fidelity_chip("prototype")), " ",
-            h("span", {"class_": "mchip"}, (sess.get("date") or sess.get("created_at", ""))[:10]))
+            _persona_chip(store, sess.get("persona_id", "")),
+            h("span", {"class_": "muted"},
+              f' · {t("session_kind_prototype")} · '
+              f'{ui._fmt_day(sess.get("date") or sess.get("created_at", ""))}'))
     shim = _proto_step_shim(sess)
     steps = shim["steps"]
     verdict_html = (raw(_study_lead(ui.clamp(raw(_md(r["verdict"])), threshold=ui.SECTION_CLAMP),
@@ -263,7 +354,8 @@ def _proto_session_detail(store: Store, sess: dict) -> str:
                      h("div", {"class_": "sess-steps"},
                        fragment(*(_step_html(shim, s) for s in steps))))
     predicted_html = _predicted_behaviors_html(r.get("predicted_behaviors") or [], store)
-    body = fragment(verdict_html, liked_html, friction_html, timeline, raw(predicted_html))
+    body = fragment(verdict_html, liked_html, friction_html, timeline, raw(predicted_html),
+                    raw(LIGHTBOX_JS) if timeline else None)
     # Project-rooted crumb (§8.2 — the council pattern); the kind root stays only for
     # orphan records that have no project to live under.
     crumbs = ([(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}')]
@@ -280,7 +372,7 @@ def _proto_session_detail(store: Store, sess: dict) -> str:
         ("check", t("grounding_h"),
          raw(_label(t("grounded_yes") if grounded else t("grounded_no"),
                     "var(--green)" if grounded else "var(--muted)")) if grounded is not None else ""),
-        ("dot", t("created"), (sess.get("created_at") or "")[:10]),
+        ("dot", t("created"), ui.fmt_date(sess.get("created_at") or "")),
     ]
     rail_sections = ([("sec-verdict", t("verdict_h"))] if verdict_html else []) \
         + ([("sec-liked", t("proto_liked_h"))] if liked_html else []) \
@@ -298,16 +390,16 @@ def _proto_session_detail(store: Store, sess: dict) -> str:
 
 
 def _session_row(s: dict, store: Store) -> str:
-    """One list row: persona avatar chip · subject label · fidelity badge · outcome · friction count
-    · date (progressive disclosure — the replay itself lives on the detail page)."""
+    """One list row: persona avatar chip · subject label · outcome · friction count · date
+    (progressive disclosure — the replay itself lives on the detail page; V2 capped the row
+    at ≤2 chips, so the fidelity tag lives in the detail properties)."""
     p = store.get_persona(s.get("persona_id", ""))
     av = _avatar(p or {"display_name": s.get("persona_id", "?"), "id": s.get("persona_id", "x")}, 22)
     n_fr = _friction_count(s)
     right = fragment(
-        raw(_fidelity_chip(s.get("fidelity", ""))),
         raw(_outcome_chip(s)),
         raw(_label(t("friction_n", n=n_fr), "var(--amber)")) if n_fr else None,
-        h("span", {}, (s.get("date") or s.get("created_at", ""))[:10]),
+        h("span", {}, ui.fmt_day(s.get("date") or s.get("created_at", ""))),
         raw(_star("session", s["id"], (s.get("subject") or {}).get("label", "")[:60], f'/sessions/{s["id"]}')))
     sub = (p or {}).get("display_name") or s.get("persona_id", "")
     return h("a", {"class_": "row", "href": f'/sessions/{s["id"]}'}, av,
@@ -340,12 +432,18 @@ def _funnel_html(funnel: dict) -> str:
              fragment(*rows), legend)
 
 
-def _sessions_section(store: Store, sessions: list[dict], sid: str = "sec-sessions") -> str:
+def _sessions_section(store: Store, sessions: list[dict], sid: str = "sec-sessions",
+                      *, shots: bool = False) -> str:
     """The cross-link block other detail pages embed (persona / project / prototype): each of their
-    sessions as one compact row — date · subject · fidelity · outcome. '' when there are none."""
+    sessions as one compact row — date · subject · fidelity · outcome. '' when there are none.
+    `shots=True` (the prototype page, §9 V4) appends each row's first/last step-shot strip."""
     if not sessions:
         return ""
-    rows = [_session_row(s, store) for s in sessions]
+    rows = []
+    for s in sessions:
+        rows.append(_session_row(s, store))
+        if shots:
+            rows.append(raw(session_shot_strip(s)))
     return h("div", {"class_": "sec", "id": sid},
              h("h2", {}, f'{t("sessions")} ({len(sessions)})'),
              h("div", {"class_": "rows"}, raw("".join(str(r) for r in rows))))
@@ -361,8 +459,11 @@ def _step_html(sess: dict, step: dict) -> str:
     meta = _friction_meta(fr.get("level", ""))
     has_friction = bool(meta and meta["value"] > 0)
     shot_url = _screenshot_url(sess["id"], state["screenshot"]) if state.get("screenshot") else None
-    screen = (h("img", {"class_": "sess-shot", "src": shot_url, "alt": state.get("title") or t("step_n", n=i),
-                        "loading": "lazy"}) if shot_url
+    # the shot opens the full-resolution file in the lightbox (no-JS: the file itself, V4)
+    screen = (h("a", {"class_": "sl-shotlink", "href": shot_url, "data-lightbox": True},
+                h("img", {"class_": "sess-shot", "src": shot_url,
+                          "alt": state.get("title") or t("step_n", n=i), "loading": "lazy"}))
+              if shot_url
               else h("div", {"class_": "sess-screen-txt"}, state.get("screen", "")))
     caption = " · ".join(x for x in (state.get("url"), state.get("title")) if x)
     action = step.get("action") or {}
@@ -379,7 +480,9 @@ def _step_html(sess: dict, step: dict) -> str:
                h("div", {"class_": "sess-cap", "title": caption}, caption) if caption else None),
              h("div", {"class_": "sess-act"},
                h("div", {"class_": "sess-act-h"},
-                 h("span", {"class_": "sess-n"}, str(i)), raw(_action_chip(action)),
+                 h("span", {"class_": "sess-n"}, str(i)),
+                 # a timeline-shaped step has free-text action only — no typed chip to paint
+                 raw(_action_chip(action)) if action.get("type") else None,
                  h("span", {"class_": "sess-target"}, target) if target else None),
                h("p", {"class_": "sess-detail"}, detail) if detail else None,
                h("blockquote", {"class_": "sess-mono"}, monologue) if monologue else None,
@@ -425,7 +528,8 @@ def register_sessions(app) -> None:
     def sessions_list(project: str | None = Query(default=None),
                       subject_kind: str | None = Query(default=None),
                       subject: str | None = Query(default=None),
-                      status: str = Query(default="")) -> str:
+                      status: str = Query(default=""),
+                      q: str = Query(default="")) -> str:
         """The Library's Sessions tab under the canonical URL (ux-contract §3.5) — the
         honest subject query filters stay, and a subject filter with ≥2 recorded
         walks keeps earning its cross-session funnel above the rows. BOTH session kinds
@@ -449,7 +553,7 @@ def register_sessions(app) -> None:
         base = "/sessions" + (f'?subject_kind={quote(subject_kind)}&subject={quote(subject)}'
                               if subject_kind and subject else "")
         return library_page("sessions", store, sessions=merged, pre_extra=funnel_html,
-                            flt=library_filters(project or "", status), base=base)
+                            flt=library_filters(project or "", status), base=base, q=q)
 
     @app.get("/sessions/{session_id}", response_class=HTMLResponse)
     def session_detail(session_id: str) -> str:
@@ -467,19 +571,17 @@ def register_sessions(app) -> None:
                            store, active="library")
         subject = sess.get("subject") or {}
         title = subject.get("label") or session_id
-        caps = sess.get("capabilities_snapshot") or {}
-        caps_chip = None
-        if caps.get("tech_comfort") is not None:
-            cm = _A.tech_comfort_meta(caps["tech_comfort"])
-            caps_chip = raw(_label(f'{t("cap_tech_comfort")}: {t(cm["label_key"])}', cm["color"],
-                                   title=cm["hint"]))
-        # meta line: persona · fidelity · capabilities · date — the subject IS the title (and
-        # the rail carries the link), so repeating it here was pure duplication (round-2 audit).
+        fid = sess.get("fidelity", "")
+        kind_label = (t("session_kind_live") if fid == "live" else
+                      t("session_kind_artifact") if fid == "artifact" else
+                      t("session_kind_prototype"))
+        # meta line (V5: plain text, no pill-soup): persona · session kind · date. The
+        # fidelity pill repeated the eyebrow, the date is meta text, and the tech-comfort
+        # capability moved into the Properties rail where the other facts live.
         sub = h("span", {"class_": "syn-meta"},
-                _persona_chip(store, sess.get("persona_id", "")), " ",
-                raw(_fidelity_chip(sess.get("fidelity", ""))), " ",
-                caps_chip, " ",
-                h("span", {"class_": "mchip"}, (sess.get("date") or "")[:10]))
+                _persona_chip(store, sess.get("persona_id", "")),
+                h("span", {"class_": "muted"},
+                  f' · {kind_label} · {ui._fmt_day(sess.get("date") or sess.get("created_at", ""))}'))
         steps = sess.get("steps") or []
         timeline = h("div", {"class_": "sec", "id": "sec-replay"},
                      h("h2", {}, t("replay_h"), h("span", {"class_": "h1cnt"}, str(len(steps)))),
@@ -490,33 +592,36 @@ def register_sessions(app) -> None:
                                 h("h2", {}, t("voices")),
                                 raw(render_statements(sess["statements"], store)))
         rail = _friction_rail(sess)
-        body = fragment(raw(_outcome_banner(sess)), raw(rail), timeline, raw(statements_html))
+        body = fragment(raw(_outcome_banner(sess)), raw(rail), timeline, raw(statements_html),
+                        raw(LIGHTBOX_JS))
         proj = store.get_research_project(sess["project_id"]) if sess.get("project_id") else None
         # Project-rooted crumb (§8.2 — the council pattern); kind root only for orphans.
         crumbs = ([(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}')]
                   if proj else [(t("sessions"), "/sessions")])
         crumbs.append((_display_title(title), None))
         grounded = sess.get("grounded_verified")
+        caps = sess.get("capabilities_snapshot") or {}
+        caps_prop = ""
+        if caps.get("tech_comfort") is not None:
+            cm = _A.tech_comfort_meta(caps["tech_comfort"])
+            caps_prop = raw(_label(t(cm["label_key"]), cm["color"], title=cm["hint"]))
         # Rail order is the §8.2 anatomy: project → kind-specifics → dates.
         prop_rows = [
             ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else ""),
             ("square", t("fidelity"), raw(_fidelity_chip(sess.get("fidelity", "")))),
             ("compass", t("subject_h"), _subject_link(store, subject)),
+            ("personas", t("cap_tech_comfort"), caps_prop),
             ("plan", t("steps_h"), str(len(steps))),
             # static "Grounding" label — the old code repeated the value as its own label
             # ("grounded → grounded", ux-audit P5 finding).
             ("check", t("grounding_h"),
              raw(_label(t("grounded_yes") if grounded else t("grounded_no"),
                         "var(--green)" if grounded else "var(--muted)")) if grounded is not None else ""),
-            ("dot", t("created"), (sess.get("created_at") or "")[:10]),
+            ("dot", t("created"), ui.fmt_date(sess.get("created_at") or "")),
         ]
         rail_sections = (([("sec-friction", t("friction_rail_h"))] if rail else [])
                          + [("sec-replay", t("replay_h"))]
                          + ([("sec-statements", t("voices"))] if statements_html else []))
-        fid = sess.get("fidelity", "")
-        kind_label = (t("session_kind_live") if fid == "live" else
-                      t("session_kind_artifact") if fid == "artifact" else
-                      t("session_kind_prototype"))
         pills = ([_label(t("grounded_yes"), "var(--green)")] if grounded else []) \
             + [_outcome_chip(sess)]
         return detail_page(

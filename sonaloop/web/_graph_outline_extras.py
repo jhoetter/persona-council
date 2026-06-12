@@ -21,8 +21,6 @@ every extra row borrows the round of its nearest preceding plan node.
 """
 from __future__ import annotations
 
-from ._components import _icon
-from ._html import h, raw
 from ._i18n import t
 
 # Row kinds that open as a slide-over (spec §8.1: click = the kind's FULL detail page sliding
@@ -89,15 +87,6 @@ def _phase_round_at(ts: str, plan_nodes: list[dict], node_round: dict[str, int],
 
 # ------------------------------------------------------------------------- the item builders
 
-def _asset_lead(a: dict) -> str:
-    """The asset row's leading visual (§3.2): an image thumb, else a file/download icon."""
-    if a.get("kind") in ("image", "screenshot") and a.get("url"):
-        return h("span", {"class_": "ol-ico"},
-                 h("img", {"class_": "ol-thumb", "src": a["url"], "alt": "", "loading": "lazy"}))
-    icon = "download" if a.get("direction") == "out" else "file"
-    return h("span", {"class_": "ol-ico"}, raw(_icon(icon)))
-
-
 def extra_outline_items(graph: dict, *, decisions: list, hypotheses: list, surveys: list,
                         pmeta: dict, node_round: dict[str, int], default_phase: str) -> list[dict]:
     """The absorbed kinds as outline items (decisions/hypotheses/surveys from the page route;
@@ -158,16 +147,11 @@ def extra_outline_items(graph: dict, *, decisions: list, hypotheses: list, surve
             pk, order, rnd = last_key, f"~~{ts}", max(node_round.values(), default=0)
         else:                                 # the phase's Evidence sub-group, after its rows
             pk, order, rnd = _phase_round_at(ts, nodes, node_round, default_phase)[0], f"~{ts}", None
-        it = item(a["id"], color="#0f9d8f" if deliverable else "#8a6d3b",
-                  title=a.get("title") or a.get("filename", ""),
-                  kind=t("asset_kind_" + (a.get("kind") or "file")), href=f'/assets/{a["id"]}',
-                  pk=pk, ts=ts, rkind="asset", node=a, order=order, rnd=rnd,
-                  lead=_asset_lead(a), evidence=not deliverable, deliverable=deliverable)
-        # The row opens the asset's detail page (slide-over, §8.1/U8); the file ITSELF stays one
-        # click away as a trailing chip — the funnel-chip idiom (a real link layered over the
-        # row's stretched target), downloading deliverables, opening evidence in a tab.
-        if a.get("url"):
-            it["chip"] = ({"href": a["url"], "text": t("download"), "download": a.get("filename", "")}
-                          if deliverable else {"href": a["url"], "text": t("open"), "target": "_blank"})
-        out.append(it)
+        # V9: the renderer presents asset items as `.sl-file--row` FILE rows (_graph_outline.row)
+        # — identity badge, one download/open affordance, body = the /assets/{id} slide-over.
+        out.append(item(a["id"], color="#0f9d8f" if deliverable else "#8a6d3b",
+                        title=a.get("title") or a.get("filename", ""),
+                        kind=t("asset_kind_" + (a.get("kind") or "file")), href=f'/assets/{a["id"]}',
+                        pk=pk, ts=ts, rkind="asset", node=a, order=order, rnd=rnd,
+                        evidence=not deliverable, deliverable=deliverable))
     return out

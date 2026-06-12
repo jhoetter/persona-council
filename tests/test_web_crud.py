@@ -299,26 +299,56 @@ def test_no_create_affordances_anywhere_in_the_ui(store):
     assert client.get(f'/projects/{proj["id"]}/sections/new').status_code == 405
 
 
-def test_edit_affordances_stay_and_delete_is_the_header_overflow(store):
-    """U9: editing is unchanged; every delete lives in the subtle header overflow ("…")
-    with the confirm <dialog> — zero danger zones render anywhere."""
+def test_edit_is_a_dialog_on_the_detail_header_overflow(store):
+    """V10 (ux-contract §9): the detail header's visible "…" overflow holds Edit — a native
+    <dialog> over the detail page carrying the SAME form (same POST action, CSRF embedded) —
+    and Delete with the typed confirm. No navigation to a form page from the UI affordance."""
     pid = create_persona(store, "Edith Editor")
     proj = services.create_research_project("P", persona_ids=[pid], store=store)
     client = _client()
-    html = client.get(f'/projects/{proj["id"]}?lang=en').text
-    assert f'/projects/{proj["id"]}/edit' in html
-    assert f"/personas/{pid}/edit" in client.get(f"/personas/{pid}?lang=en").text
+    token = client.cookies.get("sl_csrf")
+    for page_url, edit_action in [(f'/projects/{proj["id"]}', f'/projects/{proj["id"]}/edit'),
+                                  (f"/personas/{pid}", f"/personas/{pid}/edit")]:
+        html = client.get(f"{page_url}?lang=en").text
+        assert "sl-overflow" in html, page_url                       # the visible "…"
+        assert 'class="wdialog"' in html, page_url                   # Edit = a dialog …
+        assert f'action="{edit_action}"' in html, page_url           # … posting the SAME route
+        assert f'name="csrf_token" value="{token}"' in html, page_url
+        assert "danger-dialog" in html, page_url                     # Delete right beside it
+        assert "Type the name to confirm" in html, page_url          # typed confirm (server-checked)
+        assert "danger-zone" not in html, page_url
+    # the deep-link edit PAGE keeps answering (same fields, one source)
     edit_html = client.get(f'/projects/{proj["id"]}/edit?lang=en').text
-    assert "danger-zone" not in edit_html and "Danger zone" not in edit_html
-    assert "sl-overflow" in edit_html                       # the overflow menu …
-    assert f'/projects/{proj["id"]}/delete' in edit_html    # … holds the delete action
-    assert "danger-dialog" in edit_html                     # … which opens the confirm modal
-    assert "Type the name to confirm" in edit_html          # typed confirm (server-checked)
+    assert 'name="title"' in edit_html and "sl-overflow" in edit_html
+    assert f'/projects/{proj["id"]}/delete' in edit_html
+
+
+def test_dialog_validation_error_rerenders_in_the_dialog(store):
+    """V10: a dialog-submitted edit that fails validation answers 400 with the SAME dialog
+    re-opened (showModal) over the detail backdrop — errors appear IN the dialog, submitted
+    values survive."""
+    proj = services.create_research_project("Dialog project", goal="old goal", store=store)
+    client = _client()
+    r = _post(client, f'/projects/{proj["id"]}/edit', title="  ", goal="typed goal")
+    assert r.status_code == 400
+    assert 'class="wdialog"' in r.text
+    m = __import__("re").search(r'class="wdialog" id="([^"]+)"', r.text)
+    assert m and f'document.getElementById("{m.group(1)}").showModal()' in r.text
+    assert "This field is required." in r.text
+    assert "typed goal" in r.text
+    # the typed-confirm delete mismatch re-opens ITS dialog the same way
+    r = _post(client, f'/projects/{proj["id"]}/delete', confirm="wrong")
+    assert r.status_code == 400
+    m = __import__("re").search(r'class="danger-dialog" id="([^"]+)"', r.text)
+    assert m and f'document.getElementById("{m.group(1)}").showModal()' in r.text
+    assert "The typed name does not match." in r.text
 
 
 def test_every_delete_surface_uses_the_overflow_pattern(store):
-    """One consistent pattern (U9): council/synthesis/prototype detail pages and the
-    note/section/persona edit pages all carry the overflow + dialog, no danger zone."""
+    """One consistent pattern (U9/V10): EVERY detail page of a deletable kind — and the
+    deep-link edit pages — carry the overflow + confirm dialog, no danger zone. Kinds with
+    editable structure (project/persona/note/section) also hold Edit in the same overflow;
+    recorded artifacts (council/synthesis/prototype) are delete-only."""
     pid = create_persona(store, "Cara Council")
     proj = services.create_research_project("P", persona_ids=[pid], store=store)
     council = services.record_council(proj["id"], "Would you pay?", [pid],
@@ -331,18 +361,41 @@ def test_every_delete_surface_uses_the_overflow_pattern(store):
     sec = services.create_section(proj["id"], "Theme A", kind="theme", store=store)
     client = _client()
     surfaces = [
-        (f'/councils/{council["id"]}', f'/councils/{council["id"]}/delete'),
-        (f'/syntheses/{syn["id"]}', f'/syntheses/{syn["id"]}/delete'),
-        (f'/prototypes/{proto["slug"]}', f'/prototypes/{proto["slug"]}/delete'),
-        (f'/notes/{note["id"]}/edit', f'/notes/{note["id"]}/delete'),
-        (f'/sections/{sec["id"]}/edit', f'/sections/{sec["id"]}/delete'),
-        (f'/personas/{pid}/edit', f'/personas/{pid}/delete'),
+        # (page, delete action, has the edit dialog)
+        (f'/projects/{proj["id"]}', f'/projects/{proj["id"]}/delete', True),
+        (f"/personas/{pid}", f"/personas/{pid}/delete", True),
+        (f'/notes/{note["id"]}', f'/notes/{note["id"]}/delete', True),
+        (f'/sections/{sec["id"]}', f'/sections/{sec["id"]}/delete', True),
+        (f'/councils/{council["id"]}', f'/councils/{council["id"]}/delete', False),
+        (f'/syntheses/{syn["id"]}', f'/syntheses/{syn["id"]}/delete', False),
+        (f'/prototypes/{proto["slug"]}', f'/prototypes/{proto["slug"]}/delete', False),
+        (f'/notes/{note["id"]}/edit', f'/notes/{note["id"]}/delete', False),
+        (f'/sections/{sec["id"]}/edit', f'/sections/{sec["id"]}/delete', False),
+        (f'/personas/{pid}/edit', f'/personas/{pid}/delete', False),
     ]
-    for page_url, delete_action in surfaces:
+    for page_url, delete_action, has_edit in surfaces:
         html = client.get(f"{page_url}?lang=en").text
         assert "danger-zone" not in html, page_url
         assert "sl-overflow" in html and "danger-dialog" in html, page_url
         assert delete_action in html, page_url
+        assert ('class="wdialog"' in html) == has_edit, page_url
+
+
+def test_slideover_fragment_carries_the_header_actions(store):
+    """V10: the ?slide=1 fragment of an editable/deletable detail carries the overflow +
+    dialogs as a hidden [data-slide-actions] block — the drawer JS hoists it into the panel
+    header (next to expand/close), so edit/delete are reachable from the peek."""
+    pid = create_persona(store, "Petra Peek")
+    proj = services.create_research_project("P", persona_ids=[pid], store=store)
+    note = services.create_note(proj["id"], "saw a thing", title="Obs", store=store)
+    syn = services.record_synthesis("Finding", "q", [], {}, store=store)
+    client = _client()
+    for url, needs_edit in [(f'/notes/{note["id"]}', True), (f'/syntheses/{syn["id"]}', False)]:
+        html = client.get(f"{url}?slide=1&lang=en").text
+        assert html.startswith('<div class="sl-slide">'), url
+        assert "data-slide-actions" in html, url
+        assert "sl-overflow" in html and "danger-dialog" in html, url
+        assert ('class="wdialog"' in html) == needs_edit, url
 
 
 def test_forms_render_in_german_too(store):

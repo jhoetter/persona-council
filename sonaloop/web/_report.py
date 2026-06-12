@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 
+from . import ui
 from ._html import h, raw, fragment, register_css
 from ._components import _md, _icon
 from ._i18n import t
@@ -150,7 +151,7 @@ def render_report(report: dict, store, *, with_toc: bool = False):
         meta_line = " · ".join(x for x in [
             (f'{len(report.get("council_ids", []))} {t("councils")}' if report.get("council_ids") else ""),
             (t("done") if status == "done" else t("running")),
-            (report.get("created_at") or "")[:10]] if x)
+            ui.fmt_date(report.get("created_at") or "")] if x)
         cover = h("header", {"class_": "rp-cover"},
                   h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind")),
                   h("h1", {"class_": "rp-title"}, project_title),
@@ -173,7 +174,7 @@ def render_report(report: dict, store, *, with_toc: bool = False):
     meta_line = " · ".join([
         f"{n_sec} {sections_word}",
         f"{n_studies} {studies_word}",
-        (report.get("created_at") or "")[:10],
+        ui.fmt_date(report.get("created_at") or ""),
     ])
 
     cover = h("header", {"class_": "rp-cover"},
@@ -273,7 +274,7 @@ register_css(r"""
 .rp-fig figcaption{margin-top:9px;font-size:var(--t-sm);color:var(--muted);text-align:center}
 /* print: drop the app chrome, give the report the page (foundation for the Chromium PDF, Phase 3) */
 @media print{
-  .sl-sidebar,.sl-topbar,.cmdk,.sl-drawer,.toc,.rail,.actions,.crumbs{display:none!important}
+  .sl-sidebar,.sl-topbar,.sl-cmdk,.sl-drawer,.toc,.rail,.actions,.crumbs{display:none!important}
   .shell,.content,.page,main{margin:0!important;padding:0!important;max-width:none!important}
   body{background:#fff}
   .report{max-width:none}

@@ -27,12 +27,15 @@ def _decision_reads(d: dict, store, by_id: dict, *, clamp_at: int = ui.CLAMP_THR
     # the record scanning like a row: 5 lines + an expand toggle above the threshold, a plain
     # paragraph below it (no toggle chrome for three lines of text). UX contract C6.
     body = ui.clamp(d.get("decision", ""), threshold=clamp_at)
+    # the line's lead label already states the role — the chips drop their "· based on"/
+    # "· rejected" suffix (round-3 craft: no label said twice in one line)
     based = h("p", {"class_": "muted small turn-refs"},
               t("rel_based_on"), ": ",
-              fragment(*(raw(render_ref(r, store)) for r in d.get("based_on") or [])))
+              fragment(*(raw(render_ref(r, store, show_role=False))
+                         for r in d.get("based_on") or [])))
     rejected = fragment(*(
         h("p", {"class_": "muted small turn-refs"},
-          t("dec_rejected"), ": ", raw(render_ref(r, store)),
+          t("dec_rejected"), ": ", raw(render_ref(r, store, show_role=False)),
           (f' — {r["note"]}' if r.get("note") else ""))
         for r in d.get("rejected") or []))
     def _link(oid: str, label: str) -> str:
@@ -68,13 +71,14 @@ def _decision_row(d: dict, store, by_id: dict, *, title_href: str | None = None,
 
 def register_decisions(app) -> None:
     @app.get("/decisions", response_class=HTMLResponse)
-    def decisions_list(project: str = Query(default=""), status: str = Query(default="")) -> str:
+    def decisions_list(project: str = Query(default=""), status: str = Query(default=""),
+                       q: str = Query(default="")) -> str:
         """Every decision record across all projects — the Library's Decisions tab
         (ux-contract §3.5): one status-pilled row per record, the audit trail of what
         the research changed; the full ADR card lives on the detail page (full page or
         slide-over). Filterable by project + status (U10, the shared FilterBar grammar)."""
         from .library import library_filters, library_page
-        return library_page("decisions", flt=library_filters(project, status), base="/decisions")
+        return library_page("decisions", flt=library_filters(project, status), base="/decisions", q=q)
 
     @app.get("/decisions/{decision_id}", response_class=HTMLResponse)
     def decision_detail(decision_id: str) -> str:
@@ -109,7 +113,7 @@ def register_decisions(app) -> None:
         prop_rows = [
             ("projects", t("project"), proj_link),
             ("link", t("rel_based_on"), raw(_label(t("chip_evidence_n", n=len(d.get("based_on") or []))))),
-            ("dot", t("created"), (d.get("created_at") or "")[:10]),
+            ("dot", t("created"), ui.fmt_date(d.get("created_at") or "")),
         ]
         return detail_page(
             store, title=d.get("title", ""), active="library", crumbs=crumbs,

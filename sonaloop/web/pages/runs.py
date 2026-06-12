@@ -56,7 +56,7 @@ def _meta_line(r: dict) -> str:
     ready = fragment(*(h("span", {"class_": "pill"}, step) for step in r["next_ready"][:4]))
     return h("div", {"class_": "run-meta"},
              h("span", {"class_": "muted small"},
-               f'{t("run_last_activity")}: {r["last_activity"][:16].replace("T", " ")}'),
+               f'{t("run_last_activity")}: {ui.fmt_ts(r["last_activity"])}'),
              fragment(h("span", {"class_": "muted small"}, f' · {t("run_next_ready")}: '), ready)
              if r["next_ready"] else None)
 
@@ -106,7 +106,7 @@ def register_runs(app) -> None:
         finished = [h("div", {"class_": "runrow"},
                       h("div", {"class_": "runrow-head"},
                         h("a", {"href": r["url"]}, raw(_icon("projects")), " ", h("b", {}, r["title"])),
-                        h("span", {"class_": "muted small"}, r["last_activity"][:16].replace("T", " "))))
+                        h("span", {"class_": "muted small"}, ui.fmt_ts(r["last_activity"]))))
                     for r in states["finished"]]
         if not (stalled or active or finished):
             core = h("div", {"class_": "sl-empty"},

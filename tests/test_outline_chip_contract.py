@@ -40,18 +40,25 @@ def _rows(html: str) -> list[tuple[str, bool]]:
 
 
 def _assert_chip_contract(html: str) -> None:
-    """The contract: every rendered row's kind is registered, and a builder-backed kind rendered
-    real chips. NoChips kinds must name their reason. No kind may have hit the renderer
-    undeclared."""
+    """The contract: every rendered row's kind is registered; a builder-backed kind renders
+    real chips on at least one row (V2 row truth: a builder MAY suppress chips on rows where
+    the default kind carries no extra signal — e.g. a plain note — but a builder that never
+    produces chips is a dead declaration). NoChips kinds must name their reason. No kind may
+    have hit the renderer undeclared."""
     rows = _rows(html)
     assert rows, "no outline rows rendered"
+    chipped: dict[str, bool] = {}
     for kind, has_chips in rows:
         entry = OC.REGISTRY.get(kind)
         assert entry is not None, f"outline row kind {kind!r} is not declared in the chip registry"
         if isinstance(entry, OC.NoChips):
             assert entry.reason, f"NoChips for {kind!r} must carry a reason"
             continue
-        assert has_chips, f"row kind {kind!r} declared a chip builder but rendered an empty chips slot"
+        chipped[kind] = chipped.get(kind, False) or has_chips
+    for kind, any_chips in chipped.items():
+        assert any_chips, (
+            f"row kind {kind!r} declared a chip builder but rendered no chips on ANY row — "
+            "declare NoChips with a reason instead")
     assert not OC.UNDECLARED_KINDS, (
         f"row kinds hit the renderer without a registry entry: {sorted(OC.UNDECLARED_KINDS)}")
 
@@ -216,7 +223,7 @@ def test_every_row_kind_opens_a_resolving_slideover(store):
     pid = _every_kind_project(store)
     client = _client()
     html = client.get(f"/projects/{pid}?lang=en").text
-    rows = _re.findall(r'<a class="olrow[^>]*>|<a class="ol-stretch[^>]*>', html)
+    rows = _re.findall(r'<a class="olrow[^>]*>|<a class="ol-stretch[^>]*>|<a class="sl-file__open[^>]*>', html)
     armed = {}
     for row in rows:
         m = _re.search(r'data-drawer="([^"]+)"', row)
@@ -229,6 +236,11 @@ def test_every_row_kind_opens_a_resolving_slideover(store):
     for chunk in html.split('class="olrow')[1:]:    # chunk = one row up to the next olrow start
         mk = _RKIND.search(chunk.split(">", 1)[0])
         if mk and 'data-drawer="' in chunk:         # normal rows arm the tag; chip rows the stretch link
+            rkinds.add(mk.group(1))
+    # asset rows are `.sl-file--row` FILE rows since V9 — the stretched body link arms the drawer
+    for chunk in html.split('class="sl-file ')[1:]:
+        mk = _RKIND.search(chunk.split(">", 1)[0])
+        if mk and 'data-drawer="' in chunk:
             rkinds.add(mk.group(1))
     assert DRAWER_KINDS <= rkinds, f"kinds missing their slide-over arming: {DRAWER_KINDS - rkinds}"
     assert armed, "no slide-over-armed rows rendered"
@@ -325,17 +337,21 @@ def test_slide_fragment_variant_ignores_context_param(store):
 def test_seeded_chip_counts_render(store):
     pid = _every_kind_project(store)
     html = _client().get(f"/projects/{pid}?lang=en").text
-    # council: mode (decision — proposal + votes) + statement count
-    assert "Decision</span>" in html and "2 statements" in html
+    # council: the mode tag ONLY (V2 — the avatars already say who debated; the statement
+    # count lives on the detail/slide-over)
+    assert "Decision</span>" in html and "2 statements" not in html
     # synthesis: finding count + the amber in-progress chip
     assert "3 findings" in html and "running</span>" in html
     # report: section count (the shared n_sections key)
     assert "2 sections" in html
-    # notes: the quiet observation chip; the built concept shows its artifact kind + built marker
-    assert "Observation</span>" in html and "built</span>" in html
+    # notes (V2): a PLAIN note carries no chips (the default "Observation" pill retired);
+    # the built concept shows its artifact kind + built marker
+    assert "Observation</span>" not in html and "built</span>" in html
     assert presentation.present("comparison")["label"] in html
-    # session children + the parent funnel chip keep their existing chips (now via the registry)
+    # session rows: outcome + friction, ≤2 chips (V2 — the step count moved to the detail)
     assert "Completed</span>" in html and "Dropped at step 1" in html and "1× friction" in html
+    assert "2 steps" not in html
+    # the parent funnel chip keeps the cross-session count
     assert "2 sessions" in html
 
 

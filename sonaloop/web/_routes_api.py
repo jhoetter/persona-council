@@ -170,8 +170,14 @@ def register_api(app) -> None:
 
     @app.get("/api/search")
     def api_search(q: str = Query(default="")):
-        """Global command-palette search. The searchable entity types live in the
+        """Global command-palette search (UX V6). The searchable entity types live in the
         coverage registry (web/_palette_registry.SEARCH_SOURCES) — one declaration
-        feeds this endpoint AND the palette's grouping/labels/icons."""
-        from ._palette_registry import search_rows
-        return JSONResponse(search_rows(q))
+        feeds this endpoint AND the palette's grouping/labels/icons. `rows` are ranked +
+        capped per kind (fast no matter the store size); `closest` carries the nearest-hit
+        suggestions ONLY when nothing matched (the palette's teach-don't-dead-end state)."""
+        from ..storage import Store
+        from ._palette_registry import closest_rows, search_rows
+        store = Store()
+        rows = search_rows(q, store=store)
+        closest = [] if rows or not (q or "").strip() else closest_rows(q, store=store)
+        return JSONResponse({"rows": rows, "closest": closest})

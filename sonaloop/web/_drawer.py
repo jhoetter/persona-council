@@ -160,6 +160,15 @@ DRAWER_JS = """
       for(var i=0;i<old.attributes.length;i++){ s.setAttribute(old.attributes[i].name, old.attributes[i].value); }
       s.textContent=old.textContent; old.parentNode.replaceChild(s, old); });
   }
+  // V10: the fragment carries the page's header actions (the "…" overflow + its edit/delete
+  // dialogs, the star) hidden as [data-slide-actions] — hoist them into the panel header next
+  // to expand/close, so the actions are reachable from the peek too.
+  function hoistActions(){
+    var head=wrap.querySelector('.sl-drawer__head'); if(!head) return;
+    head.querySelectorAll('[data-slide-actions]').forEach(function(n){ n.remove(); });
+    var a=body.querySelector('[data-slide-actions]');
+    if(a){ a.removeAttribute('hidden'); head.insertBefore(a, head.querySelector('[data-drawer-expand]')); }
+  }
   function hide(){ wrap.classList.remove('is-open'); pushed=false; curUrl='';
     if(lastFocus&&lastFocus.focus) lastFocus.focus(); lastFocus=null; }
   function close(){                            // drop ?d=: pop our entry when we pushed one,
@@ -183,6 +192,7 @@ DRAWER_JS = """
                || doc.getElementById('main') || doc.body.firstElementChild;
       body.innerHTML='';
       if(frag){ body.appendChild(document.importNode(frag, true)); runScripts(body); }
+      hoistActions();
       if(!titleEl.textContent){ var h1=body.querySelector('h1');
         if(h1) titleEl.textContent=(h1.textContent||'').trim(); }
       body.scrollTop=0;
@@ -231,13 +241,16 @@ DRAWER_JS = """
       var tt=t.querySelector && t.querySelector('.sl-entity__title,.ol-title');
       open(t.getAttribute('data-drawer'), t.getAttribute('data-drawer-title')||((tt||t).textContent||'').trim(), t); return; }
   });
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && wrap.classList.contains('is-open')) close(); });
+  document.addEventListener('keydown', function(e){
+    // a modal <dialog> (V10 edit / confirm) owns Esc while open — don't also drop the panel
+    if(e.key==='Escape' && wrap.classList.contains('is-open') && !document.querySelector('dialog[open]')) close(); });
   // SSR-opened context URL (§8.6): adopt the server-rendered panel — no entry of ours exists
   // (close rewrites the URL in place), but the CURRENT entry must self-describe so leaving and
   // re-entering it via back/forward re-opens the panel instead of stranding a ?d= URL closed.
   var ssr=wrap.getAttribute('data-ssr');
   if(ssr){
     curUrl=ssr; window.__slBg=bgUrl();
+    hoistActions();
     // reload of a CLICK-pushed entry keeps state.pushed -> close stays history.back();
     // a direct load has no state -> close rewrites the URL in place (nowhere of ours to go back to)
     pushed=!!(history.state && history.state.slDrawer && history.state.pushed);

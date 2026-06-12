@@ -153,7 +153,9 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         _rule(slide, 0.72, 1.34, 0.85)
 
         has_visual = bool(s.get("chart") or s.get("image"))
-        body_w = (Inches(6.5) if has_visual else W - Inches(1.4))
+        # prose measure: without a visual, text caps at ~10in (≈90 chars/line at body size) —
+        # full-frame lines read like terminal output (ux-contract §9 V11).
+        body_w = (Inches(6.5) if has_visual else min(W - Inches(1.4), Inches(10.0)))
         top = Inches(1.65)
         blocks = s.get("blocks") or []
         if blocks:
@@ -476,10 +478,15 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         for it, (cx, cy, cw, ch) in zip(items, _grid_cells(items)):
             _rrect(slide, cx, cy, cw, ch, _PANEL, radius=0.05, line=_LINE)
             _rrect(slide, cx + 0.26, cy + 0.27, 0.05, 0.21, _ACCENT, radius=0.3)
-            tt = _box(slide, Inches(cx + 0.42), Inches(cy + 0.18), Inches(cw - 0.68), Inches(0.4))
-            _run(tt.paragraphs[0], it.get("title", ""), size=15, bold=True)
-            bf = _box(slide, Inches(cx + 0.26), Inches(cy + 0.62), Inches(cw - 0.52), Inches(ch - 0.8))
-            _run(bf.paragraphs[0], it.get("text", ""), size=12, color=_MUTED)
+            # ONE flowing frame (title → body → meta): a wrapping title can never overlap the body
+            tf = _box(slide, Inches(cx + 0.42), Inches(cy + 0.18), Inches(cw - 0.68), Inches(ch - 0.36))
+            _run(tf.paragraphs[0], it.get("title", ""), size=15, bold=True)
+            if it.get("text"):
+                pb = tf.add_paragraph(); pb.space_before = Pt(6)
+                _run(pb, it["text"], size=12, color=_MUTED)
+            if it.get("meta"):     # quiet card meta (e.g. effort·value scores), mono + faint
+                pm = tf.add_paragraph(); pm.space_before = Pt(6)
+                _mono_run(_run(pm, str(it["meta"]), size=9, color=_FAINT))
         _footer(slide)
 
     def _insight_slide(s):
@@ -488,7 +495,8 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         tc = _PALETTE.get(tone.get("color", "accent"), _ACCENT)
         et = _box(slide, Inches(0.7), Inches(0.55), W - Inches(1.4), Inches(0.4))
         ep = et.paragraphs[0]
-        _mono_run(_run(ep, str(tone.get("label", "Insight")).upper(), size=_TS["eyebrow"], bold=True, color=tc))
+        _mono_run(_run(ep, str(s.get("eyebrow") or tone.get("label", "Insight")).upper(),
+                       size=_TS["eyebrow"], bold=True, color=tc))
         if s.get("num"):
             _mono_run(_run(ep, "  ·  " + s["num"], size=_TS["eyebrow"], bold=True, color=_FAINT))
         body_w = 6.9 if s.get("chart") else W.inches - 1.4
@@ -524,24 +532,33 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         _run(nt.text_frame.paragraphs[0], "   " + s.get("role", ""), size=11, color=_MUTED)
         _footer(slide)
 
-    _SENTIMENT = {"support": _GREEN, "conditional": _AMBER, "opposed": _RED}
+    # canonical stance terms → tone colour (stance_scale.json roles; legacy "opposed" kept).
+    _SENTIMENT = {"support": _GREEN, "conditional": _AMBER, "neutral": _MUTED,
+                  "skeptical": _AMBER, "oppose": _RED, "opposed": _RED}
 
     def _voices_slide(s):
         slide = prs.slides.add_slide(blank); _bg(slide)
         _heading_band(slide, s, "Voices")
         items = s.get("items") or []
-        for it, (cx, cy, cw, ch) in zip(items, _grid_cells(items)):
+        if len(items) <= 2:                       # 1–2 voices: full-width stacked cards (quote-scale)
+            gap = 0.25
+            chh = (H.inches - 1.75 - 0.85 - gap) / 2
+            cells = [(0.7, 1.75 + i * (chh + gap), W.inches - 1.4, chh) for i in range(len(items))]
+        else:
+            cells = _grid_cells(items)
+        for it, (cx, cy, cw, ch) in zip(items, cells):
             _rrect(slide, cx, cy, cw, ch, _PANEL, radius=0.05, line=_LINE)
             _initials_chip(slide, cx + 0.24, cy + 0.18, 0.3, it.get("name"))
             nt = _text(slide, cx + 0.62, cy + 0.16, cw - 2.3, 0.34, it.get("name", ""), size=12, bold=True)
             _run(nt.text_frame.paragraphs[0], "   " + it.get("role", ""), size=10, color=_MUTED)
             sc = _SENTIMENT.get((it.get("sentiment") or "").lower(), _MUTED)
-            st = _text(slide, cx + cw - 1.85, cy + 0.16, 1.6, 0.34, (it.get("sentiment") or "").upper(),
+            st = _text(slide, cx + cw - 1.85, cy + 0.16, 1.6, 0.34,
+                       str(it.get("sentiment_label") or it.get("sentiment") or "").upper(),
                        size=9, bold=True, color=sc, align=PP_ALIGN.RIGHT)
             if it.get("sentiment"):
                 _mono_run(st.text_frame.paragraphs[0].runs[0])
             bf = _box(slide, Inches(cx + 0.24), Inches(cy + 0.62), Inches(cw - 0.48), Inches(ch - 0.8))
-            _run(bf.paragraphs[0], it.get("text", ""), size=12)
+            _run(bf.paragraphs[0], it.get("text", ""), size=12 if len(items) > 2 else 13)
         _footer(slide)
 
     def _stats_slide(s):

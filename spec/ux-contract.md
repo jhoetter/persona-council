@@ -316,3 +316,29 @@ data-layer follow-up.
    for dense outline / list / touch), a vertical-rhythm scale for gaps between rows, sections and
    page regions, and normalization of existing `.sl-*` rules onto that scale (no off-scale px
    values). Documented as its own docs-site page; the inspector consumes it via the vendored CSS.
+
+## 9. Round 3 (2026-06-12, second screenshot review) — CRAFT
+
+The owner's verdict on round 2: right structure, but "noch weit von 9/10 entfernt — das geht noch
+ERHEBLICH besser." The prior audits over-scored: they checked structure and consistency but not
+**craft** — visual information design, density judgment, microcopy. The rubric gains a 7th
+dimension, **Craft** (anchors: 9 = would ship at Linear/Notion unchanged; compare against real
+Linear/Notion screenshots, not against our own previous state). Concrete findings, all owner-cited:
+
+| # | finding | direction |
+|---|---|---|
+| V1 | Filter button floats OUTSIDE the content measure; Themes chip row overflows the frame; themes are obviously a facet; **no text search** | FilterBar v2 in the scaffold bar INSIDE the measure; search input is PART of the filter contract (design-system level: FilterBar always = search + facets); Themes row retires into a section facet |
+| V2 | Outline rows overloaded & partly redundant (avatars AND "15 statements"; NOTE + "Observation"; theme chip + round pill + count + date) | Row vocabulary v2: ≤2 trailing chips + date; counts move to detail/hover; default-kind pills dropped |
+| V3 | Charts: bars all render FULL WIDTH regardless of value (length encodes nothing); persona boxes waste space; "Oppose 0" legend entries; predicted-behavior shows bare "0.6" chips | Visualization redesign: diverging bars that encode value, no entity boxes, compact rows, zero categories dropped, likelihood rendered as labeled % with mini-bar |
+| V4 | Session step screenshots GONE (regression: `<img>` without src; files serve 200) — and prototypes/remote-software sessions must show them | Fix the src regression; screenshot strip + lightbox on session detail; prototype page shows session shots |
+| V5 | Slide-over properties in a boxed card, cramped spacing; session header pill-soup ("Prototype" pill, date as pill) | Notion-style properties: quiet label/value rows, no frame; header meta as plain text; rhythm pass on detail headers |
+| V6 | ⌘K is a bare 17-link jump list (re-exposes the old IA) | Palette v2: icons, sections (Recent · Navigate · results by kind with project context), entity search, Library sub-targets grouped |
+| V7 | "Take the tour" floats as toast; Feedback/shortcuts rows visually off vs nav; topbar "• 0" runs chip when zero | Tour entry into the sidebar footer; footer rows styled exactly like nav rows; zero-state chip hidden |
+| V8 | Runs vs Activity unclear; "what is a run?" | Explainer leads on both surfaces; run-chip popover defines the concept; Activity groups per run (G3) |
+| V9 | Files lens not file-like (duplicate download icons, chips instead of file identity) | File cards: type icon/thumbnail, filename+extension prominent, grid; one download affordance |
+| V10 | Edit pages should be modals/dialogs; deletion currently undiscoverable | Edit becomes a dialog over the detail page; a visible "…" overflow on detail headers holds Edit/Delete |
+| V11 | Authored surfaces still read "wie auf dem Terminal" — the PPTX exec summary is a text wall | Deck export quality pass: statement/verdict slide layouts, charts on slides, voices slides; line-length + hierarchy rules in the deck renderer |
+| V12 | Microcopy pass: terminal-flavored leads/labels de+en | Plain, human sentences; no abbreviations or colon-syntax in UI copy |
+
+Round-3 audit rule: re-score EVERYTHING with the Craft dimension against external anchors; the
+9/10 claim must survive the owner's screenshots.

@@ -1,11 +1,17 @@
 """Write routes: the inspector's structural CRUD (ticket web-crud-structure).
 
-Every route follows the ONE write-path pattern from web/_forms.py — GET edit form,
-POST -> write_gate (CSRF + cloud access guard) -> validate -> SERVICE call -> 303.
-The mutation boundary (docs/web-mutations.md): the UI inspects + edits structural
-metadata; CREATION is not a UI affordance (UX U9, §8.4 — it belongs to the MCP/CLI
-host), so the POST /new routes stay as API surface while their GET forms are gone.
-Deletion is the subtle header overflow (+ confirm modal), never a danger zone."""
+Every route follows the ONE write-path pattern from web/_forms.py — POST -> write_gate
+(CSRF + cloud access guard) -> validate -> SERVICE call -> 303. The mutation boundary
+(docs/web-mutations.md): the UI inspects + edits structural metadata; CREATION is not a
+UI affordance (UX U9, §8.4 — it belongs to the MCP/CLI host), so the POST /new routes
+stay as API surface while their GET forms are gone.
+
+Since UX V10 (ux-contract §9) EDIT IS A DIALOG over the detail page: every detail header
+carries the visible "…" overflow (Edit opens the native <dialog>, Delete the typed/plain
+confirm modal) built by the per-kind *_actions() composers below. The GET /edit routes
+keep answering for deep links (the same field builders — ONE source), and a POST
+validation failure re-renders the DETAIL backdrop with the dialog re-opened and the
+errors inline (the typed-confirm idiom)."""
 from __future__ import annotations
 
 from fastapi import Request
@@ -13,12 +19,113 @@ from fastapi import Request
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from ...prototypes import PrototypeError
 from .._forms import (
-    field, form_page, not_found, overflow_delete, see_other, write_gate,
+    detail_overflow, field, form_page, not_found, overflow_delete, see_other, write_gate,
 )
 
 
 def _s(form, name: str) -> str:
     return str(form.get(name) or "").strip()
+
+
+# ------------------------------------------------------- the per-kind field builders
+# ONE source for the edit page (form_page) AND the V10 edit dialog (detail_overflow).
+
+def project_fields(values: dict, errors: dict) -> list:
+    return [raw(field("title", t("f_title"), values.get("title", ""),
+                      error=errors.get("title", ""), required=True)),
+            raw(field("goal", t("f_goal"), values.get("goal", ""))),
+            raw(field("description", t("f_description"), values.get("description", ""),
+                      textarea=True))]
+
+
+def persona_fields(values: dict, errors: dict) -> list:
+    return [raw(field("display_name", t("f_name"), values.get("display_name", ""),
+                      error=errors.get("display_name", ""), required=True)),
+            raw(field("role_title", t("f_role_title"), values.get("role_title", ""))),
+            raw(field("customer_type", t("f_segment"), values.get("customer_type", ""))),
+            raw(field("industry", t("f_industry"), values.get("industry", "")))]
+
+
+def note_fields(values: dict, errors: dict) -> list:
+    return [raw(field("title", t("f_title"), values.get("title", ""))),
+            raw(field("text", t("f_text"), values.get("text", ""),
+                      error=errors.get("text", ""), required=True, textarea=True))]
+
+
+def section_fields(values: dict, errors: dict) -> list:
+    return [raw(field("title", t("f_title"), values.get("title", ""),
+                      error=errors.get("title", ""), required=True)),
+            raw(field("kind", t("type_h"), values.get("kind", "theme"))),
+            raw(field("note", t("f_note"), values.get("note", ""), textarea=True))]
+
+
+def _project_values(proj: dict) -> dict:
+    return {"title": proj["title"], "goal": proj.get("goal", ""),
+            "description": proj.get("description", "")}
+
+
+def _persona_values(p: dict) -> dict:
+    return {"display_name": p["display_name"], "role_title": p.get("role", {}).get("title", ""),
+            "customer_type": p.get("segment", {}).get("customer_type", ""),
+            "industry": p.get("company_context", {}).get("industry", "")}
+
+
+# ------------------------------------------- the V10 detail-header actions composers
+# Every editable kind: the "…" overflow with Edit (dialog) + Delete (confirm). `values`/
+# `errors`/`edit_open` re-render the dialog OPEN with inline errors after a 400;
+# `confirm_error` re-opens the typed-confirm delete the same way.
+
+def project_actions(proj: dict, *, values: dict | None = None, errors: dict | None = None,
+                    edit_open: bool = False, confirm_error: str = "") -> str:
+    return detail_overflow(
+        edit={"action": f'/projects/{proj["id"]}/edit', "title": f'{proj["title"]} — {t("edit")}',
+              "fields": project_fields(values if values is not None else _project_values(proj),
+                                       errors or {}),
+              "lead": t("project_form_lead"), "open_now": edit_open},
+        delete={"action": f'/projects/{proj["id"]}/delete', "label": t("delete_project"),
+                "expected": proj["title"], "error": confirm_error})
+
+
+def persona_actions(p: dict, *, values: dict | None = None, errors: dict | None = None,
+                    edit_open: bool = False, confirm_error: str = "") -> str:
+    return detail_overflow(
+        edit={"action": f'/personas/{p["id"]}/edit', "title": f'{p["display_name"]} — {t("edit")}',
+              "fields": persona_fields(values if values is not None else _persona_values(p),
+                                       errors or {}),
+              "lead": t("persona_form_lead"), "open_now": edit_open},
+        delete={"action": f'/personas/{p["id"]}/delete', "label": t("delete_persona"),
+                "expected": p["display_name"], "error": confirm_error})
+
+
+def note_actions(note: dict, *, values: dict | None = None, errors: dict | None = None,
+                 edit_open: bool = False) -> str:
+    vals = values if values is not None else {"title": note.get("title", ""),
+                                              "text": note.get("text", "")}
+    return detail_overflow(
+        edit={"action": f'/notes/{note["id"]}/edit',
+              "title": f'{note.get("title") or t("notes_h")} — {t("edit")}',
+              "fields": note_fields(vals, errors or {}), "open_now": edit_open},
+        delete={"action": f'/notes/{note["id"]}/delete', "label": t("delete_note")})
+
+
+def section_actions(sec: dict, *, values: dict | None = None, errors: dict | None = None,
+                    edit_open: bool = False) -> str:
+    vals = values if values is not None else {"title": sec["title"],
+                                              "kind": sec.get("kind", "theme"),
+                                              "note": sec.get("note", "")}
+    return detail_overflow(
+        edit={"action": f'/sections/{sec["id"]}/edit', "title": f'{sec["title"]} — {t("edit")}',
+              "fields": section_fields(vals, errors or {}), "lead": t("section_form_lead"),
+              "open_now": edit_open},
+        delete={"action": f'/sections/{sec["id"]}/delete', "label": t("delete_section")})
+
+
+def _dialog_error_page(store, *, title: str, crumbs: list, active: str, actions: str) -> str:
+    """The V10 400 re-render of a dialog-submitted form: the entity headline as a calm
+    backdrop, the SAME dialog re-opened over it with the inline errors (one renderer,
+    one source — never a second form page)."""
+    body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, title))
+    return _layout(title, str(body), store, crumbs=crumbs, active=active, actions=actions)
 
 
 # ------------------------------------------------------------------- projects
@@ -38,12 +145,7 @@ def _project_form(store, proj: dict | None, values: dict, errors: dict,
         error=confirm_error)
     return form_page(
         store, title=title, crumbs=crumbs, active="projects", action=action,
-        lead=t("project_form_lead"),
-        fields=[raw(field("title", t("f_title"), values.get("title", ""),
-                          error=errors.get("title", ""), required=True)),
-                raw(field("goal", t("f_goal"), values.get("goal", ""))),
-                raw(field("description", t("f_description"), values.get("description", ""),
-                          textarea=True))],
+        lead=t("project_form_lead"), fields=project_fields(values, errors),
         submit_label=t("create") if new else t("save"), cancel_href=cancel, actions=actions)
 
 
@@ -57,11 +159,7 @@ def _persona_form(store, p: dict, values: dict, errors: dict, confirm_error: str
         store, title=f'{p["display_name"]} — {t("edit")}', active="personas",
         crumbs=[(t("personas"), "/personas"), (p["display_name"], f'/personas/{p["id"]}'), (t("edit"), None)],
         action=f'/personas/{p["id"]}/edit', lead=t("persona_form_lead"),
-        fields=[raw(field("display_name", t("f_name"), values.get("display_name", ""),
-                          error=errors.get("display_name", ""), required=True)),
-                raw(field("role_title", t("f_role_title"), values.get("role_title", ""))),
-                raw(field("customer_type", t("f_segment"), values.get("customer_type", ""))),
-                raw(field("industry", t("f_industry"), values.get("industry", "")))],
+        fields=persona_fields(values, errors),
         submit_label=t("save"), cancel_href=f'/personas/{p["id"]}', actions=actions)
 
 
@@ -74,10 +172,7 @@ def _note_form(store, proj: dict, note: dict | None, values: dict, errors: dict)
     return form_page(
         store, title=title, active="library",
         crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (title, None)],
-        action=action,
-        fields=[raw(field("title", t("f_title"), values.get("title", ""))),
-                raw(field("text", t("f_text"), values.get("text", ""),
-                          error=errors.get("text", ""), required=True, textarea=True))],
+        action=action, fields=note_fields(values, errors),
         submit_label=t("create") if new else t("save"), cancel_href=cancel, actions=actions)
 
 
@@ -90,11 +185,7 @@ def _section_form(store, proj: dict, sec: dict | None, values: dict, errors: dic
     return form_page(
         store, title=title, active="projects",
         crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (title, None)],
-        action=action, lead=t("section_form_lead"),
-        fields=[raw(field("title", t("f_title"), values.get("title", ""),
-                          error=errors.get("title", ""), required=True)),
-                raw(field("kind", t("type_h"), values.get("kind", "theme"))),
-                raw(field("note", t("f_note"), values.get("note", ""), textarea=True))],
+        action=action, lead=t("section_form_lead"), fields=section_fields(values, errors),
         submit_label=t("create") if new else t("save"), cancel_href=cancel, actions=actions)
 
 
@@ -140,8 +231,12 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
             return not_found()
         values = {k: _s(form, k) for k in ("title", "goal", "description")}
         if not values["title"]:
-            return HTMLResponse(_project_form(store, proj, values, {"title": t("field_required")}),
-                                status_code=400)
+            return HTMLResponse(_dialog_error_page(
+                store, title=proj["title"], active="projects",
+                crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"),
+                        (t("edit"), None)],
+                actions=project_actions(proj, values=values, errors={"title": t("field_required")},
+                                        edit_open=True)), status_code=400)
         services.update_research_project(project_id, values, store=store)
         return see_other(f"/projects/{project_id}")
 
@@ -156,10 +251,12 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         except KeyError:
             return not_found()
         if _s(form, "confirm") != proj["title"]:
-            values = {"title": proj["title"], "goal": proj.get("goal", ""),
-                      "description": proj.get("description", "")}
-            return HTMLResponse(_project_form(store, proj, values, {},
-                                              confirm_error=t("confirm_mismatch")), status_code=400)
+            return HTMLResponse(_dialog_error_page(
+                store, title=proj["title"], active="projects",
+                crumbs=[(t("projects"), "/projects"), (proj["title"], f"/projects/{project_id}"),
+                        (t("delete_project"), None)],
+                actions=project_actions(proj, confirm_error=t("confirm_mismatch"))),
+                status_code=400)
         services.delete_research_project(project_id, store=store)
         return see_other("/projects")
 
@@ -186,8 +283,13 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
             return not_found(icon="personas", active="personas")
         values = {k: _s(form, k) for k in ("display_name", "role_title", "customer_type", "industry")}
         if not values["display_name"]:
-            return HTMLResponse(_persona_form(store, p, values,
-                                              {"display_name": t("field_required")}), status_code=400)
+            return HTMLResponse(_dialog_error_page(
+                store, title=p["display_name"], active="personas",
+                crumbs=[(t("personas"), "/personas"), (p["display_name"], f"/personas/{persona_id}"),
+                        (t("edit"), None)],
+                actions=persona_actions(p, values=values,
+                                        errors={"display_name": t("field_required")},
+                                        edit_open=True)), status_code=400)
         services.update_persona(persona_id, {
             "display_name": values["display_name"],
             "role": {"title": values["role_title"]},
@@ -206,11 +308,12 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         if not p:
             return not_found(icon="personas", active="personas")
         if _s(form, "confirm") != p["display_name"]:
-            values = {"display_name": p["display_name"], "role_title": p.get("role", {}).get("title", ""),
-                      "customer_type": p.get("segment", {}).get("customer_type", ""),
-                      "industry": p.get("company_context", {}).get("industry", "")}
-            return HTMLResponse(_persona_form(store, p, values, {},
-                                              confirm_error=t("confirm_mismatch")), status_code=400)
+            return HTMLResponse(_dialog_error_page(
+                store, title=p["display_name"], active="personas",
+                crumbs=[(t("personas"), "/personas"), (p["display_name"], f"/personas/{persona_id}"),
+                        (t("delete_persona"), None)],
+                actions=persona_actions(p, confirm_error=t("confirm_mismatch"))),
+                status_code=400)
         services.delete_persona(persona_id, store=store)
         return see_other("/personas")
 
@@ -254,8 +357,14 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
             return not_found(icon="panel", active="library")
         values = {k: _s(form, k) for k in ("title", "text")}
         if not values["text"]:
-            return HTMLResponse(_note_form(store, data["project"], data["note"], values,
-                                           {"text": t("field_required")}), status_code=400)
+            note, proj = data["note"], data["project"]
+            ntitle = note.get("title") or t("notes_h")
+            return HTMLResponse(_dialog_error_page(
+                store, title=ntitle, active="library",
+                crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'),
+                        (ntitle, None)],
+                actions=note_actions(note, values=values, errors={"text": t("field_required")},
+                                     edit_open=True)), status_code=400)
         services.update_note(note_id, values, store=store)
         return see_other(f"/notes/{note_id}")
 
@@ -315,8 +424,13 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
             return not_found(icon="squareGrid")
         values = {k: _s(form, k) for k in ("title", "kind", "note")}
         if not values["title"]:
-            return HTMLResponse(_section_form(store, data["project"], data["section"], values,
-                                              {"title": t("field_required")}), status_code=400)
+            sec, proj = data["section"], data["project"]
+            return HTMLResponse(_dialog_error_page(
+                store, title=sec["title"], active="projects",
+                crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'),
+                        (sec["title"], None)],
+                actions=section_actions(sec, values=values, errors={"title": t("field_required")},
+                                        edit_open=True)), status_code=400)
         services.update_section(section_id, values, store=store)
         return see_other(f"/sections/{section_id}")
 

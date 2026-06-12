@@ -39,13 +39,15 @@ def render_stance(st: dict | None) -> str:
     return _label(t(meta["label_key"]), meta["color"], title=st.get("label_raw"))
 
 
-def render_ref(r: dict, store=None) -> str:
+def render_ref(r: dict, store=None, *, show_role: bool = True) -> str:
     """A cross-reference chip (spec/artifact-cross-references.md). With a `store` and a record-pointing
     Ref, it RESOLVES the addressed artifact/part LIVE — showing the current persona/title + the typed
     role + a deep-link to the part (never a stale copy); a broken ref renders honestly. Without a store
     (or for memory/observed-state/external refs) it falls back to the plain grounding chip. The kind→route
-    mapping lives in the domain layer (artifacts.ref_href) so no kind literal is hardcoded here."""
-    role = r.get("role")
+    mapping lives in the domain layer (artifacts.ref_href) so no kind literal is hardcoded here.
+    `show_role=False` drops the typed-role suffix — for chip groups whose lead label already states
+    the role ("Based on: …"), where the suffix would just repeat it (round-3 craft pass)."""
+    role = r.get("role") if show_role else None
     rolebit = (" · " + role.replace("_", " ")) if role else ""
     if store is not None and r.get("id") and _A.ref_href(r):
         res = _A.resolve_ref(r, store)

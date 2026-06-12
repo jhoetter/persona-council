@@ -172,3 +172,75 @@ def test_library_filter_menu_counts_per_value(store):
     html = _client().get("/hypotheses?lang=en").text
     assert "sl-menu-item__count" in html and ">2<" in html      # 2 open hypotheses
     assert f'href="/hypotheses?project={ids["project_id"]}"' in html
+
+
+# ------------------------------------------------------------------- V1: search + theme facet
+
+def test_outline_search_slot_renders_inside_the_bar(store):
+    """The FilterBar always carries the leading search slot (V1: 'filter + suche immer'),
+    and an active query keeps its value in the input (URL round-trip)."""
+    ids = _seed(store)
+    pid = ids["project_id"]
+    client = _client()
+    html = client.get(f"/projects/{pid}?lang=en").text
+    assert "sl-filter-search" in html and 'name="q"' in html
+    html = client.get(f"/projects/{pid}?q=pricing&lang=en").text
+    assert 'value="pricing"' in html
+
+
+def test_outline_text_search_filters_rows_server_side(store):
+    ids = _seed(store)
+    pid = ids["project_id"]
+    client = _client()
+    html = client.get(f"/projects/{pid}?q=pricing&lang=en").text
+    kinds = _rkinds(html)
+    assert "survey" in kinds and "open_question" in kinds       # both carry "pricing"
+    assert "decision" not in kinds                              # "Pick A" does not
+    # case- AND diacritic-insensitive ("Prícing" folds to "pricing")
+    html = client.get(f"/projects/{pid}?q=Pr%C3%ADcing&lang=en").text
+    assert "survey" in _rkinds(html)
+    # chip text matches too: the decision's status pill ("Proposed") is row truth
+    html = client.get(f"/projects/{pid}?q=proposed&lang=en").text
+    assert "decision" in _rkinds(html)
+
+
+def test_outline_search_composes_with_facets(store):
+    ids = _seed(store)
+    pid = ids["project_id"]
+    client = _client()
+    html = client.get(f"/projects/{pid}?q=pricing&kind=survey&lang=en").text
+    assert _rkinds(html) == {"survey"}                          # q AND kind
+    html = client.get(f"/projects/{pid}?q=zzz-no-match&lang=en").text
+    assert "Nothing matches these filters" in html              # the teaching empty state
+
+
+def test_outline_theme_facet_replaces_the_chip_row(store):
+    """V1: the separate Themes chip row retired — themes are a facet (?theme=<section id>),
+    and a row's membership renders as a small colored dot with the title on hover."""
+    ids = _seed(store)
+    pid = ids["project_id"]
+    g = services.get_project_graph(pid, store=store)
+    council_oid = next(n["study_id"] for n in g["nodes"] if n.get("kind") == "council")
+    sec = services.create_section(pid, "Pricing pains", kind="theme",
+                                  member_ids=[council_oid], store=store)
+    client = _client()
+    full = client.get(f"/projects/{pid}?lang=en").text
+    assert "olthemes" not in full and "olth-chip" not in full   # the chip row is gone
+    assert "olth-dot" in full and 'title="Pricing pains"' in full
+    assert "Pricing pains" in full                              # the facet menu offers it
+    html = client.get(f'/projects/{pid}?theme={sec["id"]}&lang=en').text
+    assert _rkinds(html) == {"council"}                         # membership filters rows
+
+
+def test_library_text_search_per_tab(store):
+    ids = _seed(store)
+    client = _client()
+    html = client.get("/library?tab=hypotheses&q=abandon&lang=en").text
+    assert "Users abandon at the price reveal" in html
+    assert "Setup takes under five minutes" not in html
+    assert 'value="abandon"' in html                            # the input keeps its value
+    # canonical kind routes share the grammar; q composes with the project facet
+    html = client.get(f'/hypotheses?q=abandon&project={ids["project_id"]}&lang=en').text
+    assert "Users abandon at the price reveal" in html
+    html = client.get("/hypotheses?q=zzz-no-match&lang=en").text
+    assert "Nothing matches these filters" in html

@@ -1,25 +1,30 @@
-"""Linear-grade faceted FilterBar (UX U10, spec/ux-contract.md §8.5) — the SSR mirror of the
-design-system <FilterBar> (sonaloop-design/src/components.tsx, proven in the tracker).
+"""Linear-grade faceted FilterBar (UX U10 + V1, spec/ux-contract.md §8.5/§9 V1) — the SSR
+mirror of the design-system <FilterBar> (sonaloop-design/src/components.tsx, proven in the
+tracker).
 
-Anatomy (the vendored `.sl-filter-*` + `.sl-popover`/`.sl-menu-item` contracts): a quiet
-"Filter" toolbar button opens a two-level facet menu — pick a facet, then its values as
-selectable rows with live counts — and every non-empty facet becomes a removable chip
-("Kind is Council, Decision ×") with a trailing Clear action.
+Anatomy (the vendored `.sl-filter-*` + `.sl-popover`/`.sl-menu-item` contracts): a leading
+quiet SEARCH slot (`.sl-filter-search` — borderless until focus, hairline-separated; V1:
+"filter + suche immer"), a "Filter" toolbar button that opens a two-level facet menu — pick
+a facet, then its values as selectable rows with live counts — and every non-empty facet
+becomes a removable chip ("Kind is Council, Decision ×") with a trailing Clear action. All
+of it ONE wrapping row.
 
-State lives in the URL, never in JS: every value row and every chip "×" is a REAL link to
-the toggled URL (`?kind=council,decision&phase=…` — comma = OR within a facet, params AND
-across facets), so a filtered view round-trips, is shareable, and works without JS down to
-the link level. The only script is progressive enhancement: it toggles the menu popover and
-switches its panels (plus Esc / outside-click dismiss); without it the popover stays closed
-but active chips still clear and shared URLs still render filtered.
+State lives in the URL, never in JS: the search slot is a real GET form (`?q=` — Enter
+submits, the current facet params ride along as hidden inputs), and every value row and
+chip "×" is a REAL link to the toggled URL (`?kind=council,decision&phase=…` — comma = OR
+within a facet, params AND across facets), so a filtered view round-trips, is shareable,
+and works without JS down to the link level. The only script is progressive enhancement:
+it toggles the menu popover and switches its panels (plus Esc / outside-click dismiss);
+without it the popover stays closed but active chips still clear and shared URLs still
+render filtered.
 
 The host page owns the MODEL (which facets exist, their options/counts/selection — counted
 over the UNFILTERED in-scope rows, exactly like the tracker feeds the React FilterBar) and
-applies the filter server-side; this module owns the chrome.
+applies filter + search server-side; this module owns the chrome.
 """
 from __future__ import annotations
 
-from urllib.parse import quote
+from urllib.parse import parse_qsl, quote
 
 from ._components import _icon
 from ._html import Safe, h, raw, fragment, register_css
@@ -54,8 +59,9 @@ def _without(selected: dict[str, list[str]], key: str) -> dict[str, list[str]]:
 
 
 def _option_rows(base: str, facet: dict, selected: dict[str, list[str]]) -> Safe:
-    """One facet's value panel: selectable rows (check column · label · live count), each a
-    real link to the toggled URL — the `.sl-menu-item` selectable anatomy."""
+    """One facet's value panel: selectable rows (check column · [dot ·] label · live count),
+    each a real link to the toggled URL — the `.sl-menu-item` selectable anatomy. An option's
+    optional `dot` (a CSS color, e.g. a theme's section color) leads its label."""
     options = facet.get("options") or []
     if not options:
         return h("div", {"class_": "sl-filter-empty"}, t("filter_no_options"))
@@ -63,22 +69,47 @@ def _option_rows(base: str, facet: dict, selected: dict[str, list[str]]) -> Safe
     rows = []
     for o in options:
         on = o["value"] in sel
+        dot = (h("span", {"class_": "sl-dot", "style": f'background:{o["dot"]}'})
+               if o.get("dot") else None)
         rows.append(h("a", {"class_": "sl-menu-item", "aria-pressed": "true" if on else "false",
                             "href": filter_url(base, _toggled(selected, facet["key"], o["value"]))},
                       h("span", {"class_": "sl-menu-item__check"}, raw(_icon("check")) if on else None),
-                      h("span", {"class_": "sl-menu-item__label"}, o["label"]),
+                      h("span", {"class_": "sl-menu-item__label"}, dot, o["label"]),
                       h("span", {"class_": "sl-menu-item__count"}, str(o.get("count", "")))))
     return fragment(*rows)
 
 
-def filter_bar(base: str, facets: list[dict], selected: dict[str, list[str]]) -> Safe:
-    """The bar. `facets`: [{key, label, icon, options: [{value, label, count}]}, …] — the
-    page's honest model (only values that actually occur; counts over the unfiltered set).
-    `selected`: {facet key -> [values]} parsed from the URL. Returns "" when there is
-    nothing to filter (no facet has options) and nothing is selected."""
+def _search_form(base: str, search: dict, selected: dict[str, list[str]]) -> Safe:
+    """The leading search slot (V1): a real GET form over the vendored `.sl-filter-search`
+    contract. The active facet params (and `base`'s own fixed params, e.g. ?tab=) ride along
+    as hidden inputs so Enter composes search WITH the filters instead of resetting them."""
+    path, _, query = base.partition("?")
+    hidden = [h("input", {"type": "hidden", "name": k, "value": v})
+              for k, v in parse_qsl(query) if k != "q"]
+    hidden += [h("input", {"type": "hidden", "name": k, "value": ",".join(vals)})
+               for k, vals in selected.items() if vals]
+    ph = search.get("placeholder") or t("search")
+    return h("form", {"class_": "sl-filter-search", "method": "get", "action": path or "",
+                      "role": "search"},
+             raw(_icon("search")),
+             h("input", {"class_": "sl-filter-search__input", "type": "search", "name": "q",
+                         "value": search.get("value") or None, "placeholder": ph,
+                         "aria-label": ph}),
+             fragment(*hidden))
+
+
+def filter_bar(base: str, facets: list[dict], selected: dict[str, list[str]],
+               search: dict | None = None) -> Safe:
+    """The bar. `facets`: [{key, label, icon, options: [{value, label, count, dot?}]}, …] —
+    the page's honest model (only values that actually occur; counts over the unfiltered set).
+    `selected`: {facet key -> [values]} parsed from the URL. `search`: {value, placeholder}
+    renders the leading `.sl-filter-search` slot (V1 — search is PART of the filter contract);
+    `base` must already carry an active `?q=` so the facet links round-trip it. Returns ""
+    when there is nothing to filter (no facet has options), nothing is selected and no
+    search slot was asked for."""
     facets = [f for f in facets if f.get("options")]
     active = [f for f in facets if selected.get(f["key"])]
-    if not facets and not any(selected.values()):
+    if not facets and not any(selected.values()) and search is None:
         return raw("")
     label_of = {f["key"]: {o["value"]: o["label"] for o in (f.get("options") or [])} for f in facets}
 
@@ -117,8 +148,9 @@ def filter_bar(base: str, facets: list[dict], selected: dict[str, list[str]]) ->
                          raw(_icon("close")))))
     clear = (h("a", {"class_": "sl-filter-clear", "href": base}, t("clear_filter"))
              if any(selected.values()) else None)
+    search_html = _search_form(base, search, selected) if search is not None else None
     return fragment(h("div", {"class_": "sl-filter-bar", "data-filterbar": True},
-                      trigger, fragment(*chips), clear), raw(_FB_JS))
+                      search_html, trigger, fragment(*chips), clear), raw(_FB_JS))
 
 
 def empty_filter_state(clear_href: str) -> Safe:

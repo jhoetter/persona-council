@@ -22,9 +22,10 @@ PAGES_DIR = Path(__file__).resolve().parent.parent / "sonaloop" / "web" / "pages
 # Library browser's primitive_row rendering), P4 (the survey detail rebuilt on
 # question/response rows), U7 (the hyp/decision card margins moved into the
 # co-located `.hyp p` rule), U8 (the 7 repeated oqp-h margins moved into the
-# .oqp-h rule itself, web_assets.py) and U9/U10 (the oqpanel pills/ul margins moved
-# into the .oqpanel rules). ONLY lower it.
-STYLE_BASELINE = 38
+# .oqp-h rule itself, web_assets.py), U9/U10 (the oqpanel pills/ul margins moved
+# into the .oqpanel rules) and V2 (the council section-hint margins folded into the
+# now-global `.ihint` rule). ONLY lower it.
+STYLE_BASELINE = 35
 
 
 def _pages() -> list[Path]:
@@ -59,7 +60,7 @@ ALLOWED_CLASS_TOKENS = {
     # generic text/layout utilities (web_assets.py "generic" block)
     "muted", "small", "lead", "h1", "h1cnt", "page", "grid", "two", "right", "rows", "row",
     "cnt", "pill", "pills", "sec", "spacer", "title", "sub", "empty", "avatar",
-    "quote", "thought", "lbl", "lbl-soft", "ihint", "identity", "cap-row", "mchip", "rico",
+    "quote", "thought", "lbl", "lbl-soft", "ihint", "identity", "cap-row", "rico",
     # project page: outline/toolbar/graph chrome (P2 retired the appendix: projjump/projsection)
     "proj", "proj-graph", "proj-head", "oqp-h", "oqpanel",
     "ptoolbar", "ptlabel", "ptlabel-2", "graphcard", "rgchip", "rgclear", "tagchip",

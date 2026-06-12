@@ -27,6 +27,13 @@ def _strip_md(s: str) -> str:
     s = _re_pptx.sub(r"(?<!\w)_(.+?)_(?!\w)", r"\1", s)
     s = _re_pptx.sub(r"`(.+?)`", r"\1", s)
     s = _re_pptx.sub(r"\[(.+?)\]\(.*?\)", r"\1", s)
+    # bare artifact ids (council_…/protosession_…/…) are terminal output, not slide copy (§9 V11) —
+    # drop them and heal the leftover punctuation/whitespace.
+    s = _re_pptx.sub(r"\b[a-z]+_[0-9a-f]{12,16}\b", "", s)
+    s = _re_pptx.sub(r"\(\s*[,;·]?\s*\)", "", s)
+    s = _re_pptx.sub(r"\s+([,;.!?)])", r"\1", s)
+    s = _re_pptx.sub(r"\(\s+", "(", s)
+    s = _re_pptx.sub(r"\s{2,}", " ", s)
     return s.strip()
 
 
@@ -77,6 +84,133 @@ def _md_blocks(md: str) -> list[dict]:
 
 def _li(texts: list[str]) -> list[dict]:
     return [{"type": "li", "text": _strip_md(t)} for t in texts if (t or "").strip()]
+
+
+# ── prose discipline (ux-contract §9 V11): slides carry statements, cards and clamped leads —
+# never the full authored prose. All splitting is renderer-side derivation from authored text;
+# nothing new is written, the complete prose stays in the report/PDF. ─────────────────────────
+
+# Sentence boundary only before an uppercase start ('Min.' / '+40 Min. wegen …' never splits) —
+# the SAME heuristic the web report's verdict card uses (web/_synthesis._verdict_card).
+_SENT_RE = _re_pptx.compile(r"(?<=[.!?])\s+(?=[«„\"'(]?[A-ZÄÖÜ])")
+
+
+def _sentences(text: str) -> list[str]:
+    return [s.strip() for s in _SENT_RE.split((text or "").strip()) if s.strip()]
+
+
+def _clause_cut(s: str, limit: int) -> str:
+    """Hard cap for a single over-long sentence: cut at the last clause boundary before `limit`
+    (comma / dash / semicolon; word boundary as a fallback) and mark the cut with an ellipsis."""
+    if len(s) <= limit:
+        return s
+    cut = max(s.rfind(", ", 0, limit), s.rfind(" — ", 0, limit), s.rfind("; ", 0, limit))
+    if cut < limit // 3:
+        cut = s.rfind(" ", 0, limit)
+    return s[:max(cut, 1)].rstrip(" ,;—") + " …"
+
+
+def _clamp_prose(text: str, limit: int) -> tuple[str, bool]:
+    """Sentence-greedy clamp: whole sentences while they fit; a lone over-long sentence
+    clause-cuts. Returns (clamped_text, was_truncated)."""
+    sents = _sentences(text)
+    if not sents:
+        return "", False
+    out = _clause_cut(sents[0], limit)
+    if out.endswith("…"):
+        return out, True
+    for s in sents[1:]:
+        if len(out) + 1 + len(s) > limit:
+            return out, True
+        out = f"{out} {s}"
+    return out, False
+
+
+# Authored exec prose often segments itself with caps-lock labels ("DAS GEWINNERKONZEPT: …",
+# "SURVEY-RÜCKHALT (5 Antworten): …") — those labels are the natural takeaway-card titles.
+_LBL_WORD = r"(?:[0-9A-ZÄÖÜ][0-9A-ZÄÖÜ\-/&'\.]+|\([^()]{1,40}\))"
+_LABEL_RE = _re_pptx.compile(rf"(?:^|(?<=[.!?:])\s)({_LBL_WORD}(?:\s+{_LBL_WORD}){{0,5}}):\s+")
+
+
+def _label_segments(prose: str) -> list[tuple[str, str]]:
+    """[(label, body), …] for caps-label-structured prose; [] when the prose has no such spine."""
+    ms = list(_LABEL_RE.finditer(prose or ""))
+    segs = []
+    for m, nxt in zip(ms, list(ms[1:]) + [None]):
+        body = prose[m.end():(nxt.start() if nxt else len(prose))].strip()
+        if body:
+            segs.append((m.group(1).strip(), body))
+    return segs
+
+
+def _split_card(text: str, head_max: int = 90) -> tuple[str, str]:
+    """One authored finding → (card_title, card_body): split at the first ': ' or ' — ' inside the
+    first `head_max` chars (': ' needs the space, so 'Arbeiter:innen' / '15:00' never split). A head
+    that still carries an ' — ' subtitle re-splits, the subtitle leads the body. No head → body only."""
+    t = _strip_md(text)
+    i = t.find(": ")
+    if 0 < i <= head_max:
+        head, body = t[:i], t[i + 2:]
+    else:
+        j = t.find(" — ")
+        if 0 < j <= head_max and t[j + 3:].strip():
+            return t[:j].strip(), t[j + 3:].strip()
+        return "", t
+    k = head.find(" — ")
+    if k > 0:
+        head, body = head[:k], (f"{head[k + 3:]}: {body}" if body else head[k + 3:])
+    return head.strip(), body.strip()
+
+
+def _chunks(items: list, per: int) -> list[list]:
+    """Balanced chunking: 6 items at 4/slide become 3+3, never 4+2 (no half-empty card grids)."""
+    n = len(items)
+    if not n:
+        return []
+    parts = -(-n // per)
+    base = -(-n // parts)
+    return [items[i:i + base] for i in range(0, n, base)]
+
+
+# stance value → canonical term / palette role (mirrors suggestions/stance_scale.json colours).
+_STANCE_TERM = {2: "support", 1: "conditional", 0: "neutral", -1: "skeptical", -2: "oppose"}
+_STANCE_COLOR = {2: "green", 1: "accent", 0: "faint", -1: "amber", -2: "red"}
+
+
+def _stance_chart(counter, L: dict, kind: str) -> dict | None:
+    """A stance-value Counter → a deck chart with scale-ordered categories, semantic colours and
+    NO zero categories (§9 V3: empty legend entries dropped)."""
+    from .._deck import PALETTE
+    cats, vals, cols = [], [], []
+    for v in (2, 1, 0, -1, -2):
+        n = counter.get(v, 0)
+        if n:
+            cats.append(L[f"st_{v}"]); vals.append(n); cols.append(PALETTE[_STANCE_COLOR[v]])
+    if not vals:
+        return None
+    return {"type": kind, "categories": cats, "values": vals, "colors": cols}
+
+
+# per-block clamp budgets for project-report sections (slide = headline + dosed lead, not a dump)
+_BLOCK_LIMIT = {"p": 320, "li": 220, "quote": 240, "callout": 280, "h": 90}
+
+
+def _budget_blocks(blocks: list[dict], max_blocks: int = 7, budget: int = 900) -> tuple[list[dict], bool]:
+    """Apply the slide prose budget to typed blocks: each block clamps to its type budget and the
+    slide stops at `max_blocks`/`budget` chars. Returns (blocks, clipped) — clipped slides carry a
+    'details in the report' footnote instead of the overflow."""
+    out: list[dict] = []
+    used, clipped = 0, False
+    for b in blocks:
+        if len(out) >= max_blocks or used >= budget:
+            clipped = True
+            break
+        txt, tr = _clamp_prose(b.get("text", ""), _BLOCK_LIMIT.get(b.get("type", "p"), 300))
+        clipped = clipped or tr
+        if txt:
+            out.append({**b, "text": txt})
+            used += len(txt)
+    return out, clipped
 
 
 def _figure_to_chart(fig: dict, store: Store) -> dict | None:
@@ -216,12 +350,179 @@ def _figure_image(fig: dict, store: Store) -> tuple[str, str] | None:
 
 
 def _effort_impact_chart(syn: dict) -> dict | None:
-    pts = [{"x": e, "y": v, "label": _strip_md(txt)} for (txt, e, v) in _A.synthesis_recommendations(syn) if e and v]
+    # legend labels are the recommendation HEADS, never the full prose (one legend line each)
+    pts = []
+    for (txt, e, v) in _A.synthesis_recommendations(syn):
+        if e and v:
+            head, _body = _split_card(txt)
+            pts.append({"x": e, "y": v, "label": head or _clause_cut(_strip_md(txt), 64)})
     if not pts:
         return None
     L = _SYNTHESIS_EXPORT_LABELS[content_language()]
     return {"type": "scatter", "points": pts, "x_label": L["effort"], "y_label": L["value"],
             "quadrants": [L["q_quick"], L["q_big"], L["q_fill"], L["q_sink"]]}
+
+
+def _analytic_slides(syn: dict, store: Store, L: dict, de: bool, title: str, kind_label: str) -> list[dict]:
+    """The analytic-layer deck (convergence synthesis / sectionless project synthesis) built from
+    the master template's layout vocabulary (ux-contract §9 V11): a statement verdict + takeaway
+    cards instead of the prose wall, sentiment/stance as chart slides, voices as attributed
+    quote/voices slides, recommendations as numbered cards plus the effort·value map. Slides carry
+    leads, never the full prose — that stays in the report ('details' footnote)."""
+    from collections import Counter
+
+    councils = [c for c in (store.get_council_session(cid) for cid in syn.get("council_ids", [])) if c]
+    cover = {"kind": "cover", "logo": True, "canvas": "dawn",
+             "eyebrow": kind_label, "title": title,
+             "subtitle": _strip_md(syn.get("goal", "")),
+             "meta": f"{len(councils)} {L['councils_w']}" if councils else "",
+             "date": syn.get("created_at", "")[:10]}
+
+    chapters: list[str] = []
+
+    def chap(label: str) -> str:
+        chapters.append(label)
+        return f"{len(chapters):02d}"
+
+    body: list[dict] = []
+    big = _strip_md(syn.get("gesamtbild") or "")
+    segs = _label_segments(big)
+    kps = _A.finding_texts(syn, "key_problem")
+
+    # 01 · executive summary — the verdict as a STATEMENT slide + the takeaways as cards.
+    if big or kps:
+        num = chap(L["exec_summary"])
+        src_sents = _sentences(segs[0][1] if segs else big)
+        statement = _strip_md(kps[0]) if kps else (src_sents[0] if src_sents else "")
+        support: list[str] = []
+        if kps and big:                       # headline finding + the exec lead as support lines
+            lead, _ = _clamp_prose(big, 300)
+            support = _sentences(lead)[:2]
+        body.append({"kind": "insight", "tone": "insight", "eyebrow": L["verdict"], "num": num,
+                     "statement": _clause_cut(statement, 220), "support": support,
+                     "footnote": L["details_in_report"]})
+        items = []
+        if len(segs) >= 2:                    # caps-label spine → labelled takeaway cards
+            for i, (label, seg_body) in enumerate(segs[:4]):
+                sents = _sentences(seg_body)
+                if i == 0 and not kps and len(sents) > 1:   # the verdict consumed sentence one
+                    seg_body = " ".join(sents[1:])
+                items.append({"title": label, "text": _clamp_prose(seg_body, 230)[0]})
+        else:                                 # unstructured prose → one sentence per card
+            items = [{"title": "", "text": _clamp_prose(s, 230)[0]}
+                     for s in _sentences(big)[1:4] if s]
+            if len(items) < 2:
+                items = []
+        if items:
+            body.append({"kind": "summary", "heading": L["exec_summary"], "num": num, "items": items})
+        elif big and not kps:                 # no card spine → disciplined lead slide instead
+            lead, trunc = _clamp_prose(big, 480)
+            body.append({"kind": "content", "num": num, "heading": L["big_picture"],
+                         "blocks": [{"type": "p", "text": s} for s in _sentences(lead)],
+                         "footnote": L["details_in_report"] if trunc else ""})
+
+    # 02 · sentiment & stance — chart slides over the cited council chain (data already exists).
+    votes: Counter = Counter()
+    stances: Counter = Counter()
+    for c in councils:
+        for v in c.get("votes", []):
+            st = _A.vote_stance(v)
+            if st is not None:
+                votes[st["value"]] += 1
+        for st in _A.council_statements(c):
+            if st.get("stance"):
+                stances[int((st["stance"] or {}).get("value") or 0)] += 1
+    charts = [(t, ch) for t, ch in ((L["votes_w"].capitalize(), _stance_chart(votes, L, "pie")),
+                                    (L["stance_dist"], _stance_chart(stances, L, "bar"))) if ch]
+    if charts:
+        num = chap(L["sentiment"])
+        foot = " · ".join(p for p in (
+            f"{sum(votes.values())} {L['votes_w']}" if votes else "",
+            f"{sum(stances.values())} {L['contributions_w']}" if stances else "",
+            f"{len(councils)} {L['councils_w']}") if p)
+        if len(charts) == 2:
+            body.append({"kind": "charts", "heading": L["sentiment"], "num": num,
+                         "items": [{"title": t, "chart": ch} for t, ch in charts], "footnote": foot})
+        else:
+            body.append({"kind": "chart", "heading": L["sentiment"], "num": num,
+                         "chart": charts[0][1], "footnote": foot})
+
+    # 03 · voices — an anchor quote, then per-persona cards (2 per slide, name + stance + argument).
+    stmts = _A.synthesis_statements(syn)
+    if stmts:
+        num = chap(L["voices_h"])
+        quoted = [s for s in stmts
+                  if any((r.get("quote") or "").strip() for r in (s.get("refs") or []))]
+        if quoted:
+            qs = max(quoted, key=lambda s: (abs((s.get("stance") or {}).get("value") or 0),
+                                            (s.get("stance") or {}).get("value") or 0))
+            qtext = next(r["quote"] for r in qs["refs"] if (r.get("quote") or "").strip())
+            meta = qs.get("meta") or {}
+            body.append({"kind": "quote", "text": _clause_cut(_strip_md(qtext), 220),
+                         "attribution": meta.get("persona_name") or qs.get("persona_id", ""),
+                         "role": _clause_cut(_strip_md(meta.get("segment", "")), 60)})
+        vitems = []
+        for s in stmts:
+            meta = s.get("meta") or {}
+            val = (s.get("stance") or {}).get("value")
+            vitems.append({"name": meta.get("persona_name") or s.get("persona_id", ""),
+                           "role": _clause_cut(_strip_md(meta.get("segment", "")), 60),
+                           "sentiment": _STANCE_TERM.get(val if val is None else int(val), ""),
+                           "sentiment_label": L.get(f"st_{val}", "") if val is not None else "",
+                           "text": _clamp_prose(_strip_md(s.get("text", "")), 300)[0]})
+        for chunk in _chunks(vitems, 2):
+            body.append({"kind": "voices", "heading": L["voices_h"], "num": num, "items": chunk})
+
+    def _cards(kind: str, heading: str, *, limit: int = 200, per: int = 4):
+        texts = _A.finding_texts(syn, kind)
+        if not texts:
+            return
+        num = chap(heading)
+        cards = []
+        for txt in texts:
+            head, card_body = _split_card(txt)
+            cards.append({"title": head, "text": _clamp_prose(card_body, limit)[0]})
+        for chunk in _chunks(cards, per):
+            body.append({"kind": "summary", "heading": heading, "num": num, "items": chunk})
+
+    # 04+ · findings as card grids — never bullet walls.
+    _cards("key_problem", L["key_problems"])
+    _cards("pain_solver", L["pain_solvers"])
+
+    # recommendations — numbered cards (effort·value as quiet card meta) + the effort·value map.
+    recs = _A.synthesis_recommendations(syn)
+    if recs:
+        num = chap(L["recommendations"])
+        cards = []
+        for i, (txt, e, v) in enumerate(recs, 1):
+            head, card_body = _split_card(txt)
+            cards.append({"title": f"{i:02d} · {head}" if head else f"{i:02d}",
+                          "text": _clamp_prose(card_body, 200)[0],
+                          "meta": f"{L['effort']} {e}/5 · {L['value']} {v}/5" if e and v else ""})
+        for chunk in _chunks(cards, 4):
+            body.append({"kind": "summary", "heading": L["recommendations"], "num": num, "items": chunk})
+        chart = _effort_impact_chart(syn)
+        if chart:
+            body.append({"kind": "chart", "num": num,
+                         "heading": f"{L['recommendations']} — {L['effort']} · {L['value']}",
+                         "chart": chart})
+
+    # positioning — a disciplined lead (sentence rhythm, clamped), not the full paragraph.
+    pos = _strip_md(syn.get("positionierung") or "")
+    if pos:
+        num = chap(L["positioning"])
+        lead, trunc = _clamp_prose(pos, 480)
+        body.append({"kind": "content", "num": num, "heading": L["positioning"],
+                     "blocks": [{"type": "p", "text": s} for s in _sentences(lead)],
+                     "footnote": L["details_in_report"] if trunc else ""})
+
+    _cards("segment", L["segments"])
+    _cards("open_question", L["open_questions"], limit=170, per=6)
+
+    slides = [cover]
+    if len(chapters) >= 4:                    # the reader's map — only when there is one to draw
+        slides.append({"kind": "agenda", "heading": "Inhalt" if de else "Contents", "items": chapters})
+    return slides + body
 
 
 def export_template_deck(out: str = "master-template.pptx") -> dict:
@@ -325,12 +626,16 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
             figs = sec.get("figures") or []
             charts = [c for c in (_figure_to_chart(f, store) for f in figs) if c]
             images = [im for im in (_figure_image(f, store) for f in figs) if im]
-            foot = ""
+            blocks, clipped = _budget_blocks(_md_blocks(sec.get("markdown", "")))
+            foot_parts = []
+            if clipped:
+                foot_parts.append(L["details_in_report"])
             if sec.get("source_study_ids"):
-                foot = ("Quellen: " if de else "Sources: ") + ", ".join(ref_title(x) for x in sec["source_study_ids"])
+                foot_parts.append(("Quellen: " if de else "Sources: ")
+                                  + ", ".join(ref_title(x) for x in sec["source_study_ids"]))
             slides.append({"kind": "content", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
-                           "blocks": _md_blocks(sec.get("markdown", "")),
-                           "chart": charts[0] if charts else None, "footnote": foot})
+                           "blocks": blocks,
+                           "chart": charts[0] if charts else None, "footnote": " · ".join(foot_parts)})
             for c in charts[1:]:
                 slides.append({"kind": "content", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
                                "blocks": [], "chart": c})
@@ -338,34 +643,7 @@ def export_synthesis_pptx(synthesis_id: str, store: Store | None = None) -> byte
                 slides.append({"kind": "image", "num": f"{idx:02d}", "heading": sec.get("heading", ""),
                                "image": path, "caption": cap})
     else:
-        cids = syn.get("council_ids", [])
-        meta = f"{len(cids)} {'Councils' if de else 'councils'}" if cids else ""
-        slides.append({"kind": "cover", "logo": True, "canvas": "dawn",
-                       "eyebrow": kind_label, "title": title,
-                       "subtitle": _strip_md(syn.get("goal", "")), "meta": meta,
-                       "date": syn.get("created_at", "")[:10]})
-        n = 0
-        for key, heading in (("gesamtbild", L["big_picture"]), ("positionierung", L["positioning"])):
-            if (syn.get(key) or "").strip():
-                n += 1
-                slides.append({"kind": "content", "num": f"{n:02d}", "heading": heading,
-                               "blocks": _md_blocks(syn[key])})
-        kps = _A.finding_texts(syn, "key_problem")
-        if kps:
-            n += 1
-            slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["key_problems"], "blocks": _li(kps)})
-        chart = _effort_impact_chart(syn)
-        if chart:
-            n += 1
-            recs = [(txt, e, v) for (txt, e, v) in _A.synthesis_recommendations(syn) if e and v]
-            blocks = [{"type": "li", "text": f"{_strip_md(txt)}  ({L['effort']} {e}/5 · {L['value']} {v}/5)"}
-                      for (txt, e, v) in recs]
-            slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["recommendations"],
-                           "blocks": blocks, "chart": chart})
-        oqs = _A.finding_texts(syn, "open_question")
-        if oqs:
-            n += 1
-            slides.append({"kind": "content", "num": f"{n:02d}", "heading": L["open_questions"], "blocks": _li(oqs)})
+        slides.extend(_analytic_slides(syn, store, L, de, title, kind_label))
 
     slides.append({"kind": "closing", "logo": True,
                    "title": "Vielen Dank" if de else "Thank you",

@@ -87,8 +87,9 @@ def test_canary_every_entity_kind_is_searchable_or_excused():
 
 
 def test_palette_markup_seeds_registry_commands_and_groups(store):
-    """The rendered chrome carries the registry-derived commands (every nav item, incl.
-    /runs and /activity) and the per-type group labels/icons/order as JSON."""
+    """The rendered chrome carries the registry-derived structured nav (every nav item,
+    incl. /runs and /activity — each WITH an icon), the actions, and the per-type group
+    labels/icons/order as JSON (UX V6)."""
     html = TestClient(web.create_app()).get("/?lang=en").text
     cfg = html.split('id="cmdk-cfg" type="application/json">')[1].split("</script>")[0]
     for url in ("/projects", "/personas", "/activity", "/runs", "/documentation",
@@ -96,9 +97,33 @@ def test_palette_markup_seeds_registry_commands_and_groups(store):
         assert f'"url": "{url}"' in cfg or f'"{url}"' in cfg, f"palette command {url} missing"
     import json
     parsed = json.loads(cfg)
-    assert parsed["order"] == ["go", *SEARCH_SOURCES]
-    assert set(parsed["labels"]) == {"go", *SEARCH_SOURCES}
+    assert parsed["order"] == list(SEARCH_SOURCES)
+    assert {"recent", "go", "actions", "closest", "empty", "teach",
+            *SEARCH_SOURCES} <= set(parsed["labels"])
     assert set(parsed["icons"]) == {"go", *SEARCH_SOURCES}
+    for it in parsed["nav"]:
+        assert it.get("ico"), f"nav item {it['url']} carries no icon (V6: icons everywhere)"
+    assert [a["act"] for a in parsed["actions"]] == ["theme", "tour", "feedback"]
+
+
+def test_palette_consolidates_library_kinds_under_one_entry(store):
+    """C10/V6: the kind lists are CHILDREN of the one /library entry — the palette never
+    re-exposes the retired flat IA as top-level commands."""
+    import json
+    from sonaloop.web.pages.library import LIBRARY_TABS
+    html = TestClient(web.create_app()).get("/?lang=en").text
+    cfg = html.split('id="cmdk-cfg" type="application/json">')[1].split("</script>")[0]
+    parsed = json.loads(cfg)
+    tops = [n["url"] for n in parsed["nav"]]
+    lib = next(n for n in parsed["nav"] if n["url"] == "/library")
+    assert [c["url"] for c in lib["children"]] == [route for _k, route, *_ in LIBRARY_TABS]
+    for _k, route, *_rest in LIBRARY_TABS:
+        assert route not in tops, (
+            f"{route} is a flat top-level palette entry again — kind lists must ride the "
+            "/library item's `children` (web/_palette_registry.palette_nav)")
+    # /runs stays searchable but quiet (retired from the IA — it must not read like nav)
+    runs = next(n for n in parsed["nav"] if n["url"] == "/runs")
+    assert runs.get("quiet") is True
 
 
 # ------------------------------------------------------------- new searchable types
@@ -142,7 +167,7 @@ def test_search_covers_sessions_hypotheses_decisions_surveys(store):
     client = TestClient(web.create_app())
 
     def hit(q, typ, url_prefix):
-        rows = client.get(f"/api/search?q={q}").json()
+        rows = client.get(f"/api/search?q={q}").json()["rows"]
         matches = [r for r in rows if r["type"] == typ]
         assert matches, f"no {typ} hit for q={q!r}: {rows}"
         assert matches[0]["url"].startswith(url_prefix + "/")
@@ -155,10 +180,86 @@ def test_search_covers_sessions_hypotheses_decisions_surveys(store):
 
 
 def test_search_rows_matches_api_contract(store):
-    """search_rows is the same read the API serves: typed, grouped-ready rows."""
+    """search_rows is the same read the API serves: typed rows with the V6 row anatomy —
+    kind, title, the OWNING PROJECT as the desc line, url, date for the right-aligned meta."""
     _seed_new_entities(store)
     rows = search_rows("pension", store=store)
     types = {r["type"] for r in rows}
     assert {"project", "hypothesis", "decision", "session"} <= types
     for r in rows:
-        assert set(r) == {"type", "title", "subtitle", "url"}
+        assert set(r) == {"type", "title", "subtitle", "url", "date"}
+    hyp = next(r for r in rows if r["type"] == "hypothesis")
+    assert hyp["subtitle"] == "Pension awareness", "desc line must be the owning project"
+    assert next(r for r in rows if r["type"] == "session")["date"] == "10 Jun"
+
+
+# ----------------------------------------------------------- V6: ranking + fold + limits
+
+def test_search_ranking_title_prefix_then_word_prefix_then_substring(store):
+    proj = services.create_research_project("Ranking fixture", goal="rank", store=store)
+    pid = proj["id"]
+    services.create_note(pid, "x", title="Antipause artifact", store=store)   # substring
+    services.create_note(pid, "x", title="Lunch pause flow", store=store)     # word-prefix
+    services.create_note(pid, "x", title="Pause screen design", store=store)  # title-prefix
+    rows = [r["title"] for r in search_rows("pause", store=store) if r["type"] == "note"]
+    assert rows == ["Pause screen design", "Lunch pause flow", "Antipause artifact"]
+
+
+def test_search_is_diacritic_and_case_insensitive(store):
+    proj = services.create_research_project("Überstunden im Schichtdienst", goal="g", store=store)
+    for q in ("überst", "uberst", "ÜBERST"):
+        rows = search_rows(q, store=store)
+        assert any(r["url"] == f'/projects/{proj["id"]}' for r in rows), f"no hit for {q!r}"
+
+
+def test_search_caps_results_per_kind(store):
+    proj = services.create_research_project("Caps", goal="g", store=store)
+    for i in range(8):
+        services.record_hypothesis(
+            proj["id"], text=f"Pricing bet number {i}",
+            prediction={"metric": "m", "expected_value": 1, "tolerance": 1,
+                        "confidence": 0.5}, store=store)
+    rows = [r for r in search_rows("pricing", store=store) if r["type"] == "hypothesis"]
+    assert len(rows) == 6, "the palette endpoint must stay capped at 6 rows per kind"
+
+
+def test_api_empty_result_offers_closest_matches(store):
+    """No hits never dead-ends: the API carries the nearest titles (the DS-site ⌘K idea)."""
+    _seed_new_entities(store)
+    client = TestClient(web.create_app())
+    data = client.get("/api/search?q=pensoin").json()       # a typo near 'pension'
+    assert data["rows"] == []
+    assert data["closest"], "closest matches missing for a near-miss query"
+    assert any("pension" in r["title"].lower() for r in data["closest"])
+    # honest nothing: a query near nothing returns no fabricated suggestions
+    far = client.get("/api/search?q=xqzwvjkpt").json()
+    assert far["rows"] == [] and far["closest"] == []
+
+
+# --------------------------------------------------------------- V6: the recents beacon
+
+def test_detail_pages_stamp_the_recents_beacon(store):
+    """Detail renders (full page AND ?slide=1 slide-over fragment) carry the inert
+    data-cmdk-visit JSON the palette JS records into localStorage — kind, title, owning
+    project, canonical url. List pages stay beacon-free."""
+    import json
+    pid = _seed_new_entities(store)
+    client = TestClient(web.create_app())
+    cid = store.list_council_sessions()[0]["id"]
+
+    def beacon(html):
+        # the rendered element, not the bare attribute name (PALETTE_JS quotes the selector)
+        assert "data-cmdk-visit>" in html, "recents beacon missing"
+        return json.loads(html.split("data-cmdk-visit>")[1].split("</script>")[0])
+
+    v = beacon(client.get(f"/councils/{cid}").text)
+    assert v["type"] == "council" and v["url"] == f"/councils/{cid}"
+    assert v["title"] and v["project"] == "Pension awareness"
+    # the slide-over fragment stamps the SAME visit (peek counts as a visit)
+    assert beacon(client.get(f"/councils/{cid}?slide=1").text)["url"] == f"/councils/{cid}"
+    # project + persona pages stamp their own kind
+    assert beacon(client.get(f"/projects/{pid}").text)["type"] == "project"
+    per = store.list_personas()[0]
+    assert beacon(client.get(f'/personas/{per["id"]}').text)["type"] == "persona"
+    # list pages never pollute the recents
+    assert "data-cmdk-visit>" not in client.get("/councils").text

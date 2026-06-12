@@ -242,6 +242,13 @@ _SYNTHESIS_EXPORT_LABELS = {
         "voices": "Stimmen (pro Persona)", "relevance": "Relevanz", "argument": "Argument",
         "shift": "Wandel", "open_questions": "Offene Fragen / Nächste Studie",
         "sources": "Quellen (Councils in Reihenfolge)",
+        # deck (PPTX) slide labels — UX V11
+        "verdict": "Fazit", "exec_summary": "Executive Summary",
+        "sentiment": "Stimmungsbild", "stance_dist": "Haltung der Wortbeiträge",
+        "voices_h": "Stimmen", "details_in_report": "Details im vollständigen Report",
+        "votes_w": "Votes", "contributions_w": "Wortbeiträge", "councils_w": "Councils",
+        "st_2": "Befürwortend", "st_1": "Bedingt", "st_0": "Neutral",
+        "st_-1": "Skeptisch", "st_-2": "Ablehnend",
     },
     "en": {
         "report_title": "Report",
@@ -257,6 +264,13 @@ _SYNTHESIS_EXPORT_LABELS = {
         "voices": "Voices (per persona)", "relevance": "Relevance", "argument": "Argument",
         "shift": "Shift", "open_questions": "Open questions / Next study",
         "sources": "Sources (councils in order)",
+        # deck (PPTX) slide labels — UX V11
+        "verdict": "Verdict", "exec_summary": "Executive summary",
+        "sentiment": "Sentiment", "stance_dist": "Stance of the contributions",
+        "voices_h": "Voices", "details_in_report": "Details in the full report",
+        "votes_w": "votes", "contributions_w": "contributions", "councils_w": "councils",
+        "st_2": "Support", "st_1": "Conditional", "st_0": "Neutral",
+        "st_-1": "Skeptical", "st_-2": "Oppose",
     },
 }
 

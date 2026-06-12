@@ -50,26 +50,36 @@ delete** only; creation stays with the agent.
 
 Every mutating route follows one shape:
 
-1. `GET /thing/{id}/edit` renders a plain HTML form (`form_page`/`field`,
-   design-system `.sl-field` markup, no JS required). Create endpoints are
-   POST-only — no GET form (the affordance policy above).
+1. The UI affordance is the detail header's **"…" overflow → Edit**, which
+   opens a native **edit `<dialog>` over the detail page** (UX V10,
+   ux-contract §9) carrying the kind's form fields (`edit_dialog` +
+   the `pages/edit.py` field builders). `GET /thing/{id}/edit` keeps
+   answering for deep links with the SAME fields as a plain HTML form
+   (`form_page`/`field`, design-system `.sl-field` markup, no JS required —
+   one field source for page and dialog). Create endpoints are POST-only —
+   no GET form (the affordance policy above).
 2. `POST` runs `write_gate(form, operation, resource)`:
    - **CSRF** check first (403 on failure),
    - then the **cloud access-guard seam** (403 on `PermissionError`).
-3. Server-side validation; on failure the SAME form re-renders with inline
-   errors and HTTP **400**.
+3. Server-side validation; on failure HTTP **400** re-renders the dialog
+   RE-OPENED over the detail backdrop with inline errors (the create POSTs,
+   which have no detail page, re-render the plain form instead).
 4. The service call, then **303 See Other** to the entity page
    (POST-redirect-GET — a refresh never re-submits).
 5. Unknown ids answer HTTP **404** (the calm empty-state page).
 
-Deletion is **subtle, never a danger zone** (UX U9): every surface that can
-delete carries a quiet overflow ("…") button in its detail/edit page header
-(`overflow_delete`, a keyboard-accessible `<details>` popover) whose single
-action opens a confirm `<dialog>`. Projects and personas keep the
+Edit and Delete share **one visible "…" overflow on every detail header**
+(`detail_overflow`, UX V10 — the owner could not FIND deletion while it hid on
+the edit pages): kinds with editable structure (project / persona / note /
+section) hold Edit + Delete there, recorded artifacts (council / synthesis /
+prototype) Delete only, kinds without a delete route render no overflow. The
+same actions ride the **slide-over header** (next to expand/close) — the
+fragment carries them as a hidden `[data-slide-actions]` block the drawer JS
+hoists. Deletion stays **subtle, never a danger zone** (UX U9): choosing
+Delete opens a confirm `<dialog>`; projects and personas keep the
 typed-confirmation field there (the server re-checks `confirm == name` — the
 JS is convenience, not protection); the other entities confirm in the same
-modal without typing. One pattern across project / persona / note / section /
-council / synthesis / prototype.
+modal without typing.
 
 ### CSRF: double-submit cookie
 

@@ -24,7 +24,7 @@ register_css(r"""
 .insight{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:16px}
 .insight.wide{grid-column:1 / -1}
 .insight h3{margin:0 0 2px;font-size:var(--t-body)}
-.insight .ihint{color:var(--muted);font-size:var(--t-sm);margin:0 0 14px}
+.ihint{color:var(--muted);font-size:var(--t-sm);margin:0 0 14px}
 .kpi{display:flex;align-items:baseline;gap:6px;margin:2px 0 10px}
 .kpi b{font-size:var(--t-xl);font-weight:720;letter-spacing:-.01em}.kpi span{color:var(--muted);font-size:var(--t-sm)}
 .stacked{display:flex;height:12px;border-radius:var(--radius-sm);overflow:hidden;background:var(--line-2);border:1px solid var(--line)}
@@ -44,9 +44,16 @@ register_css(r"""
 .crow{display:grid;grid-template-columns:1fr 150px 64px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line-2)}
 .crow:last-child{border-bottom:0}.crow .ct{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
 .crow .cn{text-align:right;color:var(--muted);font-size:var(--t-sm)}
-.prow{display:grid;grid-template-columns:150px 1fr 38px;gap:11px;align-items:center;padding:6px 0}
-.prow .pn{display:flex;align-items:center;gap:8px;overflow:hidden}.prow .pn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
-.prow .ps{text-align:right;font-size:var(--t-sm);font-variant-numeric:tabular-nums}
+/* per-persona enthusiasm rows (V3): plain rows — avatar · name · diverging bar · score.
+   The bar is zero-CENTERED; its length encodes |score|, its color the stance sign. */
+.prow{display:grid;grid-template-columns:150px 1fr 42px;gap:11px;align-items:center;padding:6px 0}
+.prow .pwho{display:flex;align-items:center;gap:8px;overflow:hidden;text-decoration:none;color:var(--ink)}
+.prow .pwho:hover span{color:var(--accent)}
+.prow .pwho span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
+.prow .ps{text-align:right;font-size:var(--t-sm);font-weight:600;font-variant-numeric:tabular-nums}
+.dvg{position:relative;display:block;height:7px;border-radius:var(--radius-full);background:var(--line-2);overflow:hidden}
+.dvg i{position:absolute;top:0;bottom:0;border-radius:var(--radius-full)}
+.dvg::after{content:"";position:absolute;left:50%;top:-1px;bottom:-1px;width:1px;background:var(--faint);opacity:.55}
 .area svg{display:block;width:100%;height:140px}
 .area .ln{fill:none;stroke:var(--accent);stroke-width:2}
 .area .fl{fill:var(--accent);opacity:.10}
@@ -128,8 +135,11 @@ def _stacked(parts: list[tuple], thin: bool = False) -> str:
 
 
 def _legend(parts: list[tuple]) -> str:
+    """Legend rows for the nonzero parts only (V3: an "Oppose 0" entry is noise — the scale's
+    zero categories never earn a legend line)."""
     return h("div", {"class_": "legend"},
-             [h("span", {}, h("i", {"style": f"background:{c}"}), f"{lbl} {v}") for v, c, lbl in parts])
+             [h("span", {}, h("i", {"style": f"background:{c}"}), f"{lbl} {v}")
+              for v, c, lbl in parts if v])
 
 
 def _donut(parts: list[tuple], size: int = 118) -> str:
@@ -144,8 +154,19 @@ def _donut(parts: list[tuple], size: int = 118) -> str:
     return h("div", {"class_": "donut", "style": f"--g:{grad};width:{size}px;height:{size}px"})
 
 
+def _diverging(score: float, maxv: float, color: str) -> str:
+    """A compact zero-centered diverging bar (V3): the fill grows from the CENTER, its length
+    ∝ |score| / maxv, its color the caller's stance color — so the bar ENCODES the value
+    instead of painting a full-width line for every row."""
+    pct = min(abs(score) / (maxv or 1), 1.0) * 50
+    side = "right:50%" if score < 0 else "left:50%"
+    return h("span", {"class_": "dvg"},
+             h("i", {"style": f"{side};width:{pct:.1f}%;background:{color}"}))
+
+
 def _hbars(rows: list[tuple], maxv: int | None = None) -> str:
-    """rows: [(label, value, color)]. Horizontal bar chart."""
+    """rows: [(label, value, color)]. Horizontal bar chart — ALL rows share one max-count
+    scale (the longest bar = the largest count; every other length is proportional)."""
     mx = maxv or max((v for _, v, _ in rows), default=0) or 1
     return fragment(*(
         h("div", {"class_": "brow"},
@@ -208,11 +229,15 @@ def _per_council_html(sessions: list[dict]) -> str:
         rows.append(h("a", {"class_": "crow", "href": f'/councils/{s["id"]}'},
                       h("span", {"class_": "ct", "title": s["prompt"]}, s["prompt"]),
                       _stacked(parts, thin=True),
-                      h("span", {"class_": "cn"}, f'{n} P · {s.get("created_at", "")[:10]}')))
+                      h("span", {"class_": "cn"}, f'{n} P · {ui.fmt_day(s.get("created_at", ""))}')))
     return fragment(*rows)
 
 
 def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
+    """Per-persona enthusiasm rows (V3 redesign): avatar · name · a compact zero-centered
+    DIVERGING bar (length ∝ |score|, color from the nearest stance bucket) · the score at
+    the bar's end. Replaces the full-width stacked strips (whose length encoded nothing)
+    and the boxed persona cards."""
     pv: dict = defaultdict(list)                     # persona → resolved stance VALUES
     for s in sessions:
         for v in s.get("votes", []):
@@ -223,18 +248,19 @@ def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
         return ""
     personas = {p["id"]: p for p in services.list_personas(store=store)}
     # score = the MEAN of the stance values (−2..+2) — no token-specific coefficients
-    data = sorted(((pid, Counter(vals), sum(vals) / len(vals)) for pid, vals in pv.items()),
-                  key=lambda x: x[2], reverse=True)
+    data = sorted(((pid, sum(vals) / len(vals)) for pid, vals in pv.items()),
+                  key=lambda x: x[1], reverse=True)
+    maxv = max((abs(r["value"]) for r in _A.stance_terms()), default=2) or 2
     rows = []
-    for pid, cnt, score in data:
+    for pid, score in data:
         p = personas.get(pid)
         name = p["display_name"] if p else pid
         av = _avatar(p, 22) if p else ""
         # the score's color = the NEAREST scale value's color (value-bucketed, no keyword matching)
         col = min(_A.stance_terms(), key=lambda r: abs(r["value"] - score))["color"]
         rows.append(h("div", {"class_": "prow"},
-                      h("a", {"class_": "pn", "href": f'/personas/{pid}'}, av, h("span", {}, name)),
-                      _stacked(_vote_chart_parts(cnt), thin=True),
+                      h("a", {"class_": "pwho", "href": f'/personas/{pid}'}, av, h("span", {}, name)),
+                      raw(_diverging(score, maxv, col)),
                       h("span", {"class_": "ps", "style": f"color:{col}"}, f"{score:+.1f}")))
     return fragment(*rows)
 
@@ -325,7 +351,9 @@ def _charts_row(sessions: list[dict]) -> str:
     nvotes = sum(v for v, _, _ in parts)
     cards = []
     if nvotes:
-        cards.append(h("div", {"class_": "insight"}, h("h3", {}, t("sentiment_block")),
+        # card title names the SCOPE (the cited chain) — the section heading above the row
+        # already says "Sentiment", repeating it verbatim taught nothing (round-3 craft pass)
+        cards.append(h("div", {"class_": "insight"}, h("h3", {}, t("sentiment_over_chain")),
                        raw(_overview_html(parts))))
     sd = _stance_dist_html(sessions)
     if sd:
@@ -484,7 +512,7 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
             mchips.append(h("span", {"class_": "mchip"}, f'{syn["iterations"]} {t("iterations")}'))
         if smeta:
             mchips.append(h("span", {"class_": "mchip"}, raw(t("voices_meta", s=_esc(smeta)))))
-        mchips.append(h("span", {"class_": "mchip"}, syn["created_at"][:10]))
+        mchips.append(h("span", {"class_": "mchip"}, ui.fmt_date(syn["created_at"])))
         head = h("header", {"class_": "syn-head"},
                  h("h1", {"title": syn["title"]}, raw(_icon("syntheses")), syn["title"]),
                  h("div", {"class_": "syn-meta"}, fragment(*mchips)))

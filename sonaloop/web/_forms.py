@@ -146,18 +146,57 @@ def form_page(store, *, title: str, crumbs: list, active: str, action: str,
     return _layout(title, body, store, crumbs=crumbs, active=active, actions=actions)
 
 
-def overflow_delete(action: str, label: str, *, expected: str | None = None,
-                    error: str = "", dialog_id: str = "del-dialog") -> str:
-    """THE deletion affordance (UX U9, ux-contract §8.4): subtle, never a danger zone.
+def menu_item(label: str, icon: str, dialog_id: str, *, danger: bool = False) -> str:
+    """One overflow menu entry that opens a <dialog> by id (closing the popover first)."""
+    return h("button", {"class_": "sl-menu-item" + (" sl-menu-item--danger" if danger else ""),
+                        "type": "button",
+                        "onclick": "this.closest('details').removeAttribute('open');"
+                                   f"document.getElementById({json.dumps(dialog_id)}).showModal()"},
+             raw(_icon(icon)), " ", label)
 
-    An overflow "…" button in the detail/edit page header (a native <details> popover —
-    keyboard-toggleable without JS; the script below only adds Esc/outside-click dismiss)
-    holds the single destructive action. Choosing it opens the confirm <dialog>:
-    with `expected` set (projects/personas) the user must TYPE the entity name and the
-    SERVER re-checks `confirm == name` (the JS is convenience, never the protection — on
-    mismatch the page re-renders with the inline `error` and the dialog re-opened);
-    without it (notes/sections/councils/syntheses/prototypes) the same modal simply asks
-    for confirmation. ONE pattern on every surface that can delete."""
+
+def overflow_menu(items, dialogs="") -> str:
+    """The "…" header overflow (UX V10 — VISIBLE and CONSISTENT on every detail header): a
+    native <details> popover (keyboard-toggleable without JS; _OVERFLOW_JS only adds
+    Esc/outside-click dismiss) holding the entity's actions; the dialogs the items open ride
+    along as siblings (showModal works from anywhere — the top layer)."""
+    menu = h("details", {"class_": "sl-overflow"},
+             h("summary", {"class_": "sl-iconbtn", "role": "button",
+                           "aria-label": t("more_actions"), "title": t("more_actions")},
+               raw(_icon("more"))),
+             h("div", {"class_": "sl-popover sl-popover--bottom-end"}, fragment(*items)))
+    return fragment(menu, dialogs, raw(_OVERFLOW_JS))
+
+
+def edit_dialog(*, action: str, title: str, fields: list, lead: str = "",
+                open_now: bool = False, dialog_id: str = "edit-dialog") -> str:
+    """The EDIT modal (UX V10, ux-contract §9: "edit pages sollten eher modale/dialoge
+    sein"): a native <dialog> over the detail page carrying the SAME form fields the edit
+    page renders (one source — the pages/edit.py field builders), posting to the SAME
+    route. `open_now=True` re-opens it on the server's 400 re-render, so validation errors
+    appear IN the dialog (the typed-confirm idiom)."""
+    dlg = h("dialog", {"class_": "wdialog", "id": dialog_id},
+            h("form", {"class_": "wform", "method": "post", "action": action},
+              raw(csrf_field()),
+              h("h3", {}, title),
+              h("p", {"class_": "sl-field__hint"}, lead) if lead else None,
+              fragment(*fields),
+              h("div", {"class_": "wform-actions"},
+                h("button", {"class_": "sl-btn sl-btn--primary", "type": "submit"}, t("save")),
+                h("button", {"class_": "sl-btn", "type": "button",
+                             "onclick": "this.closest('dialog').close()"}, t("cancel")))))
+    reopen = (raw("<script>document.getElementById(" + json.dumps(dialog_id)
+                  + ").showModal()</script>") if open_now else "")
+    return fragment(dlg, reopen)
+
+
+def confirm_delete_dialog(action: str, label: str, *, expected: str | None = None,
+                          error: str = "", dialog_id: str = "del-dialog") -> str:
+    """The confirm <dialog> behind every delete: with `expected` set (projects/personas)
+    the user must TYPE the entity name and the SERVER re-checks `confirm == name` (the JS
+    is convenience, never the protection — on mismatch the page re-renders with the inline
+    `error` and the dialog re-opened); without it (notes/sections/councils/syntheses/
+    prototypes) the same modal simply asks for confirmation."""
     confirm_row = (raw(field("confirm", t("confirm_type_name", name=expected),
                              error=error, required=True)) if expected is not None
                    else h("p", {}, t("delete_confirm_q")))
@@ -172,18 +211,52 @@ def overflow_delete(action: str, label: str, *, expected: str | None = None,
                 h("button", {"class_": "sl-btn", "type": "button",
                              "onclick": f"document.getElementById('{dialog_id}').close()"},
                   t("cancel")))))
-    item = h("button", {"class_": "sl-menu-item sl-menu-item--danger", "type": "button",
-                        "onclick": "this.closest('details').removeAttribute('open');"
-                                   f"document.getElementById({json.dumps(dialog_id)}).showModal()"},
-             raw(_icon("trash")), " ", label)
     reopen = (raw("<script>document.getElementById(" + json.dumps(dialog_id)
                   + ").showModal()</script>") if error else "")
-    menu = h("details", {"class_": "sl-overflow"},
-             h("summary", {"class_": "sl-iconbtn", "role": "button",
-                           "aria-label": t("more_actions"), "title": t("more_actions")},
-               raw(_icon("more"))),
-             h("div", {"class_": "sl-popover sl-popover--bottom-end"}, item))
-    return fragment(menu, dlg, reopen, raw(_OVERFLOW_JS))
+    return fragment(dlg, reopen)
+
+
+def _dialog_id(prefix: str, action: str) -> str:
+    """A document-UNIQUE dialog id derived from the POST action: the `?d=` SSR context view
+    renders the background page AND the panel fragment in ONE document — fixed ids would
+    make the panel's hoisted menu items showModal() the background page's dialog."""
+    import re
+    return prefix + "-" + re.sub(r"[^a-z0-9]+", "-", action.lower()).strip("-")
+
+
+def detail_overflow(*, edit: dict | None = None, delete: dict | None = None) -> str:
+    """THE detail-header actions (UX V10): ONE visible "…" overflow holding Edit (opens the
+    edit <dialog> — kinds with editable structure) and/or Delete (opens the confirm dialog —
+    kinds with a delete route), composed per kind:
+
+        edit   = {action, title, fields[, lead, open_now]}   (edit_dialog kwargs)
+        delete = {action, label[, expected, error]}          (confirm_delete_dialog args)
+
+    Kinds without either render no overflow (pass nothing). Used by every detail page AND
+    carried into the slide-over header (web/_drawer hoists [data-slide-actions])."""
+    items, dialogs = [], []
+    if edit:
+        eid = _dialog_id("edit", edit["action"])
+        items.append(menu_item(t("edit"), "pencil", eid))
+        dialogs.append(raw(edit_dialog(**edit, dialog_id=eid)))
+    if delete:
+        did = _dialog_id("del", delete["action"])
+        items.append(menu_item(delete["label"], "trash", did, danger=True))
+        dialogs.append(raw(confirm_delete_dialog(
+            delete["action"], delete["label"], expected=delete.get("expected"),
+            error=delete.get("error", ""), dialog_id=did)))
+    if not items:
+        return ""
+    return overflow_menu(items, fragment(*dialogs))
+
+
+def overflow_delete(action: str, label: str, *, expected: str | None = None,
+                    error: str = "") -> str:
+    """The delete-only overflow (UX U9, ux-contract §8.4: subtle, never a danger zone) —
+    councils/syntheses/prototypes (recorded artifacts: no content editing) and the
+    deep-link edit pages keep this thin wrapper over the V10 builders."""
+    return detail_overflow(delete={"action": action, "label": label,
+                                   "expected": expected, "error": error})
 
 
 # Light-dismiss for the overflow <details> (Esc + outside click) — enhancement only; the
@@ -199,19 +272,14 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')
 """
 
 
-def edit_button(href: str) -> str:
-    """The topbar Edit affordance every editable detail page shows."""
-    return h("a", {"class_": "sl-btn", "href": href}, raw(_icon("pencil")), " ", t("edit"))
-
-
-# Co-located CSS (spec/roadmap.md R3): the write-form shell, the overflow menu + confirm modal.
+# Co-located CSS (spec/roadmap.md R3): the write-form shell, the overflow menu + the modals.
 register_css(r"""
 /* ---- write forms (web CRUD) ---- */
 .wform{max-width:560px;display:flex;flex-direction:column;gap:14px;margin-top:10px}
 .wform-actions{display:flex;gap:10px;margin-top:6px}
 .btn-danger{border-color:var(--red,#ea4335);color:var(--red,#ea4335)}
 .btn-danger:hover{background:var(--red,#ea4335);border-color:var(--red,#ea4335);color:#fff}
-/* ---- the overflow ("…") menu (U9): a quiet header affordance, not a red block ---- */
+/* ---- the overflow ("…") menu (U9/V10): a quiet header affordance, not a red block ---- */
 .sl-overflow{position:relative;display:inline-flex}
 .sl-overflow>summary{list-style:none;cursor:pointer}
 .sl-overflow>summary::-webkit-details-marker{display:none}
@@ -219,8 +287,12 @@ register_css(r"""
 .sl-menu-item--danger{color:var(--red,#ea4335)}
 .sl-menu-item--danger svg{width:15px;height:15px;color:var(--red,#ea4335)}
 .sl-menu-item--danger:hover{background:color-mix(in srgb,var(--red,#ea4335) 10%,transparent)}
-.danger-dialog{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--ink);padding:18px;max-width:420px}
-.danger-dialog h3{margin:0 0 12px}
+/* ---- the modals: the typed-confirm delete + the V10 edit dialog (one visual idiom) ---- */
+.danger-dialog,.wdialog{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--ink);padding:18px}
+.danger-dialog{max-width:420px}
+.wdialog{width:min(560px,92vw)}
+.danger-dialog h3,.wdialog h3{margin:0 0 12px}
 .danger-dialog p{margin:0 0 6px;color:var(--muted)}
-.danger-dialog::backdrop{background:rgba(0,0,0,.45)}
+.wdialog .wform{max-width:none;margin-top:0}
+.danger-dialog::backdrop,.wdialog::backdrop{background:rgba(0,0,0,.45)}
 """)

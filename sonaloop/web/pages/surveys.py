@@ -157,8 +157,8 @@ def _response_row(resp: dict, qmap: dict, store) -> str:
              h("div", {"class_": "sl-entity__content"},
                h("div", {"class_": "sl-entity__title"}, name)),
              h("span", {"class_": "sl-entity__trailing"},
-               h("span", {"class_": "muted small"}, t("n_responses", n=len(answers))),
-               h("span", {"class_": "muted small"}, (resp.get("submitted_at") or "")[:10])))
+               h("span", {"class_": "muted small"}, t("n_answers", n=len(answers))),
+               h("span", {"class_": "muted small"}, ui.fmt_day(resp.get("submitted_at") or ""))))
     rows = []
     for a in answers:
         q = qmap.get(a.get("question_id", "")) or {}
@@ -172,11 +172,12 @@ def _response_row(resp: dict, qmap: dict, store) -> str:
 
 def register_surveys(app) -> None:
     @app.get("/surveys", response_class=HTMLResponse)
-    def surveys(project: str = Query(default=""), status: str = Query(default="")) -> str:
+    def surveys(project: str = Query(default=""), status: str = Query(default=""),
+                q: str = Query(default="")) -> str:
         # The Library's Surveys tab under the canonical URL (ux-contract §3.5),
         # filterable by project + status (U10, the shared FilterBar grammar).
         from .library import library_filters, library_page
-        return library_page("surveys", flt=library_filters(project, status), base="/surveys")
+        return library_page("surveys", flt=library_filters(project, status), base="/surveys", q=q)
 
     @app.get("/surveys/{survey_id}", response_class=HTMLResponse)
     def survey_detail(survey_id: str) -> str:
@@ -223,7 +224,7 @@ def register_surveys(app) -> None:
             # "Type: Survey" row retired — the SURVEY eyebrow already states the kind (round 2).
             prop_rows=[("projects", t("project"), proj_link),
                        ("personas", t("respondents_h"), str(results["respondents"])),
-                       ("clock", t("created"), s.get("created_at", "")[:10])],
+                       ("clock", t("created"), ui.fmt_date(s.get("created_at", "")))],
             rail_sections=[("sec-questions", t("n_questions", n=len(s["questions"]))),
                            ("sec-responses", t("n_responses", n=n_resp))],
             star=("survey", s["id"], s["title"], f'/surveys/{s["id"]}'))

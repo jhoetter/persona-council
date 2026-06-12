@@ -6,7 +6,7 @@
       "tag": "prototype",
       "renderer": "spa",
       "default_template": "spa-min",
-      "presentation": {"label": "Prototyp", "short": "Prototyp", "icon": "projects", "color": "#00897b", "glyph": "▢"},
+      "presentation": {"label": "Prototype", "short": "Prototype", "icon": "projects", "color": "#00897b", "glyph": "▢"},
       "discriminators": [
         {"tag": "lofi", "template": "spa-sketch", "presentation": {"label": "lo-fi", "short": "lo-fi"}},
         {"tag": "midfi", "template": "spa-min", "presentation": {"label": "mid-fi", "short": "mid-fi"}},
@@ -17,35 +17,35 @@
       "tag": "flow",
       "renderer": "spa",
       "default_template": "spa-flow",
-      "presentation": {"label": "Geführter Flow", "short": "Flow", "icon": "projects", "color": "#5b6cff", "glyph": "➤"},
+      "presentation": {"label": "Guided flow", "short": "Flow", "icon": "projects", "color": "#5b6cff", "glyph": "➤"},
       "discriminators": []
     },
     {
       "tag": "dashboard",
       "renderer": "spa",
       "default_template": "spa-dashboard",
-      "presentation": {"label": "Übersicht", "short": "Dashboard", "icon": "projects", "color": "#0aa37f", "glyph": "▦"},
+      "presentation": {"label": "Dashboard", "short": "Dashboard", "icon": "projects", "color": "#0aa37f", "glyph": "▦"},
       "discriminators": []
     },
     {
       "tag": "cards",
       "renderer": "spa",
       "default_template": "spa-cards",
-      "presentation": {"label": "Karten-Auswahl", "short": "Karten", "icon": "projects", "color": "#a142f4", "glyph": "▥"},
+      "presentation": {"label": "Card picker", "short": "Cards", "icon": "projects", "color": "#a142f4", "glyph": "▥"},
       "discriminators": []
     },
     {
       "tag": "comparison",
       "renderer": "spa",
       "default_template": "spa-comparison",
-      "presentation": {"label": "Vergleich", "short": "Vergleich", "icon": "projects", "color": "#f29900", "glyph": "⇄"},
+      "presentation": {"label": "Comparison", "short": "Comparison", "icon": "projects", "color": "#f29900", "glyph": "⇄"},
       "discriminators": []
     },
     {
       "tag": "journey",
       "renderer": "spa",
       "default_template": "spa-journey",
-      "presentation": {"label": "Erfahrbare Journey", "short": "Journey", "icon": "projects", "color": "#5e6ad2", "glyph": "❯∿"},
+      "presentation": {"label": "Journey", "short": "Journey", "icon": "projects", "color": "#5e6ad2", "glyph": "❯∿"},
       "_note": "A PRODUCTION-CREDIBLE experience: an interactive model embedded in a multi-screen narrative FLOW with cross-screen state, plus `chart` (sweep an input -> live curves), `verdict` (data-driven conditional text via comparison exprs), and `timeline` elements. The richest hi-fi class. Theme via concept.fidelity (lofi/midfi/hifi).",
       "discriminators": []
     },
@@ -53,7 +53,7 @@
       "tag": "model",
       "renderer": "spa",
       "default_template": "spa-model",
-      "presentation": {"label": "Interaktives Modell", "short": "Modell", "icon": "projects", "color": "#7b61ff", "glyph": "∿"},
+      "presentation": {"label": "Interactive model", "short": "Model", "icon": "projects", "color": "#7b61ff", "glyph": "∿"},
       "_note": "An INTERACTIVE/computational prototype: range/number inputs feed `computed` + `bar` elements whose `formula` is evaluated live (e.g. a pension-gap or compounding model the persona can actually steer). The spa-model template self-themes from concept.fidelity, so a lofi/midfi/hifi tag styles it without a separate template.",
       "discriminators": []
     },
@@ -61,7 +61,7 @@
       "tag": "survey",
       "renderer": "spa",
       "default_template": "spa-min",
-      "presentation": {"label": "Umfrage", "short": "Umfrage", "color": "#6b7cff", "glyph": "▤"},
+      "presentation": {"label": "Survey", "short": "Survey", "color": "#6b7cff", "glyph": "▤"},
       "discriminators": []
     }
   ]

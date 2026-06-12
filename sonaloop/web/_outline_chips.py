@@ -17,7 +17,7 @@ from ._components import _label
 from ._html import h, raw
 from ._i18n import t
 from ._presence import (
-    asset_direction_pill, asset_size, decision_status_pill, hypothesis_status_pill,
+    decision_status_pill, hypothesis_status_pill,
     open_question_status_pill, survey_status_pill,
 )
 
@@ -40,12 +40,15 @@ _MODES = ("discovery", "evaluation", "decision")
 
 
 def _council_chips(item: dict) -> str:
-    """Mode (derived the way the council page does — it rides node['mode']) + the statement count."""
+    """The mode tag only (derived the way the council page does — it rides node['mode']).
+    V2 dropped the statement count: the avatars already say who debated, and the count lives
+    on the detail/slide-over. The count stands in only when the mode is unknown (legacy rows
+    keep a chip)."""
     node = item.get("node") or {}
     mode = node.get("mode")
-    chips = [_label(t("council_mode_" + mode), "var(--blue)")] if mode in _MODES else []
-    chips.append(_label(t("chip_statements_n", n=int(node.get("n_statements") or 0))))
-    return "".join(chips)
+    if mode in _MODES:
+        return _label(t("council_mode_" + mode), "var(--blue)")
+    return _label(t("chip_statements_n", n=int(node.get("n_statements") or 0)))
 
 
 def _synthesis_chips(item: dict) -> str:
@@ -69,14 +72,14 @@ def _report_chips(item: dict) -> str:
 
 def _note_chips(item: dict) -> str:
     """A concept note shows its artifact kind (label/color from present() — data, not code);
-    a plain note a quiet observation chip; built notes carry the built marker."""
+    built notes carry the built marker. A PLAIN note renders chip-less (V2: the default-kind
+    "Observation" pill said nothing the NOTE row label didn't — what varies earns the chip)."""
     node = item.get("node") or {}
     ak = str(node.get("artifact_kind") or "")
+    chips = []
     if ak:
         pr = _pres.present(ak)
-        chips = [_label(pr.get("label") or ak, pr.get("color"))]
-    else:
-        chips = [_label(t("chip_observation"))]
+        chips.append(_label(pr.get("label") or ak, pr.get("color")))
     if node.get("prototype_ids"):
         chips.append(_label(t("chip_built"), "var(--green)"))
     return "".join(chips)
@@ -104,8 +107,9 @@ def _url_artifact_chips(item: dict) -> str:
 
 
 def _session_chips(item: dict) -> str:
-    """Outcome (completed green / dropped red) + friction count + the verified check when the
-    walk is grounded + the step count (§3.2) — routed through the registry like every kind."""
+    """Outcome (completed green / dropped red) + friction count — ≤2 chips (V2). The step
+    count and the grounded check moved to the detail/slide-over: the outcome and where it
+    rubbed are what a row reader decides on."""
     sess = item.get("session") or {}
     out = sess.get("outcome") or {}
     chips = [_label(t("completed"), "var(--green)") if out.get("completed")
@@ -113,9 +117,6 @@ def _session_chips(item: dict) -> str:
     n_fr = _friction_count(sess)
     if n_fr:
         chips.append(_label(t("friction_n", n=n_fr), "var(--amber)"))
-    if sess.get("grounded_verified"):
-        chips.append(_label(t("grounded_yes"), "var(--green)"))
-    chips.append(_label(t("chip_steps_n", n=len(sess.get("steps") or []))))
     return "".join(str(c) for c in chips)
 
 
@@ -140,11 +141,10 @@ def _decision_chips(item: dict) -> str:
 
 
 def _survey_chips(item: dict) -> str:
-    """Lifecycle pill + n questions · n responses (§3.2) — the same honest counts the old
-    appendix section showed."""
+    """Lifecycle pill + n responses (V2: ≤2 chips — the response count is the survey's
+    signal; the question count lives on the detail page)."""
     node = item.get("node") or {}
     return (survey_status_pill(node.get("status", "draft"))
-            + _label(t("n_questions", n=len(node.get("questions") or [])))
             + _label(t("n_responses", n=int(node.get("response_count") or 0))))
 
 
@@ -154,12 +154,6 @@ def _hypothesis_chips(item: dict) -> str:
 
 def _open_question_chips(item: dict) -> str:
     return open_question_status_pill((item.get("node") or {}).get("status", "open"))
-
-
-def _asset_chips(item: dict) -> str:
-    """Direction pill + size (§3.2): deliverable (out, green) vs evidence (in, quiet)."""
-    node = item.get("node") or {}
-    return asset_direction_pill(node) + _label(asset_size(node))
 
 
 REGISTRY: dict[str, object] = {}
@@ -180,7 +174,8 @@ _register("decision", _decision_chips)
 _register("survey", _survey_chips)
 _register("hypothesis", _hypothesis_chips)
 _register("open_question", _open_question_chips)
-_register("asset", _asset_chips)
+# Assets left the chip vocabulary with V9: they render as `.sl-file--row` FILE rows
+# (direction pill + size live ON the file row — _presence.file_card), not as olrows.
 # Declared chip-less — each reason names the affordance that already carries the signal:
 _register("live_url", NoChips("the funnel chip + its session child rows carry the signal"))
 _register("flow", NoChips("the funnel chip + its session child rows carry the signal"))

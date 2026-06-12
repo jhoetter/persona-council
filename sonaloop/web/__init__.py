@@ -68,7 +68,7 @@ def create_app():
 
     from urllib.parse import urlencode
 
-    from ._slide import _SLIDE, _SSR_DRAWER, fetch_slide_fragment, valid_detail_path
+    from ._slide import _REQ_PATH, _SLIDE, _SSR_DRAWER, fetch_slide_fragment, valid_detail_path
 
     @app.middleware("http")
     async def _ui_language_middleware(request, call_next):
@@ -82,6 +82,7 @@ def create_app():
         lang, persist = _resolve_request_language(
             request.query_params.get("lang"), request.cookies.get("ui_lang"))
         token = _UI_LANG.set(lang)
+        path_token = _REQ_PATH.set(request.url.path)   # the recents-beacon seam (UX V6)
         slide = request.query_params.get("slide") in ("1", "true")
         slide_token = _SLIDE.set(slide)
         ssr_token = None
@@ -98,6 +99,7 @@ def create_app():
             response = await call_next(request)
         finally:
             _UI_LANG.reset(token)
+            _REQ_PATH.reset(path_token)
             _SLIDE.reset(slide_token)
             if ssr_token is not None:
                 _SSR_DRAWER.reset(ssr_token)
@@ -111,10 +113,10 @@ def create_app():
     from ._forms import install_forms
     install_forms(app)
 
-    # Opt-in product tour (web/_tour.py): the offer-once cookie middleware; the
-    # tour chrome itself rides the public body_end slot (registered on import).
-    from ._tour import install_tour
-    install_tour(app)
+    # Opt-in product tour (web/_tour.py): the chrome rides the public body_end slot
+    # (registered on import); the quiet offer is the sidebar-footer row (V7 — the
+    # one-time toast retired).
+    from . import _tour  # noqa: F401
 
     # Feedback button (web/_feedback.py): modal POST + thanks + the read-only
     # /feedback admin list; the trigger/modal chrome rides the public slots.

@@ -14,7 +14,8 @@ from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .sessions import _sessions_section
 from .. import ui
 from .._filterbar import filter_bar, parse_multi
-from .._forms import edit_button, overflow_delete
+from .._forms import overflow_delete
+from .edit import note_actions, section_actions
 from .._presence import asset_direction, record_status, status_filter_label
 
 # (key, canonical route, icon, label, empty-state msg, lead, teach) — labels are lambdas so
@@ -139,38 +140,62 @@ def _library_facets(entries: list[dict], store: Store, *, with_direction: bool) 
     return facets
 
 
+def _entry_blob(x: dict, store: Store) -> str:
+    """The searchable text of one library row (V1 `?q=`): what the row visibly shows — its
+    title fields, the muted desc/subject line, the persona name (sessions title with it) and
+    the status chip label. Mirrors the row, so search never matches invisible data."""
+    rec = x["rec"]
+    parts = [rec.get("prompt"), rec.get("title"), rec.get("name"), rec.get("text"),
+             rec.get("filename"), (rec.get("subject") or {}).get("label"), x.get("desc")]
+    if rec.get("persona_id"):
+        parts.append((store.get_persona(rec["persona_id"]) or {}).get("display_name"))
+    st = record_status(x["kind"], rec)
+    if st:
+        parts.append(status_filter_label(x["kind"], st))
+    return " ".join(str(p) for p in parts if p)
+
+
 def library_page(tab: str = "councils", store: Store | None = None, *,
                  sessions: list | None = None, pre_extra: str = "",
-                 flt: dict | None = None, base: str | None = None) -> str:
+                 flt: dict | None = None, base: str | None = None, q: str = "") -> str:
     """The one Library browser. `sessions` lets the /sessions route keep its honest
     project/subject query filters; `pre_extra` carries a tab's extra read (the sessions
     funnel, the hypotheses hit-rate strip) between the tab bar and the rows.
 
-    U10 (§8.5): `flt` = {project/status/direction -> [values]} from the URL applies the
-    shared FilterBar semantics (OR within a facet, AND across) server-side; `base` is the
-    canonical path the bar's links target (defaults to /library?tab=…), so /councils,
-    /sessions … keep their own addresses while sharing the one bar."""
+    U10/V1 (§8.5, §9 V1): `flt` = {project/status/direction -> [values]} from the URL applies
+    the shared FilterBar semantics (OR within a facet, AND across) server-side; `q` is the
+    tab's text search, composing with the facets; `base` is the canonical path the bar's
+    links target (defaults to /library?tab=…), so /councils, /sessions … keep their own
+    addresses while sharing the one bar."""
+    from urllib.parse import quote
+    from .._graph_outline import _q_match
     store = store or Store()
     keys = [k for k, *_ in LIBRARY_TABS]
     if tab not in keys:
         tab = keys[0]
     tabs_html = ui.tabs([{"key": k, "label": label(), "href": route}
                          for k, route, _icon_, label, _e, _l, _t_ in LIBRARY_TABS], tab)
-    _k, _route, icon, _label, empty_msg, lead, teach = next(
+    _k, _route, icon, tab_label, empty_msg, lead, teach = next(
         row for row in LIBRARY_TABS if row[0] == tab)
-    base = base or f"/library?tab={tab}"
+    base0 = base or f"/library?tab={tab}"
+    base = base0 + (("&" if "?" in base0 else "?") + f"q={quote(q)}" if q else "")
     selected = {k: v for k, v in (flt or {}).items()}
     entries = _tab_entries(tab, store, sessions=sessions)
     facets = _library_facets(entries, store, with_direction=tab == "assets")
-    bar = str(filter_bar(base, facets, selected)) if entries else ""
+    bar = (str(filter_bar(base, facets, selected,
+                          search={"value": q,
+                                  "placeholder": t("search_tab_ph", tab=tab_label())}))
+           if entries else "")
     active = {k: v for k, v in selected.items() if v}
-    if active:
+    if active or q:
         def keep(x: dict) -> bool:
             if active.get("project") and x["project_id"] not in active["project"]:
                 return False
             if active.get("status") and record_status(x["kind"], x["rec"]) not in active["status"]:
                 return False
             if active.get("direction") and asset_direction(x["rec"]) not in active["direction"]:
+                return False
+            if q and not _q_match(q, _entry_blob(x, store)):
                 return False
             return True
         kept = [x for x in entries if keep(x)]
@@ -183,7 +208,7 @@ def library_page(tab: str = "councils", store: Store | None = None, *,
         return _list_page(store, title=t("library_h"), lead=lead(), rows=[],
                           empty_icon="filter", empty_msg=t("filter_no_matches_h"),
                           empty_teach=t("filter_no_matches"),
-                          empty_action=(t("clear_filter"), base, "filter"),
+                          empty_action=(t("clear_filter"), base0, "filter"),
                           active="library", pre=str(tabs_html) + bar + pre_extra, count=0)
     return _list_page(store, title=t("library_h"), lead=lead(), rows=rows,
                       empty_icon=icon, empty_msg=empty_msg(), empty_teach=teach(),
@@ -201,8 +226,9 @@ def library_filters(project: str = "", status: str = "", direction: str = "") ->
 def register_library(app) -> None:
     @app.get("/library", response_class=HTMLResponse)
     def library(tab: str = Query(default="councils"), project: str = Query(default=""),
-                status: str = Query(default=""), direction: str = Query(default="")) -> str:
-        return library_page(tab, flt=library_filters(project, status, direction))
+                status: str = Query(default=""), direction: str = Query(default=""),
+                q: str = Query(default="")) -> str:
+        return library_page(tab, flt=library_filters(project, status, direction), q=q)
 
     @app.get("/sections/{section_id}", response_class=HTMLResponse)
     def section_view(section_id: str) -> str:
@@ -232,7 +258,8 @@ def register_library(app) -> None:
             prop_rows=[("dot", t("type_h"), pr.get("short", sec.get("kind", ""))),
                        ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]))],
             star=("section", sec["id"], sec["title"], f'/sections/{sec["id"]}'),
-            actions=edit_button(f'/sections/{sec["id"]}/edit'))
+            # V10: the "…" overflow — edit as a dialog over this page + the confirm delete
+            actions=section_actions(sec))
 
     @app.get("/notes/{note_id}", response_class=HTMLResponse)
     def note_view(note_id: str) -> str:
@@ -255,11 +282,12 @@ def register_library(app) -> None:
             body=h("div", {"class_": "sl-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))),
             # Rail order is the §8.2 anatomy: project → dates.
             prop_rows=[("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"])),
-                       ("dot", t("created"), note.get("created_at", "")[:10])],
+                       ("dot", t("created"), ui.fmt_date(note.get("created_at", "")))],
             rel_study_id=f"note:{note_id}", rel_proj_id=proj["id"],
             rail_sections=[("sec-content", klabel)],
             star=("note", note_id, ntitle, f'/notes/{note_id}'),
-            actions=edit_button(f'/notes/{note_id}/edit'))
+            # V10: the "…" overflow — edit as a dialog over this page + the confirm delete
+            actions=note_actions(note))
 
     @app.get("/prototypes/{slug}", response_class=HTMLResponse)
     def prototype_view(slug: str) -> str:
@@ -268,6 +296,9 @@ def register_library(app) -> None:
             p = services.get_prototype_artifact(slug, store=store)
         except Exception:
             return _layout(t("not_found"), _empty_state(t("prototypes_h"), t("runtime_maybe_cleared"), icon="prototype"), store, active="projects")
+        # The route accepts slug OR id (⌘K and ref chips link by id) — every file URL and
+        # sibling route below must use the CANONICAL slug, or the iframe/raw links 404.
+        slug = p.get("slug") or slug
         crumbs = [(t("projects"), "/projects")]
         proj = store.get_research_project(p["project_id"]) if p.get("project_id") else None
         if proj:
@@ -280,23 +311,26 @@ def register_library(app) -> None:
         # as ONE session row (the §3.2 vocabulary) deep-linking into its /sessions/{id} detail
         # page — verdict, timeline, screenshots and predicted behaviors live THERE, the
         # prototype page stays the structural index.
-        from .sessions import proto_session_vm
+        from .sessions import LIGHTBOX_JS, proto_session_vm, session_shot_strip
         sessions = store.list_prototype_sessions(prototype_id=p["id"])
         if sessions:
+            # each session row carries its first/last step-shot strip (ux-contract §9 V4) —
+            # the walk is visible at a glance, the lightbox/replay one click away
             sessions_html = fragment(*(
-                ui.primitive_row("session", proto_session_vm(s, store), store,
-                                 href=f'/sessions/{s["id"]}', drawer=True)
+                fragment(ui.primitive_row("session", proto_session_vm(s, store), store,
+                                          href=f'/sessions/{s["id"]}', drawer=True),
+                         raw(session_shot_strip(s)))
                 for s in sessions))
         else:
             sessions_html = h("div", {"class_": "muted small"}, f'— {t("prototypes_h")}: {t("no_sessions")} —')
         # Replayable usability sessions of THIS prototype (subject.id is the prototype id or slug) —
-        # each row deep-links into the session replay view.
+        # each row deep-links into the session replay view (and carries its shot strip, V4).
         useen, usess = set(), []
         for key in (p["id"], p.get("slug")):
             for s in (services.list_usability_sessions(subject=key, store=store) if key else []):
                 if s["id"] not in useen:
                     useen.add(s["id"]); usess.append(s)
-        replay_html = _sessions_section(store, usess, sid="sec-replays")
+        replay_html = _sessions_section(store, usess, sid="sec-replays", shots=True)
         body = fragment(
             h("p", {"style": "margin:8px 0 16px"},
               h("a", {"class_": "sl-btn", "href": src, "target": "_blank"},
@@ -305,7 +339,8 @@ def register_library(app) -> None:
             raw(replay_html),
             h("div", {"class_": "sec", "id": "sec-sessions", "style": "margin-top:22px"},
               h("h2", {}, f'{t("prototypes_h")} · {t("sessions")} ({len(sessions)})'),
-              h("div", {"style": "margin-top:8px"}, sessions_html)))
+              h("div", {"style": "margin-top:8px"}, sessions_html)),
+            raw(LIGHTBOX_JS))
         concept_in = []
         if proj:                                              # the concept that realises this prototype
             try:
@@ -317,7 +352,9 @@ def register_library(app) -> None:
         proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")
         return detail_page(
             store, title=p["name"], active="library", crumbs=crumbs,
-            hero=_hero(p["name"], icon="prototype", sub=f'{p.get("version","")} · {slug}',
+            # meta line: the version only — the slug is an address, not information (V12:
+            # no terminal-flavored identifiers in UI copy; the URL bar already shows it)
+            hero=_hero(p["name"], icon="prototype", sub=p.get("version", ""),
                        top=detail_eyebrow(t("prototype_kind"), [fid])),
             body=body,
             # Rail order is the §8.2 anatomy: project → kind-specifics → dates; the grounded
@@ -326,7 +363,7 @@ def register_library(app) -> None:
                        ("square", t("fidelity"), _ap.get("disc") or _ap.get("label") or ""),
                        ("personas", t("sessions"), str(len(sessions))),
                        ("check", t("grounding_h"), f"{n_grounded}/{len(sessions)}" if sessions else "—"),
-                       ("dot", t("created"), (p.get("created_at") or "")[:10])],
+                       ("dot", t("created"), ui.fmt_date(p.get("created_at") or ""))],
             rel_study_id=f"prototype:{p['id']}", rel_proj_id=p.get("project_id"), rel_extra_in=concept_in,
             rail_sections=(([("sec-replays", t("sessions"))] if replay_html else [])
                            + [("sec-sessions", t("sessions"))]),

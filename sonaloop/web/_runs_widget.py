@@ -83,6 +83,9 @@ def project_run_chip(project_id: str, store: Store) -> str:
             raw(_picon("play")), f'{t("run_chip")} · {label}')
     fly = h("div", {"class_": "runchip-fly", "id": "runchip-fly", "hidden": True},
             h("div", {"class_": "runsw-h"}, f'{t("run_chip")} · {label}'),
+            # the concept FIRST (§9 V8): one sentence saying what a run even is,
+            # before this run's state details
+            h("p", {"class_": "runchip-def"}, t("runs_lead")),
             h("div", {"class_": "run-meta"},
               h("span", {"class_": "muted small"},
                 f'{t("run_last_activity")}: {last}') if last else None,
@@ -97,12 +100,18 @@ def project_run_chip(project_id: str, store: Store) -> str:
 
 RUNS_WIDGET_CSS = r"""
 .runsw{position:relative;display:inline-flex}
-.runsw-btn{display:inline-flex;align-items:center;gap:7px}
+.runsw[hidden]{display:none}
+/* the topbar runs indicator is a STATUS CHIP ("1 run active" + pulse) — and at zero it is
+   not rendered at all ("• 0" taught nothing; ux-contract §9 V7) */
+.runsw-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:99px;
+  background:var(--panel);color:var(--muted);font-size:var(--t-sm);font-weight:500;padding:2px 10px;cursor:pointer}
+.runsw-btn:hover{background:var(--hover)}
 .runsw-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--faint)}
 .runsw.has-active .runsw-dot{background:var(--green,#34a853);animation:livepulse 1.6s ease-out infinite}
 .runsw.has-stalled .runsw-dot{background:var(--amber);animation:none}
-.runsw-count{font-size:var(--t-sm);color:var(--muted);min-width:10px;text-align:left}
-.runsw.has-active .runsw-count{color:var(--ink)}
+.runsw.has-active .runsw-btn{color:var(--green,#34a853);border-color:color-mix(in srgb,var(--green,#34a853) 45%,var(--line))}
+.runsw.has-stalled .runsw-btn{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}
+.runsw-count{font-variant-numeric:tabular-nums}
 .runsw-fly{position:absolute;right:0;top:calc(100% + 8px);width:min(320px,86vw);z-index:160;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 14px 40px rgba(0,0,0,.3);padding:6px}
 .runsw-fly[hidden]{display:none}
 .runsw-h{font-size:var(--t-xs);color:var(--faint);font-weight:600;letter-spacing:.04em;padding:7px 8px 3px}
@@ -123,6 +132,7 @@ RUNS_WIDGET_CSS = r"""
 .runchip-fly{position:absolute;left:0;top:calc(100% + 8px);width:min(380px,86vw);z-index:160;background:var(--panel);
   border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 14px 40px rgba(0,0,0,.3);padding:6px 8px 8px}
 .runchip-fly[hidden]{display:none}
+.runchip-def{margin:2px 0 6px;padding:0 8px;color:var(--muted);font-size:var(--t-sm);line-height:1.45}
 .runchip-fly .run-meta{padding:2px 8px}
 .runchip-fly .run-resume{padding:4px 8px 2px}
 .runchip-fly .run-resume code{font-size:var(--t-sm);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:2px 7px}
@@ -139,24 +149,42 @@ def _fly_rows(active: list[dict]) -> str:
     return "".join(rows)
 
 
+def chip_label(n_active: int, n_stalled: int) -> str:
+    """The status-chip text (§9 V7): "1 run active" / "{n} runs active", or the stalled
+    read when nothing is active but something hangs. '' at full zero (the chip hides)."""
+    if n_active:
+        return t("run_active_n", n=n_active)
+    if n_stalled:
+        return t("run_stalled_n", n=n_stalled)
+    return ""
+
+
 def runs_widget_markup(store: Store) -> str:
     """Per-request widget markup (localised, server-rendered with the current counts —
-    the static fallback IS the initial state). JS only mutates it on live events."""
+    the static fallback IS the initial state). JS only mutates it on live events.
+    At zero the whole chip is hidden (§9 V7) — the markup still ships so a live event
+    can unhide it without a reload."""
     states = collect_run_states(store)
     n_active, n_stalled = len(states["active"]), len(states["stalled"])
     cls = "runsw" + (" has-active" if n_active else "") + (" has-stalled" if n_stalled else "")
-    btn = h("button", {"type": "button", "class_": "sl-iconbtn runsw-btn", "data-runsw-toggle": True,
+    btn = h("button", {"type": "button", "class_": "runsw-btn", "data-runsw-toggle": True,
                        "aria-haspopup": "true", "aria-expanded": "false",
                        "title": t("active_runs"), "aria-label": t("active_runs")},
             h("span", {"class_": "runsw-dot"}),
-            h("span", {"class_": "runsw-count", "id": "runsw-count"}, str(n_active)))
+            h("span", {"class_": "runsw-count", "id": "runsw-count"},
+              chip_label(n_active, n_stalled)))
     fly = h("div", {"class_": "runsw-fly", "id": "runsw-fly", "hidden": True,
                     "data-empty": t("runs_none_active")},
             h("div", {"class_": "runsw-h"}, t("active_runs")),
             h("div", {"id": "runsw-list"}, raw(_fly_rows(states["active"]))),
             h("a", {"class_": "runsw-all", "href": "/runs"},
               raw(_picon("arrowRight")), " ", t("runs_view_all")))
-    return h("div", {"class_": cls, "id": "runsw"}, btn, fly)
+    return h("div", {"class_": cls, "id": "runsw", "hidden": not (n_active or n_stalled),
+                     # the JS re-render composes the localized chip text from these templates
+                     "data-l-active-one": t("run_active_n", n=1),
+                     "data-l-active-n": t("run_active_n", n="{n}"),
+                     "data-l-stalled-one": t("run_stalled_n", n=1),
+                     "data-l-stalled-n": t("run_stalled_n", n="{n}")}, btn, fly)
 
 
 RUNS_WIDGET_JS = r"""<script>(function(){
@@ -191,9 +219,14 @@ if(!window.EventSource) return;   // static fallback: the server-rendered state 
 function render(d){
   var w=el('runsw'), list=el('runsw-list'), cnt=el('runsw-count'); if(!w||!list||!cnt) return;
   var act=d.active||[], st=d.stalled||[];
-  cnt.textContent=String(act.length);
-  w.classList.toggle('has-active',act.length>0);
-  w.classList.toggle('has-stalled',st.length>0);
+  // status-chip semantics (V7): hidden at full zero, "N run(s) active" (else stalled) otherwise
+  var n=act.length, s=st.length, lbl='';
+  if(n) lbl=(n===1)?w.getAttribute('data-l-active-one'):w.getAttribute('data-l-active-n').replace('{n}',n);
+  else if(s) lbl=(s===1)?w.getAttribute('data-l-stalled-one'):w.getAttribute('data-l-stalled-n').replace('{n}',s);
+  cnt.textContent=lbl||'';
+  w.hidden=!(n||s);
+  w.classList.toggle('has-active',n>0);
+  w.classList.toggle('has-stalled',s>0);
   var html='';
   act.forEach(function(r){ html+='<a class="runsw-row" href="'+esc(r.url)+'">'
     +'<span class="runsw-t">'+esc(r.title)+'</span>'

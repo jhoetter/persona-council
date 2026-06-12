@@ -28,12 +28,25 @@ inventing a second registry: _presence.REGISTRY stays the list of what exists,
 KIND_SEARCH only declares how each kind reaches the palette."""
 from __future__ import annotations
 
+import difflib
+import unicodedata
 from typing import Any, Callable, Iterator
 
 from ..storage import Store
 from ._i18n import t
 
-Row = tuple[str, str, str]   # (title, subtitle, url)
+# (title, desc, url, date) — desc is the OWNING PROJECT title wherever the kind has one
+# (the row's context line, ux-contract §9 V6), date is the compact '11 Jun' day for the
+# right-aligned meta (ui.fmt_day — the ONE row date format, C5/C10).
+Row = tuple[str, str, str, str]
+
+
+def fold(s: Any) -> str:
+    """Case- and diacritic-insensitive search form (the V1 `?q=` helper, shared here so the
+    palette and the outline filter can never diverge): NFKD-decompose, drop combining marks,
+    casefold — "über"/"UEBER"/"Uber…" all meet at "uber"."""
+    return "".join(c for c in unicodedata.normalize("NFKD", str(s))
+                   if not unicodedata.combining(c)).casefold()
 
 
 class SearchSource:
@@ -57,38 +70,58 @@ class NotSearchable:
 
 # ------------------------------------------------------------------ the row readers
 
+def _ptitles(store: Store) -> dict[str, str]:
+    """{project_id: title} — every reader's context line resolves through this one map."""
+    return {p["id"]: p.get("title", "") for p in store.list_research_projects()}
+
+
+def _date(rec: dict, key: str = "created_at") -> str:
+    from .ui import fmt_day
+    return fmt_day(rec.get(key) or "")
+
+
 def _project_rows(store: Store) -> Iterator[Row]:
     for p in store.list_research_projects():
-        yield p.get("title", ""), (p.get("goal", "") or "")[:90], f'/projects/{p["id"]}'
+        yield p.get("title", ""), (p.get("goal", "") or "")[:90], f'/projects/{p["id"]}', _date(p)
 
 
 def _persona_rows(store: Store) -> Iterator[Row]:
     for p in store.list_personas():
         role = p.get("role")
         role_t = role.get("title", "") if isinstance(role, dict) else (role or "")
-        yield p.get("display_name", ""), role_t, f'/personas/{p["id"]}'
+        yield p.get("display_name", ""), role_t, f'/personas/{p["id"]}', _date(p)
 
 
 def _council_rows(store: Store) -> Iterator[Row]:
+    titles = _ptitles(store)
     for c in store.list_council_sessions():
-        yield c.get("prompt", ""), "", f'/councils/{c["id"]}'
+        yield (c.get("prompt", ""), titles.get(c.get("project_id") or "", ""),
+               f'/councils/{c["id"]}', _date(c))
 
 
 def _synthesis_rows(store: Store) -> Iterator[Row]:
+    # a synthesis is owned FROM the project side (study_ids) — older records may also
+    # carry their own project_id; honor both.
+    titles = _ptitles(store)
+    owner = {sid: p.get("title", "") for p in store.list_research_projects()
+             for sid in p.get("study_ids") or []}
     for sy in store.list_syntheses():
-        yield sy.get("title", ""), "", f'/syntheses/{sy["id"]}'
+        proj = titles.get(sy.get("project_id") or "", "") or owner.get(sy.get("id"), "")
+        yield sy.get("title", ""), proj, f'/syntheses/{sy["id"]}', _date(sy)
 
 
 def _prototype_rows(store: Store) -> Iterator[Row]:
+    titles = _ptitles(store)
     for pr in store.list_prototypes():
-        yield pr.get("name", ""), pr.get("version", "") or "", f'/prototypes/{pr["slug"]}'
+        yield (pr.get("name", ""), titles.get(pr.get("project_id") or "", "") or (pr.get("version") or ""),
+               f'/prototypes/{pr["slug"]}', _date(pr))
 
 
 def _section_rows(store: Store) -> Iterator[Row]:
     from .. import services
     for proj in store.list_research_projects():
         for sec in services.list_sections(proj["id"], store=store):
-            yield sec.get("title", ""), proj.get("title", ""), f'/sections/{sec["id"]}'
+            yield sec.get("title", ""), proj.get("title", ""), f'/sections/{sec["id"]}', _date(sec)
 
 
 def _note_rows(store: Store) -> Iterator[Row]:
@@ -97,28 +130,36 @@ def _note_rows(store: Store) -> Iterator[Row]:
     from .. import services
     for proj in store.list_research_projects():
         for nt in services.list_notes(proj["id"], store=store):
-            yield nt.get("title", ""), proj.get("title", ""), f'/notes/{nt["id"]}'
+            yield nt.get("title", ""), proj.get("title", ""), f'/notes/{nt["id"]}', _date(nt)
 
 
 def _session_rows(store: Store) -> Iterator[Row]:
+    titles = _ptitles(store)
     for s in store.list_usability_sessions():
         subj = s.get("subject") or {}
-        yield (subj.get("label") or s.get("id", "")), (s.get("date") or "")[:10], f'/sessions/{s["id"]}'
+        yield ((subj.get("label") or s.get("id", "")), titles.get(s.get("project_id") or "", ""),
+               f'/sessions/{s["id"]}', _date(s, "date"))
 
 
 def _hypothesis_rows(store: Store) -> Iterator[Row]:
+    titles = _ptitles(store)
     for hx in store.list_hypotheses():
-        yield hx.get("text", ""), hx.get("status", "") or "", f'/hypotheses/{hx["id"]}'
+        yield (hx.get("text", ""), titles.get(hx.get("project_id") or "", ""),
+               f'/hypotheses/{hx["id"]}', _date(hx))
 
 
 def _decision_rows(store: Store) -> Iterator[Row]:
+    titles = _ptitles(store)
     for d in store.list_decisions():
-        yield d.get("title", ""), d.get("status", "") or "", f'/decisions/{d["id"]}'
+        yield (d.get("title", ""), titles.get(d.get("project_id") or "", ""),
+               f'/decisions/{d["id"]}', _date(d))
 
 
 def _survey_rows(store: Store) -> Iterator[Row]:
+    titles = _ptitles(store)
     for sv in store.list_surveys():
-        yield sv.get("title", ""), sv.get("status", "") or "", f'/surveys/{sv["id"]}'
+        yield (sv.get("title", ""), titles.get(sv.get("project_id") or "", ""),
+               f'/surveys/{sv["id"]}', _date(sv))
 
 
 def _asset_rows(store: Store) -> Iterator[Row]:
@@ -126,7 +167,8 @@ def _asset_rows(store: Store) -> Iterator[Row]:
     # route resolves through (web/pages/assets.find_asset).
     for proj in store.list_research_projects():
         for a in proj.get("assets") or []:
-            yield (a.get("title") or a.get("filename", "")), proj.get("title", ""), f'/assets/{a["id"]}'
+            yield ((a.get("title") or a.get("filename", "")), proj.get("title", ""),
+                   f'/assets/{a["id"]}', _date(a))
 
 
 # ------------------------------------------------- the searchable entity types (ordered)
@@ -147,11 +189,15 @@ SEARCH_SOURCES: dict[str, SearchSource] = {
 }
 
 
-def search_rows(q: str, store: Store | None = None, limit: int = 20) -> list[dict[str, Any]]:
-    """The /api/search read: title-substring match across every SEARCH_SOURCES type.
-    A broken source is skipped (fail-soft) — the canary, not the request, polices gaps."""
-    ql = (q or "").strip().lower()
-    if not ql:
+def search_rows(q: str, store: Store | None = None, per_kind: int = 6) -> list[dict[str, Any]]:
+    """The /api/search read (UX V6): diacritic-/case-insensitive title match across every
+    SEARCH_SOURCES type, ranked title-prefix > word-prefix > substring (shorter titles first
+    within a rank), capped at `per_kind` rows per type so the response stays palette-sized
+    and fast no matter how big the store grows. Rows stay grouped in SEARCH_SOURCES order —
+    the palette renders the groups as-is. A broken source is skipped (fail-soft) — the
+    canary, not the request, polices gaps."""
+    qf = fold((q or "").strip())
+    if not qf:
         return []
     store = store or Store()
     out: list[dict[str, Any]] = []
@@ -160,34 +206,99 @@ def search_rows(q: str, store: Store | None = None, limit: int = 20) -> list[dic
             rows = list(src.rows(store))
         except Exception:  # noqa: BLE001
             continue
-        for title, subtitle, url in rows:
-            if title and ql in title.lower():
-                out.append({"type": typ, "title": title,
-                            "subtitle": subtitle if isinstance(subtitle, str) else "", "url": url})
-    out.sort(key=lambda r: (0 if r["title"].lower().startswith(ql) else 1, len(r["title"])))
-    return out[:limit]
+        hits: list[tuple[int, int, dict[str, Any]]] = []
+        for title, desc, url, date in rows:
+            tf = fold(title)
+            if not title or qf not in tf:
+                continue
+            rank = (0 if tf.startswith(qf)
+                    else 1 if any(w.startswith(qf) for w in tf.split()) else 2)
+            hits.append((rank, len(title),
+                         {"type": typ, "title": title,
+                          "subtitle": desc if isinstance(desc, str) else "",
+                          "url": url, "date": date or ""}))
+        hits.sort(key=lambda x: (x[0], x[1]))
+        out.extend(hit for _r, _l, hit in hits[:per_kind])
+    return out
+
+
+def closest_rows(q: str, store: Store | None = None, limit: int = 4) -> list[dict[str, Any]]:
+    """Nearest hits for a query that matched NOTHING (the DS site's ⌘K "Closest matches"
+    rail, ticket ds-cmdk-synonym-search): normalized similarity (difflib ratio — Levenshtein
+    family) of the folded query against every entity title AND its words, threshold ≥ .55.
+    Only called on the empty-result path, so the extra scan never taxes live typing."""
+    qf = fold((q or "").strip())
+    if not qf:
+        return []
+    store = store or Store()
+    scored: list[tuple[float, dict[str, Any]]] = []
+    for typ, src in SEARCH_SOURCES.items():
+        try:
+            rows = list(src.rows(store))
+        except Exception:  # noqa: BLE001
+            continue
+        for title, desc, url, date in rows:
+            tf = fold(title)
+            if not tf:
+                continue
+            score = max(difflib.SequenceMatcher(None, qf, cand).ratio()
+                        for cand in [tf, *tf.split()])
+            if score >= 0.55:
+                scored.append((score, {"type": typ, "title": title,
+                                       "subtitle": desc if isinstance(desc, str) else "",
+                                       "url": url, "date": date or ""}))
+    scored.sort(key=lambda x: -x[0])
+    out, seen = [], set()
+    for _score, row in scored:
+        if row["url"] in seen:
+            continue
+        seen.add(row["url"])
+        out.append(row)
+        if len(out) >= limit:
+            break
+    return out
 
 
 # ----------------------------------------------------------------- the jump commands
 
-def nav_commands() -> list[dict[str, str]]:
-    """Every registered nav item (core seeds AND extension registrations — the nav
-    registry is the source of truth) as a palette jump command, plus the surfaces the
-    4-item sidebar deliberately does NOT carry (ux-contract §3.5) but that stay one
-    keystroke away: the Library tabs under their canonical routes, the /runs journal
-    and the documentation hub — and the chrome overlays without a route: the ? cheat
-    sheet (web/_keymap.py opens the overlay on #shortcuts) and the settings popover
-    (web/_palette.py opens it on #settings)."""
+def palette_nav() -> list[dict[str, Any]]:
+    """The palette's STRUCTURED Navigate model (ux-contract §9 V6 + C10): every registered
+    nav item (core seeds AND extension registrations — the nav registry stays the source of
+    truth) with its icon, then the chrome/footer surfaces (Settings popover on '#settings',
+    Documentation, the ? cheat sheet on '#shortcuts') and the /runs journal. The Library's
+    kind lists are NOT flat top-level commands anymore — they ride the /library item as
+    `children` (rendered as one expandable "Library" entry; each child stays individually
+    matchable when typing). `quiet` items skip the empty-state listing but stay searchable
+    (Runs was deliberately retired from the IA — it must not look like nav again)."""
     from ._ext import nav_model, resolve_label
     from .pages.library import LIBRARY_TABS   # late: pages import web modules, not vice versa
-    cmds = [{"title": resolve_label(it["label"]), "url": it["href"], "type": "go"}
-            for _sec, items in nav_model() for it in items]
-    cmds += [{"title": label(), "url": route, "type": "go"}
-             for _k, route, _i, label, *_rest in LIBRARY_TABS]
-    cmds.append({"title": t("runs_h"), "url": "/runs", "type": "go"})
-    cmds.append({"title": t("documentation"), "url": "/documentation", "type": "go"})
-    cmds.append({"title": t("kbd_cheatsheet_h"), "url": "#shortcuts", "type": "go"})
-    cmds.append({"title": t("settings"), "url": "#settings", "type": "go"})
+    items: list[dict[str, Any]] = []
+    for _sec, navitems in nav_model():
+        for it in navitems:
+            entry: dict[str, Any] = {"title": resolve_label(it["label"]), "url": it["href"],
+                                     "icon": it.get("icon") or "arrowRight"}
+            if it["href"] == "/library":
+                entry["children"] = [{"title": label(), "url": route, "icon": icon}
+                                     for _k, route, icon, label, *_rest in LIBRARY_TABS]
+            items.append(entry)
+    items += [
+        {"title": t("settings"), "url": "#settings", "icon": "settings"},
+        {"title": t("documentation"), "url": "/documentation", "icon": "overview"},
+        {"title": t("kbd_cheatsheet_h"), "url": "#shortcuts", "icon": "command"},
+        {"title": t("runs_h"), "url": "/runs", "icon": "play", "quiet": True},
+    ]
+    return items
+
+
+def nav_commands() -> list[dict[str, str]]:
+    """The FLAT jump-command list — the coverage canary's truth, derived from palette_nav()
+    (one structure feeds both the rendered palette and the canary, so they cannot drift):
+    every nav item, every Library kind list, /runs, /documentation, '#shortcuts', '#settings'."""
+    cmds: list[dict[str, str]] = []
+    for it in palette_nav():
+        cmds.append({"title": it["title"], "url": it["url"], "type": "go"})
+        cmds += [{"title": c["title"], "url": c["url"], "type": "go"}
+                 for c in it.get("children", ())]
     return cmds
 
 

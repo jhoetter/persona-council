@@ -141,17 +141,14 @@ KEYMAP_CSS = r"""
 .km-keys kbd{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 6px;font-size:var(--t-xs);color:var(--ink);min-width:18px;text-align:center}
 /* the j/k row focus on list pages + the project outline — visible, distinct from hover */
 .row.kfocus,.olrow.kfocus,.sl-entity.kfocus{background:var(--hover);box-shadow:inset 2px 0 0 var(--accent)}
-/* the sidebar's discovery hint */
-.sl-kbd-hint{display:flex;align-items:center;gap:7px;width:100%;border:0;background:none;cursor:pointer;color:var(--faint);font-size:var(--t-xs);padding:7px 14px;text-align:left}
-.sl-kbd-hint:hover{color:var(--muted)}
-.sl-kbd-hint kbd{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:0 5px;color:var(--ink)}
 """
 
 
 def keymap_hint() -> str:
-    """The chrome's discovery affordance ("Press ? for shortcuts"), pinned at the bottom
-    of the sidebar; clicking it opens the same overlay as the `?` binding."""
-    return h("button", {"type": "button", "class_": "sl-kbd-hint", "data-km-open": True},
+    """The chrome's discovery affordance ("? for shortcuts"): ONE more row in the sidebar
+    footer's `.sl-nav` cluster (the nav-row idiom, ux-contract §9 V7) with the `?` keycap
+    as its leading visual; clicking it opens the same overlay as the `?` binding."""
+    return h("button", {"type": "button", "class_": "pi-hover", "data-km-open": True},
              h("kbd", {}, "?"), h("span", {}, t("kbd_hint")))
 
 
@@ -171,8 +168,9 @@ function closeOv(){ ov.hidden=true; }
 function typing(e){ var el=e.target, tag=(el.tagName||'').toLowerCase();
   return tag==='input'||tag==='textarea'||tag==='select'||el.isContentEditable; }
 function rows(){ var c=document.querySelector('[data-keynav]');
-  // list rows (a.row), outline rows (.olrow) and entity rows (.sl-entity) share the walk (C7)
-  return c?[].slice.call(c.querySelectorAll('a.row,.olrow,.sl-entity')):[]; }
+  // list rows (a.row), outline rows (.olrow), entity rows (.sl-entity) and file cards/rows
+  // (.sl-file, V9) share the walk (C7)
+  return c?[].slice.call(c.querySelectorAll('a.row,.olrow,.sl-entity,.sl-file')):[]; }
 var ri=-1;
 document.addEventListener('spa:load',function(){ ri=-1; });
 function focusRow(d){ var rs=rows(); if(!rs.length) return;
@@ -187,8 +185,8 @@ function run(b){ var a=b.action||{};
     case 'list-prev': focusRow(-1); return true;
     case 'list-open': var rs=rows(); if(ri>=0&&rs[ri]){
       // Enter opens the focused row: its slide-over (data-drawer) or its href — a funnel-chip
-      // row's main target is the stretched overlay link, so click that when present.
-      var el=rs[ri].querySelector('.ol-stretch')||rs[ri]; el.click(); return true; } return false;
+      // row's / file card's main target is the stretched overlay link, so click that when present.
+      var el=rs[ri].querySelector('.ol-stretch,.sl-file__open')||rs[ri]; el.click(); return true; } return false;
     case 'list-open-full': var rf=rows(); if(ri>=0&&rf[ri]){
       // 'o' skips the slide-over: navigate straight to the row's full detail page.
       var af=rf[ri].matches&&rf[ri].matches('a[href]')?rf[ri]:rf[ri].querySelector('a[href]');

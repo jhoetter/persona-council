@@ -24,7 +24,8 @@ def register_projects(app) -> None:
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
     def project_detail(project_id: str, view: str = "list",
                        kind: str = Query(default=""), phase: str = Query(default=""),
-                       persona: str = Query(default=""), status: str = Query(default="")) -> str:
+                       persona: str = Query(default=""), status: str = Query(default=""),
+                       theme: str = Query(default=""), q: str = Query(default="")) -> str:
         if view == "files":
             # The project FILES lens (UX U8 §8.3): all assets chronologically, in + out —
             # reachable from the header's "N files" chip; same scaffold, same rows.
@@ -115,7 +116,7 @@ def register_projects(app) -> None:
                 snap = a.get("snapshot") or {}
                 captured = bool(snap.get("ok"))
                 cap_icon = _icon("check") if captured else _icon("circle")
-                cap_txt = (f'{t("artifact_captured")} · {(a.get("captured_at") or "")[:16]}' if captured
+                cap_txt = (f'{t("artifact_captured")} · {ui.fmt_ts(a.get("captured_at") or "")}' if captured
                            else t("artifact_capture_failed"))
                 kind_label = t("artifact_kind_" + (a.get("kind") or "url"))
                 arows.append(h("div", {"class_": "strow"},
@@ -230,21 +231,27 @@ def register_projects(app) -> None:
                   + len(graph["open_questions"])
                   + sum(1 + len(g["sessions"]) for g in sess_groups.values()))
         card_cls = "outlinecard" + ("" if n_rows > 8 else " ol-compact")
-        # U10 (§8.5): the Linear-grade FilterBar over the outline — facet state lives in the
-        # URL (?kind=…&phase=…&persona=…&status=…; comma = OR, params AND), the outline
-        # filters server-side, and the bar renders the facet menu + removable chips.
+        # U10/V1 (§8.5, §9 V1): the Linear-grade FilterBar over the outline — search + facet
+        # state live in the URL (?q=…&kind=…&phase=…&persona=…&status=…&theme=…; comma = OR,
+        # params AND), the outline filters server-side, and the bar renders the search slot,
+        # the facet menu and the removable chips as ONE row INSIDE the content measure.
+        from urllib.parse import quote
         from .._filterbar import filter_bar, parse_multi
         selected = {"kind": parse_multi(kind), "phase": parse_multi(phase),
-                    "persona": parse_multi(persona), "status": parse_multi(status)}
+                    "persona": parse_multi(persona), "status": parse_multi(status),
+                    "theme": parse_multi(theme)}
         facets: list = []
         outline = _outline_html(graph, sessions=sess_groups, decisions=decisions,
                                 hypotheses=hypotheses, surveys=surveys,
                                 filters=selected, facets_out=facets,
-                                clear_href=f'/projects/{proj["id"]}')
-        bar = filter_bar(f'/projects/{proj["id"]}', facets, selected) if not is_graph else ""
+                                clear_href=f'/projects/{proj["id"]}', q=q)
+        base = f'/projects/{proj["id"]}' + (f"?q={quote(q)}" if q else "")
+        bar = (filter_bar(base, facets, selected,
+                          search={"value": q, "placeholder": t("search_project_ph")})
+               if not is_graph else "")
         # data-keynav arms the keymap's j/k row walk on the outline (ux-contract C7).
         main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
-                     if is_graph else fragment(bar, h("div", {"class_": card_cls, "data-keynav": True}, raw(outline))))
+                     if is_graph else h("div", {"class_": card_cls, "data-keynav": True}, raw(outline)))
         # The run-state chip (ux-contract §3.5 / decision §7.4): `▶ Run · state` with a
         # popover (last activity · next-ready/resume hint · /runs journal link). Runs left
         # the nav; this header chip is where a project's driver status now surfaces.
@@ -255,19 +262,22 @@ def register_projects(app) -> None:
         files_chip = h("a", {"class_": "pill", "href": f'/projects/{proj["id"]}?view=files'},
                        raw(_icon("file")), " ",
                        t("one_file") if len(assets) == 1 else t("n_files", n=len(assets)))
+        # The FilterBar closes the head so it sits INSIDE the 900px measure (V1 — it used to
+        # float at the page's far left), aligned with the title/outline left edge.
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
                    h("p", {"class_": "lead"}, proj.get("goal", "")), raw(run_chip), files_chip,
-                   head_tools),
+                   head_tools, bar),
                  main_view)
-        # Write affordances (web CRUD, U9 §8.4): EDIT the project's structural metadata only —
-        # no create buttons (notes/sections/projects are created by the MCP/CLI host); the
-        # edit page hosts the subtle overflow delete.
-        from .._forms import edit_button
+        # Write affordances (web CRUD, V10 §9): the ONE visible "…" overflow — Edit opens the
+        # metadata dialog over the page, Delete the typed-confirm modal. No create buttons
+        # (notes/sections/projects are created by the MCP/CLI host).
+        from .edit import project_actions
         actions = fragment(top_btn,
-                           raw(edit_button(f'/projects/{proj["id"]}/edit')),
+                           raw(project_actions(proj)),
                            raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
-        return _layout(proj["title"], body, store, active="projects",
+        from .._palette import visit_marker   # the palette's recents beacon (UX V6)
+        return _layout(proj["title"], body + visit_marker(proj["title"]), store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
 
     # ---- Hypotheses/decisions still anchor on their project page (the bets/decisions rows),

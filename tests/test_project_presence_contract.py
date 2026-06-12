@@ -134,5 +134,6 @@ def test_survey_row_counts_questions_and_responses(store):
         sv["id"], [{"respondent_key": "r1", "answers": [{"question_id": "q1", "value": "too high"}]}],
         store=store)
     html = _client().get(f"/projects/{pid}?lang=en").text
-    # the survey row's honest counts (C8): question + response chips
-    assert "1 questions" in html and "1 responses" in html
+    # the survey row's honest count (C8, V2 row truth ≤2 chips): the RESPONSE count is the
+    # row's signal; the question count lives on the detail page
+    assert "1 responses" in html and "1 questions" not in html

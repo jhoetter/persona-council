@@ -128,6 +128,11 @@ def screens(ids: dict[str, str]) -> list[tuple]:
         ("project-files", f'/projects/{ids["project_positioning"]}?view=files'),
         ("activity", "/activity"),
         ("documentation", "/documentation"),
+        # the ⌘K palette v2 (UX V6) open on the project: Recent (the visits this context
+        # accumulated over the screens above — deterministic) · Navigate (Library as ONE
+        # expandable entry) · Actions. 4th element = the explicit wait selector.
+        ("palette", f'/projects/{ids["project_positioning"]}',
+         "[data-cmdk-open]", "#cmdk:not([hidden]) .sl-cmdk-item"),
     ]
 
 
@@ -178,9 +183,10 @@ def shoot(base: str, shots: list[tuple], out_dir: Path) -> list[Path]:
                 page.add_style_tag(content="*{animation:none!important;transition:none!important;"
                                            "caret-color:transparent!important}")
                 page.wait_for_timeout(SETTLE_MS)
-                if click:                                  # interaction screens (the slide-over)
+                if click:                                  # interaction screens (slide-over, ⌘K)
                     page.click(click[0] + " >> nth=0")
-                    page.wait_for_selector("#drawer.is-open .sl-slide")
+                    page.wait_for_selector(click[1] if len(click) > 1
+                                           else "#drawer.is-open .sl-slide")
                     page.wait_for_timeout(SETTLE_MS)
                 # Pin volatile SEED-TIME stamps (activity feed, project updated_at — minute
                 # precision, different every run) to a fixed same-width string so the diff

@@ -98,7 +98,7 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
         for f in facts:
             sup = bool(f.get("t_invalid"))
             rows.append(h("div", {"class_": "mem-fact" + (" sup" if sup else "")},
-                          h("span", {"class_": "mem-date"}, (f.get("t_valid") or "")[:10]),
+                          h("span", {"class_": "mem-date"}, ui.fmt_date(f.get("t_valid") or "")),
                           h("span", {"class_": "mem-fx"}, f.get("fact", ""),
                             (fragment(" ", sup_label) if sup else None))))
         status = h("span", {"class_": "mem-status"}, e["status"]) if e.get("status") else None
@@ -117,7 +117,7 @@ def _memory_html(store: Store, persona_id: str, as_of: str | None, q: str | None
 
     # --- open threads (loops) ---
     loops = [h("div", {"class_": "mem-loop"}, h("span", {"class_": "mem-loop-dot"}), th["text"],
-               h("span", {"class_": "muted small"}, f' · {t("since")} {(th.get("opened_on") or "")[:10]}'))
+               h("span", {"class_": "muted small"}, f' · {t("since")} {ui.fmt_date(th.get("opened_on") or "")}'))
              for th in store.list_threads(pid, "open")[:20]]
 
     # --- compact toolbar: recall search + time-travel (one row, not two big cards) ---
@@ -243,10 +243,14 @@ def register_personas(app) -> None:
                  + [("caps", t("capabilities_h")),
                     ("ziele", t("goals")), ("pains", t("pain_points")), ("tools", t("tools")),
                     ("bez", t("relationships")), ("sec-properties", t("properties"))])
-        from .._forms import edit_button   # metadata edit + delete; persona CREATE stays MCP-only
-        return _layout(p["display_name"], _doc(main, rail=props) + _page_rail(prail), store,
+        # V10: the "…" overflow — metadata edit as a dialog + the typed-confirm delete;
+        # persona CREATE stays MCP-only.
+        from .edit import persona_actions
+        from .._palette import visit_marker   # the palette's recents beacon (UX V6)
+        return _layout(p["display_name"],
+                       _doc(main, rail=props) + _page_rail(prail) + visit_marker(p["display_name"]), store,
                        crumbs=[(t("personas"), "/personas"), (p["display_name"], None)], active="personas",
-                       actions=fragment(raw(edit_button(f'/personas/{p["id"]}/edit')),
+                       actions=fragment(raw(persona_actions(p)),
                                         _star("persona", p["id"], p["display_name"], f'/personas/{p["id"]}')))
 
     @app.get("/personas/{persona_id}/memory", response_class=HTMLResponse)

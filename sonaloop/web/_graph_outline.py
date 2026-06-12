@@ -14,6 +14,9 @@ from ._graph_outline_sessions import merge_session_items
 from ._html import h, raw, fragment
 from ._i18n import t
 from ._outline_chips import chips_html
+# Case-/diacritic-insensitive search form for the `?q=` text search (V1) — ONE shared
+# helper with the ⌘K entity search (V6), so the list filter and the palette never diverge.
+from ._palette_registry import fold as _fold
 
 # Per-kind leading icon (the §3.2 row-atom visual; sessions lead with the persona avatar and
 # assets with a thumb/file icon instead — both ride the item's `lead` slot). Built via dict()
@@ -24,10 +27,16 @@ _KIND_ICONS = dict(council="councils", synthesis="syntheses", report="syntheses"
                    open_question="help", live_url="external", flow="compass")
 
 
+def _q_match(q: str, blob: str) -> bool:
+    """Every whitespace token of `q` must occur in the folded blob (AND semantics)."""
+    folded = _fold(blob)
+    return all(tok in folded for tok in _fold(q).split())
+
+
 def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | None = None,
                   hypotheses: list | None = None, surveys: list | None = None,
                   filters: dict | None = None, facets_out: list | None = None,
-                  clear_href: str = "") -> str:
+                  clear_href: str = "", q: str = "") -> str:
     """Linear-style PHASE-grouped outline — the single primary project view (ux-contract §3.4: the
     project page IS the outline; every primitive is a row in its phase context). Chronological by
     iteration (phase groups carry a `· Runde N` suffix when the project looped; flat when there is no
@@ -38,12 +47,13 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
     (absorbed as phase rows via _graph_outline_extras) — all built by the page route which holds the
     Store, and optional so other callers keep the bare signature.
 
-    U10 (ux-contract §8.5): `filters` = {kind/phase/persona/status -> [values]} applies the
-    Linear-grade facet filter SERVER-SIDE (OR within a facet, AND across; rows and phase groups
-    that filter to zero disappear, group counts stay honest); `facets_out`, when given, is FILLED
-    with the page's facet model — every value that actually occurs, with counts over the
-    UNFILTERED set — for web/_filterbar.filter_bar. `clear_href` feeds the teaching empty state
-    when an active filter matches nothing."""
+    U10/V1 (ux-contract §8.5, §9 V1): `filters` = {kind/phase/persona/status/theme -> [values]}
+    applies the Linear-grade facet filter SERVER-SIDE (OR within a facet, AND across; rows and
+    phase groups that filter to zero disappear, group counts stay honest); `q` is the text
+    search (title + chip text, case/diacritic-insensitive) composing with the facets;
+    `facets_out`, when given, is FILLED with the page's facet model — every value that actually
+    occurs, with counts over the UNFILTERED set — for web/_filterbar.filter_bar. `clear_href`
+    feeds the teaching empty state when an active filter matches nothing."""
     nodes = graph["nodes"]
     steps = (graph.get("methodology_state") or {}).get("steps") or []
     by_id = {s["key"]: s for s in steps}
@@ -188,17 +198,12 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
 
     # THEMES = the cross-cutting semantic sections (kind == "theme"): the "Kern-Insight" thread, the
     # "Prototypen-Leiter", "Konzepte (Ideation)" … (phase/journal sections are skipped — phase already
-    # shows as the per-row tag). Shown Linear-style: a filter bar + per-row dots; activating a theme
-    # highlights its (coherent) members and dims the rest — deliberate, not the overwhelming raw-edge hover.
+    # shows as the per-row tag). V1 retired the separate theme chip ROW: themes are a FACET in the
+    # FilterBar (they were obviously filter options), and a row's membership shows as a small colored
+    # DOT (full title on hover; the full name lives on the section detail page).
     _TH_COLORS = ["#6d5ef0", "#0f9d8f", "#e0820a", "#c0476b", "#3a7bd5", "#8a6d3b", "#4a7d7d"]
     themes = [s for s in graph.get("sections", []) if s.get("kind") == "theme" and s.get("member_ids")]
     th_color = {s["id"]: _TH_COLORS[i % len(_TH_COLORS)] for i, s in enumerate(themes)}
-
-    def _short(title: str) -> str:                            # compact, legible theme label for the pill
-        s = title.split(":")[0].split("(")[0].strip()
-        return s[:16] + ("…" if len(s) > 16 else "")
-
-    th_short = [_short(s["title"]) for s in themes]
     node_themes: dict[str, list] = {}
     for ti, s in enumerate(themes):
         for m in s.get("member_ids", []):
@@ -238,10 +243,14 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
         rec = it.get("session") or it.get("node") or {}
         return record_status(it.get("rkind", ""), rec)
 
+    def _fthemes(it: dict) -> list[str]:
+        return [themes[ti]["id"] for ti in node_themes.get(it["oid"], [])]
+
     flt = {k: v for k, v in (filters or {}).items() if v}
     if facets_out is not None:
         kinds: Counter = Counter(); phases: Counter = Counter()
         crew_n: Counter = Counter(); statuses: Counter = Counter()
+        theme_n: Counter = Counter()
         flabel: dict[tuple, str] = {}
         for it in items:
             fk = _fkind(it)
@@ -260,6 +269,8 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
             if st:
                 statuses[st] += 1
                 flabel.setdefault(("status", st), status_filter_label(it.get("rkind", ""), st))
+            for tid in _fthemes(it):
+                theme_n[tid] += 1
         facets_out.extend([
             {"key": "kind", "label": t("type_h"), "icon": "square",
              "options": [{"value": k, "label": flabel[("kind", k)], "count": n}
@@ -267,6 +278,13 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
             {"key": "phase", "label": t("phase_h"), "icon": "diamond",
              "options": [{"value": k, "label": pmeta[k][1], "count": phases[k]}
                          for k in sorted(phases, key=lambda x: pmeta[x][0])]},
+            # V1: the project's theme sections as a facet (the retired chip row's job),
+            # each option leading with its theme dot color. The facet label comes from the
+            # section-kind data vocabulary (suggestions/section_kinds.json), never hardcoded.
+            {"key": "theme", "label": _pres.present("theme")["label"], "icon": "squareGrid",
+             "options": [{"value": s["id"], "label": s["title"], "dot": th_color[s["id"]],
+                          "count": theme_n[s["id"]]}
+                         for s in themes if theme_n.get(s["id"])]},
             {"key": "persona", "label": t("persona_h"), "icon": "personas",
              "options": [{"value": p, "label": flabel[("persona", p)] or p, "count": n}
                          for p, n in crew_n.most_common()]},
@@ -274,7 +292,17 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
              "options": [{"value": s, "label": flabel[("status", s)], "count": n}
                          for s, n in statuses.most_common()]},
         ])
-    if flt:
+    if flt or q:
+        import re as _re
+
+        def _blob(it: dict) -> str:
+            if it.get("rkind") in ("asset",):     # file rows (V9): what the row visibly shows
+                node = it.get("node") or {}
+                return " ".join((str(it.get("title", "")), node.get("filename", ""),
+                                 str(it.get("kind", ""))))
+            chips_txt = _re.sub(r"<[^>]+>", " ", str(chips_html(it)))
+            return " ".join((str(it.get("title", "")), str(it.get("kind", "")), chips_txt))
+
         def _keep(it: dict) -> bool:
             if flt.get("kind") and _fkind(it) not in flt["kind"]:
                 return False
@@ -284,6 +312,10 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
                 return False
             if flt.get("status") and _fstatus(it) not in flt["status"]:
                 return False
+            if flt.get("theme") and not set(_fthemes(it)) & set(flt["theme"]):
+                return False
+            if q and not _q_match(q, _blob(it)):
+                return False
             return True
         items = [it for it in items if _keep(it)]
         if not items:                                  # teach, don't blank (C8/F1)
@@ -292,6 +324,16 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
     # -----------------------------------------------------------------------------------
 
     def row(it: dict) -> str:
+        # V9 (ux-contract §9): asset rows render as FILES — the compact `.sl-file--row`
+        # (ext badge/thumb identity, filename+ext title, size · date, direction pill, ONE
+        # download/open affordance; the body opens /assets/{id} as the slide-over). The
+        # generic olrow vocabulary stays for every other kind; data-rkind keeps the
+        # presence/slide-over contracts addressable.
+        if it.get("rkind") in ("asset",):
+            from ._presence import file_card
+            return file_card(it.get("node") or {}, row=True, href=it["href"],
+                             drawer=bool(drawer_url("asset", it["href"])),
+                             attrs={"data-rkind": "asset"})
         tw = ("ol-tw" + (" ol-last" if it.get("last_child") else "")) if it["indent"] else ""  # tree connector
         tis = node_themes.get(it["oid"], [])
         # Persona presence + stance lean (tracker: sonaloop/inspector-cinematic-
@@ -311,14 +353,15 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
                               for v, n in sorted(sc.items(), key=lambda kv: -int(kv[0])) if n))
             crew = h("span", {"class_": "ol-crew"}, avs, more,
                      h("span", {"class_": "ol-sds"}, dots) if sc else "")
-        pills = [                                             # labelled pills (colour + name), not cryptic dots
-            h("span", {"class_": "olth-pill", "title": themes[i]["title"]},
-              h("i", {"style": f'background:{th_color[themes[i]["id"]]}'}), th_short[i])
-            for i in tis]
+        # V2: theme membership is a small colored DOT (full theme title on hover) — the wide
+        # truncated chip overloaded the row; the full name lives in the facet menu + detail.
+        pills = [h("i", {"class_": "olth-dot", "title": themes[i]["title"],
+                         "style": f'background:{th_color[themes[i]["id"]]}'})
+                 for i in tis]
         # --ti feeds the tree-spine x-offset so a depth-2 child (session under a paired prototype)
         # draws its connector one indent step deeper than a depth-1 child.
         dw_url = drawer_url(it.get("rkind", ""), it["href"])
-        attrs = {"class_": f"olrow {tw}", "data-oid": it["oid"], "data-th": " ".join(map(str, tis)),
+        attrs = {"class_": f"olrow {tw}", "data-oid": it["oid"],
                  "data-rkind": it.get("rkind", ""), "id": it.get("anchor"),
                  "style": f'padding-left:{10 + it["indent"] * 26}px'
                           + (f';--ti:{it["indent"]}' if it["indent"] else "")}
@@ -382,11 +425,7 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
             round_cap[r] = _essence(best.get("title", ""))
 
     out = []
-    if themes:                                                # theme filter bar (cross-cutting lens)
-        chips = [h("button", {"class_": "olth-chip", "data-ti": str(i)},
-                   h("span", {"class_": "olth-dot", "style": f'background:{th_color[s["id"]]}'}), s["title"])
-                 for i, s in enumerate(themes)]
-        out.append(h("div", {"class_": "olthemes"}, h("span", {"class_": "olth-l"}, t("themes_h")), fragment(*chips)))
+
     def cluster_rows(ris: list[dict]) -> list:
         """One phase group's rows; evidence assets sit in a quiet *Evidence* sub-group at the
         end of their phase (decision §7.2 — cheap, predictable, forward-compatible); deliverable
@@ -429,20 +468,4 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
                                  h("span", {"class_": "ol-cnt"}, str(len(cluster))), capH),
                                fragment(*cluster_rows(cluster))))
     out.append(h("div", {"class_": "outline"}, fragment(*inner)))
-    if themes:
-        out.append(
-            "<script>(function(){"
-            "var chips=document.querySelectorAll('.olth-chip'),rows=document.querySelectorAll('.outline .olrow[data-oid]'),act=null;"
-            "function apply(){rows.forEach(function(r){if(act===null){r.classList.remove('rel','dim');return;}"
-            "var on=(' '+r.getAttribute('data-th')+' ').indexOf(' '+act+' ')>=0;"
-            "r.classList.toggle('rel',on);r.classList.toggle('dim',!on);});}"
-            "chips.forEach(function(c){var ti=c.getAttribute('data-ti');"
-            "function hi(){if(act!==null)return;rows.forEach(function(r){var on=(' '+r.getAttribute('data-th')+' ').indexOf(' '+ti+' ')>=0;"
-            "r.classList.toggle('rel',on);r.classList.toggle('dim',!on);});}"
-            "function lo(){if(act===null)rows.forEach(function(r){r.classList.remove('rel','dim');});}"
-            "c.addEventListener('mouseenter',hi);c.addEventListener('mouseleave',lo);"
-            "c.addEventListener('click',function(){act=(act===ti?null:ti);"
-            "chips.forEach(function(x){x.classList.toggle('on',x.getAttribute('data-ti')===act);});apply();});});"
-            "})();</script>"
-        )
     return "".join(out)

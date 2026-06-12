@@ -57,10 +57,11 @@ def test_sessions_list_renders_empty_and_populated(store):
     sess = _record(store)
     html = client.get("/sessions?lang=en").text
     # the URL stays canonical; the content is the LIBRARY with the Sessions tab active
-    # (ux-contract §3.5): one sl-entity row per walk — subject desc, steps meta, and the
-    # slide-over armed with the row's own canonical URL (§8.1)
+    # (ux-contract §3.5): one sl-entity row per walk — subject desc and the slide-over armed
+    # with the row's own canonical URL (§8.1). V2 row truth: the step count lives on the
+    # detail/slide-over, never as a row chip.
     assert f'/sessions/{sess["id"]}' in html
-    assert "Signup prototype" in html and "2 steps" in html
+    assert "Signup prototype" in html and "2 steps" not in html
     assert f'data-drawer="/sessions/{sess["id"]}"' in html
     # the project filter narrows honestly
     assert f'/sessions/{sess["id"]}' not in client.get("/sessions?project=nope&lang=en").text
@@ -317,6 +318,10 @@ def test_prototype_session_full_detail_page(store):
     assert STRINGS["en"]["proto_liked_h"] in html and "counter-proposal" in html
     assert STRINGS["en"]["friction_rail_h"] in html and "calendar invite" in html
     assert STRINGS["en"]["predicted_behaviors_h"] in html and "status text" in html
+    # V3: the likelihood renders as the vendored labeled %-with-mini-bar contract — a "likely"
+    # level shows "70 %" (thin space, exactly like the DS <Likelihood>), the level name on
+    # hover, the high tone — never a bare token/number
+    assert "sl-likelihood" in html and "70 %" in html and "sl-likelihood--high" in html
     assert STRINGS["en"]["likelihood_likely"] in html        # the scale label, not the raw token
     # the per-step timeline reuses the replay renderer: anchors, monologue, friction accent
     assert 'id="step-0"' in html and 'id="step-1"' in html
@@ -333,9 +338,10 @@ def test_prototype_sessions_list_in_library_tab_and_slideover(store):
     proj, proto, pid, sess = _proto_session(store)
     client = _client()
     html = client.get("/sessions?lang=en").text
-    # one row vocabulary: persona title, subject desc, steps meta, canonical href = drawer URL
+    # one row vocabulary: persona title, subject desc, canonical href = drawer URL
+    # (V2 row truth: no step-count chip — the count lives on the detail/slide-over)
     assert f'/sessions/{sess["id"]}' in html
-    assert "Greta Walker" in html and "Journey prototype" in html and "2 steps" in html
+    assert "Greta Walker" in html and "Journey prototype" in html and "2 steps" not in html
     assert f'data-drawer="/sessions/{sess["id"]}"' in html
     # the slide-over fragment serves the FULL detail content (no 500 on protosession ids):
     # the verdict lead and the step timeline, not an essence preview
@@ -354,8 +360,88 @@ def test_prototype_session_timeline_shows_screenshots_when_files_exist(store, tm
     d.mkdir(parents=True)
     (d / "step-0.png").write_bytes(b"\x89PNG fake")
     proj, proto, pid, sess = _proto_session(store)
-    html = _client().get(f'/sessions/{sess["id"]}?lang=en').text
+    client = _client()
+    html = client.get(f'/sessions/{sess["id"]}?lang=en').text
     # the harness convention <browser session_id>/step-<n>.png resolves without a stored path
     assert '<img class="sess-shot" src="/sessions-files/psession_test/step-0.png"' in html
+    # … and the emitted src actually serves (the V4 regression pin: src present AND 200)
+    assert client.get("/sessions-files/psession_test/step-0.png").status_code == 200
+    # the shot opens the lightbox (no-JS fallback: the file itself)
+    assert 'class="sl-shotlink" href="/sessions-files/psession_test/step-0.png" data-lightbox' in html
+    assert "__slLightbox" in html
     # step 1 has no file -> the recorded screen text
     assert "proto-screen-1" in html
+
+
+def test_prototype_session_timeline_shape_renders_steps_and_screenshots(store, tmp_path, monkeypatch):
+    """§9 V4 ROOT CAUSE pin: half the showcase's prototype reactions authored their walk
+    under reaction.timeline (free-form keys, no reaction.steps) — the replay rendered
+    NOTHING while the retained step-<n>.png files served 200. The timeline shape now
+    adapts onto the step renderer: per-step rows, narration, and the on-disk shots."""
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    d = config.sessions_dir() / "psession_test"
+    d.mkdir(parents=True)
+    (d / "step-1.png").write_bytes(b"\x89PNG fake")
+    timeline = [
+        {"step": "1", "action": "Wählt das Zeitfenster", "monolog": "mein echtes Fenster",
+         "beobachtung": "Select stand auf 12:00"},
+        {"step": "2", "action": "Liest das Protokoll", "monologue": "die Frist frisst das Fenster",
+         "observed": "Rutsch-Protokoll zeigt +60 Min."},
+    ]
+    proj, proto, pid, sess = _proto_session(store, steps=[], timeline=timeline,
+                                            observed_state_refs=["Select stand auf 12:00"])
+    client = _client()
+    html = client.get(f'/sessions/{sess["id"]}?lang=en').text
+    # both authored steps render as replay rows, with their narration aliases resolved
+    assert 'id="step-1"' in html and 'id="step-2"' in html
+    assert "mein echtes Fenster" in html and "die Frist frisst das Fenster" in html
+    # step 1 has a retained file: <img> WITH a src that serves 200
+    src = "/sessions-files/psession_test/step-1.png"
+    assert f'<img class="sess-shot" src="{src}"' in html
+    assert client.get(src).status_code == 200
+    # step 2 has no file: the observed screen text, never a src-less <img>
+    assert "Rutsch-Protokoll zeigt +60 Min." in html
+
+
+def test_step_shim_repairs_explicitly_empty_screenshot_key(store, tmp_path, monkeypatch):
+    """A recorder that stored `screenshot: None` (key present, value empty) used to dodge
+    the setdefault enrichment — the shot stayed invisible despite the file existing."""
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    d = config.sessions_dir() / "psession_test"
+    d.mkdir(parents=True)
+    (d / "step-0.png").write_bytes(b"\x89PNG fake")
+    reaction = _proto_reaction()
+    reaction["steps"][0]["state"]["screenshot"] = None
+    proj, proto, pid, sess = _proto_session(store, **reaction)
+    html = _client().get(f'/sessions/{sess["id"]}?lang=en').text
+    assert '<img class="sess-shot" src="/sessions-files/psession_test/step-0.png"' in html
+
+
+def test_prototype_page_session_rows_carry_shot_strips(store, tmp_path, monkeypatch):
+    """§9 V4: the prototype detail page shows each session row with a small first/last
+    step-shot strip — BOTH session kinds (prototype reactions and usability walks)."""
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    d = config.sessions_dir() / "psession_test"
+    d.mkdir(parents=True)
+    (d / "step-0.png").write_bytes(b"\x89PNG fake")
+    (d / "step-1.png").write_bytes(b"\x89PNG fake too")
+    proj, proto, pid, sess = _proto_session(store)
+    # a usability walk of the SAME prototype, with its own stored shot
+    u_id = services.stable_id("usession", "protowalk")
+    ud = config.sessions_dir() / u_id
+    ud.mkdir(parents=True)
+    (ud / "step-0.png").write_bytes(b"\x89PNG walk")
+    shot = _step(0)
+    shot["state"]["screenshot"] = "step-0.png"
+    _record(store, key="protowalk", steps=[shot],
+            subject={"kind": "prototype", "id": proto["id"], "label": "Journey prototype"})
+    html = _client().get(f'/prototypes/{proto["slug"]}?lang=en').text
+    # the reaction row's strip: first AND last resolvable shots from the browser-session dir
+    strip = html.split('class="sl-shotstrip"')
+    assert len(strip) >= 3                                   # one strip per session kind
+    assert 'src="/sessions-files/psession_test/step-0.png"' in html
+    assert 'src="/sessions-files/psession_test/step-1.png"' in html
+    # the usability walk's strip resolves its own session dir
+    assert f'src="/sessions-files/{u_id}/step-0.png"' in html
+    # the strips open the lightbox; its JS ships once on the page
+    assert "data-lightbox" in html and "__slLightbox" in html

@@ -143,6 +143,31 @@ def test_activity_page_renders_the_feed(store):
 def test_activity_page_empty_state(store):
     html = TestClient(web.create_app()).get("/activity?lang=en").text
     assert "No activity yet" in html
+    # the lead is the one-sentence explainer (§9 V8): what this surface even is
+    assert web.STRINGS["en"]["activity_lead"] in html
+
+
+def test_activity_groups_events_per_run(store):
+    """ux-contract §9 V8/G3: events recorded INSIDE a run (same project, timestamped within
+    the run's interval) fold under one collapsible run header row (details/summary); events
+    outside any run stay flat rows."""
+    pid = create_persona(store, "Outside Run")                 # before any run → flat row
+    proj = services.start_project("Run Group Proj", "frage?", methodology="double_diamond",
+                                  persona_ids=[pid], store=store)
+    services.start_run(proj["id"], store=store)
+    services.record_council(proj["id"], "Inside the run?", [pid],
+                            statements=[{"persona_id": pid, "text": "ja"}],
+                            key="g3", store=store)             # during the run → grouped
+    html = TestClient(web.create_app()).get("/activity?lang=en").text
+    # ONE run group renders, headed by the run vocabulary + the project + the event count
+    group = html.split('class="sl-rungroup"')[1].split("</details>")[0]
+    assert html.count('class="sl-rungroup"') == 1
+    assert f'{web.STRINGS["en"]["run_chip"]} · Run Group Proj' in group
+    assert "event" in group and "<summary" in html.split('class="sl-rungroup"')[1][:300]
+    assert "Council recorded" in group                          # the in-run event sits inside
+    # the pre-run events stay flat — outside the details element
+    assert "Persona created" not in group
+    assert "Persona created" in html
 
 
 def test_chrome_includes_the_live_client(store):

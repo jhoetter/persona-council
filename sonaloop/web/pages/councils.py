@@ -107,11 +107,12 @@ def _red_team_result_html(rt: dict) -> str:
 
 def register_councils(app) -> None:
     @app.get("/councils", response_class=HTMLResponse)
-    def councils(project: str = Query(default=""), status: str = Query(default="")) -> str:
+    def councils(project: str = Query(default=""), status: str = Query(default=""),
+                 q: str = Query(default="")) -> str:
         # The URL stays canonical; the content is the Library with the Councils tab
         # active (ux-contract §3.5 — one browser, no redirects) + the shared FilterBar (U10).
         from .library import library_filters, library_page
-        return library_page("councils", flt=library_filters(project, status), base="/councils")
+        return library_page("councils", flt=library_filters(project, status), base="/councils", q=q)
 
     @app.get("/councils/{session_id}", response_class=HTMLResponse)
     def council_detail(session_id: str) -> str:
@@ -154,7 +155,7 @@ def register_councils(app) -> None:
         help_text = (t("council_questions_help", n=n_voices) if mode == "discovery"
                      else t("council_eval_help", n=n_voices) if mode == "evaluation"
                      else t("council_motion_help", n=n_voices))
-        intro = h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, help_text)
+        intro = h("p", {"class_": "ihint"}, help_text)
         # Reverse cross-refs: each statement learns who cites it (e.g. the synthesis that derives from it).
         _idx = services.ref_backlinks(session.get("project_id", ""), store) if session.get("project_id") else {}
         backlinks = {s["id"]: _idx.get(_A.part_address("council", session["id"], s["id"]), [])
@@ -199,10 +200,10 @@ def register_councils(app) -> None:
                                         t("answer_exec_summary"), qid="sec-summary"))
                         if has_summary else "")
         h2h_block = (h("div", {"class_": "sec", "id": "h2h"}, h("h2", {}, t("h2h_title")),
-                       h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, t("h2h_lead")),
+                       h("p", {"class_": "ihint"}, t("h2h_lead")),
                        raw(h2h_html)) if is_h2h else "")
         rt_block = (h("div", {"class_": "sec", "id": "red-team"}, h("h2", {}, t("rt_title")),
-                      h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, t("rt_lead")),
+                      h("p", {"class_": "ihint"}, t("rt_lead")),
                       raw(rt_html)) if is_rt else "")
         body = fragment(
             opener,
@@ -230,10 +231,12 @@ def register_councils(app) -> None:
                      ("councils", t("type_h"), t("council_mode_" + mode)),
                      ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
-            # value-bucketed via the scale (votes ARE stances; legacy tokens resolve through the aliases)
+            # value-bucketed via the scale (votes ARE stances; legacy tokens resolve through the
+            # aliases); zero buckets drop (V3 — an "Oppose 0" row is noise, not data)
             vals = [st["value"] for x in session["votes"] if (st := _A.vote_stance(x)) is not None]
-            prop_rows += [("dot", t(r["label_key"]), str(vals.count(r["value"]))) for r in _A.stance_terms()]
-        prop_rows.append(("dot", created_h, session["created_at"][:10]))
+            prop_rows += [("dot", t(r["label_key"]), str(n))
+                          for r in _A.stance_terms() if (n := vals.count(r["value"]))]
+        prop_rows.append(("dot", created_h, ui.fmt_date(session["created_at"])))
         mode_pill = _label(t("council_mode_" + mode), "var(--blue)") if mode in (
             "discovery", "evaluation", "decision") else None
         return detail_page(

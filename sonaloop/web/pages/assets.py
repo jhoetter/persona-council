@@ -21,7 +21,7 @@ from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .. import ui
 from .._presence import (
     asset_direction, asset_direction_pill, asset_file_card, asset_kind_pill,
-    asset_preview_html, asset_size, asset_source_chip,
+    asset_preview_html, asset_size, asset_source_chip, file_card,
 )
 
 
@@ -40,11 +40,11 @@ def _provenance_section(a: dict, store) -> str:
     direction · the supersede chain when recorded · notes — the sl-props row contract, so
     provenance reads like structure, not prose."""
     is_out = asset_direction(a) == "out"
-    when = (a.get("created_at") or "")[:16].replace("T", " ")
+    when = ui.fmt_ts(a.get("created_at") or "")
     chain = a.get("supersedes") or []
     chain_html = fragment(*(
         h("div", {"class_": "muted small"},
-          f'{s.get("filename", "") or s.get("id", "")} · {(s.get("created_at") or "")[:16].replace("T", " ")}')
+          f'{s.get("filename", "") or s.get("id", "")} · {ui.fmt_ts(s.get("created_at") or "")}')
         for s in chain)) if chain else None
     rows = [
         ("dot", t("asset_generated") if is_out else t("asset_received"), when),
@@ -57,17 +57,21 @@ def _provenance_section(a: dict, store) -> str:
                h("span", {"class_": "sl-prop__k"}, raw(_icon(ic)), lbl),
                h("span", {"class_": "sl-prop__v"}, val))
              for ic, lbl, val in rows if val not in (None, "", "—")]
-    # The same .sec/h2 heading idiom as the page's other sections (sec-file, sec-excerpt) —
-    # ui.section's title rendered visibly heavier here (round-2 audit, HD consistency).
+    # The same .sec/h2 heading idiom as the page's other sections (sec-file, sec-excerpt);
+    # the rows ride the QUIET frameless props contract (V9: the file card is the hero,
+    # provenance reads as quiet structure below it).
     return h("div", {"class_": "sec", "id": "sec-provenance"},
              h("h2", {}, t("provenance_h")),
-             h("div", {"class_": "sl-props"}, fragment(*props)))
+             h("div", {"class_": "sl-props sl-props--quiet"}, fragment(*props)))
 
 
 def project_files_page(project_id: str) -> str:
-    """The project FILES lens (?view=files): every asset of the project chronologically —
-    evidence in and deliverables out interleaved by created_at with day separators, each row
-    carrying its direction pill and source line. The across-many-MCP-messages story (§8.3)."""
+    """The project FILES lens (?view=files): every asset of the project chronologically as
+    FILE CARDS (ux-contract §9 V9 — the `.sl-file-grid` of `.sl-file` cards: type identity
+    first, filename+ext as the title, size · date meta, direction pill, the quiet source
+    chip; exactly ONE download/open affordance — the card body opens the detail/slide-over).
+    Evidence in and deliverables out interleave by created_at; day separators stay as grid
+    section headers. The across-many-MCP-messages story (§8.3)."""
     store = Store()
     try:
         proj = services.get_research_project(project_id, store=store)
@@ -76,17 +80,20 @@ def project_files_page(project_id: str) -> str:
                        store, active="projects")
     assets = sorted(services.list_assets(project_id, store=store),
                     key=lambda a: a.get("created_at", ""))
-    rows: list = []
-    day = None
+    sections: list = []
+    day, cards = None, []
     for a in assets:
         if (a.get("created_at") or "")[:10] != day:
-            day = (a.get("created_at") or "")[:10]
-            rows.append(ui.group_header(ui._fmt_day(day)))
-        src = asset_source_chip(a, store)
-        rows.append(ui.primitive_row("asset", a, store, href=f'/assets/{a["id"]}', drawer=True,
-                                     desc=raw(src) if src else ""))
-    if rows:
-        rows_html = h("div", {"class_": "rows", "data-keynav": True}, fragment(*(raw(str(r)) for r in rows)))
+            if cards:
+                sections.append(h("div", {"class_": "sl-file-grid"}, fragment(*(raw(str(c)) for c in cards))))
+            day, cards = (a.get("created_at") or "")[:10], []
+            sections.append(ui.group_header(ui._fmt_day(day)))
+        cards.append(file_card(a, store, drawer=True, source=True))
+    if cards:
+        sections.append(h("div", {"class_": "sl-file-grid"}, fragment(*(raw(str(c)) for c in cards))))
+    if sections:
+        rows_html = h("div", {"class_": "rows", "data-keynav": True},
+                      fragment(*(raw(str(s)) for s in sections)))
     else:
         rows_html = h("div", {"class_": "sl-empty"},
                       h("div", {"class_": "sl-empty__icon"}, raw(_icon("clipboard"))),
@@ -105,12 +112,12 @@ def project_files_page(project_id: str) -> str:
 def register_assets(app) -> None:
     @app.get("/assets", response_class=HTMLResponse)
     def assets_list(project: str = Query(default=""), status: str = Query(default=""),
-                    direction: str = Query(default="")) -> str:
+                    direction: str = Query(default=""), q: str = Query(default="")) -> str:
         # The Library's Assets tab under the canonical URL (ux-contract §3.5), with the
         # shared FilterBar (U10): project + status + direction, same URL grammar.
         from .library import library_filters, library_page
         return library_page("assets", flt=library_filters(project, status, direction),
-                            base="/assets")
+                            base="/assets", q=q)
 
     @app.get("/assets/{asset_id}", response_class=HTMLResponse)
     def asset_detail(asset_id: str) -> str:
@@ -145,7 +152,7 @@ def register_assets(app) -> None:
             ("square", t("type_h"), t("asset_kind_" + (a.get("kind") or "file"))),
             ("exchange", t("direction_h"), t("asset_dir_out") if is_out else t("asset_dir_in")),
             ("database", t("size"), asset_size(a)),
-            ("dot", t("created"), (a.get("created_at") or "")[:10]),
+            ("dot", t("created"), ui.fmt_date(a.get("created_at") or "")),
         ]
         return detail_page(
             store, title=title, active="library",

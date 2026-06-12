@@ -26,7 +26,7 @@ from __future__ import annotations
 import inspect
 
 from ._components import _icon, _label
-from ._html import h, raw, register_css
+from ._html import fragment, h, raw, register_css
 from ._i18n import t
 
 # ------------------------------------------------------------------ the presence declarations
@@ -314,19 +314,128 @@ def asset_preview_html(asset: dict) -> str:
     return ""
 
 
+# ── V9: the file-first asset presentation (ux-contract §9 V9, the vendored `.sl-file`
+# contract). An asset renders as a FILE — a prominent type identity (uppercase extension
+# badge toned by family, or an image thumbnail), the filename WITH extension as the title,
+# a faint size · date meta line, and exactly ONE download/open affordance; the card body is
+# the OPEN target (the canonical /assets/{id} detail, slide-over armed). Shared by the
+# files lens (grid cards), the Library tab + the outline Evidence/Deliver rows (--row
+# variant), and the asset detail hero. ──────────────────────────────────────────────────
+
+# Extension → badge tone, the design-system family map (components.css: red docs that
+# print, amber decks, green sheets/data, blue text, violet images; unknown stays neutral).
+_EXT_TONES = (("red", ("pdf",)),
+              ("amber", ("ppt", "pptx", "key", "odp")),
+              ("green", ("csv", "tsv", "xls", "xlsx", "ods", "parquet")),
+              ("blue", ("txt", "md", "markdown", "doc", "docx", "rtf", "json", "html", "yaml", "yml")),
+              ("violet", ("png", "jpg", "jpeg", "gif", "webp", "svg", "heic", "avif")))
+
+# The file-card composition layer: the vendored contract styles the parts; app-side are
+# the overlay-link geometry (the body-opens-detail target — anchors cannot nest, the
+# entity_row/funnel idiom), the container hover, and a wider grid floor — the inspector's
+# cards carry a direction pill + provenance source line on top of the DS default anatomy,
+# so full filenames need more than the 180px floor to read as file identity (V9).
+register_css(".sl-file{position:relative}"
+             ".sl-file__open{position:absolute;inset:0;border-radius:inherit}"
+             ".sl-file:has(.sl-file__open:hover){background:var(--sl-hover);"
+             "border-color:color-mix(in srgb,var(--sl-ink) 14%,var(--sl-line))}"
+             ".sl-file-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}"
+             ".sl-file__meta .lbl{margin-left:2px}"
+             ".sl-file__meta .srcchip{margin-left:0}")
+
+
+def asset_ext(asset: dict) -> str:
+    """The asset's file extension token ('pptx', 'md', …): from the filename, falling back
+    to the media-type subtype; '' when neither says anything."""
+    name = asset.get("filename") or ""
+    ext = name.rsplit(".", 1)[1].lower() if "." in name.strip(".") else ""
+    if not ext:
+        ext = (asset.get("media_type") or "").rpartition("/")[2].lower()
+    return ext[:6]
+
+
+def file_ext_badge(asset: dict) -> str:
+    """The uppercase extension badge (`.sl-file__ext`), toned by type family."""
+    ext = asset_ext(asset) or "file"          # extension-less: the neutral generic token
+    tone = next((tn for tn, exts in _EXT_TONES if ext in exts), "")
+    return h("span", {"class_": "sl-file__ext" + (f" sl-file__ext--{tone}" if tone else "")},
+             ext)
+
+
+def file_stage(asset: dict, *, thumb: bool = True) -> str:
+    """The card's identity stage: the image thumbnail when the asset IS an image (and the
+    caller wants it), else the extension badge on the quiet stage."""
+    if thumb and asset.get("kind") in ("image", "screenshot") and asset.get("url"):
+        return h("span", {"class_": "sl-file__stage"},
+                 h("img", {"class_": "sl-file__thumb", "src": asset["url"], "alt": "",
+                           "loading": "lazy"}))
+    return h("span", {"class_": "sl-file__stage"}, raw(file_ext_badge(asset)))
+
+
+def _file_action(asset: dict) -> str:
+    """The ONE trailing affordance (V9 — never duplicated): download for deliverables,
+    open-in-tab for evidence. '' when the binary has no URL."""
+    url = asset.get("url")
+    if not url:
+        return ""
+    is_out = asset_direction(asset) == "out"
+    label = t("download") if is_out else t("open")
+    link = ({"href": url, "download": asset.get("filename", "")} if is_out
+            else {"href": url, "target": "_blank", "rel": "noopener"})
+    return h("span", {"class_": "sl-file__action"},
+             h("a", {"class_": "sl-entity__action", **link, "title": label, "aria-label": label},
+               raw(_icon("download" if is_out else "external"))))
+
+
+def file_card(asset: dict, store=None, *, row: bool = False, href: str | None = None,
+              drawer: bool = False, desc: str = "", source: bool = False,
+              attrs: dict | None = None) -> str:
+    """An asset as a FILE card (`.sl-file`) or compact row (`.sl-file--row`): identity stage ·
+    filename+ext title · `size · date[ · desc]` meta · direction pill · one action. The card
+    BODY opens the canonical /assets/{id} detail (`drawer=True` arms the slide-over via the
+    stretched overlay link); `source=True` adds the quiet provenance source line (grid cards);
+    `desc` joins the meta line (the Library's owning-project title); `attrs` extends the
+    container (the outline's data-rkind contract attribute)."""
+    from .ui import _fmt_day
+    open_href = href or f'/assets/{asset.get("id", "")}'
+    name = asset.get("filename") or asset.get("title") or asset.get("id", "")
+    meta = " · ".join(x for x in (asset_size(asset), _fmt_day(asset.get("created_at") or ""),
+                                  desc) if x)
+    src = asset_source_chip(asset, store) if source else ""
+    pill = raw(asset_direction_pill(asset))
+    # GRID cards keep the filename on its own full-width line (file identity first — the
+    # pill joins the meta line); the compact ROW variant trails the pill beside the action.
+    info = h("div", {"class_": "sl-file__info"},
+             h("span", {"class_": "sl-file__name", "title": name}, name),
+             h("span", {"class_": "sl-file__meta"}, meta, None if row else fragment(" ", pill)),
+             h("span", {"class_": "sl-file__meta"}, raw(str(src))) if src else None)
+    stretch = h("a", {"class_": "sl-file__open", "href": open_href, "aria-label": name[:90],
+                      "data-drawer": open_href if drawer else None,
+                      "data-drawer-title": (asset.get("title") or name)[:90] if drawer else None})
+    return h("div", {"class_": "sl-file" + (" sl-file--row" if row else ""), **(attrs or {})},
+             stretch, raw(file_stage(asset)),
+             h("div", {"class_": "sl-file__body"}, info, pill if row else None,
+               raw(_file_action(asset))))
+
+
 def asset_file_card(asset: dict) -> str:
-    """The download affordance on the asset detail page: one sl-entity row — file icon ·
-    filename · size + media type — whose click downloads the binary (deliverables) or opens
-    it (evidence images/documents render in a tab)."""
+    """The asset detail page's hero file card (V9): the `.sl-file` card front and center —
+    extension badge stage (the image preview above already shows the pixels), filename+ext
+    title, size · media-type meta. The WHOLE card is the one download/open affordance
+    (download for deliverables, open-in-tab for evidence)."""
     is_out = asset_direction(asset) == "out"
     link = ({"href": asset.get("url", "#"), "download": asset.get("filename", "")} if is_out
             else {"href": asset.get("url", "#"), "target": "_blank", "rel": "noopener"})
-    return h("a", {"class_": "sl-entity sl-entity--button", **link},
-             h("span", {"class_": "sl-entity__visual"}, raw(_icon("download" if is_out else "file"))),
-             h("div", {"class_": "sl-entity__content"},
-               h("div", {"class_": "sl-entity__title"}, asset.get("filename", "")),
-               h("div", {"class_": "sl-entity__desc"}, asset.get("media_type", ""))),
-             h("span", {"class_": "sl-entity__trailing"}, asset_size(asset), raw(_icon("download"))))
+    meta = " · ".join(x for x in (asset_size(asset), asset.get("media_type", "")) if x)
+    return h("a", {"class_": "sl-file", **link},
+             raw(file_stage(asset, thumb=False)),
+             h("div", {"class_": "sl-file__body"},
+               h("div", {"class_": "sl-file__info"},
+                 h("span", {"class_": "sl-file__name"}, asset.get("filename", "")),
+                 h("span", {"class_": "sl-file__meta"}, meta)),
+               h("span", {"class_": "sl-file__action"},
+                 h("span", {"class_": "sl-entity__action"},
+                   raw(_icon("download" if is_out else "external"))))))
 
 
 def asset_rows(assets: list, store=None) -> str:

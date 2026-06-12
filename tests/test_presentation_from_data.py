@@ -60,7 +60,7 @@ def test_builtin_artifact_hints_come_from_data():
     # the lofi/midfi/prototype labels live in suggestions/artifact_types.json, not code
     assert P.present("lofi")["short"] == "lo-fi"
     assert P.present("midfi")["short"] == "mid-fi"
-    assert P.present("prototype")["label"] == "Prototyp"
+    assert P.present("prototype")["label"] == "Prototype"
     assert P.resolve_template("prototype", ["lofi"]) == "spa-sketch"
     assert P.resolve_template("prototype", ["midfi"]) == "spa-min"
 

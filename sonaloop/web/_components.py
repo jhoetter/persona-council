@@ -20,6 +20,7 @@ from ._slide import slide_mode
 from ._live import LIVE_CSS, LIVE_JS, live_markup
 from ._runs_widget import RUNS_WIDGET_CSS, RUNS_WIDGET_JS, runs_widget_markup
 from ._keymap import KEYMAP_CSS, KEYMAP_JS, keymap_markup, keymap_hint
+from ._tour import tour_footer_entry
 from ._ext import (  # noqa: F401  (extension seams; public surface re-exported by web/__init__)
     register_nav_section, register_nav_item, resolve_label, nav_model,
     render_slot, theme_override_css, brand_name, brand_logo, title_brand,
@@ -240,8 +241,7 @@ def _user_menu() -> str:
                h("div", {"class_": "sl-um-sec"}, h("div", {"class_": "sl-um-lbl"}, t("language")),
                  h("div", {"class_": "sl-segmented sl-segmented--fill"}, lang_opts)),
                h("div", {"class_": "sl-um-sec"},
-                 h("button", {"type": "button", "class_": "sl-btn", "data-tour-start": True},
-                   raw(_icon("compass")), " ", t("tour_restart")), " ",
+                 # the tour offer lives in the sidebar footer row now (V7 — concept economy C10)
                  h("a", {"class_": "sl-btn", "href": "/feedback"},  # inbox: linked from HERE only
                    raw(_icon("chat")), " ", t("feedback_h")), " ",
                  # Documentation = reference, not workspace (ux-contract §3.5): footer cluster, off the 4-item nav.
@@ -296,9 +296,14 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
             active: str = "", actions: str = "") -> str:
     # The `?slide=1` fragment variant (§8.1, web/_slide.py): the SAME page, content only — the
     # slide-over fetches this while pushState makes the address the canonical URL. The host
-    # document already carries the full CSS/JS environment; the drawer re-executes embedded scripts.
+    # document already carries the full CSS/JS environment; the drawer re-executes embedded
+    # scripts. The page's header ACTIONS (the V10 "…" overflow + its dialogs, the star) ride
+    # along hidden — web/_drawer's DRAWER_JS hoists [data-slide-actions] into the panel header
+    # (next to expand/close), so edit/delete stay reachable from the peek too.
     if slide_mode():
-        return f'<div class="sl-slide">{body}</div>'
+        acts = (f'<span class="sl-tb-actions" data-slide-actions hidden>{actions}</span>'
+                if actions else "")
+        return f'<div class="sl-slide">{acts}{body}</div>'
     crumbs = crumbs or [(title, None)]
     # Inject per-request translations into the static JS (client renders need them
     # too — same __PLACEHOLDER__ -> t() pattern used for the voices chart).
@@ -336,7 +341,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     <div class="sl-brand"><a class="sl-logo" href="/">{_lockup}</a></div>
     <div class="sl-sb-search"><button type="button" class="sl-cmdk-trigger" data-cmdk-open aria-label="{t("search")}">{_icon("search")}<span>{t("search")}</span><kbd class="sl-kbd">⌘K</kbd></button></div>
     <div class="sl-sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
-    {render_slot("sidebar_footer", store)}{keymap_hint()}
+    <nav class="sl-nav sl-sb-foot">{render_slot("sidebar_footer", store)}{tour_footer_entry()}{keymap_hint()}</nav>
     {_user_menu()}
   </aside>
   <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="{t("sidebar")}"></div>

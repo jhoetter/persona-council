@@ -27,11 +27,12 @@ def _informed_decisions_html(synthesis_id: str, store) -> str:
 
 def register_syntheses(app) -> None:
     @app.get("/syntheses", response_class=HTMLResponse)
-    def syntheses(project: str = Query(default=""), status: str = Query(default="")) -> str:
+    def syntheses(project: str = Query(default=""), status: str = Query(default=""),
+                  q: str = Query(default="")) -> str:
         # ONE concept — a Report; the list is the Library's Reports tab (ux-contract §3.5),
         # filterable by project (U10, the shared FilterBar grammar).
         from .library import library_filters, library_page
-        return library_page("reports", flt=library_filters(project, status), base="/syntheses")
+        return library_page("reports", flt=library_filters(project, status), base="/syntheses", q=q)
 
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:
@@ -70,7 +71,7 @@ def register_syntheses(app) -> None:
         prop_rows = [
             ("projects", t("project"), proj_link),
             ("link", t("rel_based_on"), raw(_label(t("chip_sources_n", n=n_sources)))),
-            ("clock", t("created"), (syn.get("created_at") or "")[:10]),
+            ("clock", t("created"), ui.fmt_date(syn.get("created_at") or "")),
         ]
         from .._forms import overflow_delete
         return detail_page(

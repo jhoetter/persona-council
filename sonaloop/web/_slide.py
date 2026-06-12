@@ -21,6 +21,17 @@ from urllib.parse import parse_qs, quote
 
 _SLIDE: contextvars.ContextVar[bool] = contextvars.ContextVar("slide_mode", default=False)
 
+# The current request's URL path (set by the same middleware). The palette's recents
+# beacon (web/_palette.visit_marker, UX V6) reads it to stamp WHICH detail is being
+# rendered — correct in all three render modes (full page, ?slide=1 fragment, and the
+# ?d= SSR sub-request, which runs through the middleware again with the detail path).
+_REQ_PATH: contextvars.ContextVar[str] = contextvars.ContextVar("req_path", default="")
+
+
+def request_path() -> str:
+    """URL path of the request currently being rendered ("" outside a request)."""
+    return _REQ_PATH.get()
+
 # (detail_path, fragment_html, close_href) while SSR-rendering a `?d=` context URL — or None.
 _SSR_DRAWER: contextvars.ContextVar[tuple[str, str, str] | None] = contextvars.ContextVar(
     "ssr_drawer", default=None)

@@ -27,8 +27,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .sb-quick{display:flex;flex-direction:column;gap:1px}
 .sb-quick a{display:block;padding:var(--s-1) var(--s-2);border-radius:var(--radius-sm);color:var(--muted);font-size:var(--t-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sb-quick a:hover{background:var(--hover);color:var(--ink)}
-.sb-foot{padding:var(--s-2) var(--s-4);border-top:1px solid var(--line);font-size:var(--t-sm)}
-.sb-foot a{color:var(--muted)}.sb-foot a:hover{color:var(--accent)}
+/* Sidebar footer rows (Feedback · Take the tour · ? shortcuts): the SAME .sl-nav row contract
+   as the nav above (height, hover, icon size — ux-contract §9 V7); only the placement differs. */
+.sl-sb-foot{flex-shrink:0;padding:var(--s-2);border-top:1px solid var(--line)}
+.sl-sb-foot kbd{font-family:var(--mono);flex:none;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);font-size:var(--t-xs);color:var(--faint)}
 /* The sidebar user/settings menu is the shared .sl-usermenu / .sl-um-* layer (COMPONENTS_CSS).
    Theme + language switchers use the shared .sl-segmented (--fill --stacked) from
    COMPONENTS_CSS. Only the icon size is bridged here (the design-system control leaves
@@ -167,27 +169,17 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
    contract (COMPONENTS_CSS, ui.clamp) — the P0 app-local .clamp rules graduated there.
    The P0 bridge section classes + header jump chips retired with UX P2: every kind is an
    outline row in its phase group now (spec/ux-contract.md §3.4). */
-/* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
-.outline .olrow.rel{background:var(--accent-weak)}
-.outline .olrow.dim{opacity:.42}
-/* themes — cross-cutting labels (Linear-style): a filter bar + per-row dots; activating a theme
-   highlights its members (.rel) and dims the rest (.dim). */
-.olthemes{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:900px;margin:4px auto 2px;padding:0 24px}
-.olth-l{font-size:var(--t-sm);color:var(--faint);margin-right:2px}
-.olth-chip{display:inline-flex;align-items:center;gap:6px;max-width:230px;padding:3px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel);color:var(--muted);font-size:var(--t-sm);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.olth-chip:hover{background:var(--hover)}
-.olth-chip.on{border-color:transparent;background:var(--accent-weak);color:var(--accent);font-weight:600}
-.olth-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-/* per-row theme membership = a LABELLED pill (colour + name), not a cryptic bare dot */
-.olth-pills{display:inline-flex;gap:5px;flex-shrink:0;margin-right:10px}
-.olth-pill{display:inline-flex;align-items:center;gap:5px;padding:1px 9px 1px 7px;border-radius:var(--radius-lg);background:var(--panel-2);color:var(--muted);font-size:var(--t-xs);font-weight:500;white-space:nowrap}.olth-pill i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* themes — cross-cutting labels (V1: the chip row retired into a FilterBar facet; a row's
+   membership is a small colored dot with the full theme title on hover) */
+.olth-pills{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;margin-right:10px}
+.olth-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
 /* relations block on detail pages (Linear progressive disclosure) */
 .relcard{margin-top:16px}
 .relh{font-size:var(--t-sm);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;display:flex;align-items:center;gap:6px}.relh svg{width:13px;height:13px}.h1ic{display:inline-flex;vertical-align:-3px;margin-right:7px}.h1ic svg{width:19px;height:19px}
 .relgrp{padding:2px 0 8px}
-.rellbl{font-size:var(--t-xs);font-weight:600;color:var(--muted);margin:0;padding:5px 14px 3px}
-.relrow{display:flex;align-items:center;gap:9px;padding:6px 14px;color:var(--ink);text-decoration:none;font-size:var(--t-body)}
+.rellbl{font-size:var(--t-xs);font-weight:600;color:var(--muted);margin:0;padding:5px 0 3px}
+.relrow{display:flex;align-items:center;gap:9px;padding:6px 8px;margin:0 -8px;border-radius:var(--radius-sm);color:var(--ink);text-decoration:none;font-size:var(--t-body)}
 .relrow:hover{background:var(--hover)}
 .relrow .relt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Properties panel uses the shared .sl-props / .sl-prop; only the value-link tint is app-local */
@@ -268,10 +260,12 @@ h1,h2,h3,h4{color:var(--ink)}
 .toc a{display:block;padding:4px 8px;border-radius:var(--radius-sm);color:var(--muted);border-left:2px solid transparent}
 .toc a:hover{color:var(--ink);background:var(--hover)}
 .toc a.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-weak)}
-.rail{position:sticky;top:0;align-self:start;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
-.rail h4{margin:0;padding:11px 14px 8px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px}
+/* Properties/Relations aside — Notion-quiet (V5): no card box; quiet uppercase group labels,
+   the frameless .sl-props--quiet rows, a hairline only BETWEEN groups. */
+.rail{position:sticky;top:0;align-self:start;padding-top:6px}
+.rail h4{margin:0 0 10px;padding:0;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px}
 .rail h4 svg{width:13px;height:13px;color:var(--faint)}
-.rail h4:not(:first-child){border-top:1px solid var(--line-2);margin-top:4px;padding-top:13px}
+.rail h4:not(:first-child){border-top:1px solid var(--line-2);margin-top:20px;padding-top:16px}
 /* .hero h1/.sub now co-located with the _hero component (component-SSR C3) */
 /* Markdown tables render with the shared .sl-table (--bordered --zebra) from COMPONENTS_CSS.
    Bridge only the prose spacing + let cells grow inside prose. See docs (Components › Table). */

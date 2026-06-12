@@ -54,7 +54,8 @@ def test_asset_detail_page_full_anatomy(store, project, both_directions):
     assert "Provenance" in html and "Received" in html
     assert "mcp: attached by the host" in html
     assert "from the user" in html
-    # the file card keeps the binary one click away
+    # the hero FILE card (V9: ext badge identity, the whole card = the one open affordance)
+    assert 'class="sl-file"' in html and ">md</span>" in html
     assert f'href="{a["url"]}"' in html
     # the rail names the project + the files lens
     assert f'/projects/{project["id"]}' in html
@@ -105,16 +106,17 @@ def test_unknown_asset_renders_not_found(store):
 
 def test_library_assets_tab_rows_with_project_and_direction(store, project, both_directions):
     html = _client().get("/assets?lang=en").text
-    # the 9th tab is active, both directions render as primitive rows
+    # the 9th tab is active, both directions render as compact FILE rows (V9: .sl-file--row)
     assert 'class="sl-tab is-active"' in html and ">Assets<" in html
+    assert html.count('class="sl-file sl-file--row"') == 2
     for a in (both_directions["in"], both_directions["out"]):
-        assert f'data-drawer="/assets/{a["id"]}"' in html      # slide-over armed
-        assert f'href="{a["url"]}"' in html                    # download one click away (trailing)
+        assert f'data-drawer="/assets/{a["id"]}"' in html      # slide-over armed (the card body)
+        assert f'href="{a["url"]}"' in html                    # download one click away (the ONE action)
     assert "Evidence" in html and "Deliverable" in html        # badged by direction
-    assert "Asset surface" in html                             # the owning project desc line
+    assert "Asset surface" in html                             # the owning project on the meta line
     # the canonical route and ?tab= address the same browser
-    assert _client().get("/library?tab=assets&lang=en").text.count("sl-entity__stretch") == \
-           html.count("sl-entity__stretch")
+    assert _client().get("/library?tab=assets&lang=en").text.count("sl-file__open") == \
+           html.count("sl-file__open")
 
 
 def test_library_assets_tab_empty_state_teaches_attach_asset(store):
@@ -132,15 +134,50 @@ def test_project_files_lens_chronological_with_day_separators(store, project, bo
     store.upsert_research_project(p)
     html = _client().get(f"/projects/{pid}?view=files&lang=en").text
     # both directions interleave chronologically: in (1 Jun) before out (3 Jun)
-    assert html.index("Interview notes") < html.index("Findings (PPTX)")
-    assert html.count('class="group"') == 2                    # one day separator per day
-    # each row: slide-over armed + its direction pill; the deliverable's source chip resolves
+    assert html.index("interview-01.md") < html.index("findings.pptx")
+    assert html.count('class="group"') == 2                    # day separators = grid section headers
+    # V9: file CARDS in the grid — each slide-over armed (body = open) with its direction
+    # pill; the deliverable's source chip resolves on the card body
+    assert html.count('class="sl-file-grid"') == 2
+    assert html.count('class="sl-file"') == 2
     assert f'data-drawer="/assets/{both_directions["in"]["id"]}"' in html
     assert "Evidence" in html and "Deliverable" in html
     assert f'/syntheses/{both_directions["syn"]["id"]}' in html
     # reachable from the project header chip
     proj_html = _client().get(f"/projects/{pid}?lang=en").text
     assert f'/projects/{pid}?view=files' in proj_html and "2 files" in proj_html
+
+
+def test_files_lens_cards_carry_file_identity_and_one_affordance(store, project, both_directions):
+    """V9 (ux-contract §9): file identity FIRST — the extension badge (type-toned), the
+    filename WITH extension as the title, size · date meta — and exactly ONE download/open
+    affordance per card (the duplicate left+right download icons are the owner finding)."""
+    html = _client().get(f'/projects/{project["id"]}?view=files&lang=en').text
+    # the markdown evidence: blue text-family badge, filename title, opens in a tab
+    assert ">md</span>" in html and "sl-file__ext--blue" in html
+    assert "interview-01.md" in html
+    # the deck deliverable: amber badge, download attribute hands the binary over
+    assert ">pptx</span>" in html and "sl-file__ext--amber" in html
+    ev, out = both_directions["in"], both_directions["out"]
+    assert f'href="{out["url"]}" download="{out["filename"]}"' in html
+    # exactly ONE affordance per file: each binary URL appears once, in the action slot
+    for a in (ev, out):
+        card = html.split(f'data-drawer="/assets/{a["id"]}"')[1].split("sl-file-grid")[0]
+        assert card.count(f'href="{a["url"]}"') == 1, "duplicate download affordances"
+    assert html.count('class="sl-file__action"') == 2
+
+
+def test_outline_evidence_and_deliver_rows_are_file_rows(store, project, both_directions):
+    """V9: the project outline's Evidence/Deliver asset rows use the compact `.sl-file--row`
+    — ext badge identity instead of a generic icon, one affordance, slide-over armed."""
+    html = _client().get(f'/projects/{project["id"]}?lang=en').text
+    assert html.count('data-rkind="asset"') == 2
+    assert html.count('class="sl-file sl-file--row" data-rkind="asset"') == 2
+    assert ">md</span>" in html and ">pptx</span>" in html
+    for a in (both_directions["in"], both_directions["out"]):
+        assert f'data-drawer="/assets/{a["id"]}"' in html
+        chunk = html.split(f'data-drawer="/assets/{a["id"]}"')[1].split("</div></div>")[0]
+        assert chunk.count(f'href="{a["url"]}"') == 1, "one download/open affordance per row"
 
 
 def test_project_files_lens_empty_state_teaches(store, project):

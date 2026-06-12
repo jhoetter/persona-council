@@ -52,6 +52,8 @@ def test_runs_page_stalled_detection_honors_quiet_open_run(store):
 def test_runs_page_empty_state(store):
     html = _client().get("/runs?lang=en").text
     assert web.STRINGS["en"]["no_runs"] in html
+    # the page leads with the one-sentence definition of a run (§9 V8)
+    assert web.STRINGS["en"]["runs_lead"] in html
 
 
 def test_topbar_widget_present_on_every_page(store):
@@ -60,10 +62,27 @@ def test_topbar_widget_present_on_every_page(store):
     _planned(store, "Stalled Proj")
     html = _client().get("/personas?lang=en").text             # any page — the widget is chrome
     assert 'id="runsw"' in html and "has-active" in html and "has-stalled" in html
-    assert ">1</span>" in html.split('id="runsw-count"')[1][:40]   # server-rendered active count
+    # the indicator reads like a status chip now (§9 V7): "1 run active", not "• 1"
+    assert ">1 run active</span>" in html.split('id="runsw-count"')[1][:60]
     assert "Active Proj" in html.split('id="runsw-fly"')[0] or "Active Proj" in html
     assert 'href="/runs"' in html                               # flyout links the full page
     assert "sl:live-event" in html                              # live update wiring (SSE re-dispatch)
+
+
+def test_topbar_widget_hidden_at_zero_runs(store):
+    """§9 V7: the zero state ("• 0") taught nothing — with no active or stalled run the
+    chip is hidden entirely (the markup still ships so a live event can unhide it)."""
+    def _runsw_tag(html: str) -> str:
+        start = html.index('id="runsw"')
+        return html[html.rindex("<div", 0, start):html.index(">", start)]
+
+    assert " hidden" in _runsw_tag(_client().get("/personas?lang=en").text)
+    # a stalled project alone keeps the loud lane loud — visible, amber, stalled read
+    _planned(store, "Stalled Proj")
+    html = _client().get("/personas?lang=en").text
+    tag = _runsw_tag(html)
+    assert " hidden" not in tag and "has-stalled" in tag
+    assert ">1 run stalled</span>" in html.split('id="runsw-count"')[1][:60]
 
 
 def test_project_header_run_chip_with_popover(store):
@@ -75,6 +94,9 @@ def test_project_header_run_chip_with_popover(store):
     assert 'class="runchip runchip--stalled"' in html          # the rendered chip, not the chrome CSS/JS
     assert f'{web.STRINGS["en"]["run_chip"]} · {web.STRINGS["en"]["runs_stalled_h"]}' in html
     pop = html.split('id="runchip-fly"')[1][:2500]
+    # the popover LEADS with the concept (§9 V8): what a run is, before this run's state
+    assert web.STRINGS["en"]["runs_lead"] in pop
+    assert pop.index(web.STRINGS["en"]["runs_lead"]) < pop.index(web.STRINGS["en"]["run_last_activity"])
     assert web.STRINGS["en"]["run_last_activity"] in pop
     assert "start_run(" in pop                                        # copyable resume hint
     assert 'data-copy=' in html and 'href="/runs"' in html            # journal link
