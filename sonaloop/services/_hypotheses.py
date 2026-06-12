@@ -196,7 +196,21 @@ def record_hypothesis(project_id: str, text: str, prediction: dict, derived_from
                      derived_from=refs, status="open", result=None,
                      created_at=(existing or {}).get("created_at", now), updated_at=now).to_dict()
     store.upsert_hypothesis(rec)
-    return {"hypothesis": rec}
+    out = {"hypothesis": rec, "url": web_url(f"/hypotheses/{hid}"),  # noqa: F821 (bound)
+           "project_url": web_url(f"/projects/{project['id']}")}  # noqa: F821 (bound)
+    # Governance parity with record_council: a hypothesis stamped while the plan has ready work
+    # and no active run is fine, but say so — remote hosts demonstrably record past the loop.
+    try:
+        from ..plan_assess import project_run_state
+        rs = project_run_state(project["id"], store=store)
+        if rs and rs.get("state") == "stalled":
+            out["warnings"] = [
+                "recorded OUTSIDE the governed run loop — the project's plan has ready work and "
+                f"no active run ({rs.get('note', '')}); drive via start_run → run_step → "
+                "checkpoint_step so plan gates and assess_project stay honest"]
+    except Exception:
+        pass
+    return out
 
 
 def get_hypothesis(hypothesis_id: str, store: Store | None = None) -> dict[str, Any]:

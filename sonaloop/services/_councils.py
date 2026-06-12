@@ -357,9 +357,13 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
                 "checkpoint_step so plan gates and assess_project stay honest")
     except Exception:
         pass
+    # The links a remote agent hands the user: the council's own page + its project (absent
+    # before, so an agent that just ran a council couldn't say WHERE to see it).
+    out = {**session, "url": web_url(f"/councils/{cid}"),  # noqa: F821 (bound)
+           "project_url": web_url(f"/projects/{project['id']}")}  # noqa: F821 (bound)
     if warnings:
-        return {**session, "warnings": warnings}
-    return session
+        out["warnings"] = warnings
+    return out
 
 
 
@@ -368,13 +372,17 @@ def get_council(session_id: str, store: Store | None = None) -> dict[str, Any]:
     c = store.get_council_session(session_id)
     if not c:
         raise KeyError(f"Unknown council session: {session_id}")
-    return c
+    out = {**c, "url": web_url(f"/councils/{c['id']}")}  # noqa: F821 (bound)
+    if c.get("project_id"):
+        out["project_url"] = web_url(f"/projects/{c['project_id']}")  # noqa: F821 (bound)
+    return out
 
 
 
 def list_councils(store: Store | None = None) -> list[dict[str, Any]]:
     store = store or Store()
     return [{"id": c["id"], "prompt": c["prompt"], "created_at": c["created_at"],
+             "url": web_url(f"/councils/{c['id']}"),  # noqa: F821 (bound)
              "personas": len(c.get("persona_ids", [])), "turns": len(_artifacts.council_statements(c)),
              "votes": _artifacts.vote_tally(c.get("votes", []))}
             for c in store.list_council_sessions()]

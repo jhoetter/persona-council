@@ -364,7 +364,8 @@ def record_head_to_head(project_id: str, prompt: str, options: list[Any],
         **({"variant_meta": vmeta} if vmeta else {}),
     }
     store.insert_council_session(session)
-    return session
+    return {**session, "url": web_url(f"/councils/{session['id']}"),  # noqa: F821 (bound)
+            "project_url": web_url(f"/projects/{project_id}")}  # noqa: F821 (bound)
 
 
 def get_head_to_head(session_id: str, store: Store | None = None) -> dict[str, Any]:
@@ -377,8 +378,11 @@ def get_head_to_head(session_id: str, store: Store | None = None) -> dict[str, A
     ht = c.get("head_to_head")
     if not ht:
         raise KeyError(f"Council {session_id} is not a head-to-head")
-    return {"id": c["id"], "prompt": c["prompt"], "project_id": c.get("project_id", ""),
-            "created_at": c["created_at"], **ht}
+    out = {"id": c["id"], "prompt": c["prompt"], "project_id": c.get("project_id", ""),
+           "created_at": c["created_at"], "url": web_url(f"/councils/{c['id']}"), **ht}  # noqa: F821 (bound)
+    if c.get("project_id"):
+        out["project_url"] = web_url(f"/projects/{c['project_id']}")  # noqa: F821 (bound)
+    return out
 
 
 def is_head_to_head(council: dict[str, Any]) -> bool:

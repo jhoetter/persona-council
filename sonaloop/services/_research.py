@@ -132,8 +132,8 @@ def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
             rs = None
         out.append({"id": p["id"], "slug": p["slug"], "title": p["title"], "goal": p.get("goal", ""),
                     "status": p.get("status", "active"),
-                    # the cohort — persona participation riding the project's own data, so the
-                    # list row can render the avatar group (ux-contract §10 W11)
+                    # the link to hand the user ("what are my projects") — absent before
+                    "url": web_url(f"/projects/{p['id']}"),  # noqa: F821 (bound)
                     "persona_ids": list(p.get("persona_ids") or []),
                     **({"run_state": rs} if rs else {}),
                     "studies": sum(1 for n in graph["nodes"] if n.get("kind") == "synthesis"),
@@ -213,10 +213,9 @@ def parent_project_of_synthesis(synthesis_id: str, store: Store | None = None) -
 
 
 def owning_project_of_synthesis(synthesis_id: str, store: Store | None = None) -> dict[str, Any] | None:
-    """parent_project_of_synthesis + the absorption fallback: a synthesis that DECLARES no project
-    but cites ONLY one project's owned councils is owned by it (the same rule plan_graph absorbs by).
-    Used where ownership must be resolved for a SIDE EFFECT (the deliverable export's asset attach) —
-    kept off the breadcrumb resolver so a citing synthesis's detail page stays library-rooted."""
+    """parent_project_of_synthesis + the absorption fallback: a synthesis that declares no project
+    but cites ONLY one project's owned councils is owned by it. For SIDE EFFECTS (the deliverable
+    export's asset attach) — off the breadcrumb resolver so a citing synthesis stays library-rooted."""
     store = store or Store()
     p = parent_project_of_synthesis(synthesis_id, store=store)
     if p:
@@ -382,7 +381,9 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
     store = store or Store()
     plan = _plan.get_plan(project_id, store=store)
     if plan is not None:                       # the plan engine is the single source of truth (HX3)
-        return _attach_reports(plan_graph(project_id, store=store), project_id, store)
+        g = _attach_reports(plan_graph(project_id, store=store), project_id, store)
+        g["project"]["url"] = web_url(f"/projects/{project_id}")  # noqa: F821 (bound) — the link to hand the user
+        return g
     # Plan-less fallback (start_project always seeds a plan, so this is only hit by hand-built data /
     # the study_ids-based report path): nodes from the project's studies + notes — NO study-edge
     # layer (retired), so no edges.
@@ -401,7 +402,8 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
         "project": {"id": project["id"], "slug": project["slug"], "title": project["title"],
                     "goal": project.get("goal", ""), "status": project.get("status", "active"),
                     "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", []),
-                    "methodology": project.get("methodology", ""), "phase": project.get("phase", "")},
+                    "methodology": project.get("methodology", ""), "phase": project.get("phase", ""),
+                    "url": web_url(f"/projects/{project['id']}")},  # noqa: F821 (bound)
         "methodology_state": None,
         "prototypes": _protos_with_session_counts(project["id"], store),
         "artifacts": list(project.get("artifacts") or []),

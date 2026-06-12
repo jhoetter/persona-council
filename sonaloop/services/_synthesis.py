@@ -206,13 +206,29 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
     # Soft honesty signal (GAP-3): the synthesis IS the answer — flag (don't block) when it persists with
     # no prose AND no findings AND no voices, so the host notices a hollow answer node.
     out = dict(rec)
+    out["url"] = web_url(f"/syntheses/{sid}")  # noqa: F821 (bound) — the report's own page to hand the user
+    if rec.get("project_id"):
+        out["project_url"] = web_url(f"/projects/{rec['project_id']}")  # noqa: F821 (bound)
     has_substance = any([rec["gesamtbild"].strip(), rec["positionierung"].strip(), rec["arc_narrative"].strip(),
                          rec["findings"], rec["statements"]])
+    warnings: list[str] = []
     if not has_substance:
-        out["warnings"] = ["SYNTHESIS_THIN: this synthesis persisted with no prose (gesamtbild/"
-                           "positionierung) and no structured blocks (clusters/key_problems/ranking/"
-                           "shortlist) — the answer node is near-empty. The synthesis IS the answer: "
-                           "author it rich here, don't leave the substance only in councils/notes."]
+        warnings.append("SYNTHESIS_THIN: this synthesis persisted with no prose (gesamtbild/"
+                        "positionierung) and no structured blocks (clusters/key_problems/ranking/"
+                        "shortlist) — the answer node is near-empty. The synthesis IS the answer: "
+                        "author it rich here, don't leave the substance only in councils/notes.")
+    if rec.get("project_id"):           # governance parity with record_council
+        try:
+            from ..plan_assess import project_run_state
+            rs = project_run_state(rec["project_id"], store=store)
+            if rs and rs.get("state") == "stalled":
+                warnings.append("recorded OUTSIDE the governed run loop — plan has ready work and no "
+                                f"active run ({rs.get('note', '')}); drive via start_run → run_step → "
+                                "checkpoint_step so gates and assess_project stay honest")
+        except Exception:
+            pass
+    if warnings:
+        out["warnings"] = warnings
     return out
 
 
@@ -222,13 +238,17 @@ def get_synthesis(synthesis_id: str, store: Store | None = None) -> dict[str, An
     syn = store.get_synthesis(synthesis_id)
     if not syn:
         raise KeyError(f"Unknown synthesis: {synthesis_id}")
-    return syn
+    out = {**syn, "url": web_url(f"/syntheses/{syn['id']}")}  # noqa: F821 (bound)
+    if syn.get("project_id"):
+        out["project_url"] = web_url(f"/projects/{syn['project_id']}")  # noqa: F821 (bound)
+    return out
 
 
 
 def list_syntheses(store: Store | None = None) -> list[dict[str, Any]]:
     store = store or Store()
-    return store.list_syntheses()
+    return [{**s, "url": web_url(f"/syntheses/{s['id']}")}  # noqa: F821 (bound)
+            for s in store.list_syntheses()]
 
 
 # Stakeholder-report headers follow the CONTENT language (de|en) so a German

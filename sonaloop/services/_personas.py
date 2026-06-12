@@ -413,6 +413,7 @@ def _persona_summary(p: dict[str, Any]) -> dict[str, Any]:
     bits = [seg.get("lebensphase"), seg.get("einstellung"), seg.get("kanal"), seg.get("region"),
             seg.get("finanzlage")]
     return {"id": p["id"], "slug": p["slug"], "display_name": p.get("display_name", ""),
+            "url": web_url(f"/personas/{p['id']}"),  # noqa: F821 (bound) — the link to hand the user
             "age_range": (p.get("identity_traits") or {}).get("age_range", ""),
             "role": (p.get("role") or {}).get("title", ""),
             "segment": " · ".join(str(b) for b in bits if b)[:140]}

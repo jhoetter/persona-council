@@ -15,10 +15,14 @@ def register_plan(mcp):
     def start_project(title: str, goal: str, methodology: str | None = None,
                       persona_ids: list[str] | None = None, description: str = "") -> dict[str, Any]:
         """THE ENTRY POINT. Create a project + seed its research plan (methodology -> analyze/act/verify
-        scaffolding; none -> one dischargeable root frame task); the goal is the How-Might-We. NEXT:
-        start_run(project_id) then loop run_step. Read the `sonaloop://guide/research` resource
-        (research_guide) for the full canonical path. (Personas should exist first — see list_personas;
-        a thin cohort pulls from the 300+-persona catalog via catalog_search/catalog_recommend → catalog_pull.)"""
+        scaffolding; none -> one dischargeable root frame task); the goal is the How-Might-We.
+        MANDATORY NEXT: start_run(project_id), then loop run_step(run_id) until kind=='done' — councils,
+        syntheses and hypotheses MUST be produced THROUGH that loop (run_step dispatches each step), NOT
+        by calling record_* directly: only inside the loop do the plan gates and assess_project stay
+        honest (a project recorded past the loop reads as 0 evidence / 'stalled' and won't close). Read
+        the `sonaloop://guide/research` resource for the full canonical path. (Personas should exist
+        first — see list_personas; a thin cohort pulls from the 300+-persona catalog via
+        catalog_search/catalog_recommend → catalog_pull.)"""
         t = time.perf_counter()
         return _env("start_project", services.start_project(title, goal, methodology, persona_ids, description), t)
 
@@ -104,9 +108,11 @@ def register_plan(mcp):
     # ----- ESV §A: the resumable run object (driver journal) -----
     @mcp.tool()
     def start_run(project_id: str, budget: int | None = None, run_id: str | None = None) -> dict[str, Any]:
-        """Create (or resume) the run object that the driver advances over the plan. Returns the run +
-        its journal; pass an existing run_id to resume (idempotent). NEXT: loop run_step(run_id) —
-        execute each returned dispatch, then checkpoint_step — until kind=='done'."""
+        """Create (or resume) the run object — the SINGLE entry to the governed loop. Returns the run +
+        its journal; pass an existing run_id to resume (idempotent — a project flagged 'stalled' wants
+        a resume, not a fresh run). MANDATORY LOOP: repeatedly call run_step(run_id), execute each
+        returned dispatch, then checkpoint_step — until run_step returns kind=='done'. Do NOT record
+        evidence outside this loop; gates passed != finished — only kind=='done' closes the project."""
         t = time.perf_counter()
         return _env("start_run", services.start_run(project_id, budget, run_id), t)
 

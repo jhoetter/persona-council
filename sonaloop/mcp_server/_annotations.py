@@ -132,6 +132,10 @@ TOOL_ANNOTATIONS: dict[str, dict[str, Any]] = {
     "load_example": W("Load example project"),
     "remove_example": D("Remove example project"),
 
+    # ---- retrieval (_tools_retrieval) — the cross-host search/fetch contract (ChatGPT) ----
+    "search": R("Search research records"),
+    "fetch": R("Fetch research record"),
+
     # ---- flows (_tools_flows) ----
     "define_flow": W("Define flow"),
     "list_flows": R("List flows"),

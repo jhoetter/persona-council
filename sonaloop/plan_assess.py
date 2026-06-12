@@ -244,8 +244,12 @@ def assess_project(project_id: str, store: Store | None = None) -> dict[str, Any
             rec = "frame"             # understand before acting
         else:
             rec = "act"               # do more work to satisfy a gate
+    from .services import web_url
     return {
         "project_id": project_id, "goal": plan.get("goal", ""), "complete": complete,
+        # the link to hand the user alongside the status (was absent — an agent reporting
+        # project health had no URL to show)
+        "url": web_url(f"/projects/{project_id}"),
         "recommendation": rec,
         **({"run_state": rs} if rs else {}),
         "coverage": cov,

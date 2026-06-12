@@ -558,6 +558,10 @@ def _extra_args(ids: dict[str, Any]) -> dict[str, dict]:
     return {
         "get_persona_memory": {"persona_id": ids["persona_id"]},
         "export_synthesis": {"synthesis_id": ids["synthesis_id"], "format": "md"},
+        # the cross-host retrieval contract: search caps at 20 hits × short snippets,
+        # fetch renders ONE record — both bounded by construction, audited here for real
+        "search": {"query": "pricing onboarding council"},
+        "fetch": {"id": ids["synthesis_id"]},
     }
 
 
