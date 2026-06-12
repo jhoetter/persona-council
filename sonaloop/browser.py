@@ -23,7 +23,7 @@ from . import walk_policy as _wp
 from .config import max_browser_sessions, sessions_dir
 
 ACTIONABLE = {"button", "link", "textbox", "checkbox", "combobox", "menuitem",
-              "tab", "radio", "searchbox", "switch", "option"}
+              "tab", "radio", "searchbox", "switch", "option", "slider", "spinbutton"}
 
 
 class HarnessError(Exception):
@@ -144,6 +144,8 @@ class _Session(threading.Thread):
           const t = (el.getAttribute('type') || 'text').toLowerCase();
           if (t === 'checkbox') return 'checkbox';
           if (t === 'radio') return 'radio';
+          if (t === 'range') return 'slider';        // ARIA role Playwright's get_by_role resolves
+          if (t === 'number') return 'spinbutton';   // — 'textbox' made range/number un-drivable
           return 'textbox';
         }
         return tag;

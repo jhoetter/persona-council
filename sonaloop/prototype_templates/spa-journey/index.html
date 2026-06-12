@@ -116,13 +116,13 @@
     else if(el.kind==='range'||el.kind==='number'){
       var l=document.createElement('label');l.textContent=el.label||el.id;w.appendChild(l);
       if(el.kind==='range'){var row=document.createElement('div');row.className='rangerow';
-        var r=document.createElement('input');r.type='range';r.id=el.id;r.min=el.min!=null?el.min:0;r.max=el.max!=null?el.max:100;r.step=el.step!=null?el.step:1;r.value=el.value!=null?el.value:r.min;
+        var r=document.createElement('input');r.type='range';r.id=el.id;r.min=el.min!=null?el.min:0;r.max=el.max!=null?el.max:100;r.step=el.step!=null?el.step:1;r.value=el.value!=null?el.value:r.min;r.setAttribute('aria-label',el.label||el.id);
         var o=document.createElement('span');o.className='rangeval';o.textContent=fmt(Number(r.value),el);state[el.id]=Number(r.value);
         r.addEventListener('input',function(){state[el.id]=Number(r.value);o.textContent=fmt(Number(r.value),el);recompute();});
         row.appendChild(r);row.appendChild(o);w.appendChild(row);}
-      else{var n=document.createElement('input');n.type='number';n.id=el.id;n.value=el.value!=null?el.value:0;state[el.id]=Number(n.value);
+      else{var n=document.createElement('input');n.type='number';n.id=el.id;n.value=el.value!=null?el.value:0;n.setAttribute('aria-label',el.label||el.id);state[el.id]=Number(n.value);
         n.addEventListener('input',function(){state[el.id]=Number(n.value);recompute();});w.appendChild(n);}}
-    else if(el.kind==='select'){var l2=document.createElement('label');l2.textContent=el.label||el.id;var sel=document.createElement('select');sel.id=el.id;
+    else if(el.kind==='select'){var l2=document.createElement('label');l2.textContent=el.label||el.id;var sel=document.createElement('select');sel.id=el.id;sel.setAttribute('aria-label',el.label||el.id);
       (el.options||[]).forEach(function(op){var o=document.createElement('option');o.value=op;o.textContent=op;sel.appendChild(o);});
       state[el.id]=(el.options||[])[0]||'';sel.addEventListener('change',function(){state[el.id]=sel.value;recompute();});w.appendChild(l2);w.appendChild(sel);}
     else if(el.kind==='computed'){var c=document.createElement('div');c.className='computed';
