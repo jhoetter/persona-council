@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fenster-Fürsprecher</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--bg:#f6f7f9;--panel:#fff;--ink:#1c1e21;--muted:#697077;--line:#e6e8eb;--accent:#5b6cff;--accent-ink:#fff;--r:10px;--sh:0 1px 2px rgba(16,18,28,.06);--ff:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body[data-fidelity=lofi]{--panel:#fffef9;--line:#cfcabb;--ink:#2b2b2b;--muted:#7a756a;--accent:#5f6368;--r:14px;--sh:none;--ff:"Comic Sans MS","Segoe Print","Bradley Hand",cursive}
+  body[data-fidelity=hifi]{--bg:#fbfbfd;--panel:#fff;--ink:#0c0d12;--muted:#6b7280;--line:#ececf1;--accent:#5e6ad2;--r:8px;--sh:0 1px 3px rgba(16,18,40,.08),0 0 0 1px rgba(16,18,40,.03);--ff:Inter,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;font:15px/1.5 var(--ff);color:var(--ink);background:var(--bg)}
+  body[data-fidelity=lofi] .el input,body[data-fidelity=lofi] .el select,body[data-fidelity=lofi] .step,body[data-fidelity=lofi] .dot{border-style:dashed}
+  #lofi-banner{display:none}
+  body[data-fidelity=lofi] #lofi-banner{display:block;background:#fff3cd;color:#7a5b00;text-align:center;padding:5px;font-size:12px;border-bottom:1px dashed #cfcabb}
+  header{padding:16px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  h1{font-size:18px;margin:0}.sub{color:var(--muted);font-size:13px;margin-top:2px}
+  main{max-width:680px;margin:0 auto;padding:26px 22px}
+  .rail{display:flex;align-items:center;gap:8px;margin:0 0 22px;flex-wrap:wrap}
+  .dot{display:flex;align-items:center;gap:7px;cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 11px 4px 4px;font-size:12px;color:var(--muted)}
+  .dot .n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--bg);font-size:11px;font-weight:600;color:var(--muted)}
+  .dot.active{color:var(--ink);border-color:var(--accent)}
+  .dot.active .n,.dot.done .n{background:var(--accent);color:var(--accent-ink,#fff)}
+  .dot.done{color:var(--ink)}
+  .step{display:none;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:22px}
+  .step.active{display:block}
+  .step .stepno{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .step h2{font-size:19px;margin:4px 0 16px}
+  .el{margin:0 0 15px}.el label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+  .el input,.el select{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r);width:100%;background:var(--bg);color:var(--ink)}
+  .el p{margin:0;max-width:60ch;color:var(--ink)}
+  .el a{color:var(--accent)}
+  .btn{font:inherit;border:1px solid transparent;background:var(--accent);color:var(--accent-ink,#fff);border-radius:var(--r);padding:10px 17px;cursor:pointer;box-shadow:var(--sh)}
+  .btn.secondary{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  .nav-row{display:flex;justify-content:space-between;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .15s;pointer-events:none}#toast.show{opacity:.95}
+</style>
+</head>
+<body>
+<div id="lofi-banner">Lo-Fi · zum Testen, nicht final</div>
+<header><h1 id="apptitle">Fenster-Fürsprecher</h1><div class="sub" id="appsummary">Richte ein geschütztes Mittags-Fenster ein — mit einer Begründung, die ohne Rückfrage akzeptiert wird, und einem automatischen Gegenvorschlag bei Terminkollisionen.</div></header>
+<main>
+  <div class="rail" id="rail"></div>
+  <div id="steps"></div>
+</main>
+<div id="toast"></div>
+<script id="concept" type="application/json">{"title": "Fenster-Fürsprecher", "summary": "Richte ein geschütztes Mittags-Fenster ein — mit einer Begründung, die ohne Rückfrage akzeptiert wird, und einem automatischen Gegenvorschlag bei Terminkollisionen.", "fidelity": "lofi", "start": "fenster", "screens": [{"id": "fenster", "title": "Fenster wählen", "elements": [{"id": "intro-text", "kind": "text", "label": "Wähle dein tägliches Mittags-Fenster. Es wird in deinem Kalender als belegt eingetragen."}, {"id": "fenster-zeit", "kind": "select", "label": "Zeitfenster", "options": ["12:00–12:45", "12:30–13:15", "13:00–13:45"]}, {"id": "fenster-tage", "kind": "select", "label": "An welchen Tagen?", "options": ["Mo–Fr", "Mo, Mi, Fr", "Nur heute"]}, {"id": "weiter-begruendung", "kind": "button", "label": "Weiter: Begründung wählen", "goto": "begruendung", "action": "begruendung"}]}, {"id": "begruendung", "title": "Begründungs-Baustein wählen", "elements": [{"id": "begr-text", "kind": "text", "label": "Dieser Baustein erscheint als Begründung, wenn jemand in dein Fenster will. Er ist so formuliert, dass dein Umfeld ihn ohne Rückfrage akzeptiert."}, {"id": "baustein", "kind": "select", "label": "Begründungs-Baustein", "options": ["Mittagspause — liefere um 13:45", "Mittagspause — ab 13:15 wieder erreichbar", "Geblockt: Pause (Team-Vereinbarung)", "Termin (ohne Details)"]}, {"id": "baustein-tipp", "kind": "text", "label": "Tipp: Bausteine mit Lieferzusage (»liefere um …«) werden im Test am seltensten hinterfragt."}, {"id": "weiter-vorschau", "kind": "button", "label": "Weiter: Vorschau bei Kollision", "goto": "vorschau", "action": "vorschau"}]}, {"id": "vorschau", "title": "Vorschau: Was passiert bei einer Terminkollision?", "elements": [{"id": "kollision-szenario", "kind": "text", "label": "Beispiel: Eine Kollegin lädt dich zu »Sync Kampagne, 12:40 Uhr« ein — mitten in deinem Fenster."}, {"id": "gegenvorschlag-intro", "kind": "text", "label": "Der Fürsprecher antwortet automatisch in deinem Namen mit einem Gegenvorschlag:"}, {"id": "gegenvorschlag", "kind": "text", "label": "»12:40 passt bei mir nicht — Mittagspause. Gegenvorschlag: 13:45 Uhr. Den aktuellen Stand liefere ich dir bis dahin.«"}, {"id": "scope-hinweis", "kind": "text", "label": "Hinweis (Lo-Fi): Der Gegenvorschlag wird bei Kalender-Einladungen ausgelöst. Spontane Chat-Anfragen (z. B. Huddles) sieht diese Version noch nicht."}, {"id": "begruendung-aendern", "kind": "link", "label": "Begründung ändern", "goto": "begruendung", "action": "begruendung"}, {"id": "aktivieren", "kind": "button", "label": "Fenster aktivieren", "goto": "fertig", "action": "fertig"}]}, {"id": "fertig", "title": "Fenster aktiv", "elements": [{"id": "fertig-text", "kind": "text", "label": "Dein Mittags-Fenster ist eingetragen. Bei einer Kollision verschickt der Fürsprecher den Gegenvorschlag automatisch — du musst dich nicht selbst rechtfertigen."}, {"id": "fertig-hinweis", "kind": "text", "label": "Du kannst jeden Gegenvorschlag vor dem Senden noch ansehen und stoppen."}, {"id": "neues-fenster", "kind": "link", "label": "Neues Fenster einrichten", "goto": "fenster", "action": "fenster"}]}]}</script>
+<script>
+(function(){
+  var C = JSON.parse(document.getElementById('concept').textContent);
+  document.body.dataset.fidelity = C.fidelity || 'midfi';
+  document.getElementById('apptitle').textContent = C.title || 'Prototype';
+  document.getElementById('appsummary').textContent = C.summary || '';
+  var rail = document.getElementById('rail'), root = document.getElementById('steps');
+  var screens = C.screens || [], ids = screens.map(function(s){return s.id;}), state = {};
+  function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1400);}
+  function idx(id){return ids.indexOf(id);}
+  function show(id){
+    var cur = idx(id);
+    document.querySelectorAll('.step').forEach(function(s){s.classList.toggle('active', s.dataset.id===id);});
+    document.querySelectorAll('.dot').forEach(function(d,i){d.classList.toggle('active', d.dataset.id===id);d.classList.toggle('done', i<cur);});
+  }
+  function renderEl(el){
+    var wrap=document.createElement('div'); wrap.className='el';
+    if(el.kind==='text'){var p=document.createElement('p');p.textContent=el.label||'';wrap.appendChild(p);}
+    else if(el.kind==='input'){var l=document.createElement('label');l.textContent=el.label||el.id;var inp=document.createElement('input');inp.id=el.id;inp.setAttribute('aria-label',el.label||el.id);if(el.placeholder)inp.placeholder=el.placeholder;inp.addEventListener('input',function(){state[el.id]=inp.value;});wrap.appendChild(l);wrap.appendChild(inp);}
+    else if(el.kind==='select'){var l2=document.createElement('label');l2.textContent=el.label||el.id;var sel=document.createElement('select');sel.id=el.id;sel.setAttribute('aria-label',el.label||el.id);(el.options||[]).forEach(function(o){var op=document.createElement('option');op.value=o;op.textContent=o;sel.appendChild(op);});sel.addEventListener('change',function(){state[el.id]=sel.value;});wrap.appendChild(l2);wrap.appendChild(sel);}
+    else if(el.kind==='link'){var a=document.createElement('a');a.href='#';a.id=el.id;a.textContent=el.label||el.id;a.setAttribute('aria-label',el.label||el.id);if(el.goto){a.addEventListener('click',function(e){e.preventDefault();show(el.goto);});}wrap.appendChild(a);}
+    else {var b=document.createElement('button');b.className='btn'+(el.variant==='secondary'?' secondary':'');b.id=el.id;b.textContent=el.label||el.id;b.setAttribute('aria-label',el.label||el.id);if(el.goto){b.addEventListener('click',function(){show(el.goto);});}else{b.addEventListener('click',function(){toast((el.label||'Done')+' ✓');});}wrap.appendChild(b);}
+    return wrap;
+  }
+  screens.forEach(function(scr,i){
+    var d=document.createElement('div');d.className='dot';d.dataset.id=scr.id;
+    d.innerHTML='<span class="n">'+(i+1)+'</span>'; d.appendChild(document.createTextNode(scr.title||scr.id));
+    d.addEventListener('click',function(){show(scr.id);}); rail.appendChild(d);
+    var sec=document.createElement('div');sec.className='step';sec.dataset.id=scr.id;
+    var sn=document.createElement('div');sn.className='stepno';sn.textContent='Schritt '+(i+1)+' von '+screens.length;sec.appendChild(sn);
+    var h=document.createElement('h2');h.textContent=scr.title||scr.id;sec.appendChild(h);
+    (scr.elements||[]).forEach(function(el){sec.appendChild(renderEl(el));});
+    var row=document.createElement('div');row.className='nav-row';
+    var back=document.createElement('button');back.className='btn secondary';back.id='step-back';back.textContent='← Zurück';back.setAttribute('aria-label','Zurück');back.disabled=i===0;back.addEventListener('click',function(){if(i>0)show(ids[i-1]);});
+    var next=document.createElement('button');next.className='btn';next.id='step-next';next.setAttribute('aria-label',i===screens.length-1?'Fertig':'Weiter');next.textContent=i===screens.length-1?'Fertig ✓':'Weiter →';next.addEventListener('click',function(){if(i<screens.length-1)show(ids[i+1]);else toast('Fertig ✓');});
+    row.appendChild(back);row.appendChild(next);sec.appendChild(row);
+    root.appendChild(sec);
+  });
+  show(C.start || (screens[0]||{}).id);
+})();
+</script>
+</body>
+</html>

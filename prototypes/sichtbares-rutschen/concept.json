@@ -1,0 +1,116 @@
+{
+  "title": "Sichtbares Rutschen",
+  "summary": "Ein steuerbares Modell deines Hochdruck-Tags: Dein Essensfenster verschwindet nicht – es wandert sichtbar. Geplantes Fenster: 12:00 Uhr.",
+  "fidelity": "lofi",
+  "start": "modell",
+  "screens": [
+    {
+      "id": "modell",
+      "title": "Dein Hochdruck-Tag",
+      "elements": [
+        {
+          "id": "intro",
+          "kind": "text",
+          "label": "Stell deinen Tag ein. Das Modell rechnet LIVE aus, wohin dein Essensfenster rutscht und wie stark es degradiert (echte Pause → Essen am Platz → Automat → ausgefallen). Es verschwindet nicht – es wandert."
+        },
+        {
+          "id": "stoerungen",
+          "kind": "range",
+          "label": "Anzahl Störungen heute (Eskalationen, Anrufe, Ad-hoc-Aufgaben)",
+          "min": 0,
+          "max": 8,
+          "step": 1,
+          "value": 2
+        },
+        {
+          "id": "frist",
+          "kind": "range",
+          "label": "Härteste Frist heute (Uhrzeit)",
+          "min": 10,
+          "max": 18,
+          "step": 1,
+          "value": 15,
+          "suffix": ":00 Uhr"
+        },
+        {
+          "id": "autonomie",
+          "kind": "range",
+          "label": "Kalender-Autonomie (0 = niedrig · 1 = mittel · 2 = hoch)",
+          "min": 0,
+          "max": 2,
+          "step": 1,
+          "value": 1
+        },
+        {
+          "id": "verschiebung",
+          "kind": "computed",
+          "label": "Gesamt-Rutsch gegenüber 12:00 Uhr",
+          "formula": "stoerungen*(20-5*autonomie)+max(0,15-frist)*20",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "fenster_start",
+          "kind": "computed",
+          "label": "Dein Fenster beginnt dann um (Std.Min)",
+          "formula": "floor((720+stoerungen*(20-5*autonomie)+max(0,15-frist)*20)/60)+((720+stoerungen*(20-5*autonomie)+max(0,15-frist)*20)%60)/100",
+          "prefix": "ca. ",
+          "decimals": 2
+        },
+        {
+          "id": "rutsch_balken",
+          "kind": "bar",
+          "label": "Wanderung des Fensters (Skala bis 16:00 Uhr = 240 Min.)",
+          "formula": "stoerungen*(20-5*autonomie)+max(0,15-frist)*20",
+          "max": 240,
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "stufe",
+          "kind": "computed",
+          "label": "Degradationsstufe: 0 = echte Pause · 1 = Essen am Platz · 2 = Automat · 3 = ausgefallen",
+          "formula": "min(3,floor((stoerungen*(20-5*autonomie)+max(0,15-frist)*20)/40))",
+          "prefix": "Stufe ",
+          "decimals": 0
+        },
+        {
+          "id": "degradations_balken",
+          "kind": "bar",
+          "label": "Degradation des Essens (0 = echte Pause … 3 = ausgefallen)",
+          "formula": "min(3,floor((stoerungen*(20-5*autonomie)+max(0,15-frist)*20)/40))",
+          "max": 3,
+          "decimals": 0
+        },
+        {
+          "id": "protokoll_titel",
+          "kind": "text",
+          "label": "Rutsch-Protokoll (live): Warum wandert dein Fenster von 12:00 weg?"
+        },
+        {
+          "id": "prot_stoerungen",
+          "kind": "computed",
+          "label": "… wegen Störungen/Eskalationen (je Störung 20/15/10 Min. bei Autonomie niedrig/mittel/hoch)",
+          "formula": "stoerungen*(20-5*autonomie)",
+          "prefix": "+",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "prot_frist",
+          "kind": "computed",
+          "label": "… wegen harter Frist vor 15:00 Uhr (20 Min. pro Stunde Nähe)",
+          "formula": "max(0,15-frist)*20",
+          "prefix": "+",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "lesebeispiel",
+          "kind": "text",
+          "label": "Lesebeispiel: 12:00 → ca. 12.40 heißt: Dein Fenster ist NICHT weg, es liegt jetzt bei 12:40 (Stufe 1, Essen am Platz). Ein Fenster, das sichtbar wandert, musst du um 9:30 nicht schon abschreiben."
+        }
+      ]
+    }
+  ]
+}

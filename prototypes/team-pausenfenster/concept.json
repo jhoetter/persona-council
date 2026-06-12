@@ -1,0 +1,329 @@
+{
+  "title": "Team-Pausenfenster",
+  "summary": "Gestaffelte Essensfenster mit Vertretungs-Pairing für Teams ohne Kalender-Autonomie (SLA-Betrieb). Lo-Fi-Konzept: das Team hält sich gegenseitig den Rücken frei — das Board macht es sichtbar.",
+  "fidelity": "lofi",
+  "start": "board",
+  "screens": [
+    {
+      "id": "board",
+      "title": "Team-Board · Heute",
+      "cards": [
+        {
+          "id": "card-tobias",
+          "tag": "11:00–11:30",
+          "title": "Tobias R.",
+          "body": "Vertretung: Sandra — nimmt sein Postfach mit.",
+          "meta": "Status: geplant"
+        },
+        {
+          "id": "card-dilara",
+          "tag": "11:30–12:00",
+          "title": "Dilara K.",
+          "body": "Vertretung: Ayşe — übernimmt Queue-Platz 3.",
+          "meta": "Status: bestätigt ✓"
+        },
+        {
+          "id": "card-ayse",
+          "tag": "12:00–12:30",
+          "title": "Ayşe T.",
+          "body": "Vertretung: Dilara — Rücktausch nach dem Coaching.",
+          "meta": "Status: bestätigt ✓"
+        },
+        {
+          "id": "card-janine",
+          "tag": "12:30–13:00",
+          "title": "Janine W. (Teamlead)",
+          "body": "Vertretung: Marco — das Eskalations-Headset geht für 30 Minuten an ihn.",
+          "meta": "Status: noch unbestätigt — antippen zum Bestätigen",
+          "goto": "vertretung",
+          "action": "vertretung"
+        },
+        {
+          "id": "card-marco",
+          "tag": "13:00–13:30",
+          "title": "Marco L.",
+          "body": "Vertretung: Janine — Übergabe-Themen parkt er vorher im Board.",
+          "meta": "Status: geplant"
+        },
+        {
+          "id": "card-sandra",
+          "tag": "13:30–14:00",
+          "title": "Sandra B.",
+          "body": "Vertretung: Tobias — letzte Schiene, Puffer bei Anrufwelle.",
+          "meta": "Status: geplant"
+        }
+      ],
+      "elements": [
+        {
+          "id": "wallboard-status",
+          "kind": "text",
+          "label": "Wallboard jetzt: 12 Anrufe in der Queue · Erreichbarkeit heute 81/20 · Besetzung 6/6"
+        },
+        {
+          "id": "staffel-regel",
+          "kind": "text",
+          "label": "Gestaffelte Fenster: Es ist nie mehr als eine Person gleichzeitig weg — die Erreichbarkeit bleibt über 80/20, ohne dass jemand sein Essen am Platz isst."
+        },
+        {
+          "id": "btn-tausch",
+          "kind": "button",
+          "label": "Fenster tauschen",
+          "goto": "tausch",
+          "action": "tausch"
+        },
+        {
+          "id": "btn-ausfall",
+          "kind": "button",
+          "label": "Krankmeldung einplanen (Neuverteilung)",
+          "goto": "ausfall",
+          "action": "ausfall"
+        },
+        {
+          "id": "btn-ausnahme",
+          "kind": "button",
+          "label": "Eskalations-Ausnahme markieren",
+          "goto": "ausnahme",
+          "action": "ausnahme"
+        },
+        {
+          "id": "link-report",
+          "kind": "link",
+          "label": "Wochen-Nachweis für die Bereichsleitung ansehen",
+          "goto": "report",
+          "action": "report"
+        }
+      ]
+    },
+    {
+      "id": "vertretung",
+      "title": "Vertretung bestätigen",
+      "elements": [
+        {
+          "id": "vertretung-detail",
+          "kind": "text",
+          "label": "Janine 12:30–13:00 — Vertretung: Marco. Marco hält dir den Rücken frei: Das Eskalations-Headset liegt von 12:30 bis 13:00 bei ihm, der Queue-Alarm ab 15 Anrufen geht zuerst an ihn."
+        },
+        {
+          "id": "anrufwelle-regel",
+          "kind": "text",
+          "label": "Bei Anrufwelle gilt: Dein Fenster wird nicht gestrichen, sondern automatisch auf das Nachhol-Fenster 14:30–15:00 geschoben. Marco bekommt das als Hinweis auf seine Karte."
+        },
+        {
+          "id": "btn-bestaetigen",
+          "kind": "button",
+          "label": "Vertretung bestätigen & zurück zum Board",
+          "goto": "board",
+          "action": "board"
+        },
+        {
+          "id": "btn-ablehnen",
+          "kind": "button",
+          "label": "Passt nicht — Tausch vorschlagen",
+          "variant": "secondary",
+          "goto": "tausch",
+          "action": "tausch"
+        }
+      ]
+    },
+    {
+      "id": "tausch",
+      "title": "Fenster tauschen",
+      "elements": [
+        {
+          "id": "tausch-intro",
+          "kind": "text",
+          "label": "Ein Tausch gilt nur, wenn die Vertretungs-Kette geschlossen bleibt — das Board prüft das automatisch und lehnt Tausche ab, bei denen zwei Personen gleichzeitig weg wären."
+        },
+        {
+          "id": "tausch-mein-fenster",
+          "kind": "select",
+          "label": "Mein Fenster",
+          "options": [
+            "Tobias 11:00–11:30",
+            "Dilara 11:30–12:00",
+            "Ayşe 12:00–12:30",
+            "Janine 12:30–13:00",
+            "Marco 13:00–13:30",
+            "Sandra 13:30–14:00"
+          ]
+        },
+        {
+          "id": "tausch-partner",
+          "kind": "select",
+          "label": "Tauschen mit",
+          "options": [
+            "Tobias 11:00–11:30",
+            "Dilara 11:30–12:00",
+            "Ayşe 12:00–12:30",
+            "Janine 12:30–13:00",
+            "Marco 13:00–13:30",
+            "Sandra 13:30–14:00"
+          ]
+        },
+        {
+          "id": "tausch-hinweis",
+          "kind": "text",
+          "label": "Die Vertretungs-Pairings wandern mit dem Tausch mit — niemand muss neu verhandeln, wer wem den Rücken freihält."
+        },
+        {
+          "id": "btn-tausch-anfragen",
+          "kind": "button",
+          "label": "Tausch anfragen",
+          "goto": "board",
+          "action": "board"
+        },
+        {
+          "id": "btn-tausch-abbrechen",
+          "kind": "button",
+          "label": "Abbrechen",
+          "variant": "secondary",
+          "goto": "board",
+          "action": "board"
+        }
+      ]
+    },
+    {
+      "id": "ausfall",
+      "title": "Krankmeldungen · Neuverteilung",
+      "cards": [
+        {
+          "id": "neu-ayse",
+          "tag": "11:45–12:15",
+          "title": "Ayşe T.",
+          "body": "Fenster um 15 Minuten geschoben. Neue Vertretung: Sandra (Dilara fällt aus).",
+          "meta": "vorher: 12:00–12:30"
+        },
+        {
+          "id": "neu-janine",
+          "tag": "12:30–13:00",
+          "title": "Janine W. (Teamlead)",
+          "body": "Fenster bleibt — das Eskalations-Headset liegt weiter bei Marco.",
+          "meta": "unverändert"
+        },
+        {
+          "id": "neu-marco",
+          "tag": "13:15–13:45",
+          "title": "Marco L.",
+          "body": "Fenster um 15 Minuten geschoben. Vertretung: Janine.",
+          "meta": "vorher: 13:00–13:30"
+        },
+        {
+          "id": "neu-sandra",
+          "tag": "13:45–14:15",
+          "title": "Sandra B.",
+          "body": "Fenster bleibt 30 Minuten, aber der Anrufwellen-Puffer entfällt. Vertretung: Marco.",
+          "meta": "vorher: 13:30–14:00"
+        }
+      ],
+      "elements": [
+        {
+          "id": "ausfall-szenario",
+          "kind": "text",
+          "label": "Szenario: 2 Krankmeldungen vor Schichtstart (Tobias und Dilara). Besetzung 4/6 — das Board verteilt die Fenster neu, bevor die Frühschicht beginnt:"
+        },
+        {
+          "id": "ausfall-regel",
+          "kind": "text",
+          "label": "Regel bei 4/6: Fenster werden geschoben, nie gestrichen. Erst wenn die Erreichbarkeit unter 80/20 fällt, greift die Eskalations-Ausnahme — mit sichtbarem Nachhol-Fenster, nicht mit Verzicht."
+        },
+        {
+          "id": "btn-neuverteilung",
+          "kind": "button",
+          "label": "Neuverteilung ins Board übernehmen",
+          "goto": "board",
+          "action": "board"
+        },
+        {
+          "id": "btn-verwerfen",
+          "kind": "button",
+          "label": "Verwerfen",
+          "variant": "secondary",
+          "goto": "board",
+          "action": "board"
+        }
+      ]
+    },
+    {
+      "id": "ausnahme",
+      "title": "Eskalations-Ausnahme",
+      "elements": [
+        {
+          "id": "ausnahme-intro",
+          "kind": "text",
+          "label": "Anrufwelle oder Eskalation mitten im eigenen Fenster? Ausnahme markieren — für das Team sichtbar, mit festem Nachhol-Fenster am selben Tag. Eine Ausnahme ohne Nachhol-Fenster gibt es nicht."
+        },
+        {
+          "id": "ausnahme-person",
+          "kind": "select",
+          "label": "Wessen Fenster fällt aus?",
+          "options": [
+            "Tobias R.",
+            "Dilara K.",
+            "Ayşe T.",
+            "Janine W.",
+            "Marco L.",
+            "Sandra B."
+          ]
+        },
+        {
+          "id": "ausnahme-nachhol",
+          "kind": "select",
+          "label": "Nachhol-Fenster heute",
+          "options": [
+            "14:30–15:00",
+            "15:00–15:30",
+            "15:30–16:00"
+          ]
+        },
+        {
+          "id": "ausnahme-datenschutz",
+          "kind": "text",
+          "label": "Im Wochen-Nachweis zählt nur: Fenster genommen / nachgeholt / verfallen. Keine Minuten-Protokolle, keine Einzelauswertung pro Person an die Bereichsleitung."
+        },
+        {
+          "id": "btn-ausnahme-markieren",
+          "kind": "button",
+          "label": "Ausnahme markieren",
+          "goto": "board",
+          "action": "board"
+        },
+        {
+          "id": "btn-ausnahme-zurueck",
+          "kind": "button",
+          "label": "Zurück zum Board",
+          "variant": "secondary",
+          "goto": "board",
+          "action": "board"
+        }
+      ]
+    },
+    {
+      "id": "report",
+      "title": "Wochen-Nachweis (Bereichsleitung)",
+      "elements": [
+        {
+          "id": "report-team",
+          "kind": "text",
+          "label": "Team-Sicht, keine Personen-Sicht: Team Wolf — 28 von 30 Fenstern genommen, 2 nachgeholt, 0 verfallen. Erreichbarkeit gehalten: 81/20."
+        },
+        {
+          "id": "report-grenze",
+          "kind": "text",
+          "label": "Was die Bereichsleitung NICHT sieht: wer wann pausiert hat, Einzelzeiten, Gründe für Ausnahmen. Der Nachweis ist ein Argument für das Team — kein Kontrollinstrument über einzelne Personen."
+        },
+        {
+          "id": "report-argument",
+          "kind": "text",
+          "label": "Lesart fürs Krankenquoten-Review: Pausen genommen UND SLA gehalten — beides zusammen, schwarz auf weiß."
+        },
+        {
+          "id": "btn-report-zurueck",
+          "kind": "button",
+          "label": "Zurück zum Board",
+          "goto": "board",
+          "action": "board"
+        }
+      ]
+    }
+  ]
+}

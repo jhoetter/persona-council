@@ -1,0 +1,519 @@
+{
+  "title": "Fenster-Fürsprecher — Journey",
+  "summary": "Ein Tag mit deinem Essensfenster: morgens einrichten, tagsüber sichtbar rutschen sehen, bei Kollision den live berechneten Gegenvorschlag stoppen oder senden, abends ehrlich Bilanz ziehen.",
+  "fidelity": "midfi",
+  "start": "setup",
+  "screens": [
+    {
+      "id": "setup",
+      "title": "Morgens · Tages-Setup",
+      "elements": [
+        {
+          "id": "intro",
+          "kind": "text",
+          "label": "Guten Morgen. Richte dein heutiges Essensfenster ein. Harte Wände (Kita, Pflegedienst, Abgabe) sind NICHT verschiebbar — dein Fenster muss ihnen ausweichen, und zwar ehrlich."
+        },
+        {
+          "id": "start",
+          "kind": "range",
+          "label": "Wunsch-Beginn des Essensfensters (1 Schritt = 10 Min. · 0 = 11:30 · 3 = 12:00 · 12 = 13:30)",
+          "min": 0,
+          "max": 12,
+          "step": 1,
+          "value": 3
+        },
+        {
+          "id": "start_zeit",
+          "kind": "computed",
+          "label": "Geplanter Beginn",
+          "formula": "floor((660+(30+start*10))/60)+(((660+(30+start*10))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "dauer",
+          "kind": "range",
+          "label": "Fenster-Länge",
+          "min": 15,
+          "max": 45,
+          "step": 5,
+          "value": 30,
+          "suffix": " Min."
+        },
+        {
+          "id": "ende_zeit",
+          "kind": "computed",
+          "label": "Geplantes Ende",
+          "formula": "floor((660+(30+start*10+dauer))/60)+(((660+(30+start*10+dauer))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "wand",
+          "kind": "range",
+          "label": "Harte Wand heute (0 = keine · 1 = Kita-Abholung 13:30 · 2 = Pflegedienst erreichbar 14:00–15:00 · 3 = Kundenabgabe 15:00)",
+          "min": 0,
+          "max": 3,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "id": "wand_anzeige",
+          "kind": "verdict",
+          "cases": [
+            {
+              "when": "wand==1",
+              "text": "Harte Wand: Kita-Abholung 13:30 — dieser Block ist NICHT verschiebbar. Dein Fenster muss komplett davor liegen.",
+              "tone": "warn"
+            },
+            {
+              "when": "wand==2",
+              "text": "Harte Wand: Pflegedienst nur 14:00–15:00 erreichbar — der Anruf-Block ab 14:00 ist NICHT verschiebbar.",
+              "tone": "warn"
+            },
+            {
+              "when": "wand==3",
+              "text": "Harte Wand: Kundenabgabe 15:00 — NICHT verschiebbar.",
+              "tone": "warn"
+            }
+          ],
+          "else": "Keine harte Wand eingetragen — rechnerische Grenze ist nur der Feierabend (17:30).",
+          "elseTone": "good"
+        },
+        {
+          "id": "baustein",
+          "kind": "range",
+          "label": "Begründungs-Baustein wählen (0–1 = Deutsch · 2–3 = Englisch)",
+          "min": 0,
+          "max": 3,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "id": "baustein_anzeige",
+          "kind": "verdict",
+          "cases": [
+            {
+              "when": "baustein==0",
+              "text": "Gewählt (DE): »Mittagspause — ich liefere direkt nach dem Fenster.«",
+              "tone": "good"
+            },
+            {
+              "when": "baustein==1",
+              "text": "Gewählt (DE): »Pause — ab Fenster-Ende bin ich wieder erreichbar.«",
+              "tone": "good"
+            },
+            {
+              "when": "baustein==2",
+              "text": "Gewählt (EN): »Lunch window — I'll deliver right after.«",
+              "tone": "good"
+            }
+          ],
+          "else": "Gewählt (EN): »Focus break — back online after the window.«",
+          "elseTone": "good"
+        },
+        {
+          "id": "baustein_tipp",
+          "kind": "text",
+          "label": "Tipp: Bausteine mit Lieferzusage werden am seltensten hinterfragt. Für EN-Teams (z. B. Stockholm) wähle 2 oder 3 — der Fürsprecher baut deinen Baustein UND die live berechnete Zeit in den Gegenvorschlag ein."
+        },
+        {
+          "id": "btn_tag",
+          "kind": "button",
+          "label": "Tag starten →",
+          "goto": "tag",
+          "action": "tag"
+        }
+      ]
+    },
+    {
+      "id": "tag",
+      "title": "Tagsüber · Störungen treffen ein",
+      "elements": [
+        {
+          "id": "tag_intro",
+          "kind": "text",
+          "label": "Dein Tag läuft. Störungen schieben dein Fenster SICHTBAR vor sich her — es verschwindet nicht lautlos aus dem Kalender."
+        },
+        {
+          "id": "esk",
+          "kind": "range",
+          "label": "Eskalation Großkunde (Verzögerung)",
+          "min": 0,
+          "max": 60,
+          "step": 10,
+          "value": 40,
+          "suffix": " Min."
+        },
+        {
+          "id": "huddle",
+          "kind": "range",
+          "label": "Ad-hoc-Anfragen / Huddles (je +15 Min.)",
+          "min": 0,
+          "max": 4,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "id": "plan_zeit",
+          "kind": "computed",
+          "label": "Fenster war geplant für",
+          "formula": "floor((660+(30+start*10))/60)+(((660+(30+start*10))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "jetzt_zeit",
+          "kind": "computed",
+          "label": "Fenster liegt JETZT bei",
+          "formula": "floor((660+(30+start*10+esk+huddle*15))/60)+(((660+(30+start*10+esk+huddle*15))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "rutsch",
+          "kind": "computed",
+          "label": "Gesamt-Rutsch heute",
+          "formula": "esk+huddle*15",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "rutsch_bar",
+          "kind": "bar",
+          "label": "Sichtbares Rutschen (Skala 0–120 Min.)",
+          "formula": "esk+huddle*15",
+          "max": 120,
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "prot_titel",
+          "kind": "text",
+          "label": "Ursachen-Protokoll — warum rutscht dein Fenster?"
+        },
+        {
+          "id": "prot_esk",
+          "kind": "computed",
+          "label": "… wegen »Eskalation Großkunde«",
+          "formula": "esk",
+          "prefix": "+",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "prot_huddle",
+          "kind": "computed",
+          "label": "… wegen Ad-hoc-Anfragen / Huddles",
+          "formula": "huddle*15",
+          "prefix": "+",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "ausblick",
+          "kind": "timeline",
+          "label": "Ausblick: käme noch mehr Verzögerung (x = zusätzliche Min.) — Fenster-Ende vs. harte Wand (Min. nach 11:00)",
+          "x": {
+            "id": "zz",
+            "from": 0,
+            "to": 90,
+            "step": 15
+          },
+          "series": [
+            {
+              "label": "Fenster-Ende",
+              "formula": "(30+start*10+esk+huddle*15+dauer)+zz"
+            },
+            {
+              "label": "Harte Wand",
+              "formula": "(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))"
+            }
+          ]
+        },
+        {
+          "id": "tag_status",
+          "kind": "verdict",
+          "cases": [
+            {
+              "when": "esk+huddle*15>0",
+              "text": "Dein Fenster ist gerutscht — bei einer Termin-Kollision bereitet der Fürsprecher einen Gegenvorschlag vor (nächster Schritt). Nichts geht ohne dein OK raus.",
+              "tone": "warn"
+            }
+          ],
+          "else": "Bisher keine Störungen — dein Fenster steht wie geplant.",
+          "elseTone": "good"
+        },
+        {
+          "id": "btn_kollision",
+          "kind": "button",
+          "label": "Weiter: Eine Einladung kollidiert →",
+          "goto": "kollision",
+          "action": "kollision"
+        }
+      ]
+    },
+    {
+      "id": "kollision",
+      "title": "Kollision · Der Fürsprecher schlägt vor",
+      "elements": [
+        {
+          "id": "inv_text",
+          "kind": "text",
+          "label": "Eingehende Einladung: »Sync Eskalation Großkunde« (30 Min.) — sie landet mitten in deinem AKTUELLEN, gerutschten Fenster:"
+        },
+        {
+          "id": "inv_zeit",
+          "kind": "computed",
+          "label": "Einladung für",
+          "formula": "floor((660+((30+start*10+esk+huddle*15)+10))/60)+(((660+((30+start*10+esk+huddle*15)+10))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "vor_text",
+          "kind": "text",
+          "label": "Der Fürsprecher setzt deinen gewählten Begründungs-Baustein ein und berechnet die Gegenvorschlags-Zeit LIVE aus deinem aktuellen Fenster (verstellst du Fenster oder Störungen, rechnet die Zeit mit). Alles wird VOR dem Senden angezeigt — nichts geht automatisch raus:"
+        },
+        {
+          "id": "gegen_text",
+          "kind": "verdict",
+          "cases": [
+            {
+              "when": "baustein==0",
+              "text": "Nachricht (DE): »Passt bei mir nicht — Mittagspause. Ich liefere direkt nach dem Fenster, siehe Gegenvorschlag unten.«",
+              "tone": ""
+            },
+            {
+              "when": "baustein==1",
+              "text": "Nachricht (DE): »Passt bei mir nicht — Pause. Ab Fenster-Ende bin ich wieder erreichbar, siehe Gegenvorschlag unten.«",
+              "tone": ""
+            },
+            {
+              "when": "baustein==2",
+              "text": "Message (EN): »That slot hits my lunch window — I'll deliver right after. Counter-proposal below.«",
+              "tone": ""
+            }
+          ],
+          "else": "Message (EN): »That slot hits my focus break — back online after the window. Counter-proposal below.«",
+          "elseTone": ""
+        },
+        {
+          "id": "gegen_zeit",
+          "kind": "computed",
+          "label": "Live aus deinem AKTUELLEN Fenster-Ende berechnet",
+          "prefix": "Gegenvorschlag / counter-proposal: ",
+          "formula": "floor((660+(30+start*10+esk+huddle*15+dauer))/60)+(((660+(30+start*10+esk+huddle*15+dauer))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "gegen_status",
+          "kind": "verdict",
+          "cases": [
+            {
+              "when": "(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))-(30+start*10+esk+huddle*15)<15",
+              "text": "STOPP: Heute ist kein echtes Fenster mehr realistisch — der Fürsprecher sendet KEINEN Schein-Gegenvorschlag. Weiter zu »Ausfall-Ehrlichkeit«.",
+              "tone": "bad"
+            },
+            {
+              "when": "(30+start*10+esk+huddle*15+dauer)+30>(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))",
+              "text": "Der Gegenvorschlag würde hinter deine harte Wand rutschen — der Fürsprecher schlägt stattdessen morgen Vormittag vor. Gesendet wird erst nach deinem OK.",
+              "tone": "warn"
+            }
+          ],
+          "else": "Sendbar: Der Gegenvorschlag liegt nach deinem Fenster und vor deiner harten Wand. Gesendet wird erst nach deinem OK.",
+          "elseTone": "good"
+        },
+        {
+          "id": "btn_senden",
+          "kind": "button",
+          "label": "Gegenvorschlag senden",
+          "goto": "ehrlichkeit",
+          "action": "ehrlichkeit"
+        },
+        {
+          "id": "btn_anpassen",
+          "kind": "button",
+          "label": "Anpassen — zurück zum Tag",
+          "variant": "secondary",
+          "goto": "tag",
+          "action": "tag"
+        },
+        {
+          "id": "btn_verwerfen",
+          "kind": "button",
+          "label": "Verwerfen — ich antworte selbst",
+          "variant": "secondary",
+          "goto": "ehrlichkeit",
+          "action": "ehrlichkeit"
+        }
+      ]
+    },
+    {
+      "id": "ehrlichkeit",
+      "title": "Ausfall-Ehrlichkeit",
+      "elements": [
+        {
+          "id": "ehr_intro",
+          "kind": "text",
+          "label": "Würde dein Fenster gegen eine harte Wand rutschen, fällt es hier SICHTBAR aus — statt unrealistisch weiterzurutschen."
+        },
+        {
+          "id": "ausfall",
+          "kind": "verdict",
+          "cases": [
+            {
+              "when": "(30+start*10+esk+huddle*15+dauer)<=(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))",
+              "text": "Fenster gehalten: Es ist gerutscht, aber es passt komplett vor deine harte Wand — echte Pause möglich.",
+              "tone": "good"
+            },
+            {
+              "when": "(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))-(30+start*10+esk+huddle*15)>=15",
+              "text": "Volles Fenster heute NICHT mehr möglich — ehrlich gekürzt. Unten steht das kürzeste realistische Fenster; mehr wäre Illusion.",
+              "tone": "warn"
+            }
+          ],
+          "else": "Heute keine echte Pause möglich — dein Fenster fällt SICHTBAR aus, statt hinter die harte Wand gerechnet zu werden. Plane ein Nachholessen und morgen ein früheres Fenster.",
+          "elseTone": "bad"
+        },
+        {
+          "id": "kurz_von",
+          "kind": "computed",
+          "label": "Kürzestes realistisches Fenster — von",
+          "formula": "floor((660+(30+start*10+esk+huddle*15))/60)+(((660+(30+start*10+esk+huddle*15))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "kurz_bis",
+          "kind": "computed",
+          "label": "— bis (an der harten Wand gekappt)",
+          "formula": "floor((660+min((30+start*10+esk+huddle*15+dauer),(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))))/60)+(((660+min((30+start*10+esk+huddle*15+dauer),(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "kurz_len",
+          "kind": "computed",
+          "label": "Realistische Pausen-Länge",
+          "formula": "max(0,min((30+start*10+esk+huddle*15+dauer),(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3)))-(30+start*10+esk+huddle*15))",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "rest_bar",
+          "kind": "bar",
+          "label": "Wie viel echte Pause bleibt?",
+          "formula": "max(0,min((30+start*10+esk+huddle*15+dauer),(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3)))-(30+start*10+esk+huddle*15))",
+          "max": 45,
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "btn_abend",
+          "kind": "button",
+          "label": "Weiter: Tages-Rückblick →",
+          "goto": "abend",
+          "action": "abend"
+        }
+      ]
+    },
+    {
+      "id": "abend",
+      "title": "Abends · Tages-Rückblick",
+      "elements": [
+        {
+          "id": "rueck",
+          "kind": "verdict",
+          "cases": [
+            {
+              "when": "(30+start*10+esk+huddle*15+dauer)<=(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))",
+              "text": "Fenster GEHALTEN — gerutscht, aber vollständig: echte Pause.",
+              "tone": "good"
+            },
+            {
+              "when": "(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))-(30+start*10+esk+huddle*15)>=15",
+              "text": "Fenster GERUTSCHT + GEKÜRZT — heute nur eine Teilpause (Minuten unten).",
+              "tone": "warn"
+            }
+          ],
+          "else": "Fenster AUSGEFALLEN — heute keine echte Pause.",
+          "elseTone": "bad"
+        },
+        {
+          "id": "r_geplant",
+          "kind": "computed",
+          "label": "Geplant",
+          "formula": "floor((660+(30+start*10))/60)+(((660+(30+start*10))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "r_real",
+          "kind": "computed",
+          "label": "Tatsächliche Lage (nach Rutschen)",
+          "formula": "floor((660+(30+start*10+esk+huddle*15))/60)+(((660+(30+start*10+esk+huddle*15))%60)/100)",
+          "suffix": " Uhr",
+          "decimals": 2
+        },
+        {
+          "id": "r_rutsch",
+          "kind": "computed",
+          "label": "Gesamt gerutscht",
+          "formula": "esk+huddle*15",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "r_pause",
+          "kind": "computed",
+          "label": "Echte Pausenzeit heute",
+          "formula": "max(0,min((30+start*10+esk+huddle*15+dauer),(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3)))-(30+start*10+esk+huddle*15))",
+          "suffix": " Min.",
+          "decimals": 0
+        },
+        {
+          "id": "erholung",
+          "kind": "bar",
+          "label": "Erholungswert (echte Pause / geplante Länge)",
+          "formula": "max(0,min((30+start*10+esk+huddle*15+dauer),(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3)))-(30+start*10+esk+huddle*15))*100/dauer",
+          "max": 100,
+          "suffix": " %",
+          "decimals": 0
+        },
+        {
+          "id": "folgekosten",
+          "kind": "verdict",
+          "cases": [
+            {
+              "when": "esk+huddle*15==0&&(30+start*10+esk+huddle*15+dauer)<=(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))",
+              "text": "Keine Störungen, Fenster wie geplant — keine Folgekosten.",
+              "tone": "good"
+            },
+            {
+              "when": "(30+start*10+esk+huddle*15+dauer)<=(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))",
+              "text": "Trotz Rutschens gehalten: Sichtbarer Rutsch + Gegenvorschlag haben dein Fenster verteidigt. Keine Folgekosten erwartet.",
+              "tone": "good"
+            },
+            {
+              "when": "(390*(wand==0)+150*(wand==1)+180*(wand==2)+240*(wand==3))-(30+start*10+esk+huddle*15)>=15",
+              "text": "Folgekosten-Hinweis: verkürzte Pause → Energie-Tief am Nachmittag wahrscheinlich, erhöhtes Snack-Risiko am Abend. Für morgen: Fenster 30 Min. früher oder Wand-Puffer einplanen.",
+              "tone": "warn"
+            }
+          ],
+          "else": "Folgekosten-Hinweis: ausgefallene Pause → Automaten-/Heißhunger-Risiko am Nachmittag, gereizter Abend. Der Fürsprecher plant für morgen ein früheres Fenster MIT Wand-Puffer ein.",
+          "elseTone": "bad"
+        },
+        {
+          "id": "btn_neu",
+          "kind": "button",
+          "label": "Neuen Tag planen ↺",
+          "variant": "secondary",
+          "goto": "setup",
+          "action": "setup"
+        }
+      ]
+    }
+  ]
+}

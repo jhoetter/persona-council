@@ -1,0 +1,143 @@
+{
+  "title": "Fenster-Fürsprecher",
+  "summary": "Richte ein geschütztes Mittags-Fenster ein — mit einer Begründung, die ohne Rückfrage akzeptiert wird, und einem automatischen Gegenvorschlag bei Terminkollisionen.",
+  "fidelity": "lofi",
+  "start": "fenster",
+  "screens": [
+    {
+      "id": "fenster",
+      "title": "Fenster wählen",
+      "elements": [
+        {
+          "id": "intro-text",
+          "kind": "text",
+          "label": "Wähle dein tägliches Mittags-Fenster. Es wird in deinem Kalender als belegt eingetragen."
+        },
+        {
+          "id": "fenster-zeit",
+          "kind": "select",
+          "label": "Zeitfenster",
+          "options": [
+            "12:00–12:45",
+            "12:30–13:15",
+            "13:00–13:45"
+          ]
+        },
+        {
+          "id": "fenster-tage",
+          "kind": "select",
+          "label": "An welchen Tagen?",
+          "options": [
+            "Mo–Fr",
+            "Mo, Mi, Fr",
+            "Nur heute"
+          ]
+        },
+        {
+          "id": "weiter-begruendung",
+          "kind": "button",
+          "label": "Weiter: Begründung wählen",
+          "goto": "begruendung",
+          "action": "begruendung"
+        }
+      ]
+    },
+    {
+      "id": "begruendung",
+      "title": "Begründungs-Baustein wählen",
+      "elements": [
+        {
+          "id": "begr-text",
+          "kind": "text",
+          "label": "Dieser Baustein erscheint als Begründung, wenn jemand in dein Fenster will. Er ist so formuliert, dass dein Umfeld ihn ohne Rückfrage akzeptiert."
+        },
+        {
+          "id": "baustein",
+          "kind": "select",
+          "label": "Begründungs-Baustein",
+          "options": [
+            "Mittagspause — liefere um 13:45",
+            "Mittagspause — ab 13:15 wieder erreichbar",
+            "Geblockt: Pause (Team-Vereinbarung)",
+            "Termin (ohne Details)"
+          ]
+        },
+        {
+          "id": "baustein-tipp",
+          "kind": "text",
+          "label": "Tipp: Bausteine mit Lieferzusage (»liefere um …«) werden im Test am seltensten hinterfragt."
+        },
+        {
+          "id": "weiter-vorschau",
+          "kind": "button",
+          "label": "Weiter: Vorschau bei Kollision",
+          "goto": "vorschau",
+          "action": "vorschau"
+        }
+      ]
+    },
+    {
+      "id": "vorschau",
+      "title": "Vorschau: Was passiert bei einer Terminkollision?",
+      "elements": [
+        {
+          "id": "kollision-szenario",
+          "kind": "text",
+          "label": "Beispiel: Eine Kollegin lädt dich zu »Sync Kampagne, 12:40 Uhr« ein — mitten in deinem Fenster."
+        },
+        {
+          "id": "gegenvorschlag-intro",
+          "kind": "text",
+          "label": "Der Fürsprecher antwortet automatisch in deinem Namen mit einem Gegenvorschlag:"
+        },
+        {
+          "id": "gegenvorschlag",
+          "kind": "text",
+          "label": "»12:40 passt bei mir nicht — Mittagspause. Gegenvorschlag: 13:45 Uhr. Den aktuellen Stand liefere ich dir bis dahin.«"
+        },
+        {
+          "id": "scope-hinweis",
+          "kind": "text",
+          "label": "Hinweis (Lo-Fi): Der Gegenvorschlag wird bei Kalender-Einladungen ausgelöst. Spontane Chat-Anfragen (z. B. Huddles) sieht diese Version noch nicht."
+        },
+        {
+          "id": "begruendung-aendern",
+          "kind": "link",
+          "label": "Begründung ändern",
+          "goto": "begruendung",
+          "action": "begruendung"
+        },
+        {
+          "id": "aktivieren",
+          "kind": "button",
+          "label": "Fenster aktivieren",
+          "goto": "fertig",
+          "action": "fertig"
+        }
+      ]
+    },
+    {
+      "id": "fertig",
+      "title": "Fenster aktiv",
+      "elements": [
+        {
+          "id": "fertig-text",
+          "kind": "text",
+          "label": "Dein Mittags-Fenster ist eingetragen. Bei einer Kollision verschickt der Fürsprecher den Gegenvorschlag automatisch — du musst dich nicht selbst rechtfertigen."
+        },
+        {
+          "id": "fertig-hinweis",
+          "kind": "text",
+          "label": "Du kannst jeden Gegenvorschlag vor dem Senden noch ansehen und stoppen."
+        },
+        {
+          "id": "neues-fenster",
+          "kind": "link",
+          "label": "Neues Fenster einrichten",
+          "goto": "fenster",
+          "action": "fenster"
+        }
+      ]
+    }
+  ]
+}
