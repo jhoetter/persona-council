@@ -700,10 +700,12 @@ def export_synthesis_html(synthesis_id: str, out_dir: str | None = None,
            f'<body><main class="content"><div class="page">{body}</div>{footer}</main></body></html>')
 
     token = uuid.uuid4().hex                  # unguessable slug — the path IS the share secret
-    data_root = DATA_DIR.resolve()
-    parent = Path(out_dir) if out_dir else DATA_DIR / "export" / "share"
+    from ..config import partition_dir
+    data_root = DATA_DIR.resolve()            # escape check stays on the GLOBAL root: every
+    part = partition_dir()                    # partition lives inside it
+    parent = Path(out_dir) if out_dir else part / "export" / "share"
     if not parent.is_absolute():
-        parent = DATA_DIR / parent
+        parent = part / parent
     if not parent.resolve().is_relative_to(data_root):
         raise ValueError(f"export path escapes the data dir ({data_root}): {out_dir!r}")
     path = write_export(doc, parent / token / "index.html")

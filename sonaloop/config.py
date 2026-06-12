@@ -38,6 +38,35 @@ DATA_DIR = _resolve_data_dir()
 DEFAULT_DB_PATH = DATA_DIR / "sonaloop.db"
 
 
+# --- request-bound data partitions (multi-tenant extensions) -----------------
+# One workspace = one partition: a directory holding its own sonaloop.db plus
+# its user artifacts (exports, sessions, prototypes). A multi-tenant extension
+# (sonaloop-cloud) binds the active workspace's partition around each request;
+# local single-user mode never sets one, so partition_dir() == DATA_DIR and
+# every path below resolves exactly as before.
+
+import contextvars  # noqa: E402  (kept beside its single consumer)
+
+_REQUEST_PARTITION: contextvars.ContextVar[Path | None] = contextvars.ContextVar(
+    "sonaloop_request_partition", default=None)
+
+
+def set_request_partition(root: Path | str | None) -> contextvars.Token:
+    """Bind the current context to a data partition rooted at `root` (None = the
+    default DATA_DIR). Returns a token; pass it to reset_request_partition() in a
+    finally block — partitions must never leak across requests."""
+    return _REQUEST_PARTITION.set(Path(root) if root else None)
+
+
+def reset_request_partition(token: contextvars.Token) -> None:
+    _REQUEST_PARTITION.reset(token)
+
+
+def partition_dir() -> Path:
+    """The active data root: the request-bound partition if set, else DATA_DIR."""
+    return _REQUEST_PARTITION.get() or DATA_DIR
+
+
 def load_env(path: Path | None = None) -> None:
     """Load a simple .env file without requiring python-dotenv at import time.
 
@@ -58,6 +87,9 @@ def load_env(path: Path | None = None) -> None:
 
 
 def database_path() -> Path:
+    part = _REQUEST_PARTITION.get()
+    if part is not None:  # an explicit per-request partition outranks everything
+        return part / "sonaloop.db"
     url = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
     if url.startswith("sqlite:///"):
         return Path(url.removeprefix("sqlite:///")).expanduser()
@@ -108,16 +140,16 @@ def prototypes_dir() -> Path:
 
     Dev (source checkout): alongside the repo at ./prototypes (committed, runnable
     locally). Installed: under the per-user data dir so a read-only install still works."""
-    if _is_source_checkout():
+    if _is_source_checkout() and _REQUEST_PARTITION.get() is None:
         return ROOT / "prototypes"
-    return DATA_DIR / "prototypes"
+    return partition_dir() / "prototypes"
 
 
 def sessions_dir() -> Path:
     """Where usability-session artifacts live (writable runtime, like data/personas and the
     avatar output dir): per-step screenshots under data/sessions/<session_id>/step-<index>.png
     (spec: the usability-session artifact — the session is the deliverable)."""
-    return DATA_DIR / "sessions"
+    return partition_dir() / "sessions"
 
 
 def max_browser_sessions() -> int:

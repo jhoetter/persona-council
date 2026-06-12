@@ -133,11 +133,12 @@ def write_export(content: str, path: str | Path) -> str:
 
 
 def write_export_bytes(data: bytes, path: str | Path) -> str:
-    """Write a binary export (pdf/pptx). Relative paths resolve under DATA_DIR/exports/."""
-    from ..config import DATA_DIR
+    """Write a binary export (pdf/pptx). Relative paths resolve under the active
+    data partition's exports/ (== DATA_DIR/exports/ outside multi-tenant requests)."""
+    from ..config import partition_dir
     out = Path(path)
     if not out.is_absolute():
-        out = DATA_DIR / "exports" / out
+        out = partition_dir() / "exports" / out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(data)
     return str(out)
