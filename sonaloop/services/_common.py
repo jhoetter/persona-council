@@ -132,6 +132,15 @@ def write_export(content: str, path: str | Path) -> str:
     return str(out)
 
 
+def web_url(path: str) -> str:
+    """Absolute inspector URL for `path` — hosted deployments set
+    SONALOOP_PUBLIC_BASE_URL (e.g. https://app.sonaloop.com) so tool results can
+    say WHERE to look at what was just created; locally the default inspector."""
+    import os
+    base = os.getenv("SONALOOP_PUBLIC_BASE_URL") or "http://127.0.0.1:8787"
+    return base.rstrip("/") + path
+
+
 def write_export_bytes(data: bytes, path: str | Path) -> str:
     """Write a binary export (pdf/pptx). Relative paths resolve under the active
     data partition's exports/ (== DATA_DIR/exports/ outside multi-tenant requests)."""

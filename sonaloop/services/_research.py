@@ -85,7 +85,10 @@ def create_research_project(title: str, goal: str = "", persona_ids: list[str] |
         status="active", created_at=now, updated_at=now, council_ids=[],
     ).to_dict()
     store.upsert_research_project(project)
-    return project
+    # The answer to "where can I look at this?" rides every creation result —
+    # remote hosts (MCP connectors) surface it to the user.
+    from ._common import web_url
+    return {**project, "url": web_url(f"/projects/{pid}")}
 
 
 

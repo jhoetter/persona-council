@@ -125,7 +125,8 @@ def start_project(title: str, goal: str, methodology: str | None = None,
                           "questions/hypotheses this inquiry needs before any council runs."}
         plan = _plan.new_plan(project["id"], goal, "", [root])
     _plan.save_plan(plan, store=store)
-    out = store.get_research_project(project["id"])
+    out = {**store.get_research_project(project["id"]),
+           "url": project.get("url") or ""}  # the where-to-look link from create_research_project
     emit_lifecycle_event("project.created", {"project_id": project["id"], "title": title,  # noqa: F821 (bound)
                                              "goal": goal, "methodology": methodology or ""}, store)
     # Cohort-depth pre-flight: warn BEFORE Discover, not after Define has gate-passed — a real run

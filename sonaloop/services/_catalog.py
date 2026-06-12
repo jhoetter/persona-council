@@ -71,6 +71,25 @@ RAW_URL = "https://raw.githubusercontent.com/{repo}/{ref}/{path}"
 DEFAULT_BASE_URL = "https://data.sonaloop.com"
 TOKEN_ENV = "SONALOOP_CATALOG_TOKEN"
 
+# Per-request catalog credential (multi-tenant hosts): a hosted deployment knows
+# the signed-in user's entitlement and binds a catalog token around the request —
+# it outranks the env var. Local single-user use keeps the env-var contract.
+import contextvars  # noqa: E402  (kept beside its single consumer)
+
+_REQUEST_CATALOG_TOKEN: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "sonaloop_request_catalog_token", default=None)
+
+
+def set_request_catalog_token(token: str | None) -> contextvars.Token:
+    """Bind a catalog bearer to the current context (None = fall back to the
+    SONALOOP_CATALOG_TOKEN env). Pass the returned token to
+    reset_request_catalog_token() in a finally block."""
+    return _REQUEST_CATALOG_TOKEN.set(token)
+
+
+def reset_request_catalog_token(token: contextvars.Token) -> None:
+    _REQUEST_CATALOG_TOKEN.reset(token)
+
 
 def _base_url() -> str:
     """The published catalog's HTTP base — the deployed site serves the raw catalog
@@ -132,7 +151,7 @@ def _fetch_bytes(url: str) -> bytes | None:
     SONALOOP_CATALOG_TOKEN (when set) rides along as `Authorization: Bearer` on
     EVERY catalog request, so premium persona files resolve for signed-in users."""
     headers = {"User-Agent": "sonaloop"}
-    token = os.environ.get(TOKEN_ENV)
+    token = _REQUEST_CATALOG_TOKEN.get() or os.environ.get(TOKEN_ENV)
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, headers=headers)
