@@ -41,8 +41,10 @@ def _trigger(store) -> str:
 
 
 def _chat_icon() -> str:
+    # animate=True: the row hover plays the icon's micro-interaction — the SAME liveliness
+    # as every nav row above (owner round 5: the footer rows read as dead without it).
     from ._components import _icon
-    return _icon("chat")
+    return _icon("chat", animate=True)
 
 
 def _form_fields(message: str = "", email: str = "", page: str = "",

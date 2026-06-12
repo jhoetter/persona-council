@@ -362,7 +362,7 @@ def test_child_rows_leave_the_phase_column_to_the_parent(store):
     html = _client().get(f"/projects/{pid}?lang=en").text
     parent_seen = child_seen = False
     for chunk in html.split('class="olrow')[1:]:
-        ptag = re.search(r'<span class="ol-ptag">([^<]*)</span>', chunk)
+        ptag = re.search(r'<span class="ol-ptag[^"]*">([^<]*)</span>', chunk)
         assert ptag is not None
         if 'data-rkind="live_url"' in chunk.split(">", 1)[0]:
             assert ptag.group(1) != ""               # the parent carries the label
@@ -371,3 +371,29 @@ def test_child_rows_leave_the_phase_column_to_the_parent(store):
             assert ptag.group(1) == ""               # children never repeat it
             child_seen = True
     assert parent_seen and child_seen
+
+
+def test_same_kind_runs_keep_the_full_label_in_the_faint_tone(store):
+    """Round-5 J4: a contiguous same-kind run of top-level rows shows the FULL kind label on
+    every row — the first in the normal muted tone, the repeats stepped down to the faint
+    tone (`.ol-ptag--run`). The round-4 omit-on-repeat ("" labels) read as missing text."""
+    pid = _every_kind_project(store)
+    html = _client().get(f"/projects/{pid}?lang=en").text
+    runs: dict[str, list[tuple[str, bool]]] = {}      # rkind -> [(label, is_faint), …]
+    for chunk in html.split('class="olrow')[1:]:
+        head = chunk.split(">", 1)[0]
+        m = _RKIND.search(head)
+        ptag = re.search(r'<span class="(ol-ptag[^"]*)">([^<]*)</span>', chunk)
+        assert ptag is not None
+        if m and ptag.group(2) != "":                 # top-level rows only (children are empty)
+            runs.setdefault(m.group(1), []).append(
+                (ptag.group(2), "ol-ptag--run" in ptag.group(1)))
+    note_rows = runs.get("note", [])
+    assert len(note_rows) >= 2, "fixture must emit a same-kind NOTE run"
+    first, repeats = note_rows[0], note_rows[1:]
+    assert not first[1], "first of a run keeps the normal muted tone"
+    for label, faint in repeats:
+        assert label == first[0], "repeats keep their FULL label (never omitted)"
+        assert faint, "repeats render in the faint tone (.ol-ptag--run)"
+    # no row anywhere renders an empty label while claiming the faint-run treatment
+    assert not re.search(r'<span class="ol-ptag ol-ptag--run"></span>', html)

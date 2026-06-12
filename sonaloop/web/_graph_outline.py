@@ -381,11 +381,13 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
         # the phase heads the group, so nothing repeats. Child rows (indent ≥1) leave the column
         # empty — the tree spine says whose child they are — and carry their kind (e.g. the
         # session fidelity) as a quiet trailing chip instead. Within a contiguous same-kind run
-        # of top-level rows only the FIRST row shows the kind (round-4 J4: nine consecutive
-        # NOTE eyebrows read as a noise column); the fixed-width column keeps the alignment.
+        # of top-level rows EVERY row keeps its full label; repeats step down to the FAINT tone
+        # (round-5 J4 re-do: the round-4 omit-on-repeat read as missing text — "sieht aus als
+        # würde der Text fehlen" — so the run quiets by tone, never by absence).
         cells = [lead,
-                 h("span", {"class_": "ol-ptag"},
-                   "" if it["indent"] or it.get("kind_run") else it["kind"]),
+                 h("span", {"class_": "ol-ptag ol-ptag--run"
+                            if it.get("kind_run") and not it["indent"] else "ol-ptag"},
+                   "" if it["indent"] else it["kind"]),
                  h("span", {"class_": "ol-title"}, it["title"]),
                  h("span", {"class_": "olth-pills"}, fragment(*pills)),
                  crew,
@@ -432,10 +434,11 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
     out = []
 
     def mark_kind_runs(its: list[dict]) -> list[dict]:
-        """Round-4 J4: within a contiguous run of top-level rows of the SAME kind, only the
-        first row keeps its kind label (`kind_run` empties the column on the rest — the
-        fixed-width `.ol-ptag` keeps the grid). Indented children and file rows (which carry
-        no label column of their own) break the run, so a kind re-announces after them."""
+        """Round-5 J4: within a contiguous run of top-level rows of the SAME kind, the first
+        row keeps the normal muted tone and the rest render their FULL label in the faint
+        tone (`kind_run` → `.ol-ptag--run`). Every row says what it is — the round-4
+        omit-on-repeat looked like missing text. Indented children and file rows (which carry
+        no label column of their own) break the run, so a kind re-emphasizes after them."""
         marked, prev = [], None
         for it in its:
             if it["indent"] or it.get("rkind") in ("asset",):

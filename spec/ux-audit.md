@@ -1,5 +1,58 @@
 # UX Audit — Phase U rubric (newest on top: Round 5 → Round 4 → Round 3 → Round 2 → P5 → U1 history)
 
+## Owner re-review (Round 5, 2026-06-12) — regressions our gates missed, and why
+
+The owner re-reviewed after the Round 5 close and found four real problems on screens whose
+gates were GREEN. That is the finding: each one slipped through a structural hole in a
+harness, not through a missing run of it. Honest accounting, per gap:
+
+**1. The `em` exemption was an escape hatch, not a contract.** `scripts/ux_spacing.py`
+classified ANY fractional px as `em` ("the density-adaptive layer") and passed it. So
+`.sl-entity` shipped 9.1/11.7px paddings and an 11.05px gap, `.sl-card` 13.65px, `.sl-tab`
+7.176/9.568px — all "conformant", all off-grid, and the owner's Library screenshot read
+cramped. *Closed:* the em exemption is narrowed to typography (font/line-height — which the
+spacing sweep doesn't measure), so em-derived paddings/margins/gaps must now resolve onto
+the px grid ±0.5 or flag. Run against the pre-fix app the widened sweep flags **38**
+measurements (13 distinct: entity-row ×4, card ×4, tab ×4, plus the bar→list relationship
+below). Fixes: `.sl-entity` snapped to token paddings 8/12 + gap 12, `.sl-card` to 16,
+`.sl-tab` to 8 (design system `components.css`, re-vendored via `make icons`); 0 flags after.
+
+**2. No gate ever measured the SPACE BETWEEN things.** Every per-element padding can be
+token-clean while the rendered rhythm between blocks is wrong: the filter-bar→rows gap was
+3px (a 2px `margin-bottom` + the rows' 1px border-top) — and 2-3px was even a PASSING
+"optical" class, so measuring it wouldn't have flagged it. *Closed:* the sweep now measures
+neighbor RELATIONSHIPS (`rel:` rows — header→tabs, tabs→bar, bar→list, list→first row,
+row→row, between adjacent visible siblings) as their own check class where only flush (0),
+a 1px hairline, or a token gap passes — the optical class deliberately does not apply
+between blocks. bar→rows is now `--sl-gap-group` (12); current sweep: header→tabs 16 ·
+tabs→bar 12 · bar→list 12 · list→first-row 1 (hairline) · row→row 0 (flush), 0 flags.
+
+**3. Hover was invisible to every gate.** The pixel goldens never move the mouse and the
+structural checks compared geometry (32px row, 4/8 padding, radius — all identical), so
+"sidebar elemente unten sind noch immer nicht animiert" was true while everything was green:
+the nav rows' felt liveliness is the `.pi-animate` icon micro-interaction, and the footer's
+Feedback row rendered its chat icon without `animate=True` (the `?` shortcuts row has no
+icon at all). *Closed:* fix (chat icon animates; the `?` keycap now "presses" on row hover —
+reduced-motion-guarded) plus a REAL-pointer gate, `tests/test_web_footer_hover.py`: Playwright
+hovers every footer row and asserts (a) the hover background paints and equals the nav rows',
+and (b) the leading visual reacts (a running icon animation, or the keycap transform).
+Verified red on the pre-fix tree, green after.
+
+**4. Two content regressions of our own making.** (J4) The Round-4 omit-on-repeat emptied
+the kind label on repeated outline rows — the owner read it as "sieht aus als würde der Text
+fehlen — ein Bug". Reverted: every row keeps its FULL label; repeats within a contiguous
+same-kind run step down to the faint tone (`.ol-ptag--run`), the first keeps the muted tone
+(gate: `test_same_kind_runs_keep_the_full_label_in_the_faint_tone`). (Data) A council title
+authored by a remote agent on a sibling store surfaced a literal `–`; healing now lives
+at the read layer beside the dict-repr prompt healing (`artifacts.heal_text`, applied on
+council prompt/proposal + synthesis title at storage read) — stored bytes untouched, unit
+tested with the `–` case. Also from the re-review: `_pptx_preview` renders at 2x
+(`PREVIEW_WIDTH` 640→1280, the card displays it downscaled → crisp on retina); showcase
+previews regenerated, `backfill-previews` re-run.
+
+Goldens refreshed for the deliberate spacing/label shifts (36 = 18 screens × light+dark).
+Ratchets unchanged: STYLE_BASELINE=35, frozen class whitelist.
+
 ## Round 5 (2026-06-12) — typography & reading density (ux-contract §11 T1–T5)
 
 ### Round 5 finish (2026-06-12, micro-pass) — the three synthesis craft remainders

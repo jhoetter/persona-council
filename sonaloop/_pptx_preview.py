@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import io
 
-PREVIEW_WIDTH = 640          # the card stage consumes ~half; 2x for crisp retina thumbs
-_EMU_PER_PX = 914400 / 96    # render geometry at 96 dpi, then scale down
+PREVIEW_WIDTH = 1280         # 2x the card stage (owner round 5: "in höherer Quali rendern") —
+                             # the card displays it downscaled, so the thumb is crisp on retina
+_EMU_PER_PX = 914400 / 96    # render geometry at 96 dpi (a 16:9 deck rasters at 1280×720 native)
 
 # Font candidates per face — first hit wins; PIL's built-in bitmap face is the last resort
 # (Linux CI/laptops ship DejaVu; mac/Windows fall through to the system paths).

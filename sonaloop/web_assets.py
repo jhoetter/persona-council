@@ -32,7 +32,14 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
    only the placement differs. The `?` keycap is the shared .sl-kbd chip, sized into the
    16px icon slot so the row geometry stays byte-identical to the rows around it. */
 .sl-sb-foot{flex-shrink:0;padding:var(--s-2);border-top:1px solid var(--line)}
-.sl-sb-foot .sl-kbd{flex:none;width:16px;height:16px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:var(--t-xs);color:var(--faint)}
+.sl-sb-foot .sl-kbd{flex:none;width:16px;height:16px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:var(--t-xs);color:var(--faint);transition:transform .18s ease,color .18s,border-color .18s}
+/* Hover liveliness parity with the nav rows (owner round 5: "unten … nicht animiert"): the
+   docs/feedback/tour icons play their .pi-animate micro-interaction on row hover (the rows
+   carry .pi-hover like the nav rows); the `?` keycap — no icon to animate — "presses" like
+   a real key instead. Guarded by reduced-motion like the icon layer. */
+@media (prefers-reduced-motion: no-preference){
+.sl-sb-foot .pi-hover:hover .sl-kbd{transform:translateY(1px);color:var(--ink);border-color:var(--faint)}
+}
 /* The sidebar user/settings menu is the shared .sl-usermenu / .sl-um-* layer (COMPONENTS_CSS).
    Theme + language switchers use the shared .sl-segmented (--fill --stacked) from
    COMPONENTS_CSS. Only the icon size is bridged here (the design-system control leaves
@@ -144,6 +151,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .pt-evs a.ev:hover{color:var(--accent);border-color:var(--accent)}
 .ol-rcap{font-size:var(--t-body);font-weight:400;color:var(--muted);margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ol-ptag{flex-shrink:0;width:86px;font-size:var(--t-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* round-5 J4: repeated kinds in a contiguous run keep their FULL label, one tone fainter —
+   the first of the run stays muted; nothing is omitted (omission read as a bug). */
+.ol-ptag--run{color:var(--faint);font-weight:500}
 .ol-flat{padding-top:4px}
 .olrow.ol-tw{position:relative}
 /* Continuous tree spine: ::before is ONE straight vertical (full height for a middle child so it joins

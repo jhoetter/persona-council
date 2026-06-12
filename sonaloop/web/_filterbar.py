@@ -190,8 +190,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
 
 # Bar spacing + menu sizing on top of the vendored chrome (.sl-filter-*, .sl-popover): the
 # value panels can be long (personas), so the popover scrolls; the bar sits quietly between
-# the page head and the rows it filters.
+# the page head and the rows it filters. bar→rows is a GROUP boundary, so it gets the
+# --sl-gap-group token (round 5: the 2px margin + 1px hairline read as a cramped 3px).
 register_css(
-    ".sl-filter-bar{margin:12px 0 2px}"
+    ".sl-filter-bar{margin:12px 0 var(--sl-gap-group)}"
     ".sl-filter-bar .sl-popover{min-width:230px;max-height:340px;overflow:auto}"
     ".sl-filter-bar .sl-menu-item__label .sl-dot{flex:none}")

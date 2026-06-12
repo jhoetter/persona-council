@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from functools import lru_cache
 from typing import Any
 
@@ -576,20 +577,41 @@ def validate_event(d: dict) -> dict:
 # them). council_prompts BUILDS the prompt primitives from the council's canonical question/proposal
 # fields; session_statements maps a prototype session's reaction → a statement.
 
+_UESC = re.compile(r"\\u([0-9a-fA-F]{4})")
+
+
+def heal_text(value: Any) -> str:
+    """Defensive read for the second real host slip (owner round 5): prompt/title text that
+    carries LITERAL ``\\uXXXX`` escape sequences ("Premium \\u2013 Pricing") — another agent
+    authored on a sibling store with double-escaped JSON. Decodes the escapes (surrogate
+    pairs included) to the real characters ("Premium – Pricing"); text without the pattern
+    passes through untouched, and decoding never raises."""
+    s = str(value or "")
+    if "\\u" not in s:
+        return s
+    try:
+        decoded = _UESC.sub(lambda m: chr(int(m.group(1), 16)), s)
+        # re-join any surrogate pairs the literal escapes spelled out (e.g. \\ud83d\\ude00)
+        return decoded.encode("utf-16", "surrogatepass").decode("utf-16")
+    except (ValueError, UnicodeError):
+        return s
+
+
 def _prompt_text(value: Any) -> str:
     """Defensive read for a real host slip: a prompt/question recorded as the REPR of a prompt
     dict ("{'id': 'q0', 'kind': 'question', 'text': '…'}") unwraps to the inner text instead of
-    surfacing as JSON on the page. Anything else passes through untouched."""
+    surfacing as JSON on the page. Literal \\uXXXX escapes heal too (heal_text). Anything else
+    passes through untouched."""
     s = str(value or "")
     t = s.strip()
     if t.startswith("{") and t.endswith("}"):
         try:
             parsed = ast.literal_eval(t)
         except (ValueError, SyntaxError):
-            return s
+            return heal_text(s)
         if isinstance(parsed, dict) and parsed.get("text"):
-            return str(parsed["text"])
-    return s
+            return heal_text(str(parsed["text"]))
+    return heal_text(s)
 
 
 def council_prompts(c: dict) -> list[dict]:
@@ -597,9 +619,9 @@ def council_prompts(c: dict) -> list[dict]:
         return [{**p, "text": _prompt_text(p.get("text"))} for p in c["prompts"]]
     out = []
     if c.get("prompt"):
-        out.append(prompt(c["prompt"], kind="question", id="prompt"))
+        out.append(prompt(_prompt_text(c["prompt"]), kind="question", id="prompt"))
     if c.get("proposal"):
-        out.append(prompt(c["proposal"], kind="proposal", id="proposal"))
+        out.append(prompt(_prompt_text(c["proposal"]), kind="proposal", id="proposal"))
     for i, q in enumerate(c.get("questions") or []):
         out.append(prompt(_prompt_text(q), kind="question", id=f"q{i}"))
     return out
