@@ -176,8 +176,8 @@ def register_councils(app) -> None:
         # Structure before prose (§3.6): the hero IS the prompt header; directly under it the
         # participants avatar row + the council's stance/vote strip open the page, and only then
         # the authored summaries follow (clamped at the section threshold).
-        avgroup = h("span", {"class_": "sl-avatar-group"},
-                    fragment(*(raw(_avatar(p, 22)) for p in pmap.values() if p)))
+        # the ONE participation avatar-group anatomy (ux-contract §10 W11 — ui.avatar_group)
+        avgroup = ui.avatar_group(pmap.values(), total=n_voices, size=22)
         names = ", ".join((p or {}).get("display_name") or pid for pid, p in pmap.items())
         if mode != "discovery" and session.get("votes"):
             _, vparts = _vote_parts([session])

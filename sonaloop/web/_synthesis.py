@@ -33,9 +33,6 @@ register_css(r"""
 .legend{display:flex;flex-wrap:wrap;gap:12px;margin:11px 0 0;font-size:var(--t-sm);color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
-.dnrow{display:flex;align-items:center;gap:18px}
-.donut{width:118px;height:118px;border-radius:50%;background:var(--g);flex-shrink:0;
-  -webkit-mask:radial-gradient(closest-side,transparent 60%,#000 61%);mask:radial-gradient(closest-side,transparent 60%,#000 61%)}
 .brow{display:grid;grid-template-columns:118px 1fr 30px;gap:8px;align-items:center;padding:5px 0;font-size:var(--t-sm)}
 .brow .blab{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow .btrack{height:9px;border-radius:var(--radius-sm);background:var(--line-2);overflow:hidden}
@@ -121,9 +118,10 @@ register_css(r"""
 # Deliberately NOT sonaloop._charts (the vendored design-system library): those functions emit
 # complete <figure class="sl-chart"> blocks with a coupled title/legend and positional series
 # colours, while these are bare composable FRAGMENTS — a thin stance-coloured strip that embeds
-# inside link rows (.ref-row/.crow/.prow), a legendless donut composed with strip + legend in
-# .dnrow, and bars/area sized to the insight-card grid. Where a full design-system figure fits,
-# we delegate instead (see _components._effort_impact → _charts.effort_impact).
+# inside link rows (.ref-row/.crow/.prow), and bars/area sized to the insight-card grid. Where a
+# full design-system figure fits, we delegate instead (see _components._effort_impact →
+# _charts.effort_impact). The web carries NO donut (§10 W9): the proportional strip is the one
+# vote encoding here; the deck keeps its single donut card (services/_synthesis_pptx).
 
 
 def _stacked(parts: list[tuple], thin: bool = False) -> str:
@@ -140,18 +138,6 @@ def _legend(parts: list[tuple]) -> str:
     return h("div", {"class_": "legend"},
              [h("span", {}, h("i", {"style": f"background:{c}"}), f"{lbl} {v}")
               for v, c, lbl in parts if v])
-
-
-def _donut(parts: list[tuple], size: int = 118) -> str:
-    total = sum(v for v, _, _ in parts) or 1
-    stops, acc = [], 0.0
-    for v, c, _ in parts:
-        if not v:
-            continue
-        start = acc / total * 100; acc += v; end = acc / total * 100
-        stops.append(f"{c} {start:.3f}% {end:.3f}%")
-    grad = "conic-gradient(" + ",".join(stops or ["var(--line-2) 0 100%"]) + ")"
-    return h("div", {"class_": "donut", "style": f"--g:{grad};width:{size}px;height:{size}px"})
 
 
 def _diverging(score: float, maxv: float, color: str) -> str:
@@ -217,8 +203,11 @@ def _vote_parts(sessions: list[dict]) -> tuple[Counter, list[tuple]]:
 
 
 def _overview_html(parts: list[tuple]) -> str:
-    return h("div", {"class_": "dnrow"}, _donut(parts),
-             h("div", {"style": "flex:1"}, _stacked(parts), _legend(parts)))
+    """The vote overview as ONE encoding (ux-contract §10 W9): the full-width proportional
+    stance strip + its legend. The donut that re-encoded the same distribution beside the
+    strip is gone from every web sentiment block — the deck keeps its single donut card
+    (services/_synthesis_pptx, deliberately untouched)."""
+    return fragment(_stacked(parts), _legend(parts))
 
 
 def _per_council_html(sessions: list[dict]) -> str:

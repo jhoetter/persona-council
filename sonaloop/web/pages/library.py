@@ -73,8 +73,9 @@ def _tab_entries(key: str, store: Store, sessions: list | None = None) -> list[d
     if key == "reports":
         return [e("synthesis", s, f'/syntheses/{s["id"]}') for s in store.list_syntheses()]
     if key == "prototypes":
-        return [e("prototype",
-                  {**p, "n_sessions": len(store.list_prototype_sessions(prototype_id=p["id"]))},
+        # the W11 crew enrichment (n_sessions BOTH kinds + the drivers' personas/voices) —
+        # the same services read the outline rows use, so the avatars never diverge
+        return [e("prototype", {**p, **services.prototype_participation(p, store)},
                   f'/prototypes/{p["slug"]}')
                 for p in store.list_prototypes()]
     if key == "sessions":
@@ -350,11 +351,21 @@ def register_library(app) -> None:
                 concept_in = []
         n_grounded = sum(1 for s in sessions if s.get("grounded_verified"))
         proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")
+        # Detail-header attribution (ux-contract §10 W11): the personas who drove this
+        # prototype's sessions — BOTH kinds (reactions + usability walks) — as the one
+        # avatar-group anatomy, leading the meta line.
+        driver_pids = [pid for pid in dict.fromkeys(
+            [s.get("persona_id", "") for s in sessions] + [s.get("persona_id", "") for s in usess]) if pid]
+        crew = ui.avatar_group((store.get_persona(pid) for pid in driver_pids[:4]),
+                               total=len(driver_pids), size=22)
+        sub = (h("span", {"class_": "syn-meta"}, crew,
+                 h("span", {"class_": "muted"}, p.get("version", "")) if p.get("version") else None)
+               if crew else p.get("version", ""))
         return detail_page(
             store, title=p["name"], active="library", crumbs=crumbs,
-            # meta line: the version only — the slug is an address, not information (V12:
-            # no terminal-flavored identifiers in UI copy; the URL bar already shows it)
-            hero=_hero(p["name"], icon="prototype", sub=p.get("version", ""),
+            # meta line: drivers + the version only — the slug is an address, not information
+            # (V12: no terminal-flavored identifiers in UI copy; the URL bar already shows it)
+            hero=_hero(p["name"], icon="prototype", sub=sub,
                        top=detail_eyebrow(t("prototype_kind"), [fid])),
             body=body,
             # Rail order is the §8.2 anatomy: project → kind-specifics → dates; the grounded

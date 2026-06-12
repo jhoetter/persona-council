@@ -194,10 +194,12 @@ def _screenshot_url(sess_id: str, shot: str) -> str | None:
 
 
 def _persona_chip(store: Store, persona_id: str):
+    # The session's subject in the detail header — the avatar rides the ONE avatar_group
+    # anatomy (ux-contract §10 W11): a group of one, identical classes to every other kind.
     p = store.get_persona(persona_id)
     if p:
         return h("a", {"href": f'/personas/{p["id"]}', "class_": "turn-who"},
-                 _avatar(p, 22), h("b", {}, p["display_name"]))
+                 ui.avatar_group([p], size=22), h("b", {}, p["display_name"]))
     return h("span", {"class_": "turn-who"}, h("b", {}, persona_id or "—"))
 
 

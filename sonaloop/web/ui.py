@@ -87,6 +87,35 @@ register_css(".sl-entity{position:relative}"
              "line-height:0;color:var(--muted)}"
              ".sl-entity__action:hover{color:var(--accent)}")
 
+# The avatar-group overflow chip ("+n") — rides the vendored `.sl-avatar-group` contract.
+register_css(".sl-avatar-group__more{font-size:var(--t-xs);color:var(--faint);"
+             "margin-left:4px;align-self:center;white-space:nowrap}")
+
+
+def avatar_group(personas: Iterable[Any], *, total: int | None = None, size: int = 18) -> Safe:
+    """THE persona-participation avatar group (ux-contract §10 W11) — ONE rule app-wide:
+    wherever an artifact's DATA carries persona participation (council participants, session
+    subjects, prototype session drivers, survey respondents, report voices, a project's
+    cohort), the row AND the detail header render this group — identical anatomy everywhere:
+    the vendored `.sl-avatar-group` overlap cluster, max 4 avatars, then one quiet
+    `.sl-avatar-group__more` "+n" overflow chip. `personas` = resolved persona dicts (the
+    services crew stubs or full records; falsy entries drop); `total` = the full participation
+    count when the caller already truncated. Rows render at 18px, detail headers at 22px —
+    same classes and overflow behavior at both sizes.
+
+    NEGATIVE rule (deliberate, pinned by tests/test_persona_attribution.py): decision /
+    hypothesis / note / asset records carry NO direct persona participation — their persona
+    link is indirect, via the evidence they cite — so those rows and detail headers never
+    render an avatar group. Returns "" for an empty cohort (a chip-less row, never a husk)."""
+    from ._components import _avatar
+    ps = [p for p in personas if p][:4]
+    if not ps:
+        return raw("")
+    n_more = max((total if total is not None else len(ps)) - len(ps), 0)
+    return h("span", {"class_": "sl-avatar-group"},
+             fragment(*(raw(_avatar(p, size)) for p in ps)),
+             h("span", {"class_": "sl-avatar-group__more"}, f"+{n_more}") if n_more else None)
+
 
 def entity_row(title: Any, *, href: str | None = None, visual: Any = "", badges: Iterable[Any] = (),
                meta: Iterable[Any] = (), desc: Any = "", id: str | None = None,
@@ -146,15 +175,19 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
     kind icons + the _outline_chips registry — both read this table).
 
     The V2 craft pass (ux-contract §9 V2) capped every row at ≤2 trailing chips + the date —
-    counts that duplicate the avatars/visual or repeat the kind label moved to the detail page:
+    counts that duplicate the avatars/visual or repeat the kind label moved to the detail page.
+    Persona ATTRIBUTION follows the one §10 W11 rule: every kind whose data carries persona
+    participation leads its meta with the avatar_group (council participants, report voices,
+    survey respondents, session subject, prototype session drivers); decision / hypothesis /
+    note / asset carry none — see avatar_group's negative rule.
 
     | kind            | visual                | badges                  | meta right            |
-    | council         | councils icon         | mode/round tag          | participants · date   |
-    | report/synthesis| report icon           | `Report`                | sources count · date  |
+    | council         | councils icon         | mode/round tag          | avatars · date        |
+    | report/synthesis| report icon           | `Report`                | avatars · count · date|
     | decision        | flag                  | status pill             | evidence count · date |
-    | survey          | plan icon             | lifecycle pill          | n responses · date    |
-    | session         | activity icon         | verified check          | persona · date        |
-    | prototype       | prototype icon        | fidelity tag            | sessions count        |
+    | survey          | plan icon             | lifecycle pill          | avatars · n responses |
+    | session         | activity icon         | verified check          | avatar group · date   |
+    | prototype       | prototype icon        | fidelity tag            | avatars · sessions n  |
     | asset           | the `.sl-file--row` FILE row (V9): ext badge/thumb · filename+ext ·
     |                 | size · date meta · direction pill · ONE download/open affordance     |
     | note / hypothesis| panel / target icon  | — / status pill         | date                  |
@@ -167,7 +200,7 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
     the owning project's title here; in a project-scoped context the per-kind default
     stands (e.g. the session's walked subject)."""
     from .. import presentation as _pres
-    from ._components import _avatar, _display_title, _icon, _label
+    from ._components import _display_title, _icon, _label
     from ._presence import decision_status_pill, hypothesis_status_pill, survey_status_pill
     rec = record or {}
     date = _fmt_day(rec.get("created_at") or "")
@@ -184,24 +217,34 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
         mode = rec.get("mode") or ""
         if mode in ("discovery", "evaluation", "decision"):
             badges.append(raw(_label(t("council_mode_" + mode), "var(--blue)")))
-        pids = list(dict.fromkeys(s.get("persona_id", "") for s in rec.get("statements") or []))
+        pids = [p for p in dict.fromkeys(s.get("persona_id", "")
+                                         for s in rec.get("statements") or []) if p]
         if store is not None and pids:
-            avatars = fragment(*(raw(_avatar(store.get_persona(p) or {}, 18)) for p in pids[:4] if p))
-            meta.insert(0, h("span", {"class_": "ol-crew"}, avatars))
+            meta.insert(0, avatar_group((store.get_persona(p) for p in pids[:4]),
+                                        total=len(pids)))
     elif kind in ("synthesis", "report"):
         badges.append(raw(_label(t("synthesis_kind"), "var(--violet)")))
         if rec.get("sections") is not None:
             meta.insert(0, raw(_label(t("n_sections", n=len(rec.get("sections") or [])))))
         else:
             meta.insert(0, raw(_label(t("chip_sources_n", n=len(rec.get("council_ids") or [])))))
+        # the voices' personas (statements) lead the meta — same anatomy as council rows (W11)
+        vpids = [p for p in dict.fromkeys(s.get("persona_id", "")
+                                          for s in rec.get("statements") or []) if p]
+        if store is not None and vpids:
+            meta.insert(0, avatar_group((store.get_persona(p) for p in vpids[:4]),
+                                        total=len(vpids)))
     elif kind == "decision":
         badges.append(raw(decision_status_pill(rec.get("status", "proposed"))))
         meta.insert(0, raw(_label(t("chip_evidence_n", n=len(rec.get("based_on") or [])))))
     elif kind == "survey":
         # V2: status + response count (≤2 trailing chips + date) — the question count
-        # lives on the detail page.
+        # lives on the detail page. Persona-sourced respondents lead as the avatar group
+        # (W11; the `personas`/`voices` crew rides services.list_surveys records).
         badges.append(raw(survey_status_pill(rec.get("status", "draft"))))
         meta.insert(0, raw(_label(t("n_responses", n=int(rec.get("response_count") or 0)))))
+        if rec.get("personas"):
+            meta.insert(0, avatar_group(rec["personas"], total=int(rec.get("voices") or 0)))
     elif kind == "session":
         persona = (store.get_persona(rec.get("persona_id", "")) or {}) if store is not None else {}
         title = persona.get("display_name") or rec.get("persona_id", "")
@@ -211,12 +254,16 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
         if rec.get("grounded_verified"):
             badges.append(raw(_label(t("grounded_yes"), "var(--green)")))
         # V2: the step count moved to the detail/slide-over — the avatar + grounded check +
-        # date are what the row reader scans for.
-        meta = [raw(_avatar(persona, 18)) if persona else None] + meta
+        # date are what the row reader scans for. The subject persona renders through the ONE
+        # avatar_group anatomy (W11) — a group of one, same classes as every other kind.
+        meta = [avatar_group([persona]) if persona else None] + meta
     elif kind == "prototype":
+        # fidelity tag · the session DRIVERS' avatar group (W11 — the `personas`/`voices`
+        # crew rides services.prototype_participation) · the honest sessions count.
         if rec.get("fidelity"):
             badges.append(raw(_label(_pres.present(rec["fidelity"])["short"], "#00897b")))
-        meta = [raw(_label(t("sessions_n", n=int(rec.get("n_sessions") or 0))))]
+        meta = [avatar_group(rec.get("personas") or [], total=int(rec.get("voices") or 0)),
+                raw(_label(t("sessions_n", n=int(rec.get("n_sessions") or 0))))]
     elif kind == "asset":
         # V9 (ux-contract §9): assets are FILES, not generic rows — the compact
         # `.sl-file--row` variant (ext badge/thumb identity, filename+ext title,

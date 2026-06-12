@@ -7,7 +7,7 @@ from itertools import groupby
 
 from .. import artifacts as _A_art
 from .. import presentation as _pres
-from ._components import _avatar, _icon
+from ._components import _icon
 from ._filterbar import empty_filter_state
 from ._graph_outline_extras import extra_outline_items, drawer_url, producing_step
 from ._graph_outline_sessions import merge_session_items
@@ -337,21 +337,23 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
         tw = ("ol-tw" + (" ol-last" if it.get("last_child") else "")) if it["indent"] else ""  # tree connector
         tis = node_themes.get(it["oid"], [])
         # Persona presence + stance lean (tracker: sonaloop/inspector-cinematic-
-        # detail-density): councils show WHO debated (avatar cluster) and how it
+        # detail-density): every row whose DATA carries persona participation shows WHO
+        # (the one §10 W11 avatar group — councils' debaters, a report's voices, a
+        # prototype's session drivers, a survey's persona respondents; the crew rides
+        # the graph node / the row's record) and councils additionally show how it
         # leaned (stance dots, scale colors) — detail worth a close look, kept quiet.
-        extra = by_oid.get(it["oid"]) or {}
+        extra = by_oid.get(it["oid"]) or it.get("node") or {}
         crew = ""
         pers = extra.get("personas") or []
         if pers:
-            avs = fragment(*(raw(_avatar(pp, 18)) for pp in pers))
-            more = (h("span", {"class_": "ol-more"}, f'+{extra.get("voices", 0) - len(pers)}')
-                    if extra.get("voices", 0) > len(pers) else "")
+            from . import ui
+            group = ui.avatar_group(pers, total=int(extra.get("voices") or 0))
             sc = extra.get("stance_counts") or {}
             dots = fragment(*(h("i", {"class_": "ol-sd",
                                       "style": f'background:{_A_art.stance_meta(int(v))["color"]}',
                                       "title": str(n)})
                               for v, n in sorted(sc.items(), key=lambda kv: -int(kv[0])) if n))
-            crew = h("span", {"class_": "ol-crew"}, avs, more,
+            crew = h("span", {"class_": "ol-crew"}, group,
                      h("span", {"class_": "ol-sds"}, dots) if sc else "")
         # V2: theme membership is a small colored DOT (full theme title on hover) — the wide
         # truncated chip overloaded the row; the full name lives in the facet menu + detail.

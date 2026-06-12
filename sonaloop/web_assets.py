@@ -97,9 +97,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .olrow .ol-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .olrow .ol-kind{color:var(--muted);font-size:var(--t-xs);flex-shrink:0;white-space:nowrap;border:1px solid var(--line);border-radius:var(--radius-full);padding:1px 9px;background:var(--panel-2)}
 .olrow .ol-crew{display:inline-flex;align-items:center;flex-shrink:0}
-.ol-crew .sl-avatar{width:18px;height:18px;font-size:9px;margin-left:-6px;box-shadow:0 0 0 1.5px var(--panel)}
-.ol-crew .sl-avatar:first-child{margin-left:0}
-.ol-more{font-size:var(--t-xs);color:var(--faint);margin-left:3px}
+/* crew avatars render through the ONE avatar_group anatomy (web/ui.py, ux-contract §10 W11):
+   the vendored .sl-avatar-group overlap + the .sl-avatar-group__more overflow chip — no
+   outline-local sizing/overlap overrides, so the cluster is identical on every surface. */
 .ol-sds{display:inline-flex;gap:3px;margin-left:7px}
 .ol-sd{width:6px;height:6px;border-radius:var(--radius-full);display:inline-block}
 .olrow .ol-ts{color:var(--faint);font-size:var(--t-xs);flex-shrink:0;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:96px;text-align:right}

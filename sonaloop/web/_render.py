@@ -21,6 +21,21 @@ details.qround>summary::-webkit-details-marker{display:none}
 details.qround>summary .qround-q{padding-right:48px}
 .qround-cnt{position:absolute;right:12px;top:12px;color:var(--accent);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 8px;font-size:var(--t-xs);font-weight:600}
 details.qround>summary:hover .qround-q{border-color:var(--accent)}
+/* Council threading (ux-contract §10 W5): the answers indent one step under their question and
+   a file-tree connector links them — a hairline spine descends from the question banner's
+   underside and ELBOWS (rounded corner) into each answer card at its header line. Each card
+   draws its own elbow (::before: border-left + border-bottom + a radius corner, reaching up
+   through the 12px gap above); every non-last card continues the spine down its own height
+   (::after), so the line runs question → card → card and ENDS curving into the last one.
+   Geometry is connector drawing (not rhythm); the indent itself is the 28px token. Hairline
+   var(--line) keeps it quiet in light AND dark; a one-answer round degrades to one elbow. */
+.qround-a{position:relative;margin-left:28px}
+.qround-a>.turn{position:relative}
+.qround-a>.turn::before{content:"";position:absolute;left:-16px;top:-12px;width:15px;height:37px;
+  border-left:1px solid var(--line);border-bottom:1px solid var(--line);
+  border-bottom-left-radius:10px;pointer-events:none}
+.qround-a>.turn:not(:last-child)::after{content:"";position:absolute;left:-16px;top:25px;bottom:-12px;
+  width:1px;background:var(--line);pointer-events:none}
 .turn-quotes{margin:8px 0 0}
 .turn-quotes>summary{cursor:pointer;list-style:none}
 .turn-quotes>summary::-webkit-details-marker{display:none}

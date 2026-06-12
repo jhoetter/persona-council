@@ -129,6 +129,9 @@ def list_research_projects(store: Store | None = None) -> list[dict[str, Any]]:
             rs = None
         out.append({"id": p["id"], "slug": p["slug"], "title": p["title"], "goal": p.get("goal", ""),
                     "status": p.get("status", "active"),
+                    # the cohort — persona participation riding the project's own data, so the
+                    # list row can render the avatar group (ux-contract §10 W11)
+                    "persona_ids": list(p.get("persona_ids") or []),
                     **({"run_state": rs} if rs else {}),
                     "studies": sum(1 for n in graph["nodes"] if n.get("kind") == "synthesis"),
                     "councils": sum(1 for n in graph["nodes"] if n.get("kind") == "council"),
@@ -270,30 +273,69 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
     if not syn:
         return None
     sentiment = _A.synthesis_sentiment_counts(syn, store)   # aggregated over the REAL council voices
+    # the voices' personas (the synthesis's OWN statements) — the row avatar cluster (§10 W11)
+    spids: list[str] = []
+    for st in syn.get("statements") or []:
+        pid = st.get("persona_id") or ""
+        if pid and pid not in spids:
+            spids.append(pid)
     return {
         "study_id": study_id, "kind": "synthesis", "title": syn.get("title", study_id),
         "status": syn.get("status", "done"), "created_at": syn.get("created_at", ""),
         "goal": syn.get("goal", ""), "council_count": len(syn.get("council_ids", [])),
-        "voices": sum(sentiment.values()), "sentiment": sentiment,
+        "voices": len(spids) or sum(sentiment.values()), "sentiment": sentiment,
+        "personas": _persona_stubs(store, spids),
         "recommendations": len(_A.synthesis_recommendations(syn)),
         "n_findings": len(syn.get("findings") or []),        # outline chip contract (_outline_chips)
         "phase": syn.get("phase", ""), "mode": syn.get("mode", ""), "role": syn.get("role", ""),
     }
 
 
+def _persona_stubs(store: Store, pids: list[str]) -> list[dict[str, Any]]:
+    """The ≤4 resolved avatar stubs a row's crew cluster renders (the council-node shape)."""
+    out = []
+    for pid in pids[:4]:
+        pr = store.get_persona(pid) or {}
+        out.append({"id": pid, "display_name": pr.get("display_name", "?"),
+                    "avatar": pr.get("avatar")})
+    return out
+
+
+def prototype_participation(proto: dict, store: Store | None = None) -> dict[str, Any]:
+    """Persona participation riding a prototype's DATA (ux-contract §10 W11): the personas who
+    drove its sessions — BOTH kinds (recorded prototype reactions + usability walks whose
+    subject is this prototype, matched by id or slug). Returns the crew enrichment every row
+    surface shares: `n_sessions` (honest combined count), `voices` (distinct drivers) and
+    `personas` (≤4 resolved avatar stubs, first-seen order)."""
+    store = store or Store()
+    pids: list[str] = []
+    n = 0
+    for s in store.list_prototype_sessions(prototype_id=proto["id"]):
+        n += 1
+        pid = s.get("persona_id") or ""
+        if pid and pid not in pids:
+            pids.append(pid)
+    seen: set[str] = set()
+    for key in (proto.get("id"), proto.get("slug")):
+        for s in (list_usability_sessions(subject=key, store=store) if key else []):
+            if s["id"] in seen:
+                continue
+            seen.add(s["id"])
+            n += 1
+            pid = s.get("persona_id") or ""
+            if pid and pid not in pids:
+                pids.append(pid)
+    return {"n_sessions": n, "voices": len(pids), "personas": _persona_stubs(store, pids)}
+
+
 def _protos_with_session_counts(project_id: str, store: Store) -> list[dict]:
     """The project's prototypes, each enriched with `n_sessions` — recorded persona reactions
-    (prototype sessions) PLUS usability walks whose subject is this prototype. Feeds the outline
-    row's sessions-count chip (spec/ux-contract.md §3.2) so the count is honest by construction."""
+    (prototype sessions) PLUS usability walks whose subject is this prototype — and the session
+    drivers' crew (`personas`/`voices`, ux-contract §10 W11). Feeds the outline row's
+    sessions-count chip + avatar cluster (§3.2) so both are honest by construction."""
     protos = list_prototypes_artifacts(project_id, store=store)
-    by_subj: dict[str, int] = {}
-    for s in list_usability_sessions(project_id=project_id, store=store):
-        key = str((s.get("subject") or {}).get("id") or "")
-        if key:
-            by_subj[key] = by_subj.get(key, 0) + 1
     for p in protos:
-        p["n_sessions"] = (len(store.list_prototype_sessions(prototype_id=p["id"]))
-                           + by_subj.get(p["id"], 0) + by_subj.get(p.get("slug", ""), 0))
+        p.update(prototype_participation(p, store))
     return protos
 
 
@@ -437,16 +479,22 @@ def _evidence_node(kind: str, eid: str, title: str, prod_task: dict, store: Stor
             if val is not None:
                 stance_counts[int(val)] = stance_counts.get(int(val), 0) + 1
         voices = len(pids)
-        for pid in pids[:4]:
-            pr = store.get_persona(pid) or {}
-            personas.append({"id": pid, "display_name": pr.get("display_name", "?"),
-                             "avatar": pr.get("avatar")})
+        personas = _persona_stubs(store, pids)
     elif kind == "synthesis":
         s = store.get_synthesis(eid) or {}
         created = s.get("created_at", "")
         council_count = len(s.get("council_ids", []))
         n_findings = len(s.get("findings") or [])            # outline chip contract
         status = s.get("status", "done")
+        # WHO speaks in the report — the voices' personas (statements), so the outline row
+        # carries the same avatar cluster as the council rows (ux-contract §10 W11).
+        spids: list[str] = []
+        for st in s.get("statements") or []:
+            pid = st.get("persona_id") or ""
+            if pid and pid not in spids:
+                spids.append(pid)
+        voices = len(spids)
+        personas = _persona_stubs(store, spids)
     href = {"council": f"/councils/{eid}", "synthesis": f"/syntheses/{eid}"}.get(kind, "")
     tags = [kind] + list(prod_task.get("presentation", {}).get("tags") or [])
     return {"study_id": f"{kind}:{eid}", "kind": kind, "title": title, "phase": step,

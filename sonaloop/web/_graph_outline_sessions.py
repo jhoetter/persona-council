@@ -9,7 +9,6 @@ from __future__ import annotations
 from urllib.parse import quote, urlsplit
 
 from .. import services
-from ._components import _avatar
 from ._i18n import t
 
 
@@ -81,7 +80,10 @@ def _session_child_item(sess: dict, parent: dict, seq: int, last: bool) -> dict:
     """One session as an indented child row under its subject: persona avatar lead + display name,
     the fidelity as the kind label, the replay as the row target. The outcome/friction chips come
     from the chip-contract registry (_outline_chips: rkind 'session' reads the `session` payload).
-    The order borrows the parent's slot (the note→prototype pairing trick) so it nests right under it."""
+    The order borrows the parent's slot (the note→prototype pairing trick) so it nests right under it.
+    The lead avatar rides the ONE avatar_group anatomy (ux-contract §10 W11) — a group of one,
+    the same classes every persona-participation surface renders."""
+    from . import ui
     fid = sess.get("fidelity", "")
     kind = (t("session_kind_live") if fid == "live" else
             t("session_kind_artifact") if fid == "artifact" else t("session_kind_prototype"))
@@ -89,7 +91,7 @@ def _session_child_item(sess: dict, parent: dict, seq: int, last: bool) -> dict:
             "kind": kind, "href": f'/sessions/{sess["id"]}', "plabel": parent["plabel"],
             "po": parent["po"], "round": parent["round"], "order": f'{parent["order"]}#s{seq:03d}',
             "ts": sess.get("created_at", ""), "indent": parent["indent"] + 1, "last_child": last,
-            "lead": _avatar(sess["persona"], 18), "rkind": "session", "session": sess,
+            "lead": str(ui.avatar_group([sess["persona"]])), "rkind": "session", "session": sess,
             "pk": parent.get("pk", "")}
 
 

@@ -144,6 +144,12 @@ def render_report(report: dict, store, *, with_toc: bool = False):
     _t = report.get("title", "")           # the default title ends in " — Report"; custom titles show as-is
     project_title = _t[:-len(" — Report")] if _t.endswith(" — Report") else _t
 
+    # Detail-header attribution (ux-contract §10 W11): when the report's DATA carries voices
+    # (statements), their personas lead the cover meta line as the one avatar-group anatomy.
+    vpids = [p for p in dict.fromkeys(st.get("persona_id", "")
+                                      for st in report.get("statements") or []) if p]
+    crew = ui.avatar_group((store.get_persona(p) for p in vpids[:4]), total=len(vpids), size=22)
+
     if report.get("scope") != "project":
         # a convergence synthesis, rendered in the unified report shell.
         from ._synthesis import _synthesis_html
@@ -155,7 +161,7 @@ def render_report(report: dict, store, *, with_toc: bool = False):
         cover = h("header", {"class_": "rp-cover"},
                   h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind")),
                   h("h1", {"class_": "rp-title"}, project_title),
-                  h("div", {"class_": "rp-metaline"}, meta_line))
+                  h("div", {"class_": "rp-metaline"}, crew if crew else None, h("span", {}, meta_line)))
         body, toc = _synthesis_html(store, report, embed=True)
         article = h("article", {"class_": "report report-syn"}, cover, raw(body))
         return (article, toc) if with_toc else article
@@ -180,7 +186,7 @@ def render_report(report: dict, store, *, with_toc: bool = False):
     cover = h("header", {"class_": "rp-cover"},
               h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind")),
               h("h1", {"class_": "rp-title"}, project_title),
-              h("div", {"class_": "rp-metaline"}, meta_line),
+              h("div", {"class_": "rp-metaline"}, crew if crew else None, h("span", {}, meta_line)),
               (h("p", {"class_": "rp-lead"}, raw(_md(report["lead"])))
                if report.get("lead") else ""))
 
@@ -226,7 +232,8 @@ register_css(r"""
 .rp-cover{padding:8px 0 26px;margin-bottom:30px;border-bottom:1px solid var(--line)}
 .rp-eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:600}
 .rp-title{font-size:34px;line-height:1.12;font-weight:700;margin:10px 0 0;letter-spacing:-.01em}
-.rp-metaline{margin-top:12px;color:var(--muted);font-size:var(--t-sm);font-variant-numeric:tabular-nums}
+.rp-metaline{margin-top:12px;color:var(--muted);font-size:var(--t-sm);font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;gap:8px}
 .rp-lead{margin:22px 0 0;font-size:19px;line-height:1.6;color:var(--ink);font-weight:450;
   border-left:3px solid var(--accent);padding-left:18px}
 .rp-lead p{margin:0}

@@ -221,10 +221,18 @@ def register_surveys(app) -> None:
                             fragment(*(_response_row(r, qmap, store) for r in responses))))
         body = fragment(intro_html, derived_html, questions_html, responses_html)
         proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")
+        # Detail-header attribution (ux-contract §10 W11): the persona-sourced respondents
+        # as the one avatar-group anatomy, leading the meta line.
+        resp_pids = services.survey_respondent_personas(s["id"], store=store)
+        crew = ui.avatar_group((store.get_persona(pid) for pid in resp_pids[:4]),
+                               total=len(resp_pids), size=22)
+        counts_txt = f'{t("n_questions", n=len(s["questions"]))} · {t("n_responses", n=n_resp)}'
+        sub = (h("span", {"class_": "syn-meta"}, crew, h("span", {"class_": "muted"}, counts_txt))
+               if crew else counts_txt)
         return detail_page(
             store, title=s["title"], active="library", crumbs=crumbs,
             icon="plan", kind=t("survey_kind"), pills=[_status_pill(s.get("status", "draft"))],
-            sub=f'{t("n_questions", n=len(s["questions"]))} · {t("n_responses", n=n_resp)}',
+            sub=sub,
             body=body,
             # label/value discipline: "5 responses → 5" duplicated the number (P5 finding);
             # rail order is the §8.2 anatomy (project → kind-specifics → dates) and the

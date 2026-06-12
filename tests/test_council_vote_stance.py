@@ -3,7 +3,9 @@ positivity vocabulary). Guards the invariants:
   - record_council normalizes every vote through the scale (canonical `vote` term + a `stance`
     {value,label}; an unresolvable token survives as stance.label_raw — never silently dropped).
   - the vote charts bucket by stance VALUE in scale order (+2 → −2) with scale colors/labels —
-    all five terms representable, so a "conditional" vote can no longer vanish from the donut.
+    all five terms representable, so a "conditional" vote can no longer vanish from the charts.
+  - the web vote overview is ONE encoding (ux-contract §10 W9): the proportional stance strip +
+    legend — no donut re-encoding the same distribution (the deck keeps its single donut card).
   - legacy stored uppercase tokens (SUPPORT/MAYBE/ABSTAIN/OPPOSE) chart identically via the aliases.
   - the per-persona score is the MEAN of the resolved stance values (−2..+2), its color the nearest
     scale value's — no token-specific coefficients, no label-keyword matching.
@@ -35,7 +37,7 @@ def test_record_council_normalizes_votes_onto_the_scale(store):
 
 
 def test_conditional_vote_appears_in_the_distribution():
-    # "conditional" — the canonical stance term! — used to be dropped from donut/legend/stacked bars
+    # "conditional" — the canonical stance term! — used to be dropped from legend/stacked bars
     tot, parts = _vote_parts(_sessions(["conditional"]))
     assert tot[1] == 1
     cnt, color, label = next(p for p in parts if p[0] == 1)
@@ -67,3 +69,13 @@ def test_vote_tally_keys_are_canonical_terms():
     tally = A.vote_tally([{"vote": "SUPPORT"}, {"vote": "conditional"}, {"vote": ""}])
     assert tally == {"support": 1, "conditional": 1, "neutral": 0, "skeptical": 0, "oppose": 0}
     assert list(tally) == ["support", "conditional", "neutral", "skeptical", "oppose"]   # +2 → −2
+
+
+def test_web_vote_overview_is_one_encoding():
+    # §10 W9 (decided): the web sentiment blocks carry ONE encoding — the proportional stance
+    # strip + its legend. The donut that painted the same distribution a second time is gone
+    # (the DECK keeps its single donut card — services/_synthesis_pptx, deliberately untouched).
+    from sonaloop.web._synthesis import _overview_html
+    html = str(_overview_html([(2, "#11a05a", "Support"), (1, "#c0392b", "Oppose")]))
+    assert 'class="stacked"' in html and 'class="legend"' in html
+    assert "donut" not in html and "conic-gradient" not in html

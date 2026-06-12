@@ -208,11 +208,34 @@ def get_survey(survey_id_or_slug: str, store: Store | None = None) -> dict[str, 
     return {**s, "response_count": store.count_survey_responses(s["id"])}
 
 
-def list_surveys(project_id: str | None = None, store: Store | None = None) -> list[dict[str, Any]]:
-    """List surveys (optionally per project), each with its live response_count."""
+def survey_respondent_personas(survey_id: str, store: Store | None = None) -> list[str]:
+    """The persona-sourced respondents of a survey (ux-contract §10 W11): the distinct
+    `persona:<id>` respondent keys of its imported responses, first-seen order. Anonymous
+    keys (street-panel `r_…`) carry no persona participation and are skipped — they have
+    no avatar to attribute."""
     store = store or Store()
-    return [{**s, "response_count": store.count_survey_responses(s["id"])}
-            for s in store.list_surveys(project_id)]
+    pids: list[str] = []
+    for r in store.list_survey_responses(survey_id):
+        key = str(r.get("respondent_key") or "")
+        if key.startswith("persona:"):
+            pid = key.split(":", 1)[1]
+            if pid and pid not in pids:
+                pids.append(pid)
+    return pids
+
+
+def list_surveys(project_id: str | None = None, store: Store | None = None) -> list[dict[str, Any]]:
+    """List surveys (optionally per project), each with its live response_count + the
+    persona-sourced respondents' crew (`personas`/`voices`, the council-node shape) so the
+    row surfaces can render the avatar group (ux-contract §10 W11)."""
+    store = store or Store()
+    from ._research import _persona_stubs
+    out = []
+    for s in store.list_surveys(project_id):
+        pids = survey_respondent_personas(s["id"], store=store)
+        out.append({**s, "response_count": store.count_survey_responses(s["id"]),
+                    "voices": len(pids), "personas": _persona_stubs(store, pids)})
+    return out
 
 
 # --------------------------------------------------------------------------- export (sendable form)

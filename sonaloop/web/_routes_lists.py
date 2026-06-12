@@ -98,7 +98,13 @@ def _projects_page(page: int = 1, q: str = "") -> str:
             h("span", {}, _cnt(p["notes"], "notes_one", t("notes"))) if p.get("notes") else None)
         # a project with open work and no driver is invisible-silent otherwise — badge it
         stalled = (p.get("run_state") or {}).get("state") == "stalled"
+        # the cohort avatar-group (ux-contract §10 W11): the project's persona participation
+        # leads the row meta — the ONE anatomy every participation surface renders
+        from . import ui
+        pids = p.get("persona_ids") or []
+        cohort = ui.avatar_group((store.get_persona(x) for x in pids[:4]), total=len(pids))
         meta = fragment(_label(t("stalled"), "var(--amber)") if stalled else None,
+                        cohort if cohort else None,
                         counts, raw(_star("project", p["id"], p["title"], f'/projects/{p["id"]}')))
         rows.append(_row(f'/projects/{p["id"]}', "projects", p["title"], meta, color="var(--accent)"))
     if not rows and not q and not store.list_personas():

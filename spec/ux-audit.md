@@ -1,6 +1,6 @@
 # UX Audit — Phase U rubric (newest on top: Round 4 → Round 3 → Round 2 → P5 → U1 history)
 
-## Round 4 (2026-06-12) — spacing conformance sweep (ux-contract §10 W1–W4)
+## Round 4 (2026-06-12) — spacing sweep + threading + attribution (ux-contract §10 W1–W5, W9, W11)
 
 ### Spacing conformance (W1)
 
@@ -199,6 +199,51 @@ instead of composing their own (−1 inline style).
 
 Gate: `uv run pytest -x -q` 744 passed; `make ux UPDATE=1` refreshed all 36 goldens
 (spacing shifts deliberate), follow-up `make ux` green.
+
+### W5 — council threading (Q→A as a file tree)
+
+Owner: answers should link to their question "über z.B. leichte Indentation, und dann
+runtergehende und leicht angewinkelt laufende Linien (wie bei einem Art File-System)".
+Implemented in the ONE statement renderer (`web/_render.py`, so council detail and every
+report embed share it): the `.qround-a` answer column indents one 28px token under the
+question banner and a pure-CSS connector draws the tree guides — each `.turn` card's
+`::before` is the ELBOW (border-left + border-bottom with a 10px `border-bottom-left-radius`
+corner, reaching up through the 12px gap, meeting the card exactly at the avatar's center
+line, y=25), and each non-last card's `::after` continues the 1px spine down its own height.
+The spine therefore descends from the question's underside, elbows into every answer, and
+ENDS curving into the last card; one answer degrades to a single elbow. Hairline
+`var(--line)` (dark-mode clean); connector geometry is drawing, not rhythm — the spacing
+gate stays at 0 flags.
+
+### W9 — one sentiment encoding (decided)
+
+The web's donut re-encoded the SAME vote distribution that the proportional stance strip
+already showed beside it. `_overview_html` (web/_synthesis.py) now renders the strip + its
+legend as the single encoding — donut, `.dnrow` and `.donut` CSS deleted from the web layer;
+council detail and the synthesis charts row inherit it. The DECK keeps its single donut card
+(`services/_synthesis_pptx` untouched), and the design-system `pie_chart` stays in the
+vendored library/catalogue. Pinned by `test_web_vote_overview_is_one_encoding`.
+
+### W11 — the persona-attribution rule
+
+Owner: "warum hat Artefakt 'prototype' keine Persona-Icons, obwohl da doch Sessions bei
+sind?" ONE rule app-wide now, implemented as ONE helper (`web/ui.avatar_group` — the
+vendored `.sl-avatar-group` cluster, max 4 avatars + a `.sl-avatar-group__more` "+n"
+overflow chip; rows at 18px, detail headers at 22px, byte-identical classes everywhere):
+wherever an artifact's DATA carries persona participation, the row AND the detail header
+render the group. Wired: council rows/opener (now with honest +n overflow) · report/synthesis
+rows + report cover (the voices' personas) · survey rows + detail (persona-sourced
+respondents via `services.survey_respondent_personas`) · prototype rows + detail (session
+drivers, BOTH kinds, via `services.prototype_participation` — also feeding the outline crew
+and the now-combined honest `n_sessions`) · session rows + detail (a group of one) · projects
+list rows (the cohort). The outline's local `.ol-crew` avatar overrides retired in favour of
+the one contract. NEGATIVE rule (documented in `avatar_group`, pinned by
+`tests/test_persona_attribution.py`): decision / hypothesis / note / asset carry no direct
+participation → no avatars, ever.
+
+Gate (W5/W9/W11): `uv run pytest -x -q` 751 passed (744 + the 7 new contract/encoding
+tests); spacing sweep 0 flags; `make ux UPDATE=1` (24 of 36 goldens shift deliberately:
+crew avatars on rows/covers, donut removal, council threading) + follow-up compare green.
 
 ## Round 3 (2026-06-12) — closing CRAFT audit of the §9 findings (recalibrated bar)
 
