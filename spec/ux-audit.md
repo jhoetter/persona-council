@@ -86,17 +86,28 @@ survives only in tooltips = the full quote, by design), `zz-vfilter.png`.
   stance-BARS card co-encode the same distribution on council detail and the synthesis charts
   row (the rail repeats the counts a third time on council). Owner taste call: keep the bars,
   fold the strip into the rail/legend — small renderer change, ~6 goldens shift.
-- **J2** Asset-detail redundancy pass: drop the mimetype from the H1 meta line (it rides the
-  file card), print the size once, drop the rail Type/Direction rows that echo the header
-  pills (the H3 precedent), and suppress the file card's empty-stage panel when the real
-  preview leads the page.
-- **J3** Activity feed: coalesce same-subject re-export events within a run (3× "Asset
-  attached · mittagspause-final-report.pptx" minutes apart → one row "×3"), beyond the
-  current adjacent-identical ×n.
-- **J4** Outline texture: nine consecutive NOTE eyebrows read as a noise column — consider
-  collapsing repeated kind-eyebrows within a contiguous same-kind run (show on first row).
-- **J5** Persona rail: long Role/Size values wrap 3–4 cramped lines — widen the value column
-  or tier the rail rows.
+- **J2** — **RESOLVED (2026-06-12)**: filename/size/mimetype now live ONLY on the file card
+  (no H1 sub line), the rail dropped its Type/Direction/Size echoes (Project · Files · Created
+  remain), provenance dropped its Direction row (the Generated/Received verb states it), and
+  the card's extension-badge stage is suppressed when the real preview leads the page —
+  the page reads once top to bottom (`pages/assets.py`, `_presence.asset_file_card(stage=)`;
+  verified on the showcase deliverable, `/tmp/ux/j2-asset.png`: mimetype 1×, size 1×).
+- **J3** — **RESOLVED (2026-06-12)**: within a run, same-key events coalesce across
+  interleaved rows (not just adjacent), a repeated asset attach reads as ONE quiet
+  "Asset re-exported ×n" row, and flat rows that become neighbors once the run rows fold
+  out coalesce too — the showcase triplet is now "Asset re-exported · mittagspause-final-
+  report.pptx ×3" + "Report recorded … ×3" (`pages/activity.py`, `evt_asset_reexported` de+en).
+- **J4** — **RESOLVED (2026-06-12)**: within a contiguous same-kind run of top-level outline
+  rows only the FIRST row shows its kind eyebrow (children/file rows break the run; the fixed
+  86px `.ol-ptag` keeps the grid) — the nine-NOTE column reads as one label + a quiet icon
+  column (`_graph_outline.mark_kind_runs`).
+- **J5** — **RESOLVED (2026-06-12)**: rail prop rows whose plain-text value exceeds the
+  inline measure TIER (label line, value at the rail's full 280px) via `.sl-prop--tier`,
+  scoped to the page rail only (`.rail:not(.rail--slide)`); short values keep the inline
+  Notion anatomy unchanged — persona Role/Industry/Size now read in 1–2 calm lines
+  (`web/_detail.py`).
+- **J1** stays OPEN — owner taste call on the strip-vs-bars co-encoding (do NOT change the
+  encoding without that decision).
 - F5 stands for /runs (deliberately minimal); G4 (avatar binaries in snapshots) stands.
 
 ### Gate (closing)

@@ -290,7 +290,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "evt_evidence_attached": "Evidenz angehängt", "evt_persona_grounded": "Persona geerdet",
         "evt_chat_recorded": "Chat erfasst", "evt_day_recorded": "Tag simuliert",
         "evt_prediction_scored": "Prognose bewertet", "evt_calibration_round_recorded": "Kalibrierungsrunde erfasst",
-        "evt_asset_attached": "Asset angehängt", "evt_council_recorded": "Council erfasst",
+        "evt_asset_attached": "Asset angehängt", "evt_asset_reexported": "Asset erneut exportiert", "evt_council_recorded": "Council erfasst",
         "evt_synthesis_recorded": "Report erfasst", "evt_project_created": "Projekt angelegt",
         "evt_run_finished": "Run beendet",
         # runs page + live topbar widget (ticket agents-running-panel)
@@ -683,7 +683,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "evt_evidence_attached": "Evidence attached", "evt_persona_grounded": "Persona grounded",
         "evt_chat_recorded": "Chat recorded", "evt_day_recorded": "Day simulated",
         "evt_prediction_scored": "Prediction scored", "evt_calibration_round_recorded": "Calibration round recorded",
-        "evt_asset_attached": "Asset attached", "evt_council_recorded": "Council recorded",
+        "evt_asset_attached": "Asset attached", "evt_asset_reexported": "Asset re-exported", "evt_council_recorded": "Council recorded",
         "evt_synthesis_recorded": "Report recorded", "evt_project_created": "Project created",
         "evt_run_finished": "Run finished",
         # runs page + live topbar widget (ticket agents-running-panel)

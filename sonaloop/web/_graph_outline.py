@@ -380,9 +380,12 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
         # The label column carries the row's KIND (§3.2 / the §4 mockup: icon · kind · title);
         # the phase heads the group, so nothing repeats. Child rows (indent ≥1) leave the column
         # empty — the tree spine says whose child they are — and carry their kind (e.g. the
-        # session fidelity) as a quiet trailing chip instead.
+        # session fidelity) as a quiet trailing chip instead. Within a contiguous same-kind run
+        # of top-level rows only the FIRST row shows the kind (round-4 J4: nine consecutive
+        # NOTE eyebrows read as a noise column); the fixed-width column keeps the alignment.
         cells = [lead,
-                 h("span", {"class_": "ol-ptag"}, "" if it["indent"] else it["kind"]),
+                 h("span", {"class_": "ol-ptag"},
+                   "" if it["indent"] or it.get("kind_run") else it["kind"]),
                  h("span", {"class_": "ol-title"}, it["title"]),
                  h("span", {"class_": "olth-pills"}, fragment(*pills)),
                  crew,
@@ -428,6 +431,22 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
 
     out = []
 
+    def mark_kind_runs(its: list[dict]) -> list[dict]:
+        """Round-4 J4: within a contiguous run of top-level rows of the SAME kind, only the
+        first row keeps its kind label (`kind_run` empties the column on the rest — the
+        fixed-width `.ol-ptag` keeps the grid). Indented children and file rows (which carry
+        no label column of their own) break the run, so a kind re-announces after them."""
+        marked, prev = [], None
+        for it in its:
+            if it["indent"] or it.get("rkind") in ("asset",):
+                prev = None
+            else:
+                if prev is not None and it["kind"] == prev:
+                    it = {**it, "kind_run": True}
+                prev = it["kind"]
+            marked.append(it)
+        return marked
+
     def cluster_rows(ris: list[dict]) -> list:
         """One phase group's rows; evidence assets sit in a quiet *Evidence* sub-group at the
         end of their phase (decision §7.2 — cheap, predictable, forward-compatible); deliverable
@@ -435,7 +454,7 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
         main = [it for it in ris if not it.get("evidence") and not it.get("deliverable")]
         ev = [it for it in ris if it.get("evidence")]
         deliv = [it for it in ris if it.get("deliverable")]
-        rows_html = [row(it) for it in main]
+        rows_html = [row(it) for it in mark_kind_runs(main)]
         if ev:
             rows_html.append(h("div", {"class_": "ol-rlabel"}, f'{t("asset_evidence_h")} ({len(ev)})'))
             rows_html += [row(it) for it in ev]
@@ -449,7 +468,8 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
     inner = []
     if not pmeta:
         ris = sorted(items, key=lambda it: (it["po"], it["order"]))
-        inner.append(h("div", {"class_": "ol-flat"}, fragment(*(row(it) for it in ris))))
+        inner.append(h("div", {"class_": "ol-flat"},
+                       fragment(*(row(it) for it in mark_kind_runs(ris)))))
     else:
         po_label = {po: lab for (po, lab) in pmeta.values()}
         for r in range(nrounds):

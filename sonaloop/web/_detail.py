@@ -23,6 +23,17 @@ register_css(".sl-page-header__top .eyebrow{margin:0}")
 register_css(".rail--slide{position:static;margin:20px 0 28px;padding:0 0 20px;"
              "border-bottom:1px solid var(--line-2)}")
 
+# Round-4 J5: in the narrow 280px page rail a LONG value beside the 8.5rem label column wraps
+# 3-4 cramped lines — rows whose plain-text value can't read inline TIER instead (label line,
+# then the value at the rail's full width). Inline rows keep the Notion anatomy unchanged; the
+# wide slide-over props card never tiers (the value fits beside the label there).
+register_css(".rail:not(.rail--slide) .sl-prop--tier{flex-wrap:wrap;row-gap:4px}"
+             ".rail:not(.rail--slide) .sl-prop--tier .sl-prop__v{flex-basis:100%}")
+
+# A plain-string value longer than this reads cramped beside the rail's label column
+# (~21 chars/line at the rail width) — the tier threshold for _properties_html.
+_TIER_CHARS = 28
+
 
 def detail_eyebrow(kind: str, pills=()) -> str:
     """The first line of EVERY detail header (ux-contract §8.2): the kind eyebrow ("COUNCIL",
@@ -84,8 +95,11 @@ def _properties_html(rows, aside: bool = False) -> str:
     """Notion-style QUIET properties (ux-contract §9 V5): icon + label + value per row over
     the vendored frameless `.sl-props--quiet` contract — no card box, muted label column,
     regular-weight values, gap-token rhythm. Skips empty values. aside=True renders a bare
-    section (h4 + rows) to sit inside the detail aside / slide-over flow."""
-    proprows = [h("div", {"class_": "sl-prop"},
+    section (h4 + rows) to sit inside the detail aside / slide-over flow. Long plain-text
+    values tier in the narrow page rail (round-4 J5, the `--tier` rule above)."""
+    proprows = [h("div", {"class_": "sl-prop"
+                          + (" sl-prop--tier" if isinstance(val, str) and len(val) > _TIER_CHARS
+                             else "")},
                   h("span", {"class_": "sl-prop__k"}, raw(_icon(ic)), lbl),
                   h("span", {"class_": "sl-prop__v"}, val))            # text auto-escaped; h-built links (Safe) kept
                 for ic, lbl, val in rows if val not in (None, "", "—")]

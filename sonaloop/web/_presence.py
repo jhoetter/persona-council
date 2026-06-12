@@ -445,17 +445,19 @@ def file_card(asset: dict, store=None, *, row: bool = False, href: str | None = 
                raw(_file_action(asset))))
 
 
-def asset_file_card(asset: dict) -> str:
+def asset_file_card(asset: dict, *, stage: bool = True) -> str:
     """The asset detail page's hero file card (V9): the `.sl-file` card front and center —
-    extension badge stage (the image preview above already shows the pixels), filename+ext
-    title, size · media-type meta. The WHOLE card is the one download/open affordance
-    (download for deliverables, open-in-tab for evidence)."""
+    extension badge stage, filename+ext title, size · media-type meta (the page's ONE place
+    for both, round-4 J2). The WHOLE card is the one download/open affordance (download for
+    deliverables, open-in-tab for evidence). `stage=False` drops the extension-badge stage
+    when the real preview (image / first-page render) already leads the page above the card
+    (J2: no empty PPTX stage right under the rendered title slide)."""
     is_out = asset_direction(asset) == "out"
     link = ({"href": asset.get("url", "#"), "download": asset.get("filename", "")} if is_out
             else {"href": asset.get("url", "#"), "target": "_blank", "rel": "noopener"})
     meta = " · ".join(x for x in (asset_size(asset), asset.get("media_type", "")) if x)
     return h("a", {"class_": "sl-file", **link},
-             raw(file_stage(asset, thumb=False)),
+             raw(file_stage(asset, thumb=False)) if stage else None,
              h("div", {"class_": "sl-file__body"},
                h("div", {"class_": "sl-file__info"},
                  h("span", {"class_": "sl-file__name"}, asset.get("filename", "")),

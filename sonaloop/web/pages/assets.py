@@ -21,7 +21,7 @@ from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .. import ui
 from .._presence import (
     asset_direction, asset_direction_pill, asset_file_card, asset_kind_pill,
-    asset_preview_html, asset_size, asset_source_chip, file_card,
+    asset_preview_html, asset_source_chip, file_card,
 )
 
 
@@ -37,8 +37,9 @@ def find_asset(store, asset_id: str) -> tuple[dict | None, dict | None]:
 
 def _provenance_section(a: dict, store) -> str:
     """The PROVENANCE block (§8.3): received/generated timestamp · source resolved as a chip ·
-    direction · the supersede chain when recorded · notes — the sl-props row contract, so
-    provenance reads like structure, not prose."""
+    the supersede chain when recorded · notes — the sl-props row contract, so provenance reads
+    like structure, not prose. The Generated/Received verb already states the direction; the
+    header pill is the page's ONE direction encoding (round-4 J2: no repeats)."""
     is_out = asset_direction(a) == "out"
     when = ui.fmt_ts(a.get("created_at") or "")
     chain = a.get("supersedes") or []
@@ -49,7 +50,6 @@ def _provenance_section(a: dict, store) -> str:
     rows = [
         ("dot", t("asset_generated") if is_out else t("asset_received"), when),
         ("link", t("asset_source"), raw(asset_source_chip(a, store))),
-        ("exchange", t("direction_h"), raw(asset_direction_pill(a))),
         ("download", t("asset_supersedes"), chain_html),
         ("panel", t("notes_h"), a.get("notes", "")),
     ]
@@ -123,8 +123,13 @@ def register_assets(app) -> None:
     def asset_detail(asset_id: str) -> str:
         """An asset's REAL detail page (UX U8 — the U7 anatomy): ASSET eyebrow + kind/direction
         pills, image preview / file card with download, the text excerpt for documents, the
-        PROVENANCE block (when received/generated, source chip, direction, supersede chain,
-        notes), and the properties rail (project · kind · direction · size · created)."""
+        PROVENANCE block (when received/generated, source chip, supersede chain, notes), and
+        the properties rail (project · files lens · created).
+
+        Round-4 J2 (ux-audit): the page reads ONCE top to bottom — filename, size and
+        mimetype live only on the file card (no H1 sub line), the rail carries no
+        Type/Direction/Size rows (the header pills + the card state them), and the card
+        drops its extension-badge stage when the real first-page preview leads the page."""
         store = Store()
         proj, a = find_asset(store, asset_id)
         if a is None:
@@ -132,12 +137,12 @@ def register_assets(app) -> None:
                            _empty_state(t("assets_h"), t("runtime_maybe_cleared"), icon="clipboard"),
                            store, active="library")
         title = a.get("title") or a.get("filename", "")
-        is_out = asset_direction(a) == "out"
-        sub = f'{a.get("filename", "")} · {asset_size(a)} · {a.get("media_type", "")}'
         excerpt = (a.get("text_excerpt") or "").strip()
+        preview = asset_preview_html(a)
         body = fragment(
-            raw(asset_preview_html(a)),
-            h("div", {"class_": "sec", "id": "sec-file"}, raw(asset_file_card(a))),
+            raw(preview),
+            h("div", {"class_": "sec", "id": "sec-file"},
+              raw(asset_file_card(a, stage=not preview))),
             (h("div", {"class_": "sec", "id": "sec-excerpt"},
                h("h2", {}, t("asset_excerpt_h")),
                ui.clamp(excerpt, threshold=ui.SECTION_CLAMP)) if excerpt else None),
@@ -149,9 +154,6 @@ def register_assets(app) -> None:
         prop_rows = [
             ("projects", t("project"), proj_link),
             ("file", t("files_h"), files_link),
-            ("square", t("type_h"), t("asset_kind_" + (a.get("kind") or "file"))),
-            ("exchange", t("direction_h"), t("asset_dir_out") if is_out else t("asset_dir_in")),
-            ("database", t("size"), asset_size(a)),
             ("dot", t("created"), ui.fmt_date(a.get("created_at") or "")),
         ]
         return detail_page(
@@ -161,7 +163,7 @@ def register_assets(app) -> None:
                     (title, None)],
             icon="file", kind=t("asset_kind"),
             pills=[asset_kind_pill(a), asset_direction_pill(a)],
-            sub=sub, body=body, prop_rows=prop_rows,
+            body=body, prop_rows=prop_rows,
             rail_sections=([("sec-excerpt", t("asset_excerpt_h"))] if excerpt else [])
                           + [("sec-provenance", t("provenance_h"))],
             star=("asset", a["id"], title[:60], f'/assets/{a["id"]}'))

@@ -10,7 +10,9 @@ project, timestamped between the run's start and finish (the bus rows are lean a
 no run id, so the run CONTEXT is derived from the runs journal) — fold under one
 collapsible run header row (the outline's details/summary idiom); everything recorded
 outside a run stays a flat row. Identical-neighbor coalescing (×n, audit F4) keeps
-working inside and outside the groups.
+working inside and outside the groups; INSIDE a run, same-key events also coalesce
+across interleaved rows, and a repeated asset attach reads as ONE quiet "re-exported"
+row (round-4 J3 — the re-export triplet).
 """
 from __future__ import annotations
 
@@ -81,10 +83,16 @@ def register_activity(app) -> None:
                 groups[-1]["n"] += 1
             else:
                 groups.append({"key": key, "ev": ev, "n": 1, "run": run})
+        total = sum(g["n"] for g in groups)   # raw event count, BEFORE the J3 folding below
 
         def _row(g: dict) -> str:
             ev = g["ev"]
             title = labels.get(ev["event"], ev["event"])
+            # A coalesced re-export (round-4 J3): the same asset attached n× — superseded and
+            # re-attached by a re-export — reads as ONE quiet verb, not n identical "attached"
+            # rows; the ×n badge keeps the honest count.
+            if ev["event"] in ("asset.attached",) and g["n"] > 1:
+                title = t("evt_asset_reexported")
             label = ev["data"].get("label") or ""
             # Drop a detail label the event title already states ("Run finished · finished") —
             # text discipline, ux-contract C6 (ux-audit P5 finding).
@@ -102,20 +110,41 @@ def register_activity(app) -> None:
         # ONE header per run: all of a run's events fold under a single group, anchored at
         # the run's newest event (an unattributable event — e.g. a bus row without a
         # project id — interleaving the stretch must not split the run into fragments).
+        # Within a run the coalescing goes BEYOND adjacent-identical (round-4 J3): a re-export
+        # emits the same asset/synthesis event minutes apart with other rows interleaved —
+        # same-key groups fold into their newest occurrence (×n), so one action reads as one row.
         by_run: dict[str, list[dict]] = {}
         for g in groups:
             rid = (g["run"] or {}).get("run_id")
             if rid:
-                by_run.setdefault(rid, []).append(g)
-        rows, rendered = [], set()
+                bucket = by_run.setdefault(rid, [])
+                same = next((x for x in bucket if x["key"] == g["key"]), None)
+                if same is not None:
+                    same["n"] += g["n"]            # the newest occurrence carries the row
+                else:
+                    bucket.append(g)
+        # The render sequence: each run appears ONCE (anchored at its newest event). Flat rows
+        # that become neighbors once a run's rows fold out of the stream coalesce too (J3 —
+        # the re-recorded synthesis of a re-export loop straddles the run's asset events in
+        # the raw stream, so plain neighbor-coalescing never saw the rows side by side).
+        seq: list[tuple[dict | None, dict]] = []
+        rendered: set[str] = set()
         for g in groups:
             run = g["run"]
-            if not run:
+            if run:
+                if run["run_id"] not in rendered:
+                    rendered.add(run["run_id"])
+                    seq.append((run, g))
+                continue
+            if seq and seq[-1][0] is None and seq[-1][1]["key"] == g["key"]:
+                seq[-1][1]["n"] += g["n"]
+                continue
+            seq.append((None, g))
+        rows = []
+        for run, g in seq:
+            if run is None:
                 rows.append(_row(g))
                 continue
-            if run["run_id"] in rendered:
-                continue
-            rendered.add(run["run_id"])
             bucket = by_run[run["run_id"]]
             n_ev = sum(x["n"] for x in bucket)
             state = (t("runs_finished_h") if run["status"] == "finished" else
@@ -131,5 +160,5 @@ def register_activity(app) -> None:
                                          else "var(--green)")))),
                           fragment(*(_row(x) for x in bucket))))
         return _list_page(store, title=t("activity_h"), lead=t("activity_lead"), rows=rows,
-                          count=sum(g["n"] for g in groups),
+                          count=total,
                           empty_icon="activity", empty_msg=t("no_activity"), active="activity")
