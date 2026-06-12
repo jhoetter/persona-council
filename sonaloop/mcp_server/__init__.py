@@ -88,6 +88,12 @@ def build_server():
     register_calibration(mcp)
     register_flows(mcp)
     register_examples(mcp)
+
+    # Directory gate: every core tool gets its title + read-only/destructive/open-world
+    # hints from the central registry (one place, CI-linted by tests/test_mcp_annotations.py).
+    from ._annotations import apply_annotations
+    apply_annotations(mcp)
+
     register_prompts(mcp)
     _load_tool_extensions(mcp)
 
