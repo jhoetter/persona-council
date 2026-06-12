@@ -17,7 +17,8 @@ def register_plan(mcp):
         """THE ENTRY POINT. Create a project + seed its research plan (methodology -> analyze/act/verify
         scaffolding; none -> one dischargeable root frame task); the goal is the How-Might-We. NEXT:
         start_run(project_id) then loop run_step. Read the `sonaloop://guide/research` resource
-        (research_guide) for the full canonical path. (Personas should exist first — see list_personas.)"""
+        (research_guide) for the full canonical path. (Personas should exist first — see list_personas;
+        a thin cohort pulls from the 300+-persona catalog via catalog_search/catalog_recommend → catalog_pull.)"""
         t = time.perf_counter()
         return _env("start_project", services.start_project(title, goal, methodology, persona_ids, description), t)
 

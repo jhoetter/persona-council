@@ -12,7 +12,11 @@ SERVER_VERSION = "0.2.0"
 _NEXT: dict[str, dict[str, Any]] = {
     "brief_persona": {"name": "record_persona", "reason": "persist the profile JSON you authored"},
     "list_examples": {"name": "load_example", "reason": "load a shipped example project to explore a fully populated inspector"},
-    # --- persona catalog (sonaloop-data): browse -> (recommend) -> pull into the store ---
+    # --- persona catalog (sonaloop-data): browse -> (recommend) -> pull into the store.
+    #     list_personas and assess_coverage lead INTO the cluster, so an agent that needs
+    #     a (better) cohort discovers the 300+ ready-made personas instead of authoring blind. ---
+    "list_personas": {"name": "catalog_search", "reason": "cohort thin or empty? browse 300+ ready-made catalog personas before authoring new ones"},
+    "assess_coverage": {"name": "catalog_recommend", "reason": "fill the detected gaps from the curated catalog (deterministic set recommendation)"},
     "catalog_search": {"name": "catalog_pull", "reason": "pull the chosen personas/pack into this store with provenance"},
     "catalog_recommend": {"name": "catalog_pull", "reason": "pull the recommended set by slug into this store"},
     "catalog_status": {"name": "catalog_pull", "reason": "refresh the behind personas (force=True for locally modified ones)"},
@@ -135,8 +139,10 @@ _ENTRY_TOOLS = {
 
 _ORIENTATION = (
     "You're new here — the database is empty. First steps: 1) create a research project "
-    "(start_project(title, goal) — the front door for any research question), 2) author 2-4 "
-    "personas (brief_persona → you write the profile JSON → record_persona), 3) run a first "
+    "(start_project(title, goal) — the front door for any research question), 2) get a cohort: "
+    "the curated catalog has 300+ ready-made personas with lived memory — catalog_search / "
+    "catalog_recommend → catalog_pull — and authoring from scratch (brief_persona → you write "
+    "the profile JSON → record_persona) is for what the catalog lacks, 3) run a first "
     "council (brief_council → author each statement in character → record_council). The full "
     "operating contract + first-run recipe is the sonaloop://guide/catalogue resource (or "
     "`sonaloop guide`); start `sonaloop-web` so the user can watch at http://127.0.0.1:8787."

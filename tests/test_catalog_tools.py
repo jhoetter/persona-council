@@ -414,6 +414,48 @@ def test_status_uses_local_checkout_timestamps(monkeypatch, tmp_path):
 
 
 # --------------------------------------------------------------------------- #
+# the avatar_url escape hatch (ticket avatar-policy-lean-distribution)         #
+# --------------------------------------------------------------------------- #
+
+def test_pull_prefers_manifest_avatar_url_over_repo_path(monkeypatch, tmp_path):
+    """A roster entry with an absolute avatar_url wins over personas/<slug>/avatar.png,
+    so avatars can move to release assets/CDN without breaking the pull contract."""
+    _no_data_pkg(monkeypatch)
+    files, personas = _mini_catalog(Store(), ["Anna Architect"])
+    slug = personas[0]["slug"]
+    cdn = "https://cdn.example/avatars/anna.png"
+    manifest = json.loads(files["manifest.json"])
+    manifest["personas"][0]["has_avatar"] = True
+    manifest["personas"][0]["avatar_url"] = cdn
+    files["manifest.json"] = json.dumps(manifest).encode()
+
+    fetched: list[str] = []
+    def fake_fetch(url: str) -> bytes | None:
+        fetched.append(url)
+        if url == cdn:
+            return b"PNG-FROM-CDN"
+        return files.get(url.split("/", 6)[-1])
+    monkeypatch.setattr(cat, "_fetch_bytes", fake_fetch)
+
+    cat.catalog_pull(persona_slugs=[slug], store=Store(tmp_path / "dest.db"))
+    assert cdn in fetched
+    assert not any(u.endswith(f"personas/{slug}/avatar.png") for u in fetched)
+
+
+# --------------------------------------------------------------------------- #
+# discoverability guards (ticket sonaloop/catalog-discoverability)             #
+# --------------------------------------------------------------------------- #
+
+def test_catalog_is_discoverable_from_the_normal_flow():
+    """An agent that needs personas must be led INTO the catalog cluster: the new-session
+    orientation names it, and list_personas/assess_coverage point at it in the DAG."""
+    from sonaloop.mcp_server._env import _NEXT, _ORIENTATION
+    assert "catalog_search" in _ORIENTATION and "catalog_pull" in _ORIENTATION
+    assert _NEXT["list_personas"]["name"] == "catalog_search"
+    assert _NEXT["assess_coverage"]["name"] == "catalog_recommend"
+
+
+# --------------------------------------------------------------------------- #
 # the MCP surface itself                                                       #
 # --------------------------------------------------------------------------- #
 

@@ -8,7 +8,7 @@ from typing import Any
 
 from .avatar import generate_persona_avatar
 from .config import load_env
-from . import services, _cli_hooks, _cli_substrate, _cli_data, _cli_feedback
+from . import services, _cli_hooks, _cli_substrate, _cli_data, _cli_feedback, _cli_catalog
 
 
 def _pkg_version() -> str:
@@ -84,8 +84,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("patch_json")
     p.add_argument("--reason", default="cli update")
 
-    p = sub.add_parser("persona-refresh")
-    p.add_argument("persona_id")
+    p = sub.add_parser("persona-refresh", help="Re-pull a catalog persona from its source "
+                                               "(drift-safe; --force overwrites local edits).")
+    p.add_argument("persona_id"); p.add_argument("--force", action="store_true")
+    _cli_catalog.add_catalog_parsers(sub)     # `sonaloop catalog-*`: browse/recommend/status/pull
 
     p = sub.add_parser("avatar-generate")
     p.add_argument("persona_id")
@@ -466,7 +468,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "persona-update":
             _print(services.update_persona(args.persona_id, json.loads(args.patch_json), args.reason))
         elif args.command == "persona-refresh":
-            _print(services.refresh_persona_from_source(args.persona_id))
+            _print(services.refresh_persona_from_source(args.persona_id, force=args.force))
+        elif args.command in _cli_catalog.COMMANDS:
+            _print(_cli_catalog.run_catalog_command(args))
         elif args.command == "avatar-generate":
             _print(generate_persona_avatar(args.persona_id, args.style))
         elif args.command == "simulate-clear":

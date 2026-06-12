@@ -75,6 +75,8 @@ def test_clone_panel_is_thin_with_recommendations(store):
     # The recommendation names a dimension and the dominant value to avoid.
     rec = out["recommendations"][0]
     assert rec["dimension"] in [d["id"] for d in _coverage.COVERAGE_DIMENSIONS] or rec["dimension"] is None
+    # Gaps answer with the catalog pointer in-band (the curated catalog is the fastest fill).
+    assert "catalog_recommend" in out["catalog_hint"]
 
 
 def test_panel_too_small_is_a_gap(store):

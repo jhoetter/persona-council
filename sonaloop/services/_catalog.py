@@ -376,7 +376,12 @@ def _builtin_pull(store: Store, persona_slugs: list[str] | None, pack: str | Non
                     data = (json.dumps(profile, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
                 (pdir / name).write_bytes(data)
             if roster[slug].get("has_avatar"):
-                avatar = _get(ref, f"personas/{slug}/avatar.png")
+                # avatar_url escape hatch (ticket sonaloop-data/avatar-policy-lean-distribution):
+                # an absolute URL on the roster entry wins over the in-repo path, so avatars can
+                # move to release assets/CDN later without breaking any consumer.
+                url = roster[slug].get("avatar_url")
+                avatar = (_fetch_bytes(url) if url
+                          else _get(ref, f"personas/{slug}/avatar.png"))
                 if avatar is not None:
                     (pdir / "avatar.png").write_bytes(avatar)
         try:

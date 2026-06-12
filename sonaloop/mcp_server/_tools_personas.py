@@ -14,7 +14,10 @@ def register_personas(mcp):
     def brief_persona(description: str, segment_hint: str | None = None, evidence: str | None = None) -> dict[str, Any]:
         """Gather the prompt + frame to AUTHOR one persona profile from a source
         description. You write the profile JSON from `instructions`, then call
-        record_persona. Detects/persists the content language from the description."""
+        record_persona. Detects/persists the content language from the description.
+        BEFORE authoring: the curated catalog has 300+ ready-made personas with lived
+        memory (catalog_search / catalog_recommend → catalog_pull) — author only what
+        the catalog does not already cover."""
         t = time.perf_counter()
         return _env("brief_persona", services.brief_persona(description, segment_hint, evidence), t)
 
@@ -124,6 +127,7 @@ def register_personas(mcp):
         research-project id (its persona_ids are the panel; override with persona_ids). With a `job` taxonomy
         id the panel is ALSO checked against that Job's declared coverage (min_personas + persona_axes).
         Returns an indicator (thin|ok|strong), per-dimension distribution + flags, concrete gaps, and
-        recommended archetypes to add. No prose generation, no persistence."""
+        recommended archetypes to add — plus a `catalog_hint` when gaps exist (catalog_recommend can
+        usually fill them from 300+ ready-made personas). No prose generation, no persistence."""
         t = time.perf_counter()
         return _env("assess_coverage", services.assess_coverage(project, job, persona_ids), t)

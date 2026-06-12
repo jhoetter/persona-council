@@ -248,10 +248,11 @@ def _detect_gaps(dims: list[dict[str, Any]], panel: int, declared: dict[str, Any
 
 def _recommend_archetypes(dims: list[dict[str, Any]], gaps: list[dict[str, Any]],
                           declared: dict[str, Any] | None) -> list[dict[str, Any]]:
-    """Deterministic gap-filling suggestions. There is no persona/archetype CATALOG in the repo (the host
-    authors personas via brief_persona/record_persona), so we suggest archetype DESCRIPTIONS derived from the
-    detected gaps — a concrete "add a persona unlike X on dimension Y" the host can turn into a real persona.
-    Each carries the dimension, the value to AVOID (the dominant/only one), and a host-ready description."""
+    """Deterministic gap-filling suggestions: archetype DESCRIPTIONS derived from the detected gaps — a
+    concrete "add a persona unlike X on dimension Y". Each carries the dimension, the value to AVOID (the
+    dominant/only one), and a host-ready description. The host fills them from the curated catalog first
+    (catalog_recommend/catalog_pull — 300+ ready-made personas; assess_coverage answers with the matching
+    `catalog_hint`) and authors via brief_persona/record_persona only what the catalog lacks."""
     by_id = {d["dimension"]: d for d in dims}
     recs: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -356,5 +357,11 @@ def assess_coverage(project: str, job: str | None = None,
         "dimensions": dims,
         "gaps": gaps,
         "recommendations": recommendations,
+        # The fastest gap-filler: the curated catalog (300+ ready-made personas). The hint is
+        # in-band so a host that only reads the assessment still discovers the pull path.
+        **({"catalog_hint": "catalog_recommend({'facets': {...}, 'n': <missing>}) finds matching "
+                            "ready-made personas in the curated catalog; catalog_pull imports them "
+                            "— author new personas only for gaps the catalog cannot fill"}
+           if gaps else {}),
         "declared_coverage": declared,
     }

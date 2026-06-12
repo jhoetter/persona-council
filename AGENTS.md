@@ -11,8 +11,10 @@ validate, or position a concept/segment — **do not answer it from your own kno
 when the message is JUST the bare question with no other instruction, that prompt is the
 assignment to run a Sonaloop research project end-to-end:
 
-1. **Cohort**: `list_personas` — reuse a fitting cohort or author one (`brief_persona` →
-   `record_persona`). If the cohort has no simulated memory (`start_project` warns), deepen it
+1. **Cohort**: `list_personas` — reuse a fitting cohort. Thin or empty? The curated catalog
+   has 300+ ready-made personas with lived memory: `catalog_search` / `catalog_recommend` →
+   `catalog_pull`. Author from scratch (`brief_persona` → `record_persona`) only what the
+   catalog lacks. If the cohort has no simulated memory (`start_project` warns), deepen it
    FIRST (simulate days/months) — councils are only as deep as the lives behind them.
 2. **Project**: `start_project(title, goal=<the question>, methodology=…, persona_ids=[…])`.
 3. **Governed loop**: `start_run(project_id)`, then loop `run_step(run_id)` — execute each
@@ -67,6 +69,13 @@ The CLI and the MCP tools are the SAME service surface — including the governe
 `run-start` / `run-step` / `run-checkpoint` / `run-critic-round` / `run-finish` / `run-journal`.
 
 ```bash
+# Cohort: check the curated catalog FIRST (300+ ready-made personas with lived memory),
+# author from scratch only what it lacks.
+sonaloop catalog-search --query "restaurant"
+sonaloop catalog-recommend --keywords pflege,schicht -n 5
+sonaloop catalog-pull --personas anna-petersen,ali-hassan     # drift-safe; --force overwrites local edits
+sonaloop catalog-status                                       # the git fetch && git status of the catalog
+
 # Persona creation is host-authored (no server-side text generation):
 # gather -> you author the profile JSON -> persist.
 sonaloop brief-persona "Restaurantleiterin in Deutschland, mittelgroßes Team, plant Schichten, Lieferanten, Reklamationen und Tagesabschluss, nutzt Kassensystem, Dienstplan, E-Mail und Telefon."
