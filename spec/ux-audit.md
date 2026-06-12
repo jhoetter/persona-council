@@ -2,6 +2,56 @@
 
 ## Round 5 (2026-06-12) — typography & reading density (ux-contract §11 T1–T5)
 
+### Round 5 finish (2026-06-12, micro-pass) — the three synthesis craft remainders
+
+The Round 5 re-score left synthesis detail at CR 8.5 with exactly three named remainders.
+All three fixed (web/_synthesis.py; verified from pixels on the showcase synthesis
+`synthesis_288f028bbfe0596c`, /tmp/ux/t6-synthesis.png):
+
+1. **Lone half-width charts card → the card IS the row.** Since J1 the charts row renders
+   exactly ONE insight card, but it still sat in the old 2-col `.insights` grid — half-width
+   beside a column of whitespace. The grid (dead structure) retired; the single card spans
+   the full content column, the stance bars scale to the document measure. Pinned:
+   `'class="insights"' not in page`.
+2. **Verdict headline no longer hard-truncates ("…").** `_display_title(head_text, 180)`
+   cut the first key_problem mid-sentence with an ellipsis. New `_headline`: short text
+   renders whole; long text ends at the LAST clean clause boundary inside the cap — sentence
+   end before an uppercase start (the `_verdict_split` abbreviation guard carries over:
+   '+40 Min. wegen …' never splits), colon/semicolon, or a spaced dash — and the full
+   finding still renders verbatim in its findings section below, so nothing is lost. With
+   no boundary at all the whole headline wraps within the prose measure (`.sl-card__title`
+   now carries `max-width:var(--measure-prose)`) instead of ellipsizing. The golden's
+   headline now ends on its em-dash clause ("… the trust segments' money"), three measured
+   lines, no '…'.
+3. **Councils named ONCE per page.** The duplication: the per-council comparison rows
+   (sentiment breakdown block) and the "Referenced councils (evidence)" list named the same
+   three councils twice. Merged into the reference rows — `C# · prompt · [thin stance
+   strip] · n P · date` — which are now a plain block (no longer a collapsed `<details>`:
+   hiding them would hide the page's one distribution comparison). The strip renders only
+   when **>1 cited councils carry stance data** (N different distributions = a comparison;
+   a lone strip would re-encode the chain bars above — J1 honored). `_per_council_html`
+   deleted, the `per_council` i18n key retired, `_sentiment_section(chain=)` keeps only the
+   scope wording; row prompts ellipsize at the row edge via CSS (the old hard `[:96]` cut
+   landed mid-word once the rows widened).
+
+**Honest re-score (same 7-dimension rubric):**
+
+| screen | OR | RP | HD | TX | KB | HN | CR | avg | one-line justification |
+|---|---|---|---|---|---|---|---|---|---|
+| Synthesis detail | 9 | 9 | 9 | 9 | 9 | 9 | 9 | **9.0** | The three Round-5 remainders verified fixed from pixels: balanced full-width bars card, verdict lead ends on a clause boundary and wraps in the measure, councils named once (the citation rows carry the comparison). CR 9, not higher: the page still says "Sentiment" three times down its length (section label, card title, per-persona block title — wording, not data, and each block shows different content), and reference-row prompts ellipsize as rows must. |
+
+(Council detail untouched this pass — stays 9.1. No other screen re-judged.)
+
+**Gate:** `uv run pytest -x -q` **765 passed, 3 skipped** (763 + 2 new pins:
+`test_synthesis_page_names_each_cited_council_once`,
+`test_verdict_headline_never_ellipsizes_mid_sentence`). `scripts/ux_spacing.py` **0 flags** ·
+`scripts/ux_type.py` **0 flags** (exemptions none, both). `make ux UPDATE=1` + follow-up
+`make ux`: **all 36 goldens green** — synthesis + the slide-over screens shifted
+deliberately; activity/project screens absorbed the Jun-11→12 relative-date rollover the
+harness documents. Ratchets unchanged: STYLE_BASELINE=35, frozen class whitelist (the new
+`.ref-bar`/`.ref-meta` live in _synthesis.py's co-located CSS; `.insights`, `.crow` rules
+deleted).
+
 ### Type conformance (T1)
 
 > Method: `scripts/ux_type.py` — the DOM-measured typography sweep, sibling of the spacing

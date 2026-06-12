@@ -8,7 +8,7 @@ from ..storage import Store
 from ._i18n import t
 from ._components import (
     _esc, _icon, _avatar, _label, _md, _md_inline, _srcchips, _prose, _rec_row_n,
-    _effort_impact, _star, _study_lead, _display_title,
+    _effort_impact, _star, _study_lead,
 )
 from ._render import render_findings, render_statement, render_statements
 from .. import artifacts as _A
@@ -20,9 +20,9 @@ from ._html import h, raw, fragment, register_css
 # Co-located CSS (spec/roadmap.md R3): analytics charts + voices/Stimmen cockpit.
 register_css(r"""
 /* ---- analytics (Linear-style insight cards) ---- */
-.insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* Since §11 T5 (J1) the charts row is ONE insight card; it spans the full content column —
+   the old 2-col .insights grid left the lone card beside a column of whitespace (Round 5). */
 .insight{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:16px}
-.insight.wide{grid-column:1 / -1}
 .insight h3{margin:0 0 2px;font-size:var(--t-body)}
 .ihint{color:var(--muted);font-size:var(--t-sm);margin:0 0 14px}
 .kpi{display:flex;align-items:baseline;gap:6px;margin:2px 0 10px}
@@ -38,9 +38,6 @@ register_css(r"""
 .brow .btrack{height:9px;border-radius:var(--radius-sm);background:var(--line-2);overflow:hidden}
 .brow .btrack i{display:block;height:100%}
 .brow .bval{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
-.crow{display:grid;grid-template-columns:1fr 150px 96px;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2)}
-.crow:last-child{border-bottom:0}.crow .ct{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
-.crow .cn{text-align:right;color:var(--muted);font-size:var(--t-sm)}
 /* per-persona enthusiasm rows (V3): plain rows — avatar · name · diverging bar · score.
    The bar is zero-CENTERED; its length encodes |score|, its color the stance sign. */
 .prow{display:grid;grid-template-columns:150px 1fr 42px;gap:12px;align-items:center;padding:6px 0}
@@ -56,8 +53,6 @@ register_css(r"""
 .area .fl{fill:var(--accent);opacity:.10}
 .area .dot{fill:var(--accent)}
 .axis{display:flex;justify-content:space-between;color:var(--muted);font-size:var(--t-xs);margin-top:4px}
-@media (max-width:760px){.insights{grid-template-columns:1fr}}
-
 """)
 
 # Co-located CSS (spec/roadmap.md R3): the synthesis report styles (was _SYN_STYLE in body).
@@ -79,6 +74,8 @@ register_css(r"""
 .ref-row:hover{border-color:var(--accent)}
 .ref-n{font-weight:700;color:var(--accent);font-size:var(--t-sm);flex:none;width:26px}
 .ref-t{flex:1;font-size:var(--t-body);line-height:1.35;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ref-bar{flex:0 0 150px}
+.ref-meta{flex:none;color:var(--muted);font-size:var(--t-sm);line-height:1.5;font-variant-numeric:tabular-nums}
 .ref-go{flex:none;color:var(--muted)}
 .ccard{border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 16px;background:var(--panel);display:flex;flex-direction:column;gap:9px}
 .cc-top{display:flex;align-items:center;gap:8px}
@@ -101,7 +98,7 @@ register_css(r"""
    carries the LEAD layer of the §11 T3 hierarchy: headline finding at t-lg/600, the opening
    sentences at the t-prose reading voice, wrapped at the prose measure. */
 .syn-verdict{margin:8px 0 24px}
-.syn-verdict .sl-card__title{font-size:var(--t-lg);line-height:1.35;margin-top:.5em}
+.syn-verdict .sl-card__title{font-size:var(--t-lg);line-height:1.35;margin-top:.5em;max-width:var(--measure-prose)}
 .syn-verdict .sl-card__body{margin-top:.4em;font-size:var(--t-prose);line-height:1.6}
 .syn-verdict .sl-card__body p{margin:0;max-width:var(--measure-prose)}
 /* effort·impact chart is a design-system component now (.sl-quad/.sl-legend, vendored from
@@ -120,8 +117,8 @@ register_css(r"""
 # Deliberately NOT sonaloop._charts (the vendored design-system library): those functions emit
 # complete <figure class="sl-chart"> blocks with a coupled title/legend and positional series
 # colours, while these are bare composable FRAGMENTS — a thin stance-coloured strip that embeds
-# inside per-row comparisons (.crow, the session funnel), and bars/area sized to the insight-card
-# grid. Where a full design-system figure fits, we delegate instead (see _components._effort_impact
+# inside per-row comparisons (.ref-row, the session funnel), and bars/area sized to the insight
+# card. Where a full design-system figure fits, we delegate instead (see _components._effort_impact
 # → _charts.effort_impact). The web carries NO donut (§10 W9) and, since §11 T5 (J1 decided), NO
 # page-level distribution strip either: the scaled stance BARS are the one distribution encoding
 # on council/synthesis blocks; the deck keeps its single donut card (services/_synthesis_pptx).
@@ -233,20 +230,6 @@ def _session_parts(s: dict) -> list[tuple]:
     return _vote_chart_parts(cnt)
 
 
-def _per_council_html(sessions: list[dict]) -> str:
-    """The cross-council comparison rows (>1 cited councils): each row charts a DIFFERENT
-    distribution, so the thin strip here is a comparison, not the §11 T5 re-encoding."""
-    rows = []
-    for s in sorted(sessions, key=lambda x: x.get("created_at", "")):
-        parts = _session_parts(s)
-        n = len(s.get("persona_ids", []))
-        rows.append(h("a", {"class_": "crow", "href": f'/councils/{s["id"]}'},
-                      h("span", {"class_": "ct", "title": s["prompt"]}, s["prompt"]),
-                      _stacked(parts, thin=True) if any(v for v, _, _ in parts) else h("span", {}),
-                      h("span", {"class_": "cn"}, f'{n} P · {ui.fmt_day(s.get("created_at", ""))}')))
-    return fragment(*rows)
-
-
 def _personas_by_sentiment_html(store: Store, sessions: list[dict]) -> str:
     """Per-persona enthusiasm rows (V3 redesign): avatar · name · a compact zero-centered
     DIVERGING bar (length ∝ |score|, color from the nearest stance bucket) · the score at
@@ -294,11 +277,13 @@ def _stance_dist_html(sessions: list[dict]) -> str:
 
 
 def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment",
-                       title: str | None = None, per_council: bool = False,
+                       title: str | None = None, chain: bool = False,
                        overview: bool = True) -> str | None:
     """Reusable sentiment analytics block, embedded ON a council or synthesis. `overview=False`
-    keeps only the breakdowns (per-council, per-persona) — used when the page already opened
-    with the sentiment/stance charts row (§3.6), so nothing renders twice."""
+    keeps only the per-persona breakdown — used when the page already opened with the
+    sentiment/stance charts row (§3.6), so nothing renders twice. `chain=True` words the hint
+    for a council chain instead of a single session. The per-council comparison rows moved
+    onto the cited-councils reference rows (Round 5: councils are named ONCE per page)."""
     if title is None:
         title = t("sentiment_block")
     sessions = [s for s in sessions if s]
@@ -307,16 +292,12 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
     has_turns = any(_A.council_statements(s) for s in sessions)
     if not nvotes and not has_turns:
         return None
-    scope = t("sentiment_scope_chain") if per_council else t("sentiment_scope_session")
+    scope = t("sentiment_scope_chain") if chain else t("sentiment_scope_session")
     blocks = [h("p", {"class_": "ihint"}, t("sentiment_intro", scope=scope))]
     if overview:                                   # the ONE distribution encoding (§11 T5): scaled bars
         sd = _dist_bars(sessions)
         if sd:
             blocks.append(sd)
-    if per_council and len(sessions) > 1:
-        pc = _per_council_html(sessions)
-        if pc:
-            blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("per_council")), pc))
     pbs = _personas_by_sentiment_html(store, sessions)
     if pbs:
         blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("personas_by_sentiment")), pbs))
@@ -347,6 +328,24 @@ def _verdict_split(syn: dict) -> tuple[str, str]:
     return lead, rest
 
 
+# Clause boundaries the headline may end on: a sentence end BEFORE an uppercase start (the
+# `_verdict_split` guard — '+40 Min. wegen …' never splits), a colon/semicolon, a spaced dash.
+_HEADLINE_CUT = re.compile(r"(?<=[.!?])\s+(?=[«„\"'(]?[A-ZÄÖÜ])|(?<=[:;])\s+|\s+[—–]\s+")
+
+
+def _headline(text: str, cap: int = 200) -> str:
+    """The verdict headline (Round 5 craft finish): never an ellipsized mid-sentence cut. Short
+    text renders whole; long text ends at the LAST clean clause boundary inside the cap — the
+    full finding always follows verbatim further down the page, so nothing is lost. Only when
+    no boundary exists at all does the full headline render and simply wrap within the prose
+    measure (`.syn-verdict .sl-card__title` carries max-width) instead of truncating to '…'."""
+    s = " ".join((text or "").split())
+    if len(s) <= cap:
+        return s
+    cuts = [m.start() for m in _HEADLINE_CUT.finditer(s) if m.start() <= cap]
+    return s[:cuts[-1]].rstrip(" ,;:") if cuts else s
+
+
 def _verdict_card(syn: dict) -> str:
     """The verdict/POV card that OPENS a report (ux-contract §3.6a): a crisp headline finding
     (the first key_problem) as the card title where one exists, plus the 2-3 sentence lead the
@@ -364,25 +363,24 @@ def _verdict_card(syn: dict) -> str:
         return ""
     return h("div", {"class_": "sl-card syn-verdict", "id": "verdict"},
              h("div", {"class_": "sl-eyebrow"}, t("verdict_h")),
-             (h("div", {"class_": "sl-card__title"}, raw(_md_inline(_display_title(head_text, 180))))
+             (h("div", {"class_": "sl-card__title"}, raw(_md_inline(_headline(head_text))))
               if head_text else None),
              h("div", {"class_": "sl-card__body"}, raw(_md(lead))) if lead else None)
 
 
 def _charts_row(sessions: list[dict]) -> str:
     """The stance distribution under the verdict card (§3.6b, single-encoded per §11 T5 — J1):
-    ONE insight card with the scaled stance bars over the cited council chain. The second card
-    that painted the same distribution as a proportional strip retired. "" when the chain
-    carries neither votes nor stanced statements."""
+    ONE insight card with the scaled stance bars over the cited council chain, spanning the
+    full content column (Round 5 finish: the retired second card left a lone half-width card
+    beside whitespace — with one card there is no grid, the card IS the row). "" when the
+    chain carries neither votes nor stanced statements."""
     sessions = [s for s in sessions if s]
     bars = _dist_bars(sessions)
     if not bars:
         return ""
     # card title names the SCOPE (the cited chain) — the section heading above the row
     # already says "Sentiment", repeating it verbatim taught nothing (round-3 craft pass)
-    return h("div", {"class_": "insights"},
-             h("div", {"class_": "insight"}, h("h3", {}, t("sentiment_over_chain")),
-               raw(bars)))
+    return h("div", {"class_": "insight"}, h("h3", {}, t("sentiment_over_chain")), raw(bars))
 
 
 def _persona_voices_html(store: Store, pid: str) -> str:
@@ -441,27 +439,41 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
                 ui.clamp(raw(_md(answer_md)), threshold=ui.SECTION_CLAMP),
                 vm["answer_label"], question=vm["question"], qlabel=t("question"))))
     # 2) Cited evidence — councils are DECOUPLED: this synthesis is a standalone answer that may
-    # CITE councils (or none). Render them as a compact reference list, NOT as the synthesis body.
+    # CITE councils (or none). The reference rows are the ONE place the cited councils are named
+    # (Round 5 finish: the per-council breakdown rows named the same councils a second time —
+    # merged). With >1 cited councils each row carries that council's thin stance strip: N
+    # DIFFERENT distributions side by side are a comparison, not the §11 T5 re-encoding (a
+    # single cited council's strip WOULD re-encode the chain bars above, so it stays bare).
     belege = None
+    cited = [c for c in syn_sessions if c]
+    # a comparison needs >1 councils WITH stance data: when only one carries any, its lone
+    # strip would just re-encode the chain bars above (the chain IS that one council)
+    row_parts = {c["id"]: _session_parts(c) for c in cited}
+    compare = sum(1 for p in row_parts.values() if any(v for v, _, _ in p)) > 1
     ref_rows = []
-    for i, cid in enumerate(syn.get("council_ids", []), 1):
-        c = store.get_council_session(cid)
-        if not c:
-            continue
-        # reference rows carry NO mini distribution strip (§11 T5): the chain's stance bars
-        # above are the one encoding; the per-council breakdown block compares >1 councils
-        prompt = c.get("prompt") or cid
-        ref_rows.append(h("a", {"class_": "ref-row", "href": f"/councils/{cid}"},
+    for i, c in enumerate(cited, 1):
+        prompt = c.get("prompt") or c["id"]
+        parts = row_parts[c["id"]] if compare else []
+        strip = (h("span", {"class_": "ref-bar"}, _stacked(parts, thin=True))
+                 if any(v for v, _, _ in parts) else None)
+        meta = f'{len(c.get("persona_ids", []))} P · {ui.fmt_day(c.get("created_at", ""))}'
+        ref_rows.append(h("a", {"class_": "ref-row", "href": f'/councils/{c["id"]}'},
                           h("span", {"class_": "ref-n"}, f"C{i}"),
-                          h("span", {"class_": "ref-t"}, prompt[:96]),
+                          # full prompt; .ref-t ellipsizes at the row edge (a hard [:96] cut used
+                          # to land mid-word once the row widened) — title carries the whole text
+                          h("span", {"class_": "ref-t", "title": prompt}, prompt),
+                          strip,
+                          h("span", {"class_": "ref-meta"}, meta),
                           h("span", {"class_": "ref-go"}, raw(_icon("arrowRight")))))
     if ref_rows:
+        # a plain block (no longer collapsed): since the rows carry the per-council comparison,
+        # hiding them behind a <details> would hide the one distribution comparison on the page
         belege = ("belege", t("councils"),
-                  h("details", {"class_": "block", "id": "belege"},
-                    h("summary", {"class_": "bh", "style": "cursor:pointer"},
+                  h("div", {"class_": "block", "id": "belege"},
+                    h("h2", {"class_": "bh"},
                       t("councils_overview"), " ", h("span", {"class_": "cnt"}, str(len(ref_rows)))),
                     h("p", {"class_": "muted small", "style": "margin:6px 0 10px"}, t("evidence_decoupled_note")),
-                    h("div", {"class_": "ref-list"}, raw("".join(ref_rows)))))
+                    h("div", {"class_": "ref-list"}, fragment(*ref_rows))))
     # Finding LIST sections (key_problems/pain_solvers/open_questions/shortlist) now render through the
     # ONE finding renderer — id + label from finding_kinds.json, prose via _prose (spec/unified-…).
     _findings = _A.synthesis_findings(syn)
@@ -508,10 +520,11 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
                     _block("stimmen", t("voices"),
                            raw(render_statements(voices, store, clamp_at=ui.TURN_CLAMP,
                                                  expand_quotes=True)))))
-    # The sentiment BREAKDOWN across the chain (per council, per persona) — the aggregate charts
-    # already opened the page (charts row), so overview=False keeps this block duplication-free.
+    # The per-persona sentiment BREAKDOWN across the chain — the aggregate charts already opened
+    # the page (charts row) and the per-council comparison rides the cited-council rows below,
+    # so overview=False keeps this block duplication-free.
     sent = _sentiment_section(store, syn_sessions, sid="sentiment", title=t("sentiment_over_chain"),
-                              per_council=True, overview=False)
+                              chain=True, overview=False)
     if sent:
         sec.append(("sentiment-detail", t("sentiment_over_chain"),
                     h("div", {"class_": "block", "id": "sentiment-detail"}, raw(sent))))
@@ -522,7 +535,7 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
         sec.append(s)
     if (s := _fsec("open_question", t("open_questions_next_study"), toc=t("open_questions"))):
         sec.append(s)
-    if belege:                       # cited evidence (councils) — demoted, near the end, collapsible
+    if belege:                       # cited evidence (councils) — demoted, near the end
         sec.append(belege)
     # arc (collapsed) — only when there is a narrative; an empty <details> reads as a broken box
     if (syn.get("arc_narrative") or "").strip():

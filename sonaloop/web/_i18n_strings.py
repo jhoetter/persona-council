@@ -209,7 +209,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "sentiment_block": "Stimmungsbild",
         "sentiment_scope_chain": "die Council-Kette", "sentiment_scope_session": "diese Sitzung",
         "sentiment_intro": "Stimmen über {scope} — wer befürwortet, wer ist skeptisch.",
-        "per_council": "Pro Council",
         "personas_by_sentiment": "Personas nach Stimmung — Begeisterungs-Score (Befürwortung − Ablehnung)",
 
 
@@ -601,7 +600,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "sentiment_block": "Sentiment",
         "sentiment_scope_chain": "the council chain", "sentiment_scope_session": "this session",
         "sentiment_intro": "Voices across {scope} — who supports, who is skeptical.",
-        "per_council": "Per council",
         "personas_by_sentiment": "Personas by sentiment — enthusiasm score (support − opposition)",
 
 

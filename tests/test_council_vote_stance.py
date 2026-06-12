@@ -93,8 +93,9 @@ def test_web_stance_bars_are_the_single_encoding():
 
 
 def test_council_and_synthesis_pages_carry_no_distribution_strip(store):
-    # the page-level strip is gone end-to-end: council detail opener + sentiment block, and the
-    # synthesis charts row / cited-evidence rows render no .stacked strip; the bars remain.
+    # the page-level strip is gone end-to-end: council detail opener + sentiment block render no
+    # .stacked strip; the bars remain. (On the synthesis the only strips left are the per-council
+    # COMPARISON strips on the cited-council reference rows — pinned in the Round-5 test below.)
     from sonaloop import services
     pid = services.start_project("M", "hmw?", None, persona_ids=[], store=store)["id"]
     c = services.record_council(pid, "Bauen?", [], [], proposal="X", store=store, key="t5",
@@ -105,3 +106,47 @@ def test_council_and_synthesis_pages_carry_no_distribution_strip(store):
     client = TestClient(create_app())
     page = client.get(f"/councils/{c['id']}").text
     assert 'class="stacked' not in page and 'class="brow"' in page
+
+
+def test_synthesis_page_names_each_cited_council_once(store):
+    # Round 5 finish: the cited-councils reference rows are the ONE place the chain's councils
+    # are named — the per-council breakdown rows that named the same councils a second time
+    # retired; their comparison strip (>1 cited councils = N DIFFERENT distributions) rides the
+    # reference rows instead, and the charts row is ONE full-width card (no half-width orphan).
+    from sonaloop import services
+    pid = services.start_project("M", "hmw?", None, persona_ids=[], store=store)["id"]
+    c1 = services.record_council(pid, "Erster Council?", [], [], proposal="X", store=store,
+                                 key="r5a", votes=[{"persona_id": "pa", "vote": "SUPPORT"}])
+    c2 = services.record_council(pid, "Zweiter Council?", [], [], proposal="X", store=store,
+                                 key="r5b", votes=[{"persona_id": "pb", "vote": "OPPOSE"}])
+    syn = services.record_synthesis("S", "hmw", [c1["id"], c2["id"]],
+                                    {"gesamtbild": "One short answer."}, store=store)
+    from sonaloop.web import create_app
+    from starlette.testclient import TestClient
+    page = TestClient(create_app()).get(f"/syntheses/{syn['id']}").text
+    # each cited council is linked + named exactly once: its reference row
+    assert page.count('class="ref-row"') == 2
+    assert page.count(f'/councils/{c1["id"]}') == 1 and page.count(f'/councils/{c2["id"]}') == 1
+    assert page.count('class="stacked thin"') == 2            # the comparison rides the ref rows
+    # one full-width insight card — the 2-col grid that beached the lone card half-width retired
+    assert 'class="insights"' not in page and page.count('class="insight"') == 1
+
+
+def test_verdict_headline_never_ellipsizes_mid_sentence():
+    # Round 5 finish: a long first key_problem used to hard-truncate at 180 chars with '…'. The
+    # headline now ends at a clean clause boundary (the full finding still renders verbatim in
+    # its findings section) or — boundary-less — renders whole and wraps within the measure.
+    from sonaloop.web._synthesis import _headline
+    short = "The €29 dead zone"
+    assert _headline(short) == short                            # short → whole, untouched
+    long = ("The €29 dead zone: a single mid-price tier is too expensive for the reach segments "
+            "(ladder acceptance 0.4) and too thin to carry the coaching that justifies the trust "
+            "segments' expectations across every cohort we asked in the study.")
+    assert _headline(long) == "The €29 dead zone" and "…" not in _headline(long)
+    two = "First sentence ends here. Second sentence carries on for quite a while afterwards."
+    assert _headline(two, cap=40) == "First sentence ends here."
+    # the _verdict_split guard carries over: '+40 Min. wegen …' is an abbreviation, not a cut —
+    # and with no clean boundary inside the cap the FULL headline wraps instead of ellipsizing
+    de = ("Das Fenster rutscht sichtbar nach hinten, +40 Min. wegen eskalierender Kundenabgabe, "
+          "und bleibt damit für alle Beteiligten nachvollziehbar im Team verankert.")
+    assert _headline(de, cap=80) == de
