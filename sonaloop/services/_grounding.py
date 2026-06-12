@@ -140,13 +140,29 @@ def list_corpora(store: Store | None = None) -> list[dict[str, Any]]:
 
 
 def get_corpus(corpus_id: str, include_chunks: bool = False,
+               limit: int | None = None, cursor: str | None = None,
                store: Store | None = None) -> dict[str, Any]:
+    """One corpus record. `include_chunks=True` adds `chunk_list` — PAGED per the
+    shared convention (docs/pagination.md): `limit` (default 25) + opaque `cursor`
+    over the stable chunk order, with `chunk_total`/`has_more`/`next_cursor`
+    alongside. A corpus can be megabytes; the page keeps the result context-sized
+    and the in-band note names the params that return the rest."""
     store = store or Store()
     corpus = store.get_corpus(corpus_id)
     if not corpus:
         raise KeyError(f"Unknown corpus: {corpus_id}")
     if include_chunks:
-        corpus = {**corpus, "chunk_list": store.list_corpus_chunks(corpus_id)}
+        from ._pagination import paginate
+        page = paginate(store.list_corpus_chunks(corpus_id), lambda c: f"{c['idx']:08d}",
+                        limit=limit, cursor=cursor, filters={"corpus_id": corpus_id})
+        corpus = {**corpus, "chunk_list": page["items"], "chunk_total": page["total"],
+                  "has_more": page["has_more"]}
+        if page["has_more"]:
+            corpus["next_cursor"] = page["next_cursor"]
+            corpus["note"] = (
+                f"chunk_list shows {len(page['items'])} of {page['total']} chunks — pass "
+                f"cursor=next_cursor (and limit, max 200) to get_corpus for the rest, or "
+                f"search_corpus(query, corpus_ids=[{corpus_id!r}]) for targeted retrieval.")
     return corpus
 
 

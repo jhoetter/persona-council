@@ -391,7 +391,24 @@ def get_calendar(persona_id: str, date_value: str | None = None, store: Store | 
 
 
 
-def get_calendar_period(persona_id: str, date_value: str | None = None, view: str = "day", store: Store | None = None) -> dict[str, Any]:
+# A summary-mode period view keeps at most this many event rows (a YEAR of dense
+# simulation is thousands) — the newest are kept and the in-band note names the
+# narrower handles (view/date, get_calendar, get_activity) for the rest.
+PERIOD_EVENT_CAP = 300
+
+# The lean per-event row of the summary view: enough to render a calendar and to
+# decide which days to drill into; the full payload stays one get_activity away.
+_PERIOD_EVENT_FIELDS = ("id", "timestamp", "event_type", "task", "tool")
+
+
+def get_calendar_period(persona_id: str, date_value: str | None = None, view: str = "day",
+                        store: Store | None = None, detail: str = "summary") -> dict[str, Any]:
+    """A persona's calendar over a day/week/month/year window.
+
+    `detail="summary"` (the default; output-budget fix, ticket mcp-output-budget-audit)
+    returns LEAN event rows + a lean persona header — a month of simulated life was
+    >200k chars with full payloads. Full single-event payloads: get_activity(id) /
+    get_calendar(date); `detail="full"` returns the previous full shape (large)."""
     store = store or Store()
     persona = store.get_persona(persona_id)
     if not persona:
@@ -402,19 +419,34 @@ def get_calendar_period(persona_id: str, date_value: str | None = None, view: st
     start = f"{start_day.isoformat()}T00:00"
     end = f"{end_day.isoformat()}T23:59"
     events = store.list_experience_events(persona["id"], start, end)
-    days: dict[str, list[dict[str, Any]]] = {}
-    for event in events:
-        days.setdefault(event["timestamp"][:10], []).append(event)
     summaries = store.list_daily_summaries(persona["id"], start_day.isoformat(), end_day.isoformat())
-    return {
+    out: dict[str, Any] = {
         "persona": persona,
         "view": view,
         "anchor_date": anchor.isoformat(),
         "period_start": start_day.isoformat(),
         "period_end": end_day.isoformat(),
-        "days": days,
         "daily_summaries": summaries,
     }
+    if detail != "full":
+        from ._personas import _persona_summary
+        out["persona"] = _persona_summary(persona)
+        out["daily_summaries"] = [{"date": s.get("date"), "mood": s.get("mood")}
+                                  for s in summaries]
+        total = len(events)
+        if total > PERIOD_EVENT_CAP:
+            events = events[-PERIOD_EVENT_CAP:]   # timestamp-ordered: keep the newest
+            out["note"] = (
+                f"showing the {PERIOD_EVENT_CAP} most recent of {total} events in this period — "
+                f"narrow the window (view/date) or use get_calendar(persona_id, date) for one day; "
+                f"events are summary rows, the full activity is get_activity(activity_id).")
+        events = [{k: e.get(k) for k in _PERIOD_EVENT_FIELDS} for e in events]
+        out["events_total"] = total
+    days: dict[str, list[dict[str, Any]]] = {}
+    for event in events:
+        days.setdefault(event["timestamp"][:10], []).append(event)
+    out["days"] = days
+    return out
 
 
 

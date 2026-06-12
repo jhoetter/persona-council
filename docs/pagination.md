@@ -27,7 +27,15 @@ Implementation: `sonaloop/services/_pagination.py` (`paginate` /
 | `list_personas` | `display_name`, slug-tiebroken |
 | `list_councils` | `created_at` + id, newest first |
 | `list_notes` | `created_at` + id, creation order |
+| `get_corpus` (`include_chunks=True` → `chunk_list`) | chunk `idx` |
 | `catalog_search` (sonaloop-data catalog) | catalog `slug` |
+
+Beyond lists, the **output budget** (tests/test_mcp_output_budget.py) keeps
+every read tool ≤ ~80k chars (~20k tokens) on a realistic fixture: big single
+documents answer summary-first or capped, always with the totals and an
+in-band `note` naming the param/tool that returns the rest (e.g.
+`get_calendar_period` → `get_activity`; `get_timeline` →
+`max_facts`/`max_events`). Never a silent truncation.
 
 The substrate `query_*` tools keep their own versioned `limit`/`offset`
 contract (`substrate_version` pins it; see docs/substrate.md) — older adopter,

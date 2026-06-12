@@ -134,10 +134,17 @@ def register_simulation(mcp):
         return _env("get_state_at", services.get_state_at(persona_id, as_of), t)
 
     @mcp.tool()
-    def get_timeline(persona_id: str, start: str | None = None, end: str | None = None, entity_id: str | None = None) -> dict[str, Any]:
-        """Chronological experience events for a persona over a date range (optionally one entity)."""
+    def get_timeline(persona_id: str, start: str | None = None, end: str | None = None,
+                     entity_id: str | None = None, max_facts: int = 100,
+                     max_events: int = 200) -> dict[str, Any]:
+        """Chronological facts + experience events for a persona over a date range
+        (optionally one entity). Capped to the newest `max_facts`/`max_events` rows —
+        facts_total/events_total count everything and a `note` says when a cap trimmed;
+        narrow with start/end/entity_id or raise the caps."""
         t = time.perf_counter()
-        return _env("get_timeline", services.get_timeline(persona_id, start, end, entity_id), t)
+        return _env("get_timeline", services.get_timeline(persona_id, start, end, entity_id,
+                                                          max_facts=max_facts,
+                                                          max_events=max_events), t)
 
     @mcp.tool()
     def search_entities(persona_id: str, kind: str | None = None, name: str | None = None) -> dict[str, Any]:
@@ -193,7 +200,10 @@ def register_simulation(mcp):
 
     @mcp.tool()
     def get_calendar_period(persona_id: str, date: str | None = None, view: str = "day") -> dict[str, Any]:
-        """A persona's calendar for a day|week|month view."""
+        """A persona's calendar for a day|week|month|year view — LEAN event rows
+        (id/timestamp/event_type/task/tool/summary, capped to the newest 400 with an
+        in-band note when more exist). Full payloads: get_activity(activity_id) for one
+        event, get_calendar(persona_id, date) for one day."""
         t = time.perf_counter()
         return _env("get_calendar_period", services.get_calendar_period(persona_id, date, view), t)
 

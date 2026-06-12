@@ -97,7 +97,22 @@ def get_state_at(persona_id: str, as_of: str, store: Store | None = None) -> dic
 
 
 
-def get_timeline(persona_id: str, start: str | None = None, end: str | None = None, entity_id: str | None = None, store: Store | None = None) -> dict[str, Any]:
+# Output-budget caps (ticket mcp-output-budget-audit): months of lived memory make
+# the unwindowed timeline arbitrarily large; the newest rows are kept and the
+# in-band note names the params that return the rest. Raise per call if needed.
+TIMELINE_MAX_FACTS = 100
+TIMELINE_MAX_EVENTS = 200
+
+
+def get_timeline(persona_id: str, start: str | None = None, end: str | None = None,
+                 entity_id: str | None = None, store: Store | None = None,
+                 max_facts: int = TIMELINE_MAX_FACTS,
+                 max_events: int = TIMELINE_MAX_EVENTS) -> dict[str, Any]:
+    """Facts + experience events on one persona's timeline. Both lists are sorted
+    oldest→newest and capped to the NEWEST `max_facts`/`max_events` rows;
+    `facts_total`/`events_total` always count the whole (windowed) set and a `note`
+    appears whenever a cap trims — never a silent truncation. Narrow with
+    `start`/`end`/`entity_id`, or raise the caps explicitly."""
     store = store or Store()
     persona = _require_persona(store, persona_id)
     pid = persona["id"]
@@ -110,8 +125,23 @@ def get_timeline(persona_id: str, start: str | None = None, end: str | None = No
     if end:
         facts = [f for f in facts if f["t_valid"][:10] <= end]
     events = store.list_experience_events(pid, start, end)
-    return {"persona_id": pid, "start": start, "end": end, "facts": facts,
-            "events": [{"timestamp": e["timestamp"], "task": e["task"], "event_type": e["event_type"]} for e in events]}
+    facts_total, events_total = len(facts), len(events)
+    out = {"persona_id": pid, "start": start, "end": end,
+           "facts_total": facts_total, "events_total": events_total}
+    trimmed = []
+    if max_facts and facts_total > max_facts:
+        facts = facts[-max_facts:]               # t_valid-ordered: keep the newest
+        trimmed.append(f"facts to the newest {max_facts} of {facts_total}")
+    if max_events and events_total > max_events:
+        events = events[-max_events:]            # timestamp-ordered: keep the newest
+        trimmed.append(f"events to the newest {max_events} of {events_total}")
+    if trimmed:
+        out["note"] = (f"trimmed {' and '.join(trimmed)} — narrow with start/end/entity_id "
+                       f"or raise max_facts/max_events for more.")
+    out["facts"] = facts
+    out["events"] = [{"timestamp": e["timestamp"], "task": e["task"],
+                      "event_type": e["event_type"]} for e in events]
+    return out
 
 
 

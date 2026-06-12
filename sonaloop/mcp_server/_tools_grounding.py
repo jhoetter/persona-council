@@ -26,10 +26,15 @@ def register_grounding(mcp):
         return _env("list_corpora", services.list_corpora(), t)
 
     @mcp.tool()
-    def get_corpus(corpus_id: str, include_chunks: bool = False) -> dict[str, Any]:
-        """One corpus record; include_chunks=True returns the full chunk list (large)."""
+    def get_corpus(corpus_id: str, include_chunks: bool = False,
+                   limit: int = 25, cursor: str | None = None) -> dict[str, Any]:
+        """One corpus record; include_chunks=True adds a PAGE of chunks (`chunk_list`,
+        shared pagination convention: `limit` default 25 + opaque `cursor`, with
+        chunk_total/has_more/next_cursor). Use search_corpus for targeted retrieval
+        instead of paging a whole large corpus."""
         t = time.perf_counter()
-        return _env("get_corpus", services.get_corpus(corpus_id, include_chunks), t)
+        return _env("get_corpus",
+                    services.get_corpus(corpus_id, include_chunks, limit=limit, cursor=cursor), t)
 
     @mcp.tool()
     def search_corpus(query: str, corpus_ids: list[str] | None = None,
