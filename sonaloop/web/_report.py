@@ -228,17 +228,23 @@ def render_report(report: dict, store, *, with_toc: bool = False):
 
 
 register_css(r"""
-/* Meta-report — report-grade document (spec/meta-report-presentation-and-pdf.md Phase 1) */
-.report{max-width:780px;margin:0 auto;color:var(--ink);font-size:15px;line-height:1.7}
-.report h2,.report h3,.report p,.report ul,.report ol{max-width:none}
+/* Meta-report — report-grade document (spec/meta-report-presentation-and-pdf.md Phase 1).
+   Typography sits on the t-* scale + roles (ux-contract §11 T1/T3): display = the t-2xl cover
+   title, lead = t-lg, body = the t-md report voice at the 1.6 reading rhythm, quiet = t-sm meta.
+   RUNNING prose wraps at the --measure-prose reading width (T2); structural elements (headings,
+   callout/toc boxes, figures, rows) keep the document column. */
+.report{max-width:780px;margin:0 auto;color:var(--ink);font-size:var(--t-md);line-height:1.6}
+.report h2,.report h3{max-width:none}
+.report p,.report ul,.report ol{max-width:var(--measure-prose)}
+.rp-call p,.rp-call ul,.rp-call ol,.rp-toc ol{max-width:none}
 /* cover */
 .rp-cover{padding:8px 0 26px;margin-bottom:30px;border-bottom:1px solid var(--line)}
-.rp-eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:8px}
-.rp-eyebrow .lbl{text-transform:none;letter-spacing:normal}
-.rp-title{font-size:34px;line-height:1.12;font-weight:700;margin:10px 0 0;letter-spacing:-.01em}
+.rp-eyebrow{font-family:var(--mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.14em;color:var(--accent);font-weight:500;display:flex;align-items:center;gap:8px}
+.rp-eyebrow .lbl{font-family:var(--sans);text-transform:none;letter-spacing:normal}
+.rp-title{font-size:var(--t-2xl);line-height:1.2;font-weight:700;margin:10px 0 0;letter-spacing:-.01em}
 .rp-metaline{margin-top:12px;color:var(--muted);font-size:var(--t-sm);font-variant-numeric:tabular-nums;
   display:flex;align-items:center;gap:8px}
-.rp-lead{margin:22px 0 0;font-size:19px;line-height:1.6;color:var(--ink);font-weight:450;
+.rp-lead{margin:22px 0 0;font-size:var(--t-lg);line-height:1.6;color:var(--ink);font-weight:400;
   border-left:3px solid var(--accent);padding-left:18px}
 .rp-lead p{margin:0}
 /* table of contents */
@@ -250,13 +256,13 @@ register_css(r"""
 .rp-toc a{color:var(--ink);text-decoration:none}.rp-toc a:hover{color:var(--accent)}
 /* sections */
 .rp-sec{margin:0 0 40px;scroll-margin-top:70px}
-.rp-sec h2{display:flex;align-items:baseline;gap:12px;font-size:23px;font-weight:650;line-height:1.25;margin:0 0 14px;letter-spacing:-.01em}
-.rp-num{color:var(--faint);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.rp-sec h2{display:flex;align-items:baseline;gap:12px;font-size:var(--t-xl);font-weight:650;line-height:1.2;margin:0 0 14px;letter-spacing:-.01em}
+.rp-num{color:var(--faint);font-size:var(--t-prose);font-weight:600;font-variant-numeric:tabular-nums}
 .report p{margin:0 0 14px}.report ul,.report ol{margin:0 0 14px;padding-left:22px}.report li{margin:3px 0}
-.report h3{font-size:16px;font-weight:600;margin:22px 0 8px}
+.report h3{font-size:var(--t-prose);font-weight:600;margin:22px 0 8px}
 /* pull-quote (blockquote) */
 .report blockquote{margin:22px 0;padding:4px 0 4px 20px;border-left:3px solid var(--line-2);
-  font-size:18px;line-height:1.55;color:var(--muted);font-style:italic}
+  font-size:var(--t-lg);line-height:1.6;color:var(--muted);font-style:italic;max-width:var(--measure-prose)}
 .report blockquote p{margin:0}
 /* callouts */
 .rp-call{display:flex;gap:12px;margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-left-width:3px;border-radius:var(--radius);background:var(--panel-2)}

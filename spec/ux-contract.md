@@ -360,3 +360,18 @@ Owner: "erneut deutlich besser, aber ich finde immer noch Mängel … geh das bi
 | W9 | (Owner round-3 H2, now decided) donut + stance bars encode the same data twice | Keep the scaled stance bars, drop the donut on web council/synthesis blocks (deck keeps its single donut card) |
 | W10 | Leftovers G1/G2/G5 | prototype-page session section naming; report lifecycle pill; sidebar active-state rule aligned with project-rooted crumbs |
 | W11 | Persona attribution is inconsistent: prototype rows show "2 sessions" but NO persona avatars while councils show the avatar group | ONE rule app-wide: wherever an artifact's data carries persona participation (council participants, session subjects, prototype session drivers, survey respondents, report voices), the row AND the detail header show the persona avatar-group (max 4 + overflow), identical anatomy everywhere |
+
+## 11. Round 5 (2026-06-12) — typography & reading density
+
+The craft column sits at 8.5; the holdouts are the text-heaviest pages (synthesis/council detail,
+CR 8). Round 5 is a focused typography/information-density pass — plus the J1 decision (taken in
+the owner's established direction): the distribution STRIP retires, the scaled stance bars are the
+one encoding.
+
+| # | item |
+|---|---|
+| T1 | **Type conformance gate** (sibling of the spacing harness): measure rendered font-size/weight/line-height per structural element on every canonical screen against the type tokens (t-xs…t-xl + the documented roles); flag off-scale values; fix to zero; keep as a re-runnable gate (`scripts/ux_type.py`). |
+| T2 | **Prose measure:** running prose (turn texts, exec summaries, report sections, verdicts) reads at a true reading measure (~68-72ch), not the full 900px container; structural elements (rows, charts, rails) keep the full measure. |
+| T3 | **Synthesis detail typography:** verdict card, section heads, prose blocks, voices rows — one hierarchy (display/lead/body/quiet) with deliberate contrast steps; quotes get real quote styling; refs/meta in the quiet layer. |
+| T4 | **Council detail typography:** question banner vs turn text vs persona meta vs refs — same hierarchy system; the tree-threaded answers read as a conversation, not a form dump. |
+| T5 | **J1 executed:** stance distribution strip removed on council/synthesis; bars are the single encoding. |

@@ -58,7 +58,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 /* node label/sub live in a foreignObject — clamp so long titles never bleed out of the card */
 .rgn-body{box-sizing:border-box;height:100%;display:flex;flex-direction:column;justify-content:center;overflow:hidden;font-family:inherit;pointer-events:none}
 .rgn-title{font-size:var(--t-body);font-weight:600;line-height:1.2;color:var(--ink);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
-.rgn-sub{margin-top:2px;font-size:var(--t-sm);line-height:1.3;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rgn-sub{margin-top:2px;font-size:var(--t-sm);line-height:1.35;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rgctrls{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.12)}
 .rgctrls .rgzl{font-size:var(--t-xs);color:var(--muted);text-align:center;padding:3px 0;border-bottom:1px solid var(--line-2);user-select:none}
 .rgbtn{width:var(--ctl-sm);height:var(--ctl-sm);display:flex;align-items:center;justify-content:center;border:0;border-bottom:1px solid var(--line-2);background:var(--panel);color:var(--ink);cursor:pointer;font-size:var(--t-md);line-height:1}
@@ -244,7 +244,7 @@ section{padding:24px 32px;overflow:auto;scroll-behavior:smooth}
 /* ---- generic ---- */
 h1,h2,h3,h4{color:var(--ink)}
 .h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;margin:0 0 4px;font-weight:650}
-.lead{color:var(--muted);font-size:var(--t-body);margin:0 0 16px;max-width:74ch;line-height:1.5}
+.lead{color:var(--muted);font-size:var(--t-body);margin:0 0 16px;max-width:var(--measure-prose);line-height:1.5}
 /* Buttons come from the shared design-system layer: .sl-btn (+ --primary / --sm / .is-active /
    [disabled]) in COMPONENTS_CSS (vendored from sonaloop-design/styles/components.css). Em-based,
    so they render dense at the inspector's 13px base. See the design-system docs (Components ›
@@ -267,8 +267,10 @@ h1,h2,h3,h4{color:var(--ink)}
 .toc a:hover{color:var(--ink);background:var(--hover)}
 .toc a.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-weak)}
 /* Properties/Relations aside — Notion-quiet (V5): no card box; quiet uppercase group labels,
-   the frameless .sl-props--quiet rows, a hairline only BETWEEN groups. */
-.rail{position:sticky;top:0;align-self:start;padding-top:8px}
+   the frameless .sl-props--quiet rows, a hairline only BETWEEN groups. The rail is CHROME,
+   not document: it pins the UI voice (t-body/1.5) so a document context (the report shell's
+   t-md base in the slide-over) never scales the em-sized prop rows off the type scale (T1). */
+.rail{position:sticky;top:0;align-self:start;padding-top:8px;font-size:var(--t-body);line-height:1.5}
 .rail h4{margin:0 0 8px;padding:0;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:8px}
 .rail h4 svg{width:13px;height:13px;color:var(--faint)}
 .rail h4:not(:first-child){border-top:1px solid var(--line-2);margin-top:20px;padding-top:16px}
@@ -285,19 +287,22 @@ details.sec>summary{cursor:pointer;list-style:none;display:flex;align-items:cent
 details.sec>summary::-webkit-details-marker,details.block>summary.bh::-webkit-details-marker{display:none}
 details.sec>summary::before,details.block>summary.bh::before{content:"\\25b8";color:var(--muted);transition:transform 150ms;font-size:var(--t-xs)}
 details.sec[open]>summary::before,details.block[open]>summary.bh::before{transform:rotate(90deg)}
-.doc-main p{max-width:74ch}.detail{overflow-wrap:break-word}pre{overflow-x:auto;max-width:100%}.detail img{max-width:100%;height:auto}
+.doc-main p{max-width:var(--measure-prose)}.detail{overflow-wrap:break-word}pre{overflow-x:auto;max-width:100%}.detail img{max-width:100%;height:auto}
 /* Prose typography is shared by many pages (note/section/synthesis prose) — stays global.
    .es/.eyebrow/.qa-q now live co-located with _study_lead (component-SSR C2/C3). */
 /* .sl-prose (the shared design-system prose layer, from COMPONENTS_CSS) + this app's dense
-   theme: the --t-* scale, tighter subheadings and the 74ch measure. The base elements
-   (paragraphs, strong/em/del, links, code, blockquote, hr, lists) come from the shared layer
-   so they can't drift; only the density deviations live here. */
+   theme: the --t-* scale, tighter subheadings; the reading measure is the shared
+   --measure-prose token (§11 T2 — running prose wraps at ~70ch, left-aligned; the vendored
+   layer already caps p/ul/ol/blockquote at the same token). The base elements come from the
+   shared layer so they can't drift; only the density deviations live here. */
 .sl-prose{font-size:var(--t-prose)}.sl-prose.sm{font-size:var(--t-md);line-height:1.6}
-.sl-prose p,.sl-prose ul,.sl-prose ol{max-width:74ch}.sl-prose ul,.sl-prose ol{padding-left:22px}
+.sl-prose ul,.sl-prose ol{padding-left:22px}
 .sl-prose h3{font-size:var(--t-md);margin:22px 0 8px}.sl-prose h4{font-size:var(--t-body);margin:18px 0 6px}
 .sl-prose pre code{font-size:var(--t-sm)}
-.rec{display:grid;grid-template-columns:74px 1fr;gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line-2);max-width:74ch}
-.rec:last-child{border-bottom:0}.rec .sl-prose,.rec p{max-width:none}
+/* Finding/recommendation ROWS are structure, not running prose (§11 T2): they span the
+   content measure like every other row; only their inner paragraphs are prose-short. */
+.rec{display:grid;grid-template-columns:74px 1fr;gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line-2)}
+.rec:last-child{border-bottom:0}
 .prio{display:inline-block;font-size:var(--t-xs);font-weight:700;letter-spacing:.03em;color:#fff;border-radius:var(--radius-sm);padding:3px 7px;text-align:center;white-space:nowrap}
 .prio-1{background:#b3493f}.prio-2{background:#a66b1f}.prio-3{background:#2f6f9f}.prio-4{background:#3d7b5f}.prio-5{background:#6d7378}
 .srcchip{display:inline-block;font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 6px;margin-left:6px;background:var(--panel-2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
@@ -308,13 +313,13 @@ a.srcchip{text-decoration:none}a.srcchip:hover{border-color:var(--accent);color:
 .turn-ans:target,.fitem:target,.rec:target{animation:xreflash 2s ease-out 1}
 @keyframes xreflash{0%,40%{background:var(--accent-weak);box-shadow:0 0 0 6px var(--accent-weak)}100%{background:transparent;box-shadow:none}}
 [id]{scroll-margin-top:70px}
-.psolve{padding:8px 0;border-bottom:1px solid var(--line-2);max-width:74ch}.psolve:last-child{border-bottom:0}
-.psolve .sl-prose,.psolve p{max-width:none}.psolve p{margin:0}
+.psolve{padding:8px 0;border-bottom:1px solid var(--line-2)}.psolve:last-child{border-bottom:0}
+.psolve p{margin:0}
 /* unified finding row (every finding section: key_problem/pain_solver/cluster/segment/ranking/…) */
-.fitem{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--line-2);max-width:74ch}
+.fitem{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--line-2)}
 .fitem:last-child{border-bottom:0}.fitem .fbody{min-width:0;flex:1}.fitem .fbody p{margin:0}
 .fitem .fchips{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.segrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line-2);max-width:74ch}
+.segrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line-2)}
 .segrow:last-child{border-bottom:0}
 .srclist{list-style:none;padding:0;margin:0;counter-reset:c}
 .srclist li{counter-increment:c;padding:8px 0;border-bottom:1px solid var(--line-2);display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:baseline}

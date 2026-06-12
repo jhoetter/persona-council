@@ -53,18 +53,6 @@ def _stance_strip(counts: dict, total: int) -> str:
     return h("div", {"class_": "pvbar"}, fragment(*segs))
 
 
-def _value_strip(stance_counts: dict, store=None) -> str:
-    """A council's stance lean as the survey-style distribution strip — value counts mapped onto
-    the canonical scale terms (artifacts.stance_meta), nothing stance-y hardcoded."""
-    by_term = {}
-    for term in _A.stance_terms():
-        n = int(stance_counts.get(term["value"]) or stance_counts.get(str(term["value"])) or 0)
-        if n:
-            by_term[term["term"]] = n
-    total = sum(by_term.values())
-    return _stance_strip(by_term, total) if total else ""
-
-
 def _option_strip(options: list, counts: dict, total: int) -> str:
     """The answer-distribution strip for a NON-stance question (the row's at-a-glance result):
     one segment per answered option in authored order, a graded accent ramp (options carry no

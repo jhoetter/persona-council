@@ -400,9 +400,12 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.
 _STUDY_LEAD_CSS = register_css(
     ".es{margin:24px 0 4px}"
-    ".eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin:0 0 12px}"
-    ".qa-q{font-size:var(--t-lg);line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 16px}"
-    ".qa-q::before{content:attr(data-label);display:block;font-size:var(--t-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}")
+    # ONE eyebrow voice app-wide (§11 T3, = the design-system .sl-eyebrow recipe): Sona Mono,
+    # t-xs, weight 500, .14em caps tracking — colour stays contextual (accent where it labels
+    # the page's answer/question, muted elsewhere).
+    ".eyebrow{font-family:var(--mono);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.14em;color:var(--accent);font-weight:500;margin:0 0 12px}"
+    ".qa-q{font-size:var(--t-lg);line-height:1.35;font-weight:600;color:var(--ink);margin:2px 0 16px;max-width:var(--measure-prose)}"
+    ".qa-q::before{content:attr(data-label);display:block;font-family:var(--mono);font-size:var(--t-xs);font-weight:500;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:4px}")
 
 
 # Long titles/subs (e.g. a council's full question-prompt) are clamped to a few lines + ellipsis — the
@@ -699,7 +702,8 @@ register_css(r"""
 register_css(r"""
 /* ---- turn cards / detail ---- */
 .turn{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:12px}
-.turn .hd{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}.turn .hd b{font-size:var(--t-body)}
+/* speaker name = the row-title layer (600), never shouting over the turn text (§11 T4) */
+.turn .hd{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}.turn .hd b{font-size:var(--t-body);font-weight:600}
 .turn.mod{background:var(--panel-2)}
 .turn-who{display:inline-flex;align-items:center;gap:7px;color:var(--ink);text-decoration:none}
 .turn-who:hover b{color:var(--accent)}
@@ -721,8 +725,9 @@ register_css(r"""
 .qround{display:flex;flex-direction:column;gap:12px}
 .qround-q{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:var(--accent-weak);border:1px solid var(--line);border-radius:var(--radius)}
 .qround-q>svg{color:var(--accent);flex-shrink:0;width:18px;height:18px;margin-top:1px}
-.qround-q p{margin:2px 0 0;font-weight:600;font-size:var(--t-md);line-height:1.35}
-.qround-n{font-size:var(--t-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+.qround-q p{margin:2px 0 0;font-weight:600;font-size:var(--t-md);line-height:1.35;max-width:var(--measure-prose)}
+/* the round kicker speaks the ONE eyebrow voice (§11 T3/T4) */
+.qround-n{font-family:var(--mono);font-size:var(--t-xs);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 .qround-a{display:flex;flex-direction:column;gap:12px}
 .turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:var(--radius);padding:8px 12px;background:var(--bg)}
 .turn-input summary{cursor:pointer}

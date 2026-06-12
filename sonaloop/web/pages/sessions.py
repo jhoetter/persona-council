@@ -42,7 +42,7 @@ register_css(r"""
 .sess-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent-weak);color:var(--accent);font-size:var(--t-xs);font-weight:700;display:flex;align-items:center;justify-content:center}
 .sess-target{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--t-sm);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sess-detail{color:var(--muted);font-size:var(--t-sm);margin:0}
-.sess-mono{margin:0;border-left:3px solid var(--line-2);padding:2px 0 2px 12px;font-style:italic;font-size:var(--t-body);line-height:1.55}
+.sess-mono{margin:0;border-left:3px solid var(--line-2);padding:2px 0 2px 12px;font-style:italic;font-size:var(--t-body);line-height:1.6;max-width:var(--measure-prose)}
 .sess-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--t-sm);color:var(--muted);margin-top:auto}
 .sess-funnel{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:14px 16px;margin:0 0 18px}
 .sess-funnel h2{margin:0 0 2px;font-size:var(--t-body)}

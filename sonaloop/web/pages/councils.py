@@ -6,7 +6,6 @@ from .. import ui
 from .._forms import overflow_delete as _overflow_delete
 from .._keymap import sibling_attrs, sibling_urls
 from .._render import render_statements
-from .._synthesis import _stacked, _vote_parts
 from .._html import register_css
 from ... import artifacts as _A
 
@@ -168,32 +167,23 @@ def register_councils(app) -> None:
                        if group_prompts else
                        render_statements(statements, store, group_by="persona", backlinks=backlinks,
                                          clamp_at=ui.TURN_CLAMP))
-        sentiment = "" if mode == "discovery" else (_sentiment_section(store, [session], title=sentiment_title) or "")
+        # Every mode keeps its stance distribution — as the ONE encoding, the scaled bars
+        # (§11 T5): evaluation/decision charts the votes' stances, discovery the statements'
+        # stance lean (the opener strip that used to carry it retired).
+        sentiment = _sentiment_section(store, [session], title=sentiment_title) or ""
         kicker = (t("rt_kicker", n=n_voices) if is_rt else t("h2h_kicker", n=n_voices) if is_h2h
                   else t("council_kicker_" + mode, n=n_voices))
         council_sub = f'{kicker} · {session["selection_reason"]}'
         short_title = _display_title(session["prompt"])        # short form for breadcrumb / tab / favourite only
         # Structure before prose (§3.6): the hero IS the prompt header; directly under it the
-        # participants avatar row + the council's stance/vote strip open the page, and only then
-        # the authored summaries follow (clamped at the section threshold).
+        # participants avatar row opens the page, and only then the authored summaries follow
+        # (clamped at the section threshold). The opener's distribution STRIP retired (§11 T5 —
+        # J1): the sentiment block's scaled stance bars are the page's one distribution encoding.
         # the ONE participation avatar-group anatomy (ux-contract §10 W11 — ui.avatar_group)
         avgroup = ui.avatar_group(pmap.values(), total=n_voices, size=22)
         names = ", ".join((p or {}).get("display_name") or pid for pid, p in pmap.items())
-        if mode != "discovery" and session.get("votes"):
-            _, vparts = _vote_parts([session])
-            strip = _stacked(vparts, thin=True)
-        else:                                          # discovery: stance lean of the statements, if any
-            from .surveys import _value_strip
-            scounts: dict = {}
-            for st in statements:
-                v = (st.get("stance") or {}).get("value")
-                if v is not None:
-                    scounts[int(v)] = scounts.get(int(v), 0) + 1
-            strip = _value_strip(scounts)
-        opener = fragment(
-            ui.entity_row(names, visual=avgroup, id="sec-participants",
-                          meta=[f"{n_voices} {personas_h}"]),
-            h("div", {"class_": "sec"}, raw(strip)) if strip else None)
+        opener = ui.entity_row(names, visual=avgroup, id="sec-participants",
+                               meta=[f"{n_voices} {personas_h}"])
         # Executive Summary (the short TL;DR) sits at the TOP — same block/name as the synthesis.
         has_summary = bool((session.get("summary") or "").strip())
         summary_lead = (raw(_study_lead(ui.clamp(raw(_md(session["summary"])), threshold=ui.SECTION_CLAMP),

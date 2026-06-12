@@ -26,7 +26,7 @@ register_css(r"""
 .insight h3{margin:0 0 2px;font-size:var(--t-body)}
 .ihint{color:var(--muted);font-size:var(--t-sm);margin:0 0 14px}
 .kpi{display:flex;align-items:baseline;gap:6px;margin:2px 0 10px}
-.kpi b{font-size:var(--t-xl);font-weight:720;letter-spacing:-.01em}.kpi span{color:var(--muted);font-size:var(--t-sm)}
+.kpi b{font-size:var(--t-xl);font-weight:700;letter-spacing:-.01em}.kpi span{color:var(--muted);font-size:var(--t-sm)}
 .stacked{display:flex;height:12px;border-radius:var(--radius-sm);overflow:hidden;background:var(--line-2);border:1px solid var(--line)}
 .stacked i{display:block;height:100%}
 .stacked.thin{height:8px}
@@ -38,7 +38,7 @@ register_css(r"""
 .brow .btrack{height:9px;border-radius:var(--radius-sm);background:var(--line-2);overflow:hidden}
 .brow .btrack i{display:block;height:100%}
 .brow .bval{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
-.crow{display:grid;grid-template-columns:1fr 150px 64px;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2)}
+.crow{display:grid;grid-template-columns:1fr 150px 96px;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2)}
 .crow:last-child{border-bottom:0}.crow .ct{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
 .crow .cn{text-align:right;color:var(--muted);font-size:var(--t-sm)}
 /* per-persona enthusiasm rows (V3): plain rows — avatar · name · diverging bar · score.
@@ -65,7 +65,7 @@ register_css(r"""
 
 .syn-head h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;font-weight:650;margin:0 0 8px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 .syn-head h1 svg{width:21px;height:21px;color:var(--accent);margin-right:8px;vertical-align:-2px}
-.syn-goal{color:var(--muted);font-size:var(--t-md);line-height:1.5;max-width:72ch;margin:0 0 14px}
+.syn-goal{color:var(--muted);font-size:var(--t-md);line-height:1.5;max-width:var(--measure-prose);margin:0 0 14px}
 .syn-meta{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .mchip{font-size:var(--t-sm);color:var(--muted);border:1px solid var(--line);background:var(--panel-2);border-radius:var(--radius-sm);padding:3px 10px}
 .block{margin:40px 0 0;padding-top:24px;border-top:1px solid var(--line)}
@@ -79,12 +79,12 @@ register_css(r"""
 .ref-row:hover{border-color:var(--accent)}
 .ref-n{font-weight:700;color:var(--accent);font-size:var(--t-sm);flex:none;width:26px}
 .ref-t{flex:1;font-size:var(--t-body);line-height:1.35;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ref-bar{flex:none;width:120px}.ref-go{flex:none;color:var(--muted)}
+.ref-go{flex:none;color:var(--muted)}
 .ccard{border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 16px;background:var(--panel);display:flex;flex-direction:column;gap:9px}
 .cc-top{display:flex;align-items:center;gap:8px}
-.cc-n{font-weight:740;color:var(--accent);font-size:var(--t-sm);letter-spacing:.03em}
+.cc-n{font-weight:700;color:var(--accent);font-size:var(--t-sm);letter-spacing:.03em}
 .cc-bar{flex:1}
-.cc-title{font-size:var(--t-md);line-height:1.3;margin:0;font-weight:660}
+.cc-title{font-size:var(--t-md);line-height:1.35;margin:0;font-weight:600}
 .cc-title a{color:var(--ink)}.cc-title a:hover{color:var(--accent)}
 .cc-take{color:var(--muted);font-size:var(--t-body);line-height:1.5;margin:0}
 .cc-chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -92,16 +92,18 @@ register_css(r"""
 .cc-more>summary::-webkit-details-marker{display:none}
 .cc-more>summary::before{content:"\25B8 Exec-Summary";color:var(--muted)}
 .cc-more[open]>summary::before{content:"\25BE Exec-Summary"}
-.cc-es{font-size:var(--t-sm);line-height:1.55;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+.cc-es{font-size:var(--t-sm);line-height:1.6;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
 .cc-es h3{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:10px 0 4px}
 .cc-es p{margin:0 0 7px}.cc-es ul{margin:0 0 7px;padding-left:18px}
 .cc-jump{font-weight:600;color:var(--accent);font-size:var(--t-body)}
 .syn-main [id]{scroll-margin-top:26px}
-/* verdict/POV card — the structural opener of every report (ux-contract §3.6a) */
+/* verdict/POV card — the structural opener of every report (ux-contract §3.6a). The card
+   carries the LEAD layer of the §11 T3 hierarchy: headline finding at t-lg/600, the opening
+   sentences at the t-prose reading voice, wrapped at the prose measure. */
 .syn-verdict{margin:8px 0 24px}
-.syn-verdict .sl-card__title{font-size:var(--t-md);line-height:1.45;margin-top:.5em}
-.syn-verdict .sl-card__body{margin-top:.4em}
-.syn-verdict .sl-card__body p{margin:0}
+.syn-verdict .sl-card__title{font-size:var(--t-lg);line-height:1.35;margin-top:.5em}
+.syn-verdict .sl-card__body{margin-top:.4em;font-size:var(--t-prose);line-height:1.6}
+.syn-verdict .sl-card__body p{margin:0;max-width:var(--measure-prose)}
 /* effort·impact chart is a design-system component now (.sl-quad/.sl-legend, vendored from
    sonaloop-design via _components_css.py) — no local chart CSS here. */
 .reclist .rec{display:flex;gap:12px;padding:8px;border-bottom:1px solid var(--line-2);scroll-margin-top:72px}
@@ -118,10 +120,11 @@ register_css(r"""
 # Deliberately NOT sonaloop._charts (the vendored design-system library): those functions emit
 # complete <figure class="sl-chart"> blocks with a coupled title/legend and positional series
 # colours, while these are bare composable FRAGMENTS — a thin stance-coloured strip that embeds
-# inside link rows (.ref-row/.crow/.prow), and bars/area sized to the insight-card grid. Where a
-# full design-system figure fits, we delegate instead (see _components._effort_impact →
-# _charts.effort_impact). The web carries NO donut (§10 W9): the proportional strip is the one
-# vote encoding here; the deck keeps its single donut card (services/_synthesis_pptx).
+# inside per-row comparisons (.crow, the session funnel), and bars/area sized to the insight-card
+# grid. Where a full design-system figure fits, we delegate instead (see _components._effort_impact
+# → _charts.effort_impact). The web carries NO donut (§10 W9) and, since §11 T5 (J1 decided), NO
+# page-level distribution strip either: the scaled stance BARS are the one distribution encoding
+# on council/synthesis blocks; the deck keeps its single donut card (services/_synthesis_pptx).
 
 
 def _stacked(parts: list[tuple], thin: bool = False) -> str:
@@ -202,22 +205,44 @@ def _vote_parts(sessions: list[dict]) -> tuple[Counter, list[tuple]]:
     return tot, _vote_chart_parts(tot)
 
 
-def _overview_html(parts: list[tuple]) -> str:
-    """The vote overview as ONE encoding (ux-contract §10 W9): the full-width proportional
-    stance strip + its legend. The donut that re-encoded the same distribution beside the
-    strip is gone from every web sentiment block — the deck keeps its single donut card
-    (services/_synthesis_pptx, deliberately untouched)."""
-    return fragment(_stacked(parts), _legend(parts))
+def _dist_bars(sessions: list[dict]) -> str:
+    """The ONE distribution encoding on council/synthesis blocks (ux-contract §11 T5 — J1
+    decided in the W9 direction): scaled stance BARS, length ∝ count. Bucketed from the
+    statements' stances; a chain whose statements carry no stances falls back to the votes
+    (votes ARE stances), so the distribution still shows exactly once. The proportional
+    strip + legend that co-encoded the same numbers beside the bars retired; per-row
+    comparison strips (one DIFFERENT distribution per cited council) are a comparison,
+    not a re-encoding, and stay."""
+    bars = _stance_dist_html(sessions)
+    if bars:
+        return bars
+    _tot, parts = _vote_parts(sessions)
+    rows = [(lbl, n, c) for n, c, lbl in parts if n]
+    return _hbars(rows) if rows else ""
+
+
+def _session_parts(s: dict) -> list[tuple]:
+    """One session's stance distribution as chart parts: the votes where they exist, else the
+    statements' stances (a discovery council carries no votes) — so a comparison row never
+    paints an EMPTY track as if the data were missing."""
+    _tot, parts = _vote_parts([s])
+    if any(n for n, _, _ in parts):
+        return parts
+    cnt: Counter = Counter(int((st.get("stance") or {}).get("value") or 0)
+                           for st in _A.council_statements(s) if st.get("stance"))
+    return _vote_chart_parts(cnt)
 
 
 def _per_council_html(sessions: list[dict]) -> str:
+    """The cross-council comparison rows (>1 cited councils): each row charts a DIFFERENT
+    distribution, so the thin strip here is a comparison, not the §11 T5 re-encoding."""
     rows = []
     for s in sorted(sessions, key=lambda x: x.get("created_at", "")):
-        _, parts = _vote_parts([s])
+        parts = _session_parts(s)
         n = len(s.get("persona_ids", []))
         rows.append(h("a", {"class_": "crow", "href": f'/councils/{s["id"]}'},
                       h("span", {"class_": "ct", "title": s["prompt"]}, s["prompt"]),
-                      _stacked(parts, thin=True),
+                      _stacked(parts, thin=True) if any(v for v, _, _ in parts) else h("span", {}),
                       h("span", {"class_": "cn"}, f'{n} P · {ui.fmt_day(s.get("created_at", ""))}')))
     return fragment(*rows)
 
@@ -284,8 +309,10 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
         return None
     scope = t("sentiment_scope_chain") if per_council else t("sentiment_scope_session")
     blocks = [h("p", {"class_": "ihint"}, t("sentiment_intro", scope=scope))]
-    if nvotes and overview:
-        blocks.append(_overview_html(parts))
+    if overview:                                   # the ONE distribution encoding (§11 T5): scaled bars
+        sd = _dist_bars(sessions)
+        if sd:
+            blocks.append(sd)
     if per_council and len(sessions) > 1:
         pc = _per_council_html(sessions)
         if pc:
@@ -293,10 +320,6 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
     pbs = _personas_by_sentiment_html(store, sessions)
     if pbs:
         blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("personas_by_sentiment")), pbs))
-    if overview:
-        sd = _stance_dist_html(sessions)
-        if sd:
-            blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("stance_of_contributions")), sd))
     if len(blocks) == 1:                       # nothing but the intro hint → no block at all
         return None
     return h("div", {"class_": "sec", "id": sid}, h("h2", {}, title), fragment(*blocks))
@@ -347,25 +370,19 @@ def _verdict_card(syn: dict) -> str:
 
 
 def _charts_row(sessions: list[dict]) -> str:
-    """The sentiment + stance charts ROW under the verdict card (§3.6b): the vote overview and
-    the contribution-stance distribution as two insight cards, computed over the cited council
-    chain. "" when the chain carries neither votes nor stanced statements."""
+    """The stance distribution under the verdict card (§3.6b, single-encoded per §11 T5 — J1):
+    ONE insight card with the scaled stance bars over the cited council chain. The second card
+    that painted the same distribution as a proportional strip retired. "" when the chain
+    carries neither votes nor stanced statements."""
     sessions = [s for s in sessions if s]
-    _tot, parts = _vote_parts(sessions)
-    nvotes = sum(v for v, _, _ in parts)
-    cards = []
-    if nvotes:
-        # card title names the SCOPE (the cited chain) — the section heading above the row
-        # already says "Sentiment", repeating it verbatim taught nothing (round-3 craft pass)
-        cards.append(h("div", {"class_": "insight"}, h("h3", {}, t("sentiment_over_chain")),
-                       raw(_overview_html(parts))))
-    sd = _stance_dist_html(sessions)
-    if sd:
-        cards.append(h("div", {"class_": "insight"}, h("h3", {}, t("stance_of_contributions")),
-                       raw(sd)))
-    if not cards:
+    bars = _dist_bars(sessions)
+    if not bars:
         return ""
-    return h("div", {"class_": "insights"}, fragment(*cards))
+    # card title names the SCOPE (the cited chain) — the section heading above the row
+    # already says "Sentiment", repeating it verbatim taught nothing (round-3 craft pass)
+    return h("div", {"class_": "insights"},
+             h("div", {"class_": "insight"}, h("h3", {}, t("sentiment_over_chain")),
+               raw(bars)))
 
 
 def _persona_voices_html(store: Store, pid: str) -> str:
@@ -431,12 +448,12 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
         c = store.get_council_session(cid)
         if not c:
             continue
-        _, parts = _vote_parts([c])                 # value-bucketed via the scale (votes ARE stances)
+        # reference rows carry NO mini distribution strip (§11 T5): the chain's stance bars
+        # above are the one encoding; the per-council breakdown block compares >1 councils
         prompt = c.get("prompt") or cid
         ref_rows.append(h("a", {"class_": "ref-row", "href": f"/councils/{cid}"},
                           h("span", {"class_": "ref-n"}, f"C{i}"),
                           h("span", {"class_": "ref-t"}, prompt[:96]),
-                          h("span", {"class_": "ref-bar"}, _stacked(parts, thin=True)),
                           h("span", {"class_": "ref-go"}, raw(_icon("arrowRight")))))
     if ref_rows:
         belege = ("belege", t("councils"),

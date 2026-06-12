@@ -36,13 +36,22 @@ details.qround>summary:hover .qround-q{border-color:var(--accent)}
   border-bottom-left-radius:10px;pointer-events:none}
 .qround-a>.turn:not(:last-child)::after{content:"";position:absolute;left:-16px;top:25px;bottom:-12px;
   width:1px;background:var(--line);pointer-events:none}
+/* The turn TEXT is running prose (§11 T2/T4): the dense reading voice (t-md at the 1.6
+   rhythm — the same body layer as the report base), wrapped at the --measure-prose reading
+   width, left-aligned; the card itself keeps the structural measure. */
+.turn-text{font-size:var(--t-md);line-height:1.6;max-width:var(--measure-prose)}
+.turn-text p{margin:0}
 .turn-quotes{margin:8px 0 0}
 .turn-quotes>summary{cursor:pointer;list-style:none}
 .turn-quotes>summary::-webkit-details-marker{display:none}
 .turn-quotes>summary::before{content:"▸ "}
 .turn-quotes[open]>summary::before{content:"▾ "}
-.turn-quote{margin:8px 0 0;padding:4px 12px;border-left:2px solid var(--line-2);font-size:var(--t-sm);color:var(--muted)}
-.turn-quote p{margin:0 0 3px;font-style:italic}
+/* Verbatim quote typography (§11 T3/T4 — the design system's prose-blockquote idiom is the
+   loud Markdown callout; evidence quotes stay RESTRAINED): quiet hairline, italic body at
+   t-body/1.6, and the opening „ HANGS into the gutter (negative first-line indent) so the
+   quoted words stay optically aligned. */
+.turn-quote{margin:8px 0 0;padding:2px 0 2px 16px;border-left:2px solid var(--line-2);font-size:var(--t-body);line-height:1.6;color:var(--muted);max-width:var(--measure-prose)}
+.turn-quote p{margin:0 0 3px;font-style:italic;text-indent:-.62ch}
 /* Grounding-chip lines (§10 W4): one explicit rhythm under a turn/finding — quiet faint lead
    label, consistent 4px/8px wrap spacing for the chips (the base .srcchip margin-left is the
    inline-citation idiom; inside a refs LINE the chips space themselves). */
@@ -185,8 +194,11 @@ def _statement_body(st: dict, store=None, backlinks=None, *, clamp_at: int | Non
     if st.get("id"):
         attrs["id"] = st["id"]
     prose_html = raw(_prose(st.get("text", "")))
-    text_html = (ui.clamp(prose_html, threshold=clamp_at) if clamp_at
-                 else h("p", {}, prose_html))
+    # the utterance itself rides the .turn-text reading layer (§11 T2/T4: t-md/1.6 at the
+    # prose measure) — meta/refs/pushback stay in the quiet layer beside it
+    text_html = h("div", {"class_": "turn-text"},
+                  ui.clamp(prose_html, threshold=clamp_at) if clamp_at
+                  else h("p", {}, prose_html))
     refs = st.get("refs") or []
     quoted = [r for r in refs if r.get("quote")] if expand_quotes else []
     plain = [r for r in refs if r not in quoted]

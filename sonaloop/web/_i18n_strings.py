@@ -211,7 +211,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "sentiment_intro": "Stimmen über {scope} — wer befürwortet, wer ist skeptisch.",
         "per_council": "Pro Council",
         "personas_by_sentiment": "Personas nach Stimmung — Begeisterungs-Score (Befürwortung − Ablehnung)",
-        "stance_of_contributions": "Haltung der Wortbeiträge",
 
 
 
@@ -604,7 +603,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "sentiment_intro": "Voices across {scope} — who supports, who is skeptical.",
         "per_council": "Per council",
         "personas_by_sentiment": "Personas by sentiment — enthusiasm score (support − opposition)",
-        "stance_of_contributions": "Stance of the contributions",
 
 
 

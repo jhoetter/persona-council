@@ -1,4 +1,286 @@
-# UX Audit — Phase U rubric (newest on top: Round 4 → Round 3 → Round 2 → P5 → U1 history)
+# UX Audit — Phase U rubric (newest on top: Round 5 → Round 4 → Round 3 → Round 2 → P5 → U1 history)
+
+## Round 5 (2026-06-12) — typography & reading density (ux-contract §11 T1–T5)
+
+### Type conformance (T1)
+
+> Method: `scripts/ux_type.py` — the DOM-measured typography sweep, sibling of the spacing
+> harness. Boots the same seeded app as `make ux`, walks every canonical screen (incl. the
+> open slide-over) at 1440×900 and reads the COMPUTED font-size / font-weight / line-height
+> of every structural TEXT element (headings, leads, body prose, row titles, chips, meta,
+> eyebrows, kbd). Every value is classified against the type scale + the documented roles
+> below: **token** (an exact t-* step) · **em** (an em-derived size that RESOLVES onto the
+> scale within 0.5px — the density-adaptive layer: entity rows, tabs, props, toolbtns) ·
+> **FLAG** everything else. The script exits 1 while any flag remains — a re-runnable gate.
+
+**Before → after (flags per screen):** project-slideover 21→0 · project-slideover-ssr 21→0 ·
+synthesis 16→0 · documentation 1→0 · palette 1→0 · all other screens 0→0 — **TOTAL 60 → 0**.
+
+Representative fixes (all at the RULE level — web_assets.py, the co-located `register_css`
+blocks, or the design system + `npm run gen` + `make icons` where the offender is vendored):
+
+- **Report shell off-scale** (`web/_report.py` — the synthesis page IS the report shell):
+  base `15px/1.7 → t-md/1.6`, cover title `34px/1.12/700 → t-2xl/1.2/700` (the **t-2xl 32px
+  display step is new in the design-system scale**, tokens.data.mjs), section h2
+  `23px/1.25 → t-xl/1.2`, lead `19px/450 → t-lg/400`, pull-quote `18px/1.55 → t-lg/1.6`,
+  `.rp-num`/`h3 16px → t-prose`. The 1.7 base ratio was the single largest flag source —
+  every quiet element inside the report inherited it.
+- **Vendored em layer landing off-scale at dense bases** (`sonaloop-design/styles/
+  components.css`, regenerated + re-vendored): `.sl-eyebrow .72em` and `.sl-kbd .8em` now
+  carry the 11px type-scale floor (`max(.72em, 11px)` / `max(.8em, 11px)`) — at the app's
+  13px base they sat at 9.4/10.4px (the palette's ⌘K footer kbd measured 10.24px); the
+  website's 16px base keeps its airy sizes. `.sl-prose` strong `680 → 700`, h2–h4
+  `680 → 650`, `--sm` line-height `1.55 → 1.6`.
+- **Off-role weights snapped** (`web/_synthesis.py`): `.kpi b 720 → 700`, `.cc-n 740 → 700`,
+  `.cc-title 660/1.3 → 600/1.35`; the report lead `450 → 400`.
+- **Off-role line-heights snapped**: `.qa-q 1.42 → 1.35`, verdict title `1.45 → 1.35`,
+  `.cc-es 1.55 → 1.6`, docs/runs/sessions asides `1.45/1.55 → 1.5/1.6`, `.rgn-sub 1.3 → 1.35`.
+- **The rail pinned to the UI voice** (`.rail{font-size:var(--t-body);line-height:1.5}`):
+  inside the slide-over the report's t-md base scaled the em-sized prop rows to 13.8px —
+  the rail is chrome, not document, and no longer inherits a document base.
+
+**Documented type roles** (the scale lives in `sonaloop-design/tokens.data.mjs`; the gate
+encodes them in `scripts/ux_type.py`):
+
+| layer | size | weight | line-height | voice |
+|---|---|---|---|---|
+| display | t-xl 24 (pages) / t-2xl 32 (report covers) | 650 / 700 | 1.2 | sans, −.02em |
+| lead | t-lg 18 (verdict headline, study question) | 600 | 1.35 | sans |
+| body | t-prose 16 (document prose) / t-md 15 (dense reading: report base, turn cards) | 400 | 1.6 | sans, measured |
+| quiet | t-sm 12 (meta, refs, hints, chips) / t-body 13 (UI rows) | 400–500 | 1.5 | sans |
+| eyebrow | t-xs 11 | 500 | inherit | **Sona Mono**, caps, .14em — ONE voice (`.eyebrow`, `.sl-eyebrow`, `.rp-eyebrow`, `.qround-n`) |
+| section label | t-sm 12 | 600 | inherit | sans, caps, .06em (`.sec>h2`, `.block>.bh`, rail h4) |
+
+Weight tokens: 400 regular · 500 medium · 550 row-title (the em layer) · 600 semibold ·
+650 display · 700 strong. Line-height roles: 1.0 / 1.2 / 1.35 / 1.5 / 1.6 (ratio, ±0.035).
+Adjacent hierarchy levels: 32→24 (1.33×) → 18 (1.33×) → 16 (1.13× **+ the 600→400 weight
+step**) → 12 (1.33×). **Exemption list: empty.**
+
+### Reading measure (T2)
+
+`--measure-prose: 70ch` is a design-system token now (tokens.data.mjs `scales`, emitted as
+`--measure-prose`/`--sl-measure-prose`; the vendored `.sl-prose` p/ul/ol/blockquote consume
+it). Running prose wraps at the token, left-aligned in its container: report section runs,
+exec summaries, verdict body, council turn texts (the new `.turn-text` layer — t-md/1.6),
+verbatim quotes, study questions, leads, session monologues. Structural elements keep their
+container measure — finding/recommendation/segment rows DROPPED their old 74ch caps (a row
+is structure; only its inner paragraphs are prose), charts/rails/headers unchanged. The
+app's scattered `74ch`/`72ch` literals are gone; one token states the measure.
+
+### One hierarchy on synthesis + council detail (T3 + T4)
+
+The roles, applied end-to-end on both pages (and inherited by every report embed):
+
+- **display** — the page title: council hero (t-xl/650), report cover (t-2xl/700).
+- **lead** — the verdict headline (`.syn-verdict .sl-card__title`, was t-md → **t-lg/600/
+  1.35**) and its opening sentences (`__body` → **t-prose/1.6**, measured); the study
+  question (`.qa-q`); the per-round question banner (t-md/600/1.35).
+- **body** — `.sl-prose` t-prose/1.6 for document runs; **turn texts promoted from the 13px
+  UI voice to the dense reading voice** (`.turn-text`: t-md/1.6 at the prose measure) — the
+  tree-threaded council answers read as a conversation, not a form dump.
+- **quiet** — persona context lines (italic t-sm), refs/"Drew on" chip lines, dates,
+  stance chips, speaker names at the row-title weight (**600, was the browser's 700**).
+- **eyebrows** — ONE voice (Sona Mono 500 caps .14em, the design-system idiom): the app
+  `.eyebrow` (was sans 700/.09em), the report cover eyebrow (was 600/.1em), the round
+  kickers (was 700/.05em) and the vendored `.sl-eyebrow` now speak identically; colour
+  stays contextual (accent when labelling the answer/question, muted otherwise).
+- **quotes** — verbatim evidence quotes get restrained quote typography (the design
+  system's `.sl-prose blockquote` is the loud Markdown callout, deliberately NOT used
+  here): quiet hairline, italic t-body/1.6 at the measure, and the opening „ HANGS into
+  the gutter (`text-indent:-.62ch`) so the quoted words stay optically aligned.
+
+### J1 executed (T5)
+
+Decided in the owner's established W9 direction: **the distribution STRIP retired; the
+scaled stance bars are the single encoding** on council/synthesis web blocks.
+`_overview_html` (strip + legend) deleted; the synthesis charts row is ONE insight card
+(scaled bars over the cited chain, falling back to the votes when statements carry no
+stances — votes ARE stances, the data still shows exactly once); the council opener's
+strip and the cited-evidence rows' mini strips removed; the council sentiment block now
+renders for every mode (discovery charts its statements' stance lean as the same bars).
+Kept deliberately: the per-council comparison rows (>1 cited councils — N DIFFERENT
+distributions side by side is a comparison, not a re-encoding; they now also chart
+statement stances instead of painting an empty track for vote-less councils) and the
+survey-page strips (out of J1's scope). Pinned by
+`test_web_stance_bars_are_the_single_encoding` +
+`test_council_and_synthesis_pages_carry_no_distribution_strip`.
+
+### Honest re-score (the two T3/T4 pages, same 7-dimension rubric as Round 4)
+
+| screen | OR | RP | HD | TX | KB | HN | CR | avg | one-line justification |
+|---|---|---|---|---|---|---|---|---|---|
+| Council detail | 9 | 9 | 9 | 9 | 9 | 10 | 9 | **9.1** | One hierarchy verified from pixels: mono eyebrows, 24px question, 15px/1.6 measured turn prose under the threaded spine, 600 speaker names, italic quiet context — reads as a conversation; ONE distribution encoding (bars) + rail counts only. CR 9: the J1 redundancy is gone; remaining nit is the truncated persona context line (data trim, not type). |
+| Synthesis detail | 9 | 9 | 9 | 9 | 9 | 9 | 8.5 | **8.9** | 32px cover → 24px sections → 18px verdict lead → 16px measured prose → quiet layer: the steps are deliberate and the page reads like a document; single bars card; voices = the same turn anatomy. CR 8.5 honest: the lone half-width sentiment card sits next to whitespace, the verdict headline still hard-truncates mid-sentence ("…"), and the per-council rows + cited-evidence list name the same three councils twice. |
+
+(The craft holdouts that kept these at CR 8 in Round 4 — strip-vs-bars co-encoding, the
+1.7 report rhythm, the 13px turn walls — are fixed; what remains is layout/data dosing,
+not typography. No score is carried for the other screens: their type all measures token
+/em with zero flags, but they were not re-judged from pixels this round.)
+
+### Gate
+
+`uv run pytest -x -q`: **763 passed, 3 skipped** (762 + the new T5 page-level pin; the W9
+strip test rewritten to the bars contract — honest replacement, not an addition).
+`scripts/ux_spacing.py`: **0 flags, exemptions none**. `scripts/ux_type.py`: **0 flags,
+exemptions none** (table: `/tmp/ux/t-type-table.txt`, regenerate any time).
+`make ux UPDATE=1` + follow-up `make ux`: **all 36 goldens green** (synthesis/council and
+every prose-bearing screen shifted deliberately). Ratchets unchanged: STYLE_BASELINE=35,
+frozen class whitelist (`.turn-text` lives in the statement renderer's co-located CSS).
+
+### Final type-conformance table (distinct measured rule → classification)
+
+| element | property | computed | class |
+|---|---|---|---|
+| block-heading | font-size | 12px | token |
+| block-heading | font-weight | 600 | token |
+| block-heading | line-height | 1.60 | token |
+| breadcrumb | font-size | 13px | token |
+| breadcrumb | font-weight | 400 | token |
+| breadcrumb | line-height | 1.50 | token |
+| entity-desc | font-size | 11.05px | em |
+| entity-desc | font-weight | 400 | token |
+| entity-desc | line-height | 1.50 | token |
+| entity-title | font-size | 13px | token |
+| entity-title | font-weight | 550 | token |
+| entity-title | line-height | 1.50 | token |
+| eyebrow | font-size | 11px | token |
+| eyebrow | font-weight | 500 | token |
+| eyebrow | line-height | 1.50 | token |
+| eyebrow | line-height | 1.60 | token |
+| finding-text | font-size | 15px | token |
+| finding-text | font-weight | 400 | token |
+| finding-text | line-height | 1.60 | token |
+| h1 | font-size | 24px | token |
+| h1 | font-weight | 650 | token |
+| h1 | line-height | 1.20 | token |
+| ihint | font-size | 12px | token |
+| ihint | font-weight | 400 | token |
+| ihint | line-height | 1.50 | token |
+| ihint | line-height | 1.60 | token |
+| kbd | font-size | 11px | token |
+| kbd | font-weight | 400 | token |
+| kbd | font-weight | 500 | token |
+| kbd | line-height | 1.50 | token |
+| label-chip | font-size | 12px | token |
+| label-chip | font-weight | 400 | token |
+| label-chip | font-weight | 500 | token |
+| label-chip | line-height | 1.50 | token |
+| label-chip | line-height | 1.60 | token |
+| lead | font-size | 13px | token |
+| lead | font-weight | 400 | token |
+| lead | line-height | 1.50 | token |
+| muted-small | font-size | 12px | token |
+| muted-small | font-weight | 400 | token |
+| muted-small | font-weight | 500 | token |
+| muted-small | line-height | 1.50 | token |
+| muted-small | line-height | 1.60 | token |
+| nav-row | font-size | 13px | token |
+| nav-row | font-weight | 500 | token |
+| nav-row | font-weight | 600 | token |
+| nav-row | line-height | 1.50 | token |
+| ol-date | font-size | 11px | token |
+| ol-date | font-weight | 400 | token |
+| ol-date | line-height | 1.50 | token |
+| ol-title | font-size | 13px | token |
+| ol-title | font-weight | 400 | token |
+| ol-title | line-height | 1.50 | token |
+| page-sub | font-size | 13px | token |
+| page-sub | font-weight | 400 | token |
+| page-sub | line-height | 1.50 | token |
+| page-title | font-size | 24px | token |
+| page-title | font-weight | 650 | token |
+| page-title | line-height | 1.20 | token |
+| phase-tag | font-size | 11px | token |
+| phase-tag | font-weight | 600 | token |
+| phase-tag | line-height | 1.50 | token |
+| pill | font-size | 12px | token |
+| pill | font-weight | 500 | token |
+| pill | line-height | 1.50 | token |
+| prop-label | font-size | 11.96px | em |
+| prop-label | font-weight | 400 | token |
+| prop-label | line-height | 1.50 | token |
+| prop-value | font-size | 11.96px | em |
+| prop-value | font-weight | 400 | token |
+| prop-value | line-height | 1.50 | token |
+| prose | font-size | 15px | token |
+| prose | font-size | 16px | token |
+| prose | font-weight | 400 | token |
+| prose | line-height | 1.60 | token |
+| prose | line-height | 1.62 | token |
+| prose-p | font-size | 15px | token |
+| prose-p | font-size | 16px | token |
+| prose-p | font-weight | 400 | token |
+| prose-p | line-height | 1.60 | token |
+| prose-p | line-height | 1.62 | token |
+| prose-strong | font-size | 16px | token |
+| prose-strong | font-weight | 700 | token |
+| prose-strong | line-height | 1.62 | token |
+| qround-cnt | font-size | 11px | token |
+| qround-cnt | font-weight | 600 | token |
+| qround-cnt | line-height | 1.50 | token |
+| qround-kicker | font-size | 11px | token |
+| qround-kicker | font-weight | 500 | token |
+| qround-kicker | line-height | 1.50 | token |
+| qround-q | font-size | 15px | token |
+| qround-q | font-weight | 600 | token |
+| qround-q | line-height | 1.35 | token |
+| rail-h4 | font-size | 11px | token |
+| rail-h4 | font-weight | 600 | token |
+| rail-h4 | line-height | 1.50 | token |
+| ref-title | font-size | 13px | token |
+| ref-title | font-weight | 400 | token |
+| ref-title | line-height | 1.35 | token |
+| report-eyebrow | font-size | 11px | token |
+| report-eyebrow | font-weight | 500 | token |
+| report-eyebrow | line-height | 1.60 | token |
+| report-metaline | font-size | 12px | token |
+| report-metaline | font-weight | 400 | token |
+| report-metaline | line-height | 1.60 | token |
+| report-title | font-size | 32px | token |
+| report-title | font-weight | 700 | token |
+| report-title | line-height | 1.20 | token |
+| section-heading | font-size | 12px | token |
+| section-heading | font-weight | 600 | token |
+| section-heading | line-height | 1.50 | token |
+| section-heading | line-height | 1.60 | token |
+| sl-eyebrow | font-size | 11px | token |
+| sl-eyebrow | font-weight | 500 | token |
+| sl-eyebrow | line-height | 1.60 | token |
+| srcchip | font-size | 11px | token |
+| srcchip | font-weight | 400 | token |
+| srcchip | line-height | 1.50 | token |
+| srcchip | line-height | 1.60 | token |
+| study-question | font-size | 18px | token |
+| study-question | font-weight | 600 | token |
+| study-question | line-height | 1.35 | token |
+| tab | font-size | 11.96px | em |
+| tab | font-weight | 500 | token |
+| tab | font-weight | 600 | token |
+| tab | line-height | 1.50 | token |
+| toolbtn | font-size | 11.96px | em |
+| toolbtn | font-weight | 400 | token |
+| toolbtn | line-height | 1.50 | token |
+| turn-ctx | font-size | 12px | token |
+| turn-ctx | font-weight | 400 | token |
+| turn-ctx | line-height | 1.50 | token |
+| turn-ctx | line-height | 1.60 | token |
+| turn-name | font-size | 13px | token |
+| turn-name | font-weight | 600 | token |
+| turn-name | line-height | 1.50 | token |
+| turn-name | line-height | 1.60 | token |
+| turn-refs | font-size | 12px | token |
+| turn-refs | font-weight | 400 | token |
+| turn-refs | line-height | 1.60 | token |
+| turn-text | font-size | 15px | token |
+| turn-text | font-weight | 400 | token |
+| turn-text | line-height | 1.60 | token |
+| verdict-body | font-size | 16px | token |
+| verdict-body | font-weight | 400 | token |
+| verdict-body | line-height | 1.60 | token |
+| verdict-title | font-size | 18px | token |
+| verdict-title | font-weight | 600 | token |
+| verdict-title | line-height | 1.35 | token |
+
 
 ## Round 4 (2026-06-12) — CLOSING AUDIT: every screen re-scored from fresh pixels, W1–W11 verified
 
