@@ -369,6 +369,10 @@ def test_prototype_session_timeline_shows_screenshots_when_files_exist(store, tm
     # the shot opens the lightbox (no-JS fallback: the file itself)
     assert 'class="sl-shotlink" href="/sessions-files/psession_test/step-0.png" data-lightbox' in html
     assert "__slLightbox" in html
+    # round-3 H6: the lightbox builds a visible close × and a step/action caption, fed by the
+    # anchor's data-caption (Esc/click-out unchanged)
+    assert "sl-lb-close" in html and "sl-lb-cap" in html
+    assert 'data-caption="Step 0' in html
     # step 1 has no file -> the recorded screen text
     assert "proto-screen-1" in html
 

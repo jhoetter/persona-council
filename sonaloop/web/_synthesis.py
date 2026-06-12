@@ -313,23 +313,38 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
     return h("div", {"class_": "sec", "id": sid}, h("h2", {}, title), fragment(*blocks))
 
 
+def _verdict_split(syn: dict) -> tuple[str, str]:
+    """The ONE splitter for the verdict lead vs the remaining exec prose (round-3 H1): returns
+    (lead, rest). The verdict card renders `lead` (2-3 sentences cut from the executive opening,
+    sentence boundaries only before an uppercase start, so 'Min.' or '+40 Min. wegen …' never
+    splits); the exec-summary section renders `rest` — the same sentences never appear twice on
+    one screen. Both consumers MUST go through this function so the split can't drift apart."""
+    text = (syn.get("gesamtbild") or "").strip()
+    first_para, _, tail = text.partition("\n\n")
+    sentences = [s for s in re.split(r"(?<=[.!?])\s+(?=[«„\"'(]?[A-ZÄÖÜ])", first_para.strip()) if s]
+    lead, used = "", 0
+    if sentences:
+        lead, used = sentences[0], 1
+        for s in sentences[1:3]:
+            if len(lead) + len(s) > 460:
+                break
+            lead = f"{lead} {s}"
+            used += 1
+    rest_first = " ".join(sentences[used:]).strip()
+    rest = "\n\n".join(p for p in (rest_first, tail.strip()) if p)
+    return lead, rest
+
+
 def _verdict_card(syn: dict) -> str:
     """The verdict/POV card that OPENS a report (ux-contract §3.6a): a crisp headline finding
-    (the first key_problem) as the card title where one exists, plus a 2-3 sentence lead cut
-    from the executive opening (sentence boundaries only before an uppercase start, so 'Min.'
-    or '+40 Min. wegen …' never splits). Without an exec opening the first recommendation
-    stands in as the title. Pure derivation from authored data — nothing new is written, the
-    full prose still follows (clamped) further down."""
+    (the first key_problem) as the card title where one exists, plus the 2-3 sentence lead the
+    shared `_verdict_split` cuts from the executive opening. Without an exec opening the first
+    recommendation stands in as the title. Pure derivation from authored data — nothing new is
+    written, the NON-consumed prose still follows further down (H1: never the same sentences)."""
     findings = _A.synthesis_findings(syn)
     heads = [f for f in findings if f.get("kind") in ("key_problem",)]
     head_text = heads[0].get("text", "") if heads else ""
-    first_para = (syn.get("gesamtbild") or "").strip().split("\n\n", 1)[0]
-    sentences = [s for s in re.split(r"(?<=[.!?])\s+(?=[«„\"'(]?[A-ZÄÖÜ])", first_para) if s]
-    lead = sentences[0] if sentences else ""
-    for s in sentences[1:3]:
-        if len(lead) + len(s) > 460:
-            break
-        lead = f"{lead} {s}"
+    lead, _ = _verdict_split(syn)
     if not lead:                                       # no exec opening → a recommendation stands in
         recs = [f for f in findings if f.get("kind") in ("recommendation",)]
         head_text = head_text or (recs[0].get("text", "") if recs else "")
@@ -404,12 +419,21 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
         sec.append(("charts", t("sentiment_block"), _block("charts", t("sentiment_block"), charts)))
     # 2) Executive Summary — the unified Question → Answer lead (shared with the council 'finding'),
     # fed by the shared study view-model so council/synthesis never branch on field names. Long
-    # authored bodies clamp at the section threshold (C6) — depth stays, dosed.
+    # authored bodies clamp at the section threshold (C6) — depth stays, dosed. When the verdict
+    # card above already consumed the opening sentences, the section starts from the first
+    # NON-consumed sentence (round-3 H1: one screen never repeats prose verbatim); when the card
+    # consumed EVERYTHING, the honest fallback is no echo block at all — the verdict IS the summary.
     if syn.get("gesamtbild"):
         vm = study_head(syn, is_synthesis=True)
-        sec.append(("exec", t("summary"), _study_lead(
-            ui.clamp(raw(_md(vm["answer_md"])), threshold=ui.SECTION_CLAMP),
-            vm["answer_label"], question=vm["question"], qlabel=t("question"))))
+        answer_md = vm["answer_md"]
+        if verdict:
+            lead, rest = _verdict_split(syn)           # the SAME splitter the card rendered from
+            if lead:
+                answer_md = rest
+        if answer_md.strip():
+            sec.append(("exec", t("summary"), _study_lead(
+                ui.clamp(raw(_md(answer_md)), threshold=ui.SECTION_CLAMP),
+                vm["answer_label"], question=vm["question"], qlabel=t("question"))))
     # 2) Cited evidence — councils are DECOUPLED: this synthesis is a standalone answer that may
     # CITE councils (or none). Render them as a compact reference list, NOT as the synthesis body.
     belege = None

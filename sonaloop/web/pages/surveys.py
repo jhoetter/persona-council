@@ -98,10 +98,12 @@ def _predicted_vs_actual(comparison: dict, store) -> str:
     return h("div", {}, fragment(*rows), refs_line)
 
 
-def _question_row(q: dict, result: dict | None, store) -> str:
+def _question_row(q: dict, result: dict | None, store, show_count: bool = True) -> str:
     """One question as an expandable ROW (§3.6): the summary line carries the kind icon, the
     (ellipsized) text, the distribution strip + answered count; the body keeps the full question
-    text and the result charts exactly where they already rendered."""
+    text and the result charts exactly where they already rendered. `show_count=False` when every
+    question shares the same answered count — the section states it ONCE instead of every row
+    repeating "5 responses" (round-3 H4); per-question counts stay only when they DIFFER."""
     icons = dict(single="dot", multi="list", scale="analytics", text="quote")
     res = result or {}
     answered = res.get("answered", 0)
@@ -120,7 +122,8 @@ def _question_row(q: dict, result: dict | None, store) -> str:
                h("span", {"class_": "pill"}, q.get("kind", "")),
                (h("span", {"class_": "pill"}, t("survey_stance_mapped"))
                 if q.get("stance_mapped") else None),
-               (h("span", {"class_": "muted small"}, t("n_responses", n=answered)) if answered else None)))
+               (h("span", {"class_": "muted small"}, t("n_responses", n=answered))
+                if answered and show_count else None)))
     body = [h("div", {"class_": "qhead"}, h("span", {"class_": "qnum"}, q.get("id", "")),
             h("b", {}, q.get("text", "")))]
     if answered and q.get("kind") == "text":
@@ -201,9 +204,16 @@ def register_surveys(app) -> None:
                           fragment(*(raw(render_ref(r, store)) for r in derived)))
                         if derived else None)
         intro_html = (h("p", {"class_": "sub"}, s.get("intro", "")) if s.get("intro") else None)
+        # When every question shares one answered count, state it ONCE at section level instead
+        # of repeating "5 responses" on every row (round-3 H4); differing counts stay per-row.
+        answered_counts = [(by_q.get(q["id"]) or {}).get("answered", 0) for q in s["questions"]]
+        uniform_n = answered_counts[0] if len(set(answered_counts)) == 1 and answered_counts else None
         questions_html = h("div", {"class_": "sec", "id": "sec-questions"},
                            h("h2", {}, t("n_questions", n=len(s["questions"]))),
-                           fragment(*(_question_row(q, by_q.get(q["id"]), store)
+                           (h("p", {"class_": "ihint"}, t("n_responses_each", n=uniform_n))
+                            if uniform_n else None),
+                           fragment(*(_question_row(q, by_q.get(q["id"]), store,
+                                                    show_count=uniform_n is None)
                                       for q in s["questions"])))
         n_resp = results["responses"]
         responses = store.list_survey_responses(s["id"]) if n_resp else []

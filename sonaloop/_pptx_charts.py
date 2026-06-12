@@ -52,6 +52,20 @@ def _rgb(hexv: str):
     return RGBColor.from_string(hexv)
 
 
+def _set_hole_size(plot, val: str):
+    """Set the doughnut hole size on the EXISTING `c:holeSize` element (python-pptx's doughnut
+    template already carries one at val=50). Appending a second one — the pre-round-3 code path —
+    made the chart part schema-invalid (CT_DoughnutChart allows ONE holeSize), so strict renderers
+    (PowerPoint) dropped the whole chart: the H5 "legend with NO donut" empty panel."""
+    from pptx.oxml.ns import qn
+    el = plot._element
+    hole = el.find(qn("c:holeSize"))
+    if hole is None:
+        hole = el.makeelement(qn("c:holeSize"), {})
+        el.append(hole)
+    hole.set("val", val)
+
+
 def _clean_area(chart):
     """Transparent chart area (blend into the slide) + brand default font — for the donut ring,
     which stays a native chart (arcs are impractical as shapes)."""
@@ -88,7 +102,6 @@ def _bar_chart(ctx, slide, ch, bx, by, bw, bh):
 
 def _donut_chart(ctx, slide, ch, bx, by, bw, bh):
     from pptx.util import Inches
-    from pptx.oxml.ns import qn
     from pptx.chart.data import CategoryChartData
     from pptx.enum.chart import XL_CHART_TYPE
     cats = [str(c) for c in ch["categories"]]
@@ -105,7 +118,7 @@ def _donut_chart(ctx, slide, ch, bx, by, bw, bh):
         for j, pt in enumerate(plot.series[0].points):
             pt.format.fill.solid(); pt.format.fill.fore_color.rgb = _rgb(cols[j % len(cols)])
             pt.format.line.fill.background()
-        plot._element.append(plot._element.makeelement(qn("c:holeSize"), {"val": "62"}))
+        _set_hole_size(plot, "62")
     except Exception:
         pass
     lx = bx + size + 0.4; lw = max(1.0, bw - size - 0.4)
@@ -219,7 +232,6 @@ def _diverging_chart(ctx, slide, ch, bx, by, bw, bh):
 
 def _gauge_chart(ctx, slide, ch, bx, by, bw, bh):
     from pptx.util import Inches
-    from pptx.oxml.ns import qn
     from pptx.chart.data import CategoryChartData
     from pptx.enum.chart import XL_CHART_TYPE
     from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
@@ -242,7 +254,7 @@ def _gauge_chart(ctx, slide, ch, bx, by, bw, bh):
             for idx, col in ((0, _SERIES[i % len(_SERIES)]), (1, _SURFACE2)):
                 pts[idx].format.fill.solid(); pts[idx].format.fill.fore_color.rgb = _rgb(col)
                 pts[idx].format.line.fill.background()
-            plot._element.append(plot._element.makeelement(qn("c:holeSize"), {"val": "70"}))
+            _set_hole_size(plot, "70")
         except Exception:
             pass
         ctx.text(slide, gx, by + size / 2 - 0.2, size, 0.4, f"{round(pct)}%", size=16, bold=True,

@@ -61,16 +61,24 @@ register_css(r"""
 .sl-shotstrip .sl-shotlink:hover img{border-color:var(--accent)}
 .sl-lightbox{border:0;padding:0;background:transparent;max-width:94vw;max-height:94vh;overflow:visible}
 .sl-lightbox::backdrop{background:rgba(0,0,0,.74)}
-.sl-lightbox img{display:block;max-width:94vw;max-height:94vh;border:1px solid var(--line);
+.sl-lightbox img{display:block;max-width:94vw;max-height:90vh;border:1px solid var(--line);
   border-radius:var(--radius);background:var(--panel);cursor:zoom-out}
+/* visible close × + step caption (round-3 H6) — Esc / click-out unchanged */
+.sl-lb-fig{margin:0;position:relative}
+.sl-lb-close{position:absolute;top:-12px;right:-12px;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:17px;line-height:1;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.sl-lb-close:hover{background:var(--panel-2)}
+.sl-lb-cap{margin-top:8px;text-align:center;color:rgba(255,255,255,.88);font-size:var(--t-sm)}
 """)
 
 
 # The minimal image lightbox (ux-contract §9 V4): every [data-lightbox] anchor opens its href
 # (the full-resolution step shot) in a native <dialog> built lazily ON FIRST USE — Esc and any
-# click close it; without JS the anchor simply opens the file. Idempotent (the window flag), so
-# the script may ride along with every surface that renders shots (detail page, slide-over
-# fragments re-execute their scripts, the prototype page strip).
+# click close it, and a visible close × plus a small step/action caption make both discoverable
+# (round-3 H6: data-caption on the anchor feeds the caption). Without JS the anchor simply opens
+# the file. Idempotent (the window flag), so the script may ride along with every surface that
+# renders shots (detail page, slide-over fragments re-execute their scripts, the prototype strip).
 LIGHTBOX_JS = """<script>(function(){
 if(window.__slLightbox) return; window.__slLightbox=1;
 document.addEventListener('click',function(e){
@@ -79,12 +87,21 @@ document.addEventListener('click',function(e){
   var dlg=document.getElementById('sl-lightbox');
   if(!dlg){
     dlg=document.createElement('dialog'); dlg.id='sl-lightbox'; dlg.className='sl-lightbox';
-    dlg.appendChild(document.createElement('img'));
+    var fig=document.createElement('figure'); fig.className='sl-lb-fig';
+    fig.appendChild(document.createElement('img'));
+    var x=document.createElement('button'); x.type='button'; x.className='sl-lb-close';
+    x.setAttribute('aria-label','Close'); x.textContent='\\u00d7';
+    fig.appendChild(x);
+    var cap=document.createElement('figcaption'); cap.className='sl-lb-cap';
+    fig.appendChild(cap);
+    dlg.appendChild(fig);
     dlg.addEventListener('click',function(){ dlg.close(); });
     document.body.appendChild(dlg);
   }
-  var img=dlg.querySelector('img'), thumb=a.querySelector('img');
+  var img=dlg.querySelector('img'), thumb=a.querySelector('img'), cap=dlg.querySelector('.sl-lb-cap');
   img.src=a.getAttribute('href'); img.alt=(thumb&&thumb.alt)||'';
+  cap.textContent=a.getAttribute('data-caption')||(thumb&&thumb.alt)||'';
+  cap.style.display=cap.textContent?'':'none';
   dlg.showModal();
 });
 })();</script>"""
@@ -288,7 +305,7 @@ def session_shot_strip(sess: dict) -> str:
         return ""
     picks = shots[:1] if len(shots) == 1 else [shots[0], shots[-1]]
     thumbs = [h("a", {"class_": "sl-shotlink", "href": url, "data-lightbox": True,
-                      "title": t("step_n", n=i)},
+                      "data-caption": t("step_n", n=i), "title": t("step_n", n=i)},
                h("img", {"src": url, "alt": title or t("step_n", n=i), "loading": "lazy"}))
               for i, url, title in picks]
     return h("div", {"class_": "sl-shotstrip"}, fragment(*thumbs))
@@ -459,14 +476,19 @@ def _step_html(sess: dict, step: dict) -> str:
     meta = _friction_meta(fr.get("level", ""))
     has_friction = bool(meta and meta["value"] > 0)
     shot_url = _screenshot_url(sess["id"], state["screenshot"]) if state.get("screenshot") else None
+    action = step.get("action") or {}
+    # the lightbox caption: step number + action (round-3 H6) — the typed chip label when one exists
+    typ = action.get("type") or ""
+    act_label = (t("action_" + typ) if typ in _ACTION_ICONS else typ)
+    lb_caption = " · ".join(x for x in (t("step_n", n=i), act_label) if x)
     # the shot opens the full-resolution file in the lightbox (no-JS: the file itself, V4)
-    screen = (h("a", {"class_": "sl-shotlink", "href": shot_url, "data-lightbox": True},
+    screen = (h("a", {"class_": "sl-shotlink", "href": shot_url, "data-lightbox": True,
+                      "data-caption": lb_caption},
                 h("img", {"class_": "sess-shot", "src": shot_url,
                           "alt": state.get("title") or t("step_n", n=i), "loading": "lazy"}))
               if shot_url
               else h("div", {"class_": "sess-screen-txt"}, state.get("screen", "")))
     caption = " · ".join(x for x in (state.get("url"), state.get("title")) if x)
-    action = step.get("action") or {}
     target = (action.get("target") or "").strip()
     detail = (action.get("detail") or "").strip()
     monologue = (step.get("monologue") or "").strip()

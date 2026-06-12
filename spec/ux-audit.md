@@ -94,23 +94,31 @@ Tests updated to the new contracts: `test_presentation_from_data` (label "Protot
 
 ### Follow-ups (the honest craft remainder — concrete, with effort)
 
-- **H1** Synthesis verdict card can duplicate the exec-summary opening VERBATIM on one screen
-  (final showcase report) — derive a non-overlapping lead (skip the sentences the verdict
-  consumed) or suppress the card when no distinct key_problem exists. Renderer change in
-  `web/_synthesis.py::_verdict_card`; ~0.5d.
+- **H1 — RESOLVED (2026-06-12).** ONE shared splitter (`web/_synthesis.py::_verdict_split`) now
+  feeds BOTH the verdict card (the lead) and the exec-summary section (the rest): exec renders
+  from the first NON-consumed sentence — on the final showcase report it now opens "Trifft das
+  Fenster auf eine harte Wand…" with zero verbatim overlap (`/tmp/ux/h1-exec.png`); when the
+  card consumed everything, the honest fallback is no echo block at all.
 - **H2** Donut + proportional strip encode the SAME distribution side by side (council sentiment
   block and the synthesis charts card) — pick one encoding per surface. Small renderer change +
-  an owner taste call.
-- **H3** Council rail "Type: Decision" repeats the header mode pill (round 2 kept it as "real
-  info"; with the pill it is now an echo) — drop the rail row or rename to "Mode". One-liner +
-  golden refresh; needs the owner's call because round 2 decided the opposite.
-- **H4** Survey question rows each repeat "5 responses" when every question shares the count —
-  show per-question counts only when they differ. Small (`web/pages/surveys.py`).
-- **H5** Deck sentiment slide: the "Votes" card renders the legend with NO donut (empty ~300px
-  panel, `deck-after-05.png`) — chart missing or invisible in the PPTX renderer
-  (`_pptx_charts`). Needs a deck-side fix + re-render; ~0.5d.
-- **H6** Session lightbox has no visible close "×" or step caption (Esc/outside-click only) —
-  add both in `LIGHTBOX_JS`/CSS. Small.
+  an owner taste call. **STAYS OPEN — owner call, deliberately not implemented.**
+- **H3 — RESOLVED (2026-06-12).** The rail "Type: Decision" row dropped on council detail
+  (reverses round 2: with the header mode pill it became an echo) — rail is now Project →
+  Personas → stance counts → Created (`/tmp/ux/h3-rail-crop.png`); assets keep Type (real info).
+- **H4 — RESOLVED (2026-06-12).** Identical per-question counts collapse into ONE section-level
+  hint "5 responses per question" (new `n_responses_each` key de+en); per-row counts render
+  ONLY when they differ (`/tmp/ux/h4-survey.png`).
+- **H5 — RESOLVED (2026-06-12).** Root cause: `_pptx_charts` APPENDED a second `c:holeSize` to
+  the doughnut/gauge plots (python-pptx's template already carries one) — the chart part was
+  schema-invalid (CT_DoughnutChart allows ONE), so strict renderers dropped the native chart
+  while the shape-drawn legend survived. `_set_hole_size()` now sets the existing element;
+  re-export verified by XML/python-pptx introspection (ONE holeSize=62, series [1,1,1,2],
+  doughnut graphicFrame on the votes panel; `/tmp/ux/deck-h5.pptx` + verification note) and
+  pinned by `test_votes_donut_is_a_valid_native_chart`. The PIL verification rasterizer does
+  not draw native charts — the panel reads empty THERE by tool limitation, not in PowerPoint.
+- **H6 — RESOLVED (2026-06-12).** The lightbox gained a visible close × and a small caption
+  (step number + action, e.g. "Step 0 · Look", fed by `data-caption` on the shot anchors);
+  Esc/click-out unchanged (`/tmp/ux/h6-lightbox.png`).
 - **G1–G5 stand** from round 2 (G1 prototype session heading; G2 report lifecycle pill;
   G4 avatar binaries in snapshots; G5 sidebar active-state rule), F5 stands for /runs.
 
@@ -120,6 +128,14 @@ Tests updated to the new contracts: `test_presentation_from_data` (label "Protot
 `make ux UPDATE=1` + follow-up `make ux`: **all 36 goldens match** (the date-format and label
 fixes moved most screens deliberately). Ratchets unchanged: STYLE_BASELINE=35, frozen class
 whitelist; no new `style=`, no new classes (one dead CSS rule removed).
+
+### Gate (H follow-ups, 2026-06-12)
+
+`uv run pytest -x -q`: **744 passed** (743 + the new H5 donut-validity pin).
+`make ux UPDATE=1` + follow-up `make ux`: **all 36 goldens match** — council (H3 rail) and
+synthesis (H1 exec) shifted deliberately; the other refreshed goldens moved only by load-time
+relative timestamps. Ratchets unchanged: STYLE_BASELINE=35, frozen class whitelist (the new
+lightbox close/caption live as `sl-*` contracts in co-located CSS/JS, not page classes).
 
 ---
 

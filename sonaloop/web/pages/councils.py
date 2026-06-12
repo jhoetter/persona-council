@@ -227,8 +227,9 @@ def register_councils(app) -> None:
         crumbs.append((short_title, None))
         # Rail order is the §8.2 anatomy: project → kind-specifics → dates.
         proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "")
+        # No rail "Type" row: the header mode pill already states it — with the pill the rail row
+        # became an echo (round-3 H3, reversing the round-2 keep; assets keep Type = real info).
         prop_rows = [("projects", t("project"), proj_link),
-                     ("councils", t("type_h"), t("council_mode_" + mode)),
                      ("personas", personas_h, str(n_voices))]
         if mode != "discovery":                               # the vote panel only where a vote/reaction exists
             # value-bucketed via the scale (votes ARE stances; legacy tokens resolve through the

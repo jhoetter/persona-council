@@ -145,6 +145,31 @@ def test_sentiment_and_stance_render_as_chart_slides(store):
     assert pie["values"] == [1, 1, 1] and bar["values"] == [1, 1, 1]
 
 
+def test_votes_donut_is_a_valid_native_chart(store):
+    """Round-3 H5: the sentiment slide's Votes card carries a NATIVE doughnut graphicFrame whose
+    chart part is schema-valid — exactly ONE c:holeSize (the appended duplicate made strict
+    renderers drop the chart: the 'legend with NO donut' empty panel) — with a nonzero series
+    and every point carrying its semantic stance colour."""
+    from pptx.oxml.ns import qn
+
+    syn = _showcase(store)
+    prs = Presentation(io.BytesIO(services.export_synthesis_pptx(syn["id"], store=store)))
+    # the charts slide is identifiable by its 'Votes' card title; it must hold the graphicFrame
+    votes_slide = next(sl for sl in prs.slides
+                       if any(sh.has_text_frame and sh.text_frame.text == "Votes" for sh in sl.shapes))
+    charts = [sh.chart for sh in votes_slide.shapes if getattr(sh, "has_chart", False)]
+    assert len(charts) == 1, "the votes donut graphicFrame is missing from the sentiment slide"
+    doughnuts = charts[0]._chartSpace.findall(".//" + qn("c:doughnutChart"))
+    assert len(doughnuts) == 1
+    holes = doughnuts[0].findall(qn("c:holeSize"))
+    assert len(holes) == 1 and holes[0].get("val") == "62", (
+        f"doughnut must carry exactly one c:holeSize (got {[h.get('val') for h in holes]}) — "
+        "a duplicate makes the chart part invalid and PowerPoint renders an empty panel (H5)")
+    series = charts[0].plots[0].series[0]
+    assert sum(series.values) > 0 and list(series.values) == [1, 1, 1]
+    assert len(doughnuts[0].findall(".//" + qn("c:dPt"))) == 3   # per-point stance colours applied
+
+
 def test_voices_are_quote_slides_two_per_slide(store):
     syn = _showcase(store)
     slides = _slide_model(syn, store)
