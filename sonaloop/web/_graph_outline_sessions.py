@@ -65,7 +65,7 @@ def _subject_parent_item(group: dict, key: str, pk, pmeta: dict) -> dict:
     po, plabel = pmeta.get(pk, (99, ""))
     it = {"oid": f"subject:{key}", "color": "#9aa0a6", "title": subj.get("label") or key,
           "kind": t("fidelity_artifact"), "href": "", "plabel": plabel, "po": po, "round": 0,
-          "order": ts, "ts": ts, "indent": 0, "last_child": False,
+          "order": ts, "ts": ts, "indent": 0, "last_child": False, "pk": pk or "",
           "rkind": subj.get("kind", "")}      # chip contract: live_url/flow/prototype, all declared
     if subj.get("kind") == "live_url":
         title = next((st["state"]["title"] for s in sessions for st in (s.get("steps") or [])
@@ -89,7 +89,8 @@ def _session_child_item(sess: dict, parent: dict, seq: int, last: bool) -> dict:
             "kind": kind, "href": f'/sessions/{sess["id"]}', "plabel": parent["plabel"],
             "po": parent["po"], "round": parent["round"], "order": f'{parent["order"]}#s{seq:03d}',
             "ts": sess.get("created_at", ""), "indent": parent["indent"] + 1, "last_child": last,
-            "lead": _avatar(sess["persona"], 18), "rkind": "session", "session": sess}
+            "lead": _avatar(sess["persona"], 18), "rkind": "session", "session": sess,
+            "pk": parent.get("pk", "")}
 
 
 def merge_session_items(items: list[dict], groups: dict[str, dict], ideation, pmeta: dict,

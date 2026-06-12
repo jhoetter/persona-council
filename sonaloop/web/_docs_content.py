@@ -290,22 +290,36 @@ INSPECTOR_SECTIONS = [
      ("Orientierung: vier Punkte, ein Modell", "Getting around: four items, one model"),
      ("Die Seitenleiste hat genau **vier** Einträge: **Projekte · Personas · Library · Activity** "
       "(Einstellungen & Doku sitzen im Footer). Das Denkmodell ist überall dasselbe: *Projekt → "
-      "Phasen → Zeilen; Klick = Peek.* Das **Projekt ist das Zuhause** — alles, was eine Studie "
+      "Phasen → Zeilen; Klick = Seitenpanel.* Das **Projekt ist das Zuhause** — alles, was eine Studie "
       "erzeugt (Councils, Reports, Entscheidungen, Umfragen, Prototypen, Sessions, Assets), ist "
       "eine Zeile in seiner Phase. Die **Library** ist der projektübergreifende Browser: eine "
       "Seite mit Tabs (Councils · Reports · Prototypen · Sessions · Umfragen · Hypothesen · "
-      "Entscheidungen · Notizen), überall dieselben Zeilen. Ein Klick auf eine Zeile öffnet erst "
-      "den **Peek** (Seitenpanel mit der Essenz); die volle Detailseite ist einen Klick weiter — "
-      "und jede behält ihre eigene URL. Den **Run-Status** eines Projekts zeigt ein Chip im "
+      "Entscheidungen · Notizen · Assets), überall dieselben Zeilen. **Assets** — empfangene "
+      "Input-Dateien (Evidenz, via MCP angehängt) und von der Software erzeugte Dokumente "
+      "(Deliverables) — haben eigene Detailseiten mit Herkunft (Quelle, Richtung, ersetzte "
+      "Versionen); der Chip **„N Dateien“** im Projekt-Kopf öffnet alle Dateien eines Projekts "
+      "chronologisch. Ein Klick auf eine Zeile öffnet die "
+      "**ganze Detailseite als Seitenpanel** (Notion-Stil): die Liste bleibt dahinter sichtbar, "
+      "die URL bleibt die Listen-URL und bekommt `?d=<Detailpfad>` — neu laden oder teilen "
+      "reproduziert exakt diese Ansicht (Liste + offenes Panel). Das ⤢-Symbol wechselt zur "
+      "vollen Seite (die kanonische Detail-URL, die direkt geladen weiterhin die volle Seite "
+      "zeigt), Esc/Zurück bringt die Liste samt URL zurück. Den **Run-Status** eines Projekts zeigt ein Chip im "
       "Projekt-Kopf (verlinkt aufs Run-Journal).",
       "The sidebar has exactly **four** items: **Projects · Personas · Library · Activity** "
       "(settings & docs live in the footer). One mental model runs the whole app: *project → "
-      "phases → rows; click = peek.* The **project is the home** — everything a study produces "
+      "phases → rows; click = slide-over.* The **project is the home** — everything a study produces "
       "(councils, reports, decisions, surveys, prototypes, sessions, assets) is a row in its "
       "phase. The **Library** is the cross-project browser: one page with tabs (Councils · "
-      "Reports · Prototypes · Sessions · Surveys · Hypotheses · Decisions · Notes), the same "
-      "rows everywhere. Clicking a row opens the **peek** first (a side panel with the essence); "
-      "the full detail page is one more click — and every record keeps its own URL. A project's "
+      "Reports · Prototypes · Sessions · Surveys · Hypotheses · Decisions · Notes · Assets), the same "
+      "rows everywhere. **Assets** — input files received (evidence, attached via MCP) and "
+      "documents the software generated (deliverables) — have their own detail pages with "
+      "provenance (source, direction, superseded versions); the **“N files”** chip in the "
+      "project header opens all of a project's files chronologically. "
+      "Clicking a row opens the **full detail page as a slide-over** (Notion-style): "
+      "the list stays visible behind it, and the URL stays the list URL plus `?d=<detail "
+      "path>` — reloading or sharing it reproduces exactly this view (list + open panel). "
+      "The ⤢ control expands to the full page (the canonical detail URL, which still renders "
+      "full-page when loaded directly), and Esc/back restores the list and its URL. A project's "
       "**run state** shows as a chip in the project header (linking to the run journal).")),
     ("examples", "package",
      ("Beispielprojekte", "Example projects"),
@@ -348,16 +362,16 @@ INSPECTOR_SECTIONS = [
       "alles (Personas, Councils, Reports, Sessions, Hypothesen, Entscheidungen, Umfragen …) plus "
       "Sprungbefehle zu jeder Seite. Navigation per Chords: `g` `h` Home, `g` `p` Personas, `g` `c` "
       "Councils, `g` `s` Reports, `g` `a` Activity, `g` `r` Runs, `g` `d` Doku. In Listen und im "
-      "Projekt-Outline: `j`/`k` bewegt den Fokus, `Enter` öffnet die Zeile als **Peek** "
-      "(Seitenpanel), `Esc` schließt ihn — von dort öffnet „Öffnen“ die volle Detailseite. Auf "
-      "Detailseiten blättern `[`/`]` zum Nachbarn. Beim Tippen in Felder ist alles deaktiviert.",
+      "Projekt-Outline: `j`/`k` bewegt den Fokus, `Enter` öffnet die Zeile als **Seitenpanel** "
+      "(volle Detailseite, echte URL), `o` öffnet sie direkt als ganze Seite, `Esc` schließt "
+      "das Panel. Auf Detailseiten blättern `[`/`]` zum Nachbarn. Beim Tippen in Felder ist alles deaktiviert.",
       "`?` opens the shortcut cheat sheet. **⌘K / Ctrl+K** opens the command palette: search across "
       "everything (personas, councils, reports, sessions, hypotheses, decisions, surveys …) plus jump "
       "commands for every page. Navigate with chords: `g` `h` home, `g` `p` personas, `g` `c` "
       "councils, `g` `s` reports, `g` `a` activity, `g` `r` runs, `g` `d` docs. In lists and the "
-      "project outline `j`/`k` move focus, `Enter` opens the row as a **peek** (side panel) and "
-      "`Esc` closes it — “Open” inside the peek goes to the full detail page. On detail pages "
-      "`[`/`]` step to the sibling record. Everything is disabled while you type in a field.")),
+      "project outline `j`/`k` move focus, `Enter` opens the row as a **slide-over** (the full "
+      "detail page, real URL), `o` opens it straight as a full page, and `Esc` closes the "
+      "panel. On detail pages `[`/`]` step to the sibling record. Everything is disabled while you type in a field.")),
     ("tour", "compass",
      ("Produkt-Tour", "Product tour"),
      ("Eine optionale 60-Sekunden-Tour zeigt die Oberfläche in sechs Schritten. Sie startet **nie von "
@@ -370,17 +384,34 @@ INSPECTOR_SECTIONS = [
       "any time.")),
     ("editing", "pencil",
      ("Was du bearbeiten kannst", "What you can edit"),
-     ("Der Inspector ist primär eine Lese-Oberfläche — mit einer klaren Grenze für Schreibzugriffe: "
-      "**Struktur ja, generierter Text nie.** Du kannst Projekte, Notizen und Sections anlegen, "
-      "umbenennen und löschen sowie Persona-Metadaten (Name, Rolle, Segment, Branche) bearbeiten. "
-      "Generierte Artefakte — Councils, Reports, Prototypen — kannst du nur **löschen** (mit "
-      "Bestätigung); ihr Inhalt entsteht ausschließlich über deinen Agenten. Erinnerungen, SOULs und "
-      "Evidenz bleiben komplett unantastbar.",
-      "The inspector is primarily a reading surface — with one clear write boundary: **structure yes, "
-      "generated text never.** You can create, rename and delete projects, notes and sections, and "
-      "edit persona metadata (name, role, segment, industry). Generated artifacts — councils, "
-      "reports, prototypes — can only be **deleted** (with confirmation); their content is authored "
-      "exclusively through your agent. Memories, SOULs and evidence stay untouchable entirely.")),
+     ("Der Inspector ist eine Lese-Oberfläche mit einer klaren Grenze: **ansehen und bearbeiten, "
+      "nie anlegen.** Neue Projekte, Notizen oder Sections entstehen ausschließlich über deinen "
+      "Agenten (MCP/CLI) — die UI bietet dafür bewusst keinen Button. Bearbeiten ist fein: "
+      "Projekt-, Notiz- und Section-Metadaten sowie Persona-Metadaten (Name, Rolle, Segment, "
+      "Branche). Löschen ist bewusst dezent: das **„…“-Menü** im Seitenkopf öffnet einen "
+      "Bestätigungs-Dialog (bei Projekten und Personas tippst du den Namen). Generierter Text — "
+      "Councils, Reports, Prototypen — bleibt unantastbar; Erinnerungen, SOULs und Evidenz komplett.",
+      "The inspector is a reading surface with one clear boundary: **inspect and edit, never "
+      "create.** New projects, notes or sections come exclusively from your agent (MCP/CLI) — the "
+      "UI deliberately offers no button for them. Editing is fine: project, note and section "
+      "metadata plus persona metadata (name, role, segment, industry). Deletion is deliberately "
+      "subtle: the **“…” menu** in the page header opens a confirm dialog (projects and personas "
+      "ask you to type the name). Generated text — councils, reports, prototypes — stays "
+      "untouchable; memories, SOULs and evidence entirely so.")),
+    ("filtering", "filter",
+     ("Filtern wie in Linear", "Filtering, Linear-style"),
+     ("Projekt-Outline und Library tragen eine **Filterleiste**: „Filter“ öffnet das Facetten-Menü "
+      "(Typ, Phase, Persona, Status — in der Library Projekt, Status, bei Assets Richtung) mit "
+      "ehrlichen Treffer-Zahlen pro Wert. Innerhalb einer Facette gilt ODER, zwischen Facetten "
+      "UND. Aktive Filter erscheinen als Chips mit ×; der Zustand lebt in der **URL** "
+      "(`?kind=council,decision&phase=…`) — teilbar, verlinkbar, Reload-fest. Trifft ein Filter "
+      "nichts, sagt die Seite das und bietet „zurücksetzen“ an.",
+      "The project outline and the Library carry a **filter bar**: “Filter” opens the facet menu "
+      "(kind, phase, persona, status — in the Library project, status, plus direction on Assets) "
+      "with honest per-value counts. Within a facet values OR, across facets they AND. Active "
+      "filters become chips with ×; the state lives in the **URL** "
+      "(`?kind=council,decision&phase=…`) — shareable, linkable, reload-proof. When a filter "
+      "matches nothing, the page says so and offers “clear”.")),
     ("language", "globe",
      ("Sprache", "Language"),
      ("Die Oberfläche ist zweisprachig (Deutsch/Englisch) — der Umschalter sitzt im "

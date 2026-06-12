@@ -121,6 +121,14 @@ def _survey_rows(store: Store) -> Iterator[Row]:
         yield sv.get("title", ""), sv.get("status", "") or "", f'/surveys/{sv["id"]}'
 
 
+def _asset_rows(store: Store) -> Iterator[Row]:
+    # Assets ride the project record (no global list read) — the same scan the /assets/{id}
+    # route resolves through (web/pages/assets.find_asset).
+    for proj in store.list_research_projects():
+        for a in proj.get("assets") or []:
+            yield (a.get("title") or a.get("filename", "")), proj.get("title", ""), f'/assets/{a["id"]}'
+
+
 # ------------------------------------------------- the searchable entity types (ordered)
 
 SEARCH_SOURCES: dict[str, SearchSource] = {
@@ -135,6 +143,7 @@ SEARCH_SOURCES: dict[str, SearchSource] = {
     "decision": SearchSource(lambda: t("decisions_h"), "flag", "#d81b60", "/decisions", _decision_rows),
     "section": SearchSource(lambda: t("sections"), "squareGrid", "#3d9b6b", "/sections", _section_rows),
     "note": SearchSource(lambda: t("notes_h"), "panel", "#b87a25", "/notes", _note_rows),
+    "asset": SearchSource(lambda: t("assets_h"), "file", "#8a6d3b", "/assets", _asset_rows),
 }
 
 
@@ -174,7 +183,7 @@ def nav_commands() -> list[dict[str, str]]:
     cmds = [{"title": resolve_label(it["label"]), "url": it["href"], "type": "go"}
             for _sec, items in nav_model() for it in items]
     cmds += [{"title": label(), "url": route, "type": "go"}
-             for _k, route, _i, label, _e, _l in LIBRARY_TABS]
+             for _k, route, _i, label, *_rest in LIBRARY_TABS]
     cmds.append({"title": t("runs_h"), "url": "/runs", "type": "go"})
     cmds.append({"title": t("documentation"), "url": "/documentation", "type": "go"})
     cmds.append({"title": t("kbd_cheatsheet_h"), "url": "#shortcuts", "type": "go"})
@@ -212,6 +221,5 @@ KIND_SEARCH: dict[str, str | NotSearchable] = {
                                   "their project page (reachable via the project source)"),
     "open_question": NotSearchable("no detail route — lives in the project page's "
                                    "#open-questions section (reachable via the project source)"),
-    "asset": NotSearchable("no detail route — files surface in the project page's #assets "
-                           "section and are served from the /data mount"),
+    "asset": "asset",            # the U8 detail surface: /assets/{id}, global id resolution
 }

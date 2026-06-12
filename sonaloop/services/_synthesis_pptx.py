@@ -261,11 +261,19 @@ def export_synthesis_deliverable(synthesis_id: str, fmt: str, out: str | None = 
                            source=f"synthesis:{synthesis_id}", direction="out", store=store)
         # A deliverable's identity is (synthesis, format), not its bytes: renders are not
         # byte-stable, so each re-export gets a fresh content hash and attach_asset's
-        # bytes-keyed upsert can't see the previous record — supersede it here.
+        # bytes-keyed upsert can't see the previous record — supersede it here, and RECORD
+        # the chain on the survivor (UX U8: the asset's provenance block shows which earlier
+        # versions this export replaced; a stale record's own chain is inherited).
+        replaced: list[dict] = []
         for stale in list_assets(proj["id"], store=store):                  # noqa: F821 (bound)
             if (stale["id"] != rec["id"] and stale.get("source") == f"synthesis:{synthesis_id}"
                     and stale.get("filename", "").lower().endswith(f".{fmt}")):
+                replaced += (stale.get("supersedes") or []) + [
+                    {"id": stale["id"], "filename": stale.get("filename", ""),
+                     "created_at": stale.get("created_at", "")}]
                 remove_asset(proj["id"], stale["id"], store=store)          # noqa: F821 (bound)
+        if replaced:
+            rec = record_asset_supersession(proj["id"], rec["id"], replaced, store=store)  # noqa: F821 (bound)
         result["project_id"], result["asset_id"] = proj["id"], rec["id"]
     return result
 

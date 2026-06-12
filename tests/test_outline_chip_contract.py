@@ -202,22 +202,122 @@ def test_planless_fallback_rows_carry_chips(store):
     assert 'data-rkind="synthesis"' in html and "2 findings" in html
 
 
-# ----------------------------------------------------------------- peek universality (§7.3)
+# ------------------------------------------------------------ slide-over universality (§8.1)
 
-def test_every_row_kind_opens_a_resolving_peek(store):
-    """'Click a row → peek' must be universally true (spec/ux-contract.md §3.3, decision §7.3):
-    every peek-armed outline row's data-drawer URL resolves, and every peekable kind is armed.
-    External/synthesized rows (url_artifact, live_url/flow subjects) legitimately carry none."""
+def test_every_row_kind_opens_a_resolving_slideover(store):
+    """'Click a row → its FULL detail page slides over the outline' must be universally true
+    for every kind that HAS a detail page (spec/ux-contract.md §8.1, superseding §3.3's
+    essence-peek): each armed row's data-drawer URL IS its canonical href, and that URL's
+    ?slide=1 fragment variant resolves as a bare content fragment (no app shell) — so
+    pushState always lands on a REAL address. Assets included since UX U8 (/assets/{id};
+    the row's download chip keeps the file one click away). External/synthesized rows
+    (url_artifact, live_url/flow subjects) and inline open questions legitimately carry none."""
     import re as _re
     pid = _every_kind_project(store)
     client = _client()
     html = client.get(f"/projects/{pid}?lang=en").text
-    urls = sorted(set(_re.findall(r'data-drawer="(/peek/[^"]+)"', html)))
-    kinds = {u.split("/")[2] for u in urls}
-    assert {"council", "synthesis", "report", "note", "prototype", "session",
-            "decision", "survey", "hypothesis", "open_question", "asset"} <= kinds, kinds
-    for u in urls:
-        assert client.get(u).status_code == 200, f"peek fragment {u} did not resolve"
+    rows = _re.findall(r'<a class="olrow[^>]*>|<a class="ol-stretch[^>]*>', html)
+    armed = {}
+    for row in rows:
+        m = _re.search(r'data-drawer="([^"]+)"', row)
+        href = _re.search(r'href="([^"]+)"', row)
+        if m:
+            armed[m.group(1)] = href.group(1) if href else None
+    # every kind with a detail page is armed — the registry lives in _graph_outline_extras
+    from sonaloop.web._graph_outline_extras import DRAWER_KINDS
+    rkinds = set()
+    for chunk in html.split('class="olrow')[1:]:    # chunk = one row up to the next olrow start
+        mk = _RKIND.search(chunk.split(">", 1)[0])
+        if mk and 'data-drawer="' in chunk:         # normal rows arm the tag; chip rows the stretch link
+            rkinds.add(mk.group(1))
+    assert DRAWER_KINDS <= rkinds, f"kinds missing their slide-over arming: {DRAWER_KINDS - rkinds}"
+    assert armed, "no slide-over-armed rows rendered"
+    for url, href in armed.items():
+        assert url == href, f"drawer URL {url!r} must BE the row's canonical href {href!r} (§8.1)"
+        r = client.get(f"{url}{'&' if '?' in url else '?'}slide=1")
+        assert r.status_code == 200, f"slide variant of {url} did not resolve"
+        assert r.text.startswith('<div class="sl-slide">'), f"{url}?slide=1 is not a fragment"
+        assert "sl-sidebar" not in r.text, f"{url}?slide=1 leaked the app shell"
+
+
+# ------------------------------------------------ context URLs: ?d= SSR-open (§8.6, UX U11)
+
+def _first_drawer_url(html: str) -> str:
+    import re as _re
+    m = _re.search(r'data-drawer="([^"]+)"', html)
+    assert m, "no slide-over-armed row rendered"
+    return m.group(1)
+
+
+def test_context_url_ssr_opens_the_slideover(store):
+    """Reload semantics (§8.6): a `?d=<urlencoded detail path>` URL server-renders the
+    BACKGROUND page (full shell, outline behind) WITH the slide-over already open and the
+    detail fragment inside — no fetch flash — and the no-JS close (scrim link) is the same
+    URL with ?d= dropped while expand links the canonical detail URL."""
+    from urllib.parse import quote
+    pid = _every_kind_project(store)
+    client = _client()
+    detail = _first_drawer_url(client.get(f"/projects/{pid}?lang=en").text)
+    r = client.get(f"/projects/{pid}?lang=en&d={quote(detail, safe='')}")
+    assert r.status_code == 200
+    assert 'class="sl-drawer sl-drawer--wide is-open"' in r.text, "panel not SSR-opened"
+    assert '<div class="sl-slide">' in r.text, "detail fragment missing from the panel"
+    assert "sl-sidebar" in r.text and 'class="olrow' in r.text, "background page missing"
+    import html as _h
+    assert f'data-ssr="{_h.escape(detail, quote=True)}"' in r.text
+    assert f'data-drawer-close href="/projects/{pid}?lang=en"' in r.text, "no-JS close must drop ?d="
+    assert f'data-drawer-expand href="{_h.escape(detail, quote=True)}"' in r.text
+
+
+def test_context_param_composes_with_existing_params(store):
+    """URL grammar (§8.6): ?d= JOINS the background's own params (filters, tabs, views) —
+    the SSR view keeps the filtered outline behind the panel, and the no-JS close href
+    drops ONLY ?d=, preserving the rest."""
+    from urllib.parse import quote
+    pid = _every_kind_project(store)
+    client = _client()
+    detail = _first_drawer_url(client.get(f"/projects/{pid}?lang=en").text)
+    r = client.get(f"/projects/{pid}?lang=en&kind=decision&d={quote(detail, safe='')}")
+    assert r.status_code == 200
+    assert 'class="sl-drawer sl-drawer--wide is-open"' in r.text
+    body = r.text.split('id="drawer"')[0]                  # the background, before the panel
+    kinds = {m for m in _RKIND.findall(body)}
+    assert kinds == {"decision"}, f"filter not applied behind the panel: {kinds}"
+    assert f'data-drawer-close href="/projects/{pid}?lang=en&amp;kind=decision"' in r.text
+
+
+@pytest.mark.parametrize("bad", [
+    "https://evil.example/phish",        # absolute URL (scheme)
+    "//evil.example/phish",              # protocol-relative host
+    "/\\evil.example/phish",             # backslash normalization trick
+    "councils/x",                        # not rooted
+    "/projects/x?d=%2Fy",                # nested ?d= (recursion)
+    "/nope/unknown-route",               # valid shape, unknown path -> 404 fragment
+    "/data/assets",                      # static mount: no .sl-slide fragment
+])
+def test_invalid_context_param_renders_background_only(store, bad):
+    """Guard (§8.6): a hostile or unknown ?d= NEVER 500s and never opens a panel — the
+    background page renders normally (and only local detail paths are ever sub-requested,
+    so ?d= cannot become an open-redirect/IFRAME-style injection vector)."""
+    pid = _every_kind_project(store)
+    from urllib.parse import quote
+    r = _client().get(f"/projects/{pid}?lang=en&d={quote(bad, safe='')}")
+    assert r.status_code == 200
+    assert 'class="sl-drawer sl-drawer--wide is-open"' not in r.text
+    assert "data-ssr=" not in r.text
+    assert 'class="olrow' in r.text                        # the background rendered fine
+
+
+def test_slide_fragment_variant_ignores_context_param(store):
+    """A ?slide=1 fragment request never SSR-nests another drawer (?d= is meaningful only
+    on full-page loads)."""
+    from urllib.parse import quote
+    pid = _every_kind_project(store)
+    client = _client()
+    detail = _first_drawer_url(client.get(f"/projects/{pid}?lang=en").text)
+    r = client.get(f"/projects/{pid}?lang=en&slide=1&d={quote(detail, safe='')}")
+    assert r.status_code == 200
+    assert r.text.startswith('<div class="sl-slide">') and "sl-drawer" not in r.text
 
 
 # ------------------------------------------------------------------- the chips themselves

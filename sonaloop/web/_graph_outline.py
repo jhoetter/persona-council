@@ -2,12 +2,14 @@
 the LOC bar keeps every module under ~800 lines, tests/test_loc_budget.py)."""
 from __future__ import annotations
 
+from collections import Counter
 from itertools import groupby
 
 from .. import artifacts as _A_art
 from .. import presentation as _pres
 from ._components import _avatar, _icon
-from ._graph_outline_extras import extra_outline_items, peek_url, producing_step
+from ._filterbar import empty_filter_state
+from ._graph_outline_extras import extra_outline_items, drawer_url, producing_step
 from ._graph_outline_sessions import merge_session_items
 from ._html import h, raw, fragment
 from ._i18n import t
@@ -23,7 +25,9 @@ _KIND_ICONS = dict(council="councils", synthesis="syntheses", report="syntheses"
 
 
 def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | None = None,
-                  hypotheses: list | None = None, surveys: list | None = None) -> str:
+                  hypotheses: list | None = None, surveys: list | None = None,
+                  filters: dict | None = None, facets_out: list | None = None,
+                  clear_href: str = "") -> str:
     """Linear-style PHASE-grouped outline — the single primary project view (ux-contract §3.4: the
     project page IS the outline; every primitive is a row in its phase context). Chronological by
     iteration (phase groups carry a `· Runde N` suffix when the project looped; flat when there is no
@@ -32,7 +36,14 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
     row → its related rows light up, the rest dim) — never permanent edges. `sessions` = the prepared
     subject groups (outline_session_groups); decisions/hypotheses/surveys = the project's record lists
     (absorbed as phase rows via _graph_outline_extras) — all built by the page route which holds the
-    Store, and optional so other callers keep the bare signature."""
+    Store, and optional so other callers keep the bare signature.
+
+    U10 (ux-contract §8.5): `filters` = {kind/phase/persona/status -> [values]} applies the
+    Linear-grade facet filter SERVER-SIDE (OR within a facet, AND across; rows and phase groups
+    that filter to zero disappear, group counts stay honest); `facets_out`, when given, is FILLED
+    with the page's facet model — every value that actually occurs, with counts over the
+    UNFILTERED set — for web/_filterbar.filter_bar. `clear_href` feeds the teaching empty state
+    when an active filter matches nothing."""
     nodes = graph["nodes"]
     steps = (graph.get("methodology_state") or {}).get("steps") or []
     by_id = {s["key"]: s for s in steps}
@@ -89,7 +100,8 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
         po, pl = pmeta.get(pk, (99, ""))
         items.append({"oid": oid, "color": color or "#9aa0a6", "title": title, "kind": kind, "href": href,
                       "plabel": plabel if plabel is not None else pl, "po": po, "round": r, "order": order,
-                      "ts": ts, "indent": indent, "last_child": last_child, "rkind": rkind, "node": node or {}})
+                      "ts": ts, "indent": indent, "last_child": last_child, "rkind": rkind,
+                      "node": node or {}, "pk": pk or ""})
 
     # Plan-less projects (hand-built data / the study_ids report path) have NO methodology steps, so
     # pmeta is empty — their nodes must still render (parity with ?view=graph): one flat chronological
@@ -158,7 +170,8 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
                       "kind": kindlab, "href": a.get("url", ""), "external": True,
                       "plabel": pl or kindlab, "po": po, "round": 0,
                       "order": a.get("created_at", ""), "ts": a.get("created_at", ""),
-                      "indent": 0, "last_child": False, "rkind": "url_artifact", "node": a})
+                      "indent": 0, "last_child": False, "rkind": "url_artifact", "node": a,
+                      "pk": notes_phase or ""})
 
     # Usability sessions nest under their SUBJECT row (tracker: project-page-sessions-live-under-
     # their-subject-in-the-outlin): prototype subjects under the existing prototype row (matched by
@@ -203,6 +216,81 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
 
     by_oid = {n["study_id"]: n for n in nodes}
 
+    # ---- U10: the facet model + the server-side filter (ux-contract §8.5) -------------
+    # One extractor per facet; counts are taken over the UNFILTERED items (the honest
+    # inventory the menu shows), the filter then narrows `items` before grouping so phase
+    # groups vanish at zero and group counts stay true. OR within a facet, AND across.
+    from ._presence import record_status, status_filter_label
+
+    def _fkind(it: dict) -> str:
+        rk = it.get("rkind") or ""                  # synthesis nodes + project reports are ONE
+        return "report" if rk in ("synthesis", "report") else rk   # concept to the reader (§3.5)
+
+    def _fpersonas(it: dict) -> list[str]:
+        crew = (by_oid.get(it["oid"]) or {}).get("personas") or []
+        ids = [str(p["id"]) for p in crew if p.get("id")]
+        sp = (it.get("session") or {}).get("persona") or {}
+        if sp.get("id"):
+            ids.append(str(sp["id"]))
+        return ids
+
+    def _fstatus(it: dict) -> str:
+        rec = it.get("session") or it.get("node") or {}
+        return record_status(it.get("rkind", ""), rec)
+
+    flt = {k: v for k, v in (filters or {}).items() if v}
+    if facets_out is not None:
+        kinds: Counter = Counter(); phases: Counter = Counter()
+        crew_n: Counter = Counter(); statuses: Counter = Counter()
+        flabel: dict[tuple, str] = {}
+        for it in items:
+            fk = _fkind(it)
+            if fk:
+                kinds[fk] += 1
+                flabel.setdefault(("kind", fk), it.get("kind") or fk)
+            if it.get("pk") in pmeta:
+                phases[it["pk"]] += 1
+            crew = (by_oid.get(it["oid"]) or {}).get("personas") or []
+            sp = (it.get("session") or {}).get("persona") or {}
+            for p in list(crew) + ([sp] if sp.get("id") else []):
+                if p.get("id"):
+                    crew_n[str(p["id"])] += 1
+                    flabel.setdefault(("persona", str(p["id"])), p.get("display_name", ""))
+            st = _fstatus(it)
+            if st:
+                statuses[st] += 1
+                flabel.setdefault(("status", st), status_filter_label(it.get("rkind", ""), st))
+        facets_out.extend([
+            {"key": "kind", "label": t("type_h"), "icon": "square",
+             "options": [{"value": k, "label": flabel[("kind", k)], "count": n}
+                         for k, n in kinds.most_common()]},
+            {"key": "phase", "label": t("phase_h"), "icon": "diamond",
+             "options": [{"value": k, "label": pmeta[k][1], "count": phases[k]}
+                         for k in sorted(phases, key=lambda x: pmeta[x][0])]},
+            {"key": "persona", "label": t("persona_h"), "icon": "personas",
+             "options": [{"value": p, "label": flabel[("persona", p)] or p, "count": n}
+                         for p, n in crew_n.most_common()]},
+            {"key": "status", "label": t("status_h"), "icon": "flag",
+             "options": [{"value": s, "label": flabel[("status", s)], "count": n}
+                         for s, n in statuses.most_common()]},
+        ])
+    if flt:
+        def _keep(it: dict) -> bool:
+            if flt.get("kind") and _fkind(it) not in flt["kind"]:
+                return False
+            if flt.get("phase") and it.get("pk", "") not in flt["phase"]:
+                return False
+            if flt.get("persona") and not set(_fpersonas(it)) & set(flt["persona"]):
+                return False
+            if flt.get("status") and _fstatus(it) not in flt["status"]:
+                return False
+            return True
+        items = [it for it in items if _keep(it)]
+        if not items:                                  # teach, don't blank (C8/F1)
+            return str(h("div", {"class_": "outline"},
+                         empty_filter_state(clear_href or "?")))
+    # -----------------------------------------------------------------------------------
+
     def row(it: dict) -> str:
         tw = ("ol-tw" + (" ol-last" if it.get("last_child") else "")) if it["indent"] else ""  # tree connector
         tis = node_themes.get(it["oid"], [])
@@ -229,16 +317,16 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
             for i in tis]
         # --ti feeds the tree-spine x-offset so a depth-2 child (session under a paired prototype)
         # draws its connector one indent step deeper than a depth-1 child.
-        pk_url = peek_url(it.get("rkind", ""), it["oid"])
+        dw_url = drawer_url(it.get("rkind", ""), it["href"])
         attrs = {"class_": f"olrow {tw}", "data-oid": it["oid"], "data-th": " ".join(map(str, tis)),
                  "data-rkind": it.get("rkind", ""), "id": it.get("anchor"),
                  "style": f'padding-left:{10 + it["indent"] * 26}px'
-                          + (f';--ti:{it["indent"]}' if it["indent"] else "")
-                          + (";cursor:pointer" if pk_url and not it["href"] else "")}
-        # Click = peek (§3.3): the row keeps its href as the deep link (middle-click / no-JS),
-        # the data-drawer attribute additionally opens the kind's peek in the shared drawer.
-        peek_attrs = ({"data-drawer": pk_url, "data-drawer-title": str(it["title"])[:90]}
-                      if pk_url else {})
+                          + (f';--ti:{it["indent"]}' if it["indent"] else "")}
+        # Click = slide-over (§8.1): the row keeps its href as the deep link (middle-click /
+        # no-JS); data-drawer carries the SAME canonical URL, which the drawer opens as a
+        # slide-over while pushState makes it the address.
+        drawer_attrs = ({"data-drawer": dw_url, "data-drawer-title": str(it["title"])[:90]}
+                      if dw_url else {})
         ts_short, ts_full = _fmt_ts(it["ts"])
         ic = _KIND_ICONS.get(it.get("rkind", ""))
         lead = (raw(it["lead"]) if it.get("lead")           # session/asset rows: avatar / thumb lead
@@ -262,16 +350,18 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
         if chip:
             # the funnel chip is a REAL link and <a> cannot nest — the row becomes a positioned <div>
             # whose main target is a stretched overlay link (.ol-stretch) layered UNDER the chip
-            # (the peek rides the stretch link, so the funnel chip keeps its own target).
+            # (the slide-over rides the stretch link, so the funnel chip keeps its own target).
             link = (h("a", {"class_": "ol-stretch", "href": it["href"] or None,
-                            "aria-label": it["title"], **ext, **peek_attrs})
-                    if (it["href"] or pk_url) else "")
-            chip_a = h("a", {"class_": "ol-funnel", "href": chip["href"]}, chip["text"])
+                            "aria-label": it["title"], **ext, **drawer_attrs})
+                    if it["href"] else "")
+            chip_a = h("a", {"class_": "ol-funnel", "href": chip["href"],
+                             "download": chip.get("download"), "target": chip.get("target"),
+                             "rel": "noopener" if chip.get("target") else None}, chip["text"])
             return h("div", attrs, *cells[:6], chip_a, *cells[6:], link)
         if it["href"]:
             attrs["href"] = it["href"]
             attrs.update(ext)
-        attrs.update(peek_attrs)
+        attrs.update(drawer_attrs)
         return h("a", attrs, *cells)
 
     # ROUND CAPTION (Linear: a group header should carry MEANING) — the essence of each round's most

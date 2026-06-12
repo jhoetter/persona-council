@@ -10,7 +10,8 @@ from pathlib import Path
 from fastapi.responses import FileResponse, Response
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
-from .._render import render_statements
+from .. import ui
+from .._render import render_ref, render_statements
 from .._synthesis import _stacked, _legend
 from .._html import register_css
 from ... import artifacts as _A
@@ -147,6 +148,155 @@ def _persona_chip(store: Store, persona_id: str):
     return h("span", {"class_": "turn-who"}, h("b", {}, persona_id or "—"))
 
 
+# ---------------------------------------------------------------- prototype reaction sessions
+# A protosession_* record (record_prototype_session) is the OTHER first-class session kind
+# (ux-contract §8.2 — sessions are explicitly first-class): same step shape as a usability
+# session (index/action/monologue/state/friction/verdict), but the steps live under
+# reaction.steps and the walked subject is always its prototype. The vm maps it onto the ONE
+# session row vocabulary (ui.primitive_row §3.2) so the Library tab, the prototype page and
+# the slide-over render identical rows; the detail route below reuses the SAME step renderer.
+
+
+def proto_session_vm(sess: dict, store: Store) -> dict:
+    """A prototype session in the usability-session record shape the row vocabulary reads:
+    subject = the prototype, steps = reaction.steps, fidelity = the prototype rung."""
+    r = sess.get("reaction") if isinstance(sess.get("reaction"), dict) else {}
+    proto = store.get_prototype(sess.get("prototype_id", "")) or {}
+    return {"id": sess["id"], "persona_id": sess.get("persona_id", ""),
+            "subject": {"kind": "prototype", "id": proto.get("id") or sess.get("prototype_id", ""),
+                        "label": proto.get("name") or sess.get("prototype_id", "")},
+            "fidelity": "prototype", "steps": r.get("steps") or [],
+            "grounded_verified": sess.get("grounded_verified"),
+            "created_at": sess.get("created_at", ""), "date": sess.get("date", ""),
+            "project_id": proto.get("project_id"), "outcome": {"summary": r.get("summary", "")}}
+
+
+def proto_session_rows(store: Store, project_id: str | None = None,
+                       prototype_id: str | None = None) -> list[dict]:
+    """The prototype sessions as session vms (newest first), optionally narrowed to one project
+    (via the owning prototype) or one prototype — the Library Sessions tab merges these with the
+    usability sessions so EVERY recorded session is one reachable row."""
+    vms = [proto_session_vm(s, store)
+           for s in store.list_prototype_sessions(prototype_id=prototype_id)]
+    if project_id:
+        vms = [v for v in vms if v.get("project_id") == project_id]
+    return vms
+
+
+def _proto_step_shim(sess: dict) -> dict:
+    """The {id, steps} shim _step_html/_friction_rail read: steps enriched with the harness's
+    on-disk screenshot convention (data/sessions/<browser session_id>/step-<n>.png) — the id is
+    the BROWSER session dir, so _screenshot_url resolves the file when it exists and the step
+    falls back to its recorded screen text when it doesn't."""
+    r = sess.get("reaction") if isinstance(sess.get("reaction"), dict) else {}
+    steps = []
+    for st in r.get("steps") or []:
+        st = dict(st)
+        state = dict(st.get("state") or {})
+        state.setdefault("screenshot", f'step-{st.get("index", 0)}.png')
+        st["state"] = state
+        steps.append(st)
+    return {"id": sess.get("session_id") or sess["id"], "steps": steps}
+
+
+def _likelihood_label(term) -> str:
+    meta = next((r for r in _A.likelihood_terms() if r["term"] == term), None)
+    if meta:
+        return _label(t(meta["label_key"]), meta["color"])
+    res = _A.resolve_likelihood(term)
+    return _label(str(term), "var(--muted)") if res is None else _label(str(term))
+
+
+def _predicted_behaviors_html(behaviors: list, store: Store) -> str:
+    """The session's falsifiable output (predicted_behaviors): one row per prediction —
+    likelihood pill · the expected action · its trigger · evidence ref chips. '' when none."""
+    if not behaviors:
+        return ""
+    rows = []
+    for b in behaviors:
+        refs = fragment(*(raw(render_ref(r, store)) for r in (b.get("refs") or [])))
+        rows.append(h("div", {"class_": "hyp"},
+                      h("div", {}, raw(_likelihood_label(b.get("likelihood"))), " ",
+                        h("b", {}, b.get("action", ""))),
+                      (h("p", {"class_": "muted small"}, b["trigger"]) if b.get("trigger") else None),
+                      (h("p", {"class_": "muted small turn-refs"}, refs) if b.get("refs") else None)))
+    return h("div", {"class_": "sec", "id": "sec-predicted"},
+             h("h2", {}, t("predicted_behaviors_h"), h("span", {"class_": "h1cnt"}, str(len(behaviors)))),
+             fragment(*rows))
+
+
+def _proto_session_detail(store: Store, sess: dict) -> str:
+    """The prototype session's full detail page — the SAME anatomy and step renderer as the
+    usability replay (one session concept, two recorders): persona + prototype header with the
+    verified badge, verdict lead, liked/friction reads, the per-step timeline (monologue +
+    screenshots from the retained browser-session dir), predicted behaviors."""
+    r = sess.get("reaction") if isinstance(sess.get("reaction"), dict) else {}
+    proto = store.get_prototype(sess.get("prototype_id", "")) or {}
+    proj = (store.get_research_project(proto["project_id"]) if proto.get("project_id") else None)
+    title = proto.get("name") or sess.get("prototype_id", sess["id"])
+    grounded = sess.get("grounded_verified")
+    proto_link = (h("a", {"href": f'/prototypes/{proto["slug"]}'}, title) if proto.get("slug")
+                  else h("span", {}, title))
+    # meta line: persona · fidelity · date — the prototype itself IS the title (and the rail
+    # carries the link), so repeating it here was pure duplication (round-2 audit, TX).
+    sub = h("span", {"class_": "syn-meta"},
+            _persona_chip(store, sess.get("persona_id", "")), " ",
+            raw(_fidelity_chip("prototype")), " ",
+            h("span", {"class_": "mchip"}, (sess.get("date") or sess.get("created_at", ""))[:10]))
+    shim = _proto_step_shim(sess)
+    steps = shim["steps"]
+    verdict_html = (raw(_study_lead(ui.clamp(raw(_md(r["verdict"])), threshold=ui.SECTION_CLAMP),
+                                    t("verdict_h"), qid="sec-verdict"))
+                    if (r.get("verdict") or "").strip() else "")
+    def _read_list(sid: str, heading: str, items: list) -> str:
+        if not items:
+            return ""
+        return h("div", {"class_": "sec", "id": sid},
+                 h("h2", {}, heading, h("span", {"class_": "h1cnt"}, str(len(items)))),
+                 fragment(*(h("p", {"class_": "small"}, x) for x in items)))
+    liked_html = _read_list("sec-liked", t("proto_liked_h"), r.get("liked") or [])
+    friction_html = _read_list("sec-friction", t("friction_rail_h"), r.get("friction") or [])
+    timeline = ""
+    if steps:
+        timeline = h("div", {"class_": "sec", "id": "sec-replay"},
+                     h("h2", {}, t("replay_h"), h("span", {"class_": "h1cnt"}, str(len(steps)))),
+                     h("div", {"class_": "sess-steps"},
+                       fragment(*(_step_html(shim, s) for s in steps))))
+    predicted_html = _predicted_behaviors_html(r.get("predicted_behaviors") or [], store)
+    body = fragment(verdict_html, liked_html, friction_html, timeline, raw(predicted_html))
+    # Project-rooted crumb (§8.2 — the council pattern); the kind root stays only for
+    # orphan records that have no project to live under.
+    crumbs = ([(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}')]
+              if proj else [(t("sessions"), "/sessions")])
+    crumbs.append((_display_title(title), None))
+    # Rail order is the §8.2 anatomy: project → kind-specifics → dates; the prototype row
+    # is ONE prototype (singular label).
+    prop_rows = [
+        ("projects", t("project"),
+         h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else ""),
+        ("square", t("fidelity"), raw(_fidelity_chip("prototype"))),
+        ("prototype", t("prototype_kind"), proto_link),
+        ("plan", t("steps_h"), str(len(steps)) if steps else ""),
+        ("check", t("grounding_h"),
+         raw(_label(t("grounded_yes") if grounded else t("grounded_no"),
+                    "var(--green)" if grounded else "var(--muted)")) if grounded is not None else ""),
+        ("dot", t("created"), (sess.get("created_at") or "")[:10]),
+    ]
+    rail_sections = ([("sec-verdict", t("verdict_h"))] if verdict_html else []) \
+        + ([("sec-liked", t("proto_liked_h"))] if liked_html else []) \
+        + ([("sec-friction", t("friction_rail_h"))] if friction_html else []) \
+        + ([("sec-replay", t("replay_h"))] if timeline else []) \
+        + ([("sec-predicted", t("predicted_behaviors_h"))] if predicted_html else [])
+    pills = [_label(t("grounded_yes"), "var(--green)")] if grounded else []
+    return detail_page(
+        store, title=_display_title(title), active="library", crumbs=crumbs,
+        hero=_hero(title, icon="activity", sub=sub, hid="sec-head",
+                   top=detail_eyebrow(t("session_kind_prototype"), pills)),
+        body=body, prop_rows=prop_rows, rel_proj_id=proto.get("project_id") or None,
+        rail_sections=rail_sections,
+        star=("session", sess["id"], str(title)[:60], f'/sessions/{sess["id"]}'))
+
+
 def _session_row(s: dict, store: Store) -> str:
     """One list row: persona avatar chip · subject label · fidelity badge · outcome · friction count
     · date (progressive disclosure — the replay itself lives on the detail page)."""
@@ -274,25 +424,44 @@ def register_sessions(app) -> None:
     @app.get("/sessions", response_class=HTMLResponse)
     def sessions_list(project: str | None = Query(default=None),
                       subject_kind: str | None = Query(default=None),
-                      subject: str | None = Query(default=None)) -> str:
+                      subject: str | None = Query(default=None),
+                      status: str = Query(default="")) -> str:
         """The Library's Sessions tab under the canonical URL (ux-contract §3.5) — the
-        honest project/subject query filters stay, and a subject filter with ≥2 recorded
-        walks keeps earning its cross-session funnel above the rows."""
-        from .library import library_page
+        honest subject query filters stay, and a subject filter with ≥2 recorded
+        walks keeps earning its cross-session funnel above the rows. BOTH session kinds
+        list here (§8.2 — sessions are first-class): usability walks and prototype
+        reactions, newest first, one row vocabulary. ?project= and ?status= ride the
+        shared FilterBar grammar (U10) — same param, now with chips + counts."""
+        from urllib.parse import quote
+        from .library import library_filters, library_page
         store = Store()
         subj = ({"kind": subject_kind, "id": subject} if (subject_kind and subject)
                 else subject or None)
-        sessions = services.list_usability_sessions(project_id=project, subject=subj, store=store)
+        sessions = services.list_usability_sessions(subject=subj, store=store)
         funnel_html = ""
         if subject_kind and subject and len(sessions) >= 2:
             funnel_html = _funnel_html(services.get_session_funnel(subject_kind, subject, store=store))
-        return library_page("sessions", store, sessions=sessions, pre_extra=funnel_html)
+        protos = proto_session_rows(store)
+        if subject:                                   # subject filter: the walked prototype
+            key = subject if isinstance(subject, str) else ""
+            protos = [v for v in protos if key and v["subject"].get("id") == key]
+        merged = sorted(sessions + protos, key=lambda s: s.get("created_at", ""), reverse=True)
+        base = "/sessions" + (f'?subject_kind={quote(subject_kind)}&subject={quote(subject)}'
+                              if subject_kind and subject else "")
+        return library_page("sessions", store, sessions=merged, pre_extra=funnel_html,
+                            flt=library_filters(project or "", status), base=base)
 
     @app.get("/sessions/{session_id}", response_class=HTMLResponse)
     def session_detail(session_id: str) -> str:
+        """ONE detail route for both session kinds: a usability walk renders the dual-timeline
+        replay; a protosession_* id dispatches to the prototype-session detail (same scaffold,
+        same step renderer — the record decides, not the URL shape)."""
         store = Store()
         sess = store.get_usability_session(session_id)
         if not sess:
+            psess = store.get_prototype_session(session_id)
+            if psess:
+                return _proto_session_detail(store, psess)
             return _layout(t("not_found"),
                            _empty_state(t("session_not_found"), t("runtime_maybe_cleared"), icon="activity"),
                            store, active="library")
@@ -304,10 +473,12 @@ def register_sessions(app) -> None:
             cm = _A.tech_comfort_meta(caps["tech_comfort"])
             caps_chip = raw(_label(f'{t("cap_tech_comfort")}: {t(cm["label_key"])}', cm["color"],
                                    title=cm["hint"]))
+        # meta line: persona · fidelity · capabilities · date — the subject IS the title (and
+        # the rail carries the link), so repeating it here was pure duplication (round-2 audit).
         sub = h("span", {"class_": "syn-meta"},
                 _persona_chip(store, sess.get("persona_id", "")), " ",
                 raw(_fidelity_chip(sess.get("fidelity", ""))), " ",
-                _subject_link(store, subject), " ", caps_chip, " ",
+                caps_chip, " ",
                 h("span", {"class_": "mchip"}, (sess.get("date") or "")[:10]))
         steps = sess.get("steps") or []
         timeline = h("div", {"class_": "sec", "id": "sec-replay"},
@@ -321,16 +492,17 @@ def register_sessions(app) -> None:
         rail = _friction_rail(sess)
         body = fragment(raw(_outcome_banner(sess)), raw(rail), timeline, raw(statements_html))
         proj = store.get_research_project(sess["project_id"]) if sess.get("project_id") else None
-        crumbs = [(t("sessions"), "/sessions")]
-        if proj:
-            crumbs.append((proj["title"], f'/projects/{proj["id"]}'))
+        # Project-rooted crumb (§8.2 — the council pattern); kind root only for orphans.
+        crumbs = ([(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}')]
+                  if proj else [(t("sessions"), "/sessions")])
         crumbs.append((_display_title(title), None))
         grounded = sess.get("grounded_verified")
+        # Rail order is the §8.2 anatomy: project → kind-specifics → dates.
         prop_rows = [
+            ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else ""),
             ("square", t("fidelity"), raw(_fidelity_chip(sess.get("fidelity", "")))),
             ("compass", t("subject_h"), _subject_link(store, subject)),
             ("plan", t("steps_h"), str(len(steps))),
-            ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else ""),
             # static "Grounding" label — the old code repeated the value as its own label
             # ("grounded → grounded", ux-audit P5 finding).
             ("check", t("grounding_h"),
@@ -341,9 +513,17 @@ def register_sessions(app) -> None:
         rail_sections = (([("sec-friction", t("friction_rail_h"))] if rail else [])
                          + [("sec-replay", t("replay_h"))]
                          + ([("sec-statements", t("voices"))] if statements_html else []))
+        fid = sess.get("fidelity", "")
+        kind_label = (t("session_kind_live") if fid == "live" else
+                      t("session_kind_artifact") if fid == "artifact" else
+                      t("session_kind_prototype"))
+        pills = ([_label(t("grounded_yes"), "var(--green)")] if grounded else []) \
+            + [_outcome_chip(sess)]
         return detail_page(
             store, title=_display_title(title), active="library", crumbs=crumbs,
-            hero=_hero(title, icon="activity", sub=sub, hid="sec-head"), body=body,
+            hero=_hero(title, icon="activity", sub=sub, hid="sec-head",
+                       top=detail_eyebrow(kind_label, pills)),
+            body=body,
             prop_rows=prop_rows, rel_proj_id=sess.get("project_id") or None,
             rail_sections=rail_sections,
             star=("session", session_id, title[:60], f"/sessions/{session_id}"))

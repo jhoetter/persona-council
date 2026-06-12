@@ -208,6 +208,10 @@ def test_export_synthesis_deliverable_reexport_supersedes_stale_record(store, pr
     deliverables = [a for a in services.list_assets(project["id"], store=store)
                     if a.get("source") == f'synthesis:{syn["id"]}']
     assert [a["id"] for a in deliverables] == [second["asset_id"]]
+    # ... and the survivor RECORDS the chain (UX U8 provenance: which version it replaced)
+    chain = deliverables[0].get("supersedes") or []
+    assert [s["id"] for s in chain] == [first["asset_id"]]
+    assert chain[0]["filename"] == "d.pptx" and chain[0]["created_at"]
 
 
 def test_export_synthesis_deliverable_without_project_skips_attach(store, tmp_path, monkeypatch):
@@ -219,12 +223,13 @@ def test_export_synthesis_deliverable_without_project_skips_attach(store, tmp_pa
 
 def test_assets_render_as_outline_rows_with_direction_pills(store, project, tmp_path, monkeypatch):
     """UX P2 (spec/ux-contract.md §3.4 / §7.2): assets are outline rows — evidence in its phase
-    flow, the deliverable at the END (the Deliver group); direction pills on both; the asset
-    peek carries the download action."""
+    flow, the deliverable at the END (the Deliver group); direction pills on both. Since UX U8
+    the row deep-links to the asset's DETAIL page (slide-over armed, §8.1); the file itself
+    stays one click away as the row's trailing download/open chip."""
     monkeypatch.setattr(services, "export_synthesis_pptx", lambda sid, store=None: b"PK deck")
     evidence = tmp_path / "field-note.txt"
     evidence.write_text("observed in the field")
-    services.attach_asset(project["id"], path=str(evidence), title="Field note", store=store)
+    ev = services.attach_asset(project["id"], path=str(evidence), title="Field note", store=store)
     syn = _project_synthesis(store, project)
     services.export_synthesis_deliverable(syn["id"], "pptx", str(tmp_path / "finder.pptx"), store=store)
     from starlette.testclient import TestClient
@@ -235,11 +240,15 @@ def test_assets_render_as_outline_rows_with_direction_pills(store, project, tmp_
     assert "Deliverable" in html and "Evidence" in html       # direction pills on the rows
     # the evidence row sits in the flow; the deliverable closes the outline (Deliver group)
     assert html.index("Field note") < html.index("Component finder (PPTX)")
-    # the peek carries the deliverable's download action
     deliverable = next(a for a in services.list_assets(project["id"], store=store)
                        if a.get("direction") == "out")
-    peek = client.get(f'/peek/asset/{deliverable["id"]}?lang=en').text
-    assert "download" in peek and deliverable["filename"] in peek
+    # the rows open the detail pages as slide-overs (U8)...
+    assert f'data-drawer="/assets/{ev["id"]}"' in html
+    assert f'data-drawer="/assets/{deliverable["id"]}"' in html
+    # ...while the file itself stays one click away (the trailing chip: download / open)
+    assert f'href="{deliverable["url"]}"' in html and f'href="{ev["url"]}"' in html
+    # and the project header carries the FILES lens chip ("N files" → ?view=files)
+    assert f'/projects/{project["id"]}?view=files' in html
 
 
 def test_attach_prototype_shot_uses_capture(store, project, monkeypatch, tmp_path):

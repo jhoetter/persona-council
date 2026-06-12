@@ -16,6 +16,7 @@ from ..web_assets import CSS, HEAD_JS, _RGRAPH_JS  # noqa: F401  (extracted asse
 from ._i18n import t, _lang
 from ._html import h, raw, fragment, register_css, collect_css  # noqa: F401  (component-SSR foundation)
 from ._palette import PALETTE_CSS, PALETTE_JS, palette_markup
+from ._slide import slide_mode
 from ._live import LIVE_CSS, LIVE_JS, live_markup
 from ._runs_widget import RUNS_WIDGET_CSS, RUNS_WIDGET_JS, runs_widget_markup
 from ._keymap import KEYMAP_CSS, KEYMAP_JS, keymap_markup, keymap_hint
@@ -195,126 +196,7 @@ APP_JS = """
 """
 
 
-# SPA-style navigation (spec/design-system.md): the sidebar/topbar shell is rendered once; internal
-# link clicks fetch the target and swap ONLY #main, so the sidebar (and its favorites) never re-render
-# or flicker. Pure progressive enhancement — falls back to a full load on any error or non-HTML response.
-SPA_JS = """
-<script>
-(function(){
-  var main=document.getElementById('main');
-  if(!main || !window.history || !window.history.pushState || !window.fetch) return;
-  function runScripts(root){            // importNode'd <script>s don't execute — recreate them so they do
-    root.querySelectorAll('script').forEach(function(old){
-      var s=document.createElement('script');
-      for(var i=0;i<old.attributes.length;i++){ s.setAttribute(old.attributes[i].name, old.attributes[i].value); }
-      s.textContent=old.textContent; old.parentNode.replaceChild(s, old);
-    });
-  }
-  function syncActive(doc){             // mirror the fetched page's sidebar active-state onto the live nav
-    var on={}; doc.querySelectorAll('.sl-sidebar .sl-nav a.is-active').forEach(function(a){ on[a.getAttribute('href')]=1; });
-    document.querySelectorAll('.sl-sidebar .sl-nav a').forEach(function(a){ a.classList.toggle('is-active', !!on[a.getAttribute('href')]); });
-  }
-  function swap(html, url, push){
-    var doc=new DOMParser().parseFromString(html, 'text/html');
-    var nm=doc.getElementById('main');
-    if(!nm){ location.href=url; return; }                 // unexpected shape -> full load
-    var imp=document.importNode(nm, true);
-    main.replaceWith(imp); main=imp;
-    if(doc.title) document.title=doc.title;
-    syncActive(doc);
-    runScripts(main);
-    if(push) history.pushState({spa:1}, '', url);
-    window.scrollTo(0,0);
-    document.dispatchEvent(new CustomEvent('spa:load'));   // let app_js re-apply star states etc.
-  }
-  function navigate(url, push){
-    document.body.classList.add('spa-loading');
-    fetch(url, {headers:{'X-Requested-With':'spa'}, credentials:'same-origin'}).then(function(r){
-      var ct=r.headers.get('content-type')||'';
-      if(!r.ok || ct.indexOf('text/html')<0){ location.href=url; return; }
-      return r.text().then(function(t){ swap(t, url, push); });
-    }).catch(function(){ location.href=url; })
-      .then(function(){ document.body.classList.remove('spa-loading'); });
-  }
-  document.addEventListener('click', function(e){
-    if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
-    var a=e.target.closest && e.target.closest('a'); if(!a) return;
-    if(a.hasAttribute('data-drawer')) return;                                // handled by the drawer
-    var href=a.getAttribute('href');
-    if(!href || href.charAt(0)!=='/' || href.indexOf('//')===0) return;     // internal absolute paths only
-    if(a.target==='_blank' || a.hasAttribute('download') || a.getAttribute('rel')==='external') return;
-    if(href.indexOf('/data/')===0 || href.indexOf('/proto-files/')===0) return;  // static assets -> real nav
-    e.preventDefault();
-    if(href===location.pathname+location.search){ return; }
-    navigate(href, true);
-  });
-  window.addEventListener('popstate', function(){ navigate(location.pathname+location.search, false); });
-})();
-</script>
-"""
-
-
-# Reusable right slide-over drawer — the shared design-system overlay (.sl-drawer*; styling lives in
-# sonaloop-design styles/components.css, vendored via _components_css.py). Any element with
-# data-drawer="<url>" opens that page's content in a peek panel (fetched + script-reexec via the same
-# approach as SPA nav), without leaving the current page. We keep a persistent root and toggle the
-# `.is-open` class (the panel/scrim transition in AND out — see .sl-drawer in COMPONENTS_CSS). The
-# trigger keeps its href as a graceful fallback (deep-linkable full page when JS is off).
-# Only the in-drawer .page reset is app-local; the panel/scrim/header chrome is the shared component.
-DRAWER_CSS = register_css(".sl-drawer__body .page{padding:0;max-width:none}"
-                          ".sl-drawer__body img{max-width:100%;height:auto}")
-
-DRAWER_MARKUP = (
-    '<div class="sl-drawer" id="drawer">'
-    '<div class="sl-drawer__scrim" data-drawer-close></div>'
-    '<aside class="sl-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">'
-    '<header class="sl-drawer__head"><span class="sl-drawer__title" id="drawer-title"></span>'
-    '<button class="sl-overlay-close" type="button" data-drawer-close aria-label="__CLOSE__">'
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">'
-    '<path d="M6 6l12 12M18 6L6 18"/></svg></button></header>'
-    '<div class="sl-drawer__body"></div></aside></div>')
-
-DRAWER_JS = """
-<script>
-(function(){
-  var wrap=document.getElementById('drawer'); if(!wrap || !window.fetch) return;
-  var body=wrap.querySelector('.sl-drawer__body'), titleEl=wrap.querySelector('.sl-drawer__title'), lastFocus=null;
-  function close(){ wrap.classList.remove('is-open'); if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
-  function runScripts(root){
-    root.querySelectorAll('script').forEach(function(old){ var s=document.createElement('script');
-      for(var i=0;i<old.attributes.length;i++){ s.setAttribute(old.attributes[i].name, old.attributes[i].value); }
-      s.textContent=old.textContent; old.parentNode.replaceChild(s, old); });
-  }
-  function open(url, title, trigger){
-    lastFocus=trigger||document.activeElement;
-    titleEl.textContent=title||'';
-    body.innerHTML='<p class="muted small">\\u2026</p>';
-    wrap.classList.add('is-open');
-    fetch(url, {headers:{'X-Requested-With':'drawer'}, credentials:'same-origin'}).then(function(r){
-      if(!r.ok) throw 0; return r.text();
-    }).then(function(html){
-      var doc=new DOMParser().parseFromString(html, 'text/html');
-      // full pages peek their #main section; the /peek/{kind}/{id} partials are bare fragments
-      var sec=doc.querySelector('#main section') || doc.getElementById('main') || doc.body.firstElementChild;
-      body.innerHTML='';
-      if(sec){ var imp=document.importNode(sec, true); body.appendChild(imp); runScripts(body); }
-      body.scrollTop=0;
-      document.dispatchEvent(new CustomEvent('spa:load'));   // re-apply star states inside the drawer
-    }).catch(function(){ location.href=url; });               // any failure -> just open the real page
-  }
-  document.addEventListener('click', function(e){
-    var t=e.target.closest && e.target.closest('[data-drawer]');
-    if(t){ e.preventDefault(); e.stopPropagation();
-      // Title fallback prefers the row's title slot — full textContent would concatenate
-      // title+desc+badges into one run-on header (ux-audit P5 finding).
-      var tt=t.querySelector && t.querySelector('.sl-entity__title');
-      open(t.getAttribute('data-drawer'), t.getAttribute('data-drawer-title')||((tt||t).textContent||'').trim(), t); return; }
-    if(e.target.closest && e.target.closest('[data-drawer-close]')){ e.preventDefault(); close(); }
-  });
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && wrap.classList.contains('is-open')) close(); });
-})();
-</script>
-"""
+from ._drawer import DRAWER_CSS, DRAWER_JS, SPA_JS, drawer_markup  # noqa: F401  (injected by _layout)
 
 
 from . import _nav_seed  # noqa: F401,E402  (seeds the core sidebar via the public nav registry)
@@ -412,6 +294,11 @@ def _brand_logo_img(alt: str) -> str:
 
 def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
             active: str = "", actions: str = "") -> str:
+    # The `?slide=1` fragment variant (§8.1, web/_slide.py): the SAME page, content only — the
+    # slide-over fetches this while pushState makes the address the canonical URL. The host
+    # document already carries the full CSS/JS environment; the drawer re-executes embedded scripts.
+    if slide_mode():
+        return f'<div class="sl-slide">{body}</div>'
     crumbs = crumbs or [(title, None)]
     # Inject per-request translations into the static JS (client renders need them
     # too — same __PLACEHOLDER__ -> t() pattern used for the voices chart).
@@ -458,7 +345,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
       {_crumbs_html(crumbs)}<span class="sl-spacer"></span>{runs_widget_markup(store)}<span class="sl-tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
-</div>{DRAWER_MARKUP.replace("__CLOSE__", _esc(t("cmdk_close")))}{palette_markup()}{PALETTE_JS}{keymap_markup()}{KEYMAP_JS}{live_markup()}{LIVE_JS}{RUNS_WIDGET_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
+</div>{drawer_markup(t("cmdk_close"), t("drawer_expand"))}{palette_markup()}{PALETTE_JS}{keymap_markup()}{KEYMAP_JS}{live_markup()}{LIVE_JS}{RUNS_WIDGET_JS}{SHELL_JS}{app_js}{SPA_JS}{DRAWER_JS}{render_slot("body_end", store)}</body></html>"""
 
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.
@@ -518,15 +405,17 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
                empty_icon: str, empty_msg: str, active: str,
                pre: str = "", count: int | None = None,
                actions: str = "", empty_action: tuple | None = None,
-               after: str = "") -> str:
+               empty_teach: str = "", after: str = "") -> str:
     """One index-page shell — title + count + lead + rows (or an empty state). Every list page
     (projects, personas, councils, syntheses, prototypes, concepts) renders identically through this.
     `pre` is optional HTML between the lead and the rows (e.g. the hypotheses hit-rate strip);
     `count` overrides the h1 count when `rows` interleaves `.group` headers with the records
     (and when `rows` is one PAGE of a larger filtered set — pass the set's total).
     `actions` is topbar HTML (e.g. the New-project button); `empty_action` = (label, href, icon)
-    adds the same CTA inside the empty state; `after` is optional HTML below the rows
-    (e.g. the pager controls)."""
+    adds the same CTA inside the empty state; `empty_teach` upgrades the empty card to the
+    design-system FIRST-USE anatomy (audit F1 / C8 "teach"): the message becomes the title and
+    the teach line — the next action that produces this kind — becomes the body; `after` is
+    optional HTML below the rows (e.g. the pager controls)."""
     if rows:
         rows_html = raw("".join(str(r) for r in rows))
     else:
@@ -534,7 +423,9 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
                  raw(_icon(empty_action[2])), " ", empty_action[0]) if empty_action else None)
         rows_html = h("div", {"class_": "sl-empty"},
                       h("div", {"class_": "sl-empty__icon"}, raw(_hifi(empty_icon, 44))),
-                      h("p", {"class_": "sl-empty__body"}, empty_msg), cta)
+                      h("h2", {"class_": "sl-empty__title"}, empty_msg) if empty_teach else None,
+                      h("p", {"class_": "sl-empty__body"}, empty_teach or empty_msg),
+                      h("div", {"class_": "sl-empty__actions"}, cta) if cta else None)
     cnt = h("span", {"class_": "h1cnt"}, str(count if count is not None else len(rows))) if rows else ""
     body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, title, cnt),
              h("p", {"class_": "lead"}, lead), raw(pre) if pre else None,

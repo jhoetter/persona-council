@@ -15,8 +15,19 @@ def register_activity(app) -> None:
     def activity() -> str:
         store = Store()
         labels = event_labels()
-        rows = []
+        # Coalesce identical NEIGHBORS into one row with a ×n badge (audit F4): a re-export
+        # that supersedes an asset emits the same event/label/url back-to-back — honest data,
+        # but two visually identical lines teach nothing the badge doesn't.
+        groups: list[dict] = []
         for ev in store.list_recent_events(limit=200):
+            key = (ev["event"], ev["data"].get("label") or "", ev["data"].get("url") or "")
+            if groups and groups[-1]["key"] == key:
+                groups[-1]["n"] += 1
+            else:
+                groups.append({"key": key, "ev": ev, "n": 1})
+        rows = []
+        for g in groups:
+            ev = g["ev"]
             title = labels.get(ev["event"], ev["event"])
             label = ev["data"].get("label") or ""
             # Drop a detail label the event title already states ("Run finished · finished") —
@@ -27,7 +38,8 @@ def register_activity(app) -> None:
                           h("span", {"class_": "rico", "style": "color:var(--accent)"},
                             raw(_icon("activity"))),
                           h("span", {"class_": "title"}, title,
-                            h("span", {"class_": "muted small"}, f" · {label}") if label else None),
+                            h("span", {"class_": "muted small"}, f" · {label}") if label else None,
+                            (h("span", {"class_": "pill"}, f'×{g["n"]}') if g["n"] > 1 else None)),
                           h("span", {"class_": "right"},
                             h("span", {}, ev["ts"][:16].replace("T", " ")))))
         return _list_page(store, title=t("activity_h"), lead=t("activity_lead"), rows=rows,

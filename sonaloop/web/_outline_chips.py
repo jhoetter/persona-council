@@ -17,8 +17,8 @@ from ._components import _label
 from ._html import h, raw
 from ._i18n import t
 from ._presence import (
-    asset_direction, decision_status_pill, hypothesis_status_pill, open_question_status_pill,
-    survey_status_pill,
+    asset_direction_pill, asset_size, decision_status_pill, hypothesis_status_pill,
+    open_question_status_pill, survey_status_pill,
 )
 
 
@@ -157,13 +157,9 @@ def _open_question_chips(item: dict) -> str:
 
 
 def _asset_chips(item: dict) -> str:
-    """Kind + direction pill + size (§3.2): deliverable (out, green) vs evidence (in, quiet)."""
+    """Direction pill + size (§3.2): deliverable (out, green) vs evidence (in, quiet)."""
     node = item.get("node") or {}
-    is_out = asset_direction(node) == "out"
-    direction = (_label(t("asset_dir_out"), "var(--green)") if is_out
-                 else _label(t("asset_dir_in")))
-    size_kb = f'{max(1, int(node.get("bytes") or 0) // 1024)} KB'   # a unit, not a UI string
-    return direction + _label(size_kb)
+    return asset_direction_pill(node) + _label(asset_size(node))
 
 
 REGISTRY: dict[str, object] = {}

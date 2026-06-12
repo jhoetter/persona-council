@@ -66,17 +66,41 @@ def create_app():
     _pd.mkdir(parents=True, exist_ok=True)
     app.mount("/proto-files", StaticFiles(directory=str(_pd), html=True), name="proto-files")
 
+    from urllib.parse import urlencode
+
+    from ._slide import _SLIDE, _SSR_DRAWER, fetch_slide_fragment, valid_detail_path
+
     @app.middleware("http")
     async def _ui_language_middleware(request, call_next):
         """Resolve the UI language per request (?lang= -> cookie -> setting), expose
-        it to the render helpers via the contextvar, and persist an explicit choice."""
+        it to the render helpers via the contextvar, and persist an explicit choice.
+        The same hook resolves `?slide=1` (the slide-over fragment variant, §8.1) and
+        `?d=<detail path>` (the context URL, §8.6 / UX U11): a valid local `d` gets its
+        `?slide=1` fragment rendered in-process up front, so `_layout` can SSR the page
+        with the slide-over already open — reload of a context URL reproduces the click
+        view with no fetch flash. Invalid/unknown `d` -> the background renders alone."""
         lang, persist = _resolve_request_language(
             request.query_params.get("lang"), request.cookies.get("ui_lang"))
         token = _UI_LANG.set(lang)
+        slide = request.query_params.get("slide") in ("1", "true")
+        slide_token = _SLIDE.set(slide)
+        ssr_token = None
+        d = request.query_params.get("d")
+        if d and not slide and request.method == "GET" and valid_detail_path(d):
+            frag_html = await fetch_slide_fragment(
+                request.app, d, request.headers.get("cookie", ""))
+            if frag_html is not None:
+                # the no-JS scrim/close target: this URL with ?d= dropped (param order kept)
+                rest = [(k, v) for k, v in request.query_params.multi_items() if k != "d"]
+                close_href = request.url.path + (f"?{urlencode(rest)}" if rest else "")
+                ssr_token = _SSR_DRAWER.set((d, frag_html, close_href))
         try:
             response = await call_next(request)
         finally:
             _UI_LANG.reset(token)
+            _SLIDE.reset(slide_token)
+            if ssr_token is not None:
+                _SSR_DRAWER.reset(ssr_token)
         if persist:
             response.set_cookie("ui_lang", lang, max_age=60 * 60 * 24 * 365, samesite="lax")
             set_ui_language(lang)

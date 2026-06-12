@@ -36,11 +36,12 @@ def _no_leftover_guards():
 
 # ------------------------------------------------------------------- CSRF plumbing
 
-def test_csrf_cookie_is_issued_and_forms_embed_it():
+def test_csrf_cookie_is_issued_and_forms_embed_it(store):
+    proj = services.create_research_project("P", store=store)
     client = _client()
     token = client.cookies.get("sl_csrf")
     assert token
-    html = client.get("/projects/new?lang=en").text
+    html = client.get(f'/projects/{proj["id"]}/edit?lang=en').text
     assert f'name="csrf_token" value="{token}"' in html
 
 
@@ -145,7 +146,8 @@ def test_persona_create_stays_mcp_only():
 def test_note_create_edit_delete_roundtrip(store):
     proj = services.create_research_project("P", store=store)
     client = _client()
-    assert client.get(f'/projects/{proj["id"]}/notes/new?lang=en').status_code == 200
+    # no GET create form (U9) — the POST route stays as API surface
+    assert client.get(f'/projects/{proj["id"]}/notes/new?lang=en').status_code == 405
     r = _post(client, f'/projects/{proj["id"]}/notes/new', title="Obs", text="saw a thing")
     assert r.status_code == 303
     nid = r.headers["location"].rsplit("/", 1)[1]
@@ -278,39 +280,74 @@ def test_guard_denial_renders_a_403_page_not_a_traceback(store):
     assert "permission" in r.text
 
 
-# ------------------------------------------------------------------- affordances
+# ------------------------------------------------------------------- affordances (U9)
 
-def test_projects_list_and_empty_state_offer_new_project(store):
-    client = _client()
-    html = client.get("/projects?lang=en").text
-    if "first steps" in html.lower():               # truly fresh DB renders the checklist instead
-        assert 'href="/projects/new"' in html       # … whose create step links the real form
-    services.create_research_project("P", store=store)
-    html = client.get("/projects?lang=en").text
-    assert 'href="/projects/new"' in html and "New project" in html
-
-
-def test_first_steps_checklist_links_the_create_form():
+def test_no_create_affordances_anywhere_in_the_ui(store):
+    """U9 (ux-contract §8.4): the UI inspects + edits — creation belongs to the MCP/CLI
+    host. No "New …" button, no create-form link, no GET create form."""
     client = _client()
     html = client.get("/?lang=en").text             # empty DB -> first-steps checklist
-    assert 'href="/projects/new"' in html
+    assert "/projects/new" not in html              # the checklist TELLS, it never links a form
+    services.create_research_project("P", store=store)
+    proj = services.list_research_projects(store=store)[0]
+    assert "/projects/new" not in client.get("/projects?lang=en").text
+    html = client.get(f'/projects/{proj["id"]}?lang=en').text
+    assert f'/projects/{proj["id"]}/notes/new' not in html
+    assert f'/projects/{proj["id"]}/sections/new' not in html
+    # the GET create forms are gone; the POST routes stay as API surface
+    assert client.get(f'/projects/{proj["id"]}/notes/new').status_code == 405
+    assert client.get(f'/projects/{proj["id"]}/sections/new').status_code == 405
 
 
-def test_detail_pages_show_edit_and_danger_affordances(store):
+def test_edit_affordances_stay_and_delete_is_the_header_overflow(store):
+    """U9: editing is unchanged; every delete lives in the subtle header overflow ("…")
+    with the confirm <dialog> — zero danger zones render anywhere."""
     pid = create_persona(store, "Edith Editor")
     proj = services.create_research_project("P", persona_ids=[pid], store=store)
     client = _client()
     html = client.get(f'/projects/{proj["id"]}?lang=en').text
     assert f'/projects/{proj["id"]}/edit' in html
-    assert f'/projects/{proj["id"]}/notes/new' in html
-    assert f'/projects/{proj["id"]}/sections/new' in html
     assert f"/personas/{pid}/edit" in client.get(f"/personas/{pid}?lang=en").text
-    assert "Danger zone" in client.get(f'/projects/{proj["id"]}/edit?lang=en').text
+    edit_html = client.get(f'/projects/{proj["id"]}/edit?lang=en').text
+    assert "danger-zone" not in edit_html and "Danger zone" not in edit_html
+    assert "sl-overflow" in edit_html                       # the overflow menu …
+    assert f'/projects/{proj["id"]}/delete' in edit_html    # … holds the delete action
+    assert "danger-dialog" in edit_html                     # … which opens the confirm modal
+    assert "Type the name to confirm" in edit_html          # typed confirm (server-checked)
+
+
+def test_every_delete_surface_uses_the_overflow_pattern(store):
+    """One consistent pattern (U9): council/synthesis/prototype detail pages and the
+    note/section/persona edit pages all carry the overflow + dialog, no danger zone."""
+    pid = create_persona(store, "Cara Council")
+    proj = services.create_research_project("P", persona_ids=[pid], store=store)
+    council = services.record_council(proj["id"], "Would you pay?", [pid],
+                                      statements=[], store=store)
+    syn = services.record_synthesis("Finding", "what did we learn?", [], {}, store=store)
+    from sonaloop import prototypes
+    proto = prototypes.register_artifact("signup-flow", "Signup flow", "prototypes/signup-flow",
+                                         project_id=proj["id"], store=store)
+    note = services.create_note(proj["id"], "saw a thing", title="Obs", store=store)
+    sec = services.create_section(proj["id"], "Theme A", kind="theme", store=store)
+    client = _client()
+    surfaces = [
+        (f'/councils/{council["id"]}', f'/councils/{council["id"]}/delete'),
+        (f'/syntheses/{syn["id"]}', f'/syntheses/{syn["id"]}/delete'),
+        (f'/prototypes/{proto["slug"]}', f'/prototypes/{proto["slug"]}/delete'),
+        (f'/notes/{note["id"]}/edit', f'/notes/{note["id"]}/delete'),
+        (f'/sections/{sec["id"]}/edit', f'/sections/{sec["id"]}/delete'),
+        (f'/personas/{pid}/edit', f'/personas/{pid}/delete'),
+    ]
+    for page_url, delete_action in surfaces:
+        html = client.get(f"{page_url}?lang=en").text
+        assert "danger-zone" not in html, page_url
+        assert "sl-overflow" in html and "danger-dialog" in html, page_url
+        assert delete_action in html, page_url
 
 
 def test_forms_render_in_german_too(store):
     proj = services.create_research_project("P", store=store)
     client = _client()
-    html = client.get("/projects/new?lang=de").text
-    assert "Titel" in html and "Erstellen" in html
-    assert "Gefahrenzone" in client.get(f'/projects/{proj["id"]}/edit?lang=de').text
+    html = client.get(f'/projects/{proj["id"]}/edit?lang=de').text
+    assert "Titel" in html and "Speichern" in html
+    assert "Gefahrenzone" not in html and "Projekt löschen" in html

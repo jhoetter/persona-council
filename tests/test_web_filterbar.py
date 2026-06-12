@@ -1,0 +1,174 @@
+"""The Linear-grade FilterBar (UX U10, spec/ux-contract.md §8.5).
+
+Contract under test: filter state lives in the URL and round-trips (?kind=…&phase=…&persona=…
+&status=… on the project outline; ?project=…&status=…[&direction=…] on the Library tabs);
+comma = OR within a facet, params AND across facets; the facet menu carries honest per-value
+counts over the unfiltered set (no dead options); rows/groups that filter to zero disappear
+and group counts stay true; an active filter that matches nothing renders the teaching empty
+state (C8/F1) with a Clear way out.
+"""
+from __future__ import annotations
+
+import base64
+
+from starlette.testclient import TestClient
+
+from sonaloop import services, web
+from sonaloop.web._filterbar import filter_url, parse_multi
+from conftest import create_persona
+
+
+def _client():
+    return TestClient(web.create_app())
+
+
+def _seed(store) -> dict:
+    """One PLAN-based project carrying a filterable mix: a council (with a persona, at the
+    discover phase), a decision (proposed), two hypotheses (open), an open question, a
+    survey (draft) and an evidence asset."""
+    pid_p = create_persona(store, "Frida Filter")
+    proj = services.start_project("Filterable", "why do users churn?", "double_diamond",
+                                  persona_ids=[pid_p], store=store)
+    pid = proj["id"]
+    services.record_frame(pid, "frame__discover", ["why churn?"], memory_refs=["m1"], store=store)
+    council = services.record_council(pid, "Would you pay for this?", [pid_p], statements=[
+        {"persona_id": pid_p, "text": "Probably not at that price.", "stance": {"value": 1}}],
+        summary="mixed", store=store)
+    task = services.add_task(pid, "act", "explore", "Pain council",
+                             consumes=["frame__discover"], store=store)
+    services.link_evidence(pid, task["id"], {"kind": "council", "id": council["id"]}, store=store)
+    services.record_decision(pid, "Pick A", "we pick A",
+                             [{"kind": "council", "id": council["id"]}], store=store)
+    for text in ("Users abandon at the price reveal", "Setup takes under five minutes"):
+        services.record_hypothesis(pid, text, {"metric": "abandon_rate",
+                                               "expected_direction": "down"}, store=store)
+    services.record_open_questions(pid, ["What about pricing?"], store=store)
+    services.record_survey(pid, "Pricing survey",
+                           [{"id": "q1", "kind": "text", "text": "Why this price?"}], store=store)
+    services.attach_asset(pid, content_base64=base64.b64encode(b"field note").decode(),
+                          filename="note.txt", title="Field note", store=store)
+    return {"project_id": pid, "persona_id": pid_p}
+
+
+def _rkinds(html: str) -> set[str]:
+    import re
+    return set(re.findall(r'data-rkind="([a-z_]+)"', html))
+
+
+# ----------------------------------------------------------------------- URL grammar units
+
+def test_parse_multi_and_filter_url_round_trip():
+    assert parse_multi("council,decision") == ["council", "decision"]
+    assert parse_multi("") == [] and parse_multi(None) == []
+    url = filter_url("/projects/p1", {"kind": ["council", "decision"], "status": []})
+    assert url == "/projects/p1?kind=council,decision"
+    assert filter_url("/library?tab=assets", {"direction": ["in"]}) \
+        == "/library?tab=assets&direction=in"
+    assert filter_url("/projects/p1", {"kind": []}) == "/projects/p1"
+
+
+# -------------------------------------------------------------------------- project outline
+
+def test_outline_kind_filter_round_trips_and_hides_other_rows(store):
+    ids = _seed(store)
+    pid = ids["project_id"]
+    client = _client()
+    full = client.get(f"/projects/{pid}?lang=en").text
+    assert {"council", "decision", "hypothesis", "survey", "asset"} <= _rkinds(full)
+    html = client.get(f"/projects/{pid}?kind=decision&lang=en").text
+    assert _rkinds(html) == {"decision"}                       # rows filter server-side
+    assert "Pick A" in html
+    # the active chip + the Clear action render; the URL is the state
+    assert "sl-filter-chip" in html and f'href="/projects/{pid}"' in html
+
+
+def test_outline_or_within_a_facet_and_across_facets(store):
+    ids = _seed(store)
+    pid = ids["project_id"]
+    client = _client()
+    html = client.get(f"/projects/{pid}?kind=decision,hypothesis&lang=en").text
+    assert _rkinds(html) == {"decision", "hypothesis"}          # comma = OR
+    # AND across facets: hypotheses are status=open, decisions are proposed — combining
+    # kind=decision with status=open matches nothing of the decision kind
+    html = client.get(f"/projects/{pid}?kind=decision&status=open&lang=en").text
+    assert "decision" not in _rkinds(html)
+
+
+def test_outline_status_persona_and_phase_facets_are_honest(store):
+    ids = _seed(store)
+    pid = ids["project_id"]
+    client = _client()
+    html = client.get(f"/projects/{pid}?status=open&lang=en").text
+    assert {"hypothesis", "open_question"} <= _rkinds(html)     # both carry status=open
+    assert "decision" not in _rkinds(html)
+    html = client.get(f'/projects/{pid}?persona={ids["persona_id"]}&lang=en').text
+    assert "council" in _rkinds(html)                           # the persona debated here
+    assert "decision" not in _rkinds(html)
+    html = client.get(f"/projects/{pid}?phase=frame__discover&lang=en").text
+    assert "council" in _rkinds(html)                           # the discover-phase council
+
+
+def test_outline_facet_menu_carries_counts_over_the_unfiltered_set(store):
+    ids = _seed(store)
+    pid = ids["project_id"]
+    html = _client().get(f"/projects/{pid}?kind=decision&lang=en").text
+    # the menu still offers the other kinds, with their true counts (2 hypotheses)
+    assert "sl-menu-item__count" in html
+    assert 'kind=decision,hypothesis' in html                   # toggling adds to the OR set
+    assert ">2<" in html                                        # the hypotheses count
+
+
+def test_outline_empty_filter_result_teaches(store):
+    ids = _seed(store)
+    pid = ids["project_id"]
+    html = _client().get(f"/projects/{pid}?kind=session&lang=en").text  # no sessions recorded
+    assert "Nothing matches these filters" in html
+    assert f'href="/projects/{pid}"' in html                    # the Clear way out
+
+
+# --------------------------------------------------------------------------------- library
+
+def test_library_project_filter_round_trips(store):
+    ids = _seed(store)
+    pid_b = create_persona(store, "Otto Other")
+    other = services.create_research_project("Other", persona_ids=[pid_b], store=store)
+    council_b = services.record_council(other["id"], "Option B?", [pid_b], statements=[
+        {"persona_id": pid_b, "text": "B works.", "stance": {"value": 1}}],
+        summary="b", store=store)
+    services.record_decision(other["id"], "Pick B", "we pick B",
+                             [{"kind": "council", "id": council_b["id"]}], store=store)
+    client = _client()
+    full = client.get("/decisions?lang=en").text
+    assert "Pick A" in full and "Pick B" in full
+    html = client.get(f'/decisions?project={ids["project_id"]}&lang=en').text
+    assert "Pick A" in html and "Pick B" not in html
+    assert "sl-filter-chip" in html and 'href="/decisions"' in html
+
+
+def test_library_status_filter_and_composition_with_tab(store):
+    _seed(store)
+    client = _client()
+    html = client.get("/library?tab=hypotheses&status=open&lang=en").text
+    assert "Users abandon at the price reveal" in html
+    html = client.get("/library?tab=hypotheses&status=validated&lang=en").text
+    assert "Nothing matches these filters" in html              # honest: nothing validated yet
+    assert 'href="/library?tab=hypotheses"' in html             # Clear keeps the tab
+
+
+def test_assets_tab_gains_the_direction_facet(store):
+    ids = _seed(store)
+    services.attach_asset(ids["project_id"], content_base64="UEsDBA==",
+                          filename="report.pptx", title="Report out", direction="out",
+                          store=store)
+    client = _client()
+    html = client.get("/assets?direction=out&lang=en").text
+    assert "Report out" in html and "Field note" not in html
+    html = client.get("/assets?direction=in&lang=en").text
+    assert "Field note" in html and "Report out" not in html
+
+
+def test_library_filter_menu_counts_per_value(store):
+    ids = _seed(store)
+    html = _client().get("/hypotheses?lang=en").text
+    assert "sl-menu-item__count" in html and ">2<" in html      # 2 open hypotheses
+    assert f'href="/hypotheses?project={ids["project_id"]}"' in html

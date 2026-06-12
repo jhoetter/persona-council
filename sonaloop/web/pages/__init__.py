@@ -14,8 +14,8 @@ from .library import register_library
 from .surveys import register_surveys
 from .hypotheses import register_hypotheses
 from .decisions import register_decisions
+from .assets import register_assets
 from .sessions import register_sessions
-from .peek import register_peek
 from .activity import register_activity
 from .runs import register_runs, register_runs_section  # noqa: F401  (seam re-exported via web/__init__)
 from .edit import register_edit
@@ -32,7 +32,7 @@ def register_pages(app) -> None:
     register_surveys(app)
     register_hypotheses(app)   # the /hypotheses list — after projects' /hypotheses/{id} redirect
     register_decisions(app)    # the /decisions list — after projects' /decisions/{id} redirect
+    register_assets(app)       # the /assets tab + the global /assets/{id} detail route (UX U8)
     register_sessions(app)
-    register_peek(app)         # /peek/{kind}/{id} drawer fragments (ux-contract §3.3)
     register_activity(app)
     register_runs(app)

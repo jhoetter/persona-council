@@ -1,10 +1,11 @@
 """Write routes: the inspector's structural CRUD (ticket web-crud-structure).
 
-Every route follows the ONE write-path pattern from web/_forms.py — GET form,
+Every route follows the ONE write-path pattern from web/_forms.py — GET edit form,
 POST -> write_gate (CSRF + cloud access guard) -> validate -> SERVICE call -> 303.
-The mutation boundary (docs/web-mutations.md): structural/metadata operations only;
-authored/generated prose stays host-authored (persona CREATE is therefore MCP-only —
-record_persona requires the full host-authored profile JSON from brief_persona)."""
+The mutation boundary (docs/web-mutations.md): the UI inspects + edits structural
+metadata; CREATION is not a UI affordance (UX U9, §8.4 — it belongs to the MCP/CLI
+host), so the POST /new routes stay as API surface while their GET forms are gone.
+Deletion is the subtle header overflow (+ confirm modal), never a danger zone."""
 from __future__ import annotations
 
 from fastapi import Request
@@ -12,8 +13,7 @@ from fastapi import Request
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from ...prototypes import PrototypeError
 from .._forms import (
-    confirm_delete_modal, danger_zone, delete_button_form, field, form_page,
-    not_found, see_other, write_gate,
+    field, form_page, not_found, overflow_delete, see_other, write_gate,
 )
 
 
@@ -25,15 +25,17 @@ def _s(form, name: str) -> str:
 
 def _project_form(store, proj: dict | None, values: dict, errors: dict,
                   confirm_error: str = "") -> str:
-    """New + edit share one form; edit adds the danger zone (typed-confirm delete)."""
+    """New + edit share one form (new renders only on the POST validation re-render —
+    no GET form, U9); edit adds the header overflow with the typed-confirm delete."""
     new = proj is None
     title = t("new_project") if new else f'{proj["title"]} — {t("edit")}'
     action = "/projects/new" if new else f'/projects/{proj["id"]}/edit'
     cancel = "/projects" if new else f'/projects/{proj["id"]}'
     crumbs = ([(t("projects"), "/projects"), (t("new_project"), None)] if new else
               [(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (t("edit"), None)])
-    danger = "" if new else danger_zone(confirm_delete_modal(
-        f'/projects/{proj["id"]}/delete', proj["title"], t("delete_project"), error=confirm_error))
+    actions = "" if new else overflow_delete(
+        f'/projects/{proj["id"]}/delete', t("delete_project"), expected=proj["title"],
+        error=confirm_error)
     return form_page(
         store, title=title, crumbs=crumbs, active="projects", action=action,
         lead=t("project_form_lead"),
@@ -42,14 +44,15 @@ def _project_form(store, proj: dict | None, values: dict, errors: dict,
                 raw(field("goal", t("f_goal"), values.get("goal", ""))),
                 raw(field("description", t("f_description"), values.get("description", ""),
                           textarea=True))],
-        submit_label=t("create") if new else t("save"), cancel_href=cancel, danger=danger)
+        submit_label=t("create") if new else t("save"), cancel_href=cancel, actions=actions)
 
 
 def _persona_form(store, p: dict, values: dict, errors: dict, confirm_error: str = "") -> str:
     """Persona METADATA only (name/role/segment/industry) — the profile prose and the
     generated SOUL stay host-authored (docs/web-mutations.md)."""
-    danger = danger_zone(confirm_delete_modal(
-        f'/personas/{p["id"]}/delete', p["display_name"], t("delete_persona"), error=confirm_error))
+    actions = overflow_delete(
+        f'/personas/{p["id"]}/delete', t("delete_persona"), expected=p["display_name"],
+        error=confirm_error)
     return form_page(
         store, title=f'{p["display_name"]} — {t("edit")}', active="personas",
         crumbs=[(t("personas"), "/personas"), (p["display_name"], f'/personas/{p["id"]}'), (t("edit"), None)],
@@ -59,7 +62,7 @@ def _persona_form(store, p: dict, values: dict, errors: dict, confirm_error: str
                 raw(field("role_title", t("f_role_title"), values.get("role_title", ""))),
                 raw(field("customer_type", t("f_segment"), values.get("customer_type", ""))),
                 raw(field("industry", t("f_industry"), values.get("industry", "")))],
-        submit_label=t("save"), cancel_href=f'/personas/{p["id"]}', danger=danger)
+        submit_label=t("save"), cancel_href=f'/personas/{p["id"]}', actions=actions)
 
 
 def _note_form(store, proj: dict, note: dict | None, values: dict, errors: dict) -> str:
@@ -67,8 +70,7 @@ def _note_form(store, proj: dict, note: dict | None, values: dict, errors: dict)
     title = t("new_note") if new else f'{note.get("title") or t("notes_h")} — {t("edit")}'
     action = f'/projects/{proj["id"]}/notes/new' if new else f'/notes/{note["id"]}/edit'
     cancel = f'/projects/{proj["id"]}' if new else f'/notes/{note["id"]}'
-    danger = "" if new else danger_zone(raw(
-        delete_button_form(f'/notes/{note["id"]}/delete', t("delete_note"))))
+    actions = "" if new else overflow_delete(f'/notes/{note["id"]}/delete', t("delete_note"))
     return form_page(
         store, title=title, active="library",
         crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (title, None)],
@@ -76,7 +78,7 @@ def _note_form(store, proj: dict, note: dict | None, values: dict, errors: dict)
         fields=[raw(field("title", t("f_title"), values.get("title", ""))),
                 raw(field("text", t("f_text"), values.get("text", ""),
                           error=errors.get("text", ""), required=True, textarea=True))],
-        submit_label=t("create") if new else t("save"), cancel_href=cancel, danger=danger)
+        submit_label=t("create") if new else t("save"), cancel_href=cancel, actions=actions)
 
 
 def _section_form(store, proj: dict, sec: dict | None, values: dict, errors: dict) -> str:
@@ -84,8 +86,7 @@ def _section_form(store, proj: dict, sec: dict | None, values: dict, errors: dic
     title = t("new_section") if new else f'{sec["title"]} — {t("edit")}'
     action = f'/projects/{proj["id"]}/sections/new' if new else f'/sections/{sec["id"]}/edit'
     cancel = f'/projects/{proj["id"]}' if new else f'/sections/{sec["id"]}'
-    danger = "" if new else danger_zone(raw(
-        delete_button_form(f'/sections/{sec["id"]}/delete', t("delete_section"))))
+    actions = "" if new else overflow_delete(f'/sections/{sec["id"]}/delete', t("delete_section"))
     return form_page(
         store, title=title, active="projects",
         crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (title, None)],
@@ -94,17 +95,15 @@ def _section_form(store, proj: dict, sec: dict | None, values: dict, errors: dic
                           error=errors.get("title", ""), required=True)),
                 raw(field("kind", t("type_h"), values.get("kind", "theme"))),
                 raw(field("note", t("f_note"), values.get("note", ""), textarea=True))],
-        submit_label=t("create") if new else t("save"), cancel_href=cancel, danger=danger)
+        submit_label=t("create") if new else t("save"), cancel_href=cancel, actions=actions)
 
 
 def register_edit(app) -> None:  # noqa: C901  (route table — one block per entity)
     from fastapi.responses import HTMLResponse
 
     # ---------------------------------------------------------------- projects
-    @app.get("/projects/new", response_class=HTMLResponse)
-    def project_new_form() -> str:
-        return _project_form(Store(), None, {}, {})
-
+    # POST-only (U9): creation is API surface for hosts/automations — the UI renders no
+    # create form; the 400 validation re-render below is the only place the form appears.
     @app.post("/projects/new")
     async def project_create(request: Request):
         store = Store()
@@ -216,15 +215,6 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         return see_other("/personas")
 
     # ------------------------------------------------------------------- notes
-    @app.get("/projects/{project_id}/notes/new", response_class=HTMLResponse)
-    def note_new_form(project_id: str):
-        store = Store()
-        try:
-            proj = services.get_research_project(project_id, store=store)
-        except KeyError:
-            return not_found()
-        return _note_form(store, proj, None, {}, {})
-
     @app.post("/projects/{project_id}/notes/new")
     async def note_create(project_id: str, request: Request):
         store = Store()
@@ -283,15 +273,6 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         return see_other(f'/projects/{data["project"]["id"]}')
 
     # ---------------------------------------------------------------- sections
-    @app.get("/projects/{project_id}/sections/new", response_class=HTMLResponse)
-    def section_new_form(project_id: str):
-        store = Store()
-        try:
-            proj = services.get_research_project(project_id, store=store)
-        except KeyError:
-            return not_found()
-        return _section_form(store, proj, None, {}, {})
-
     @app.post("/projects/{project_id}/sections/new")
     async def section_create(project_id: str, request: Request):
         store = Store()

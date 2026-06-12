@@ -204,7 +204,8 @@ def register_personas(app) -> None:
                       raw(_period_calendar_html(p["id"], selected_date, view, period)))
              if has_sim else h("p", {"class_": "muted"}, t("no_days_yet"))))
         main = fragment(
-            _hero(p["display_name"], sub=f'{p["role"]["title"]} · {p["company_context"]["industry"]}'),
+            _hero(p["display_name"], sub=f'{p["role"]["title"]} · {p["company_context"]["industry"]}',
+                  top=detail_eyebrow(t("persona"))),
             h("div", {"class_": "identity"}, h("div", {}, avatar), h("div", {},
               h("div", {"class_": "sl-card"}, h("h3", {}, t("current_state")),
                 h("p", {}, h("strong", {}, state["current_activity"])),

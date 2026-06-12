@@ -57,10 +57,11 @@ def test_sessions_list_renders_empty_and_populated(store):
     sess = _record(store)
     html = client.get("/sessions?lang=en").text
     # the URL stays canonical; the content is the LIBRARY with the Sessions tab active
-    # (ux-contract §3.5): one sl-entity row per walk — subject desc, steps meta, peek
+    # (ux-contract §3.5): one sl-entity row per walk — subject desc, steps meta, and the
+    # slide-over armed with the row's own canonical URL (§8.1)
     assert f'/sessions/{sess["id"]}' in html
     assert "Signup prototype" in html and "2 steps" in html
-    assert f'data-drawer="/peek/session/{sess["id"]}"' in html
+    assert f'data-drawer="/sessions/{sess["id"]}"' in html
     # the project filter narrows honestly
     assert f'/sessions/{sess["id"]}' not in client.get("/sessions?project=nope&lang=en").text
 
@@ -256,3 +257,105 @@ def test_planless_project_outline_shows_study_nodes_and_compacts(store):
     assert "Pains" in html and 'href="/syntheses/syn0"' in html
     # a near-empty outline sizes to content instead of pinning a viewport-high dead zone
     assert "ol-compact" in html
+
+
+# --------------------------------------------------- prototype reaction sessions (UX U7, §8.2)
+# A protosession_* record is the OTHER first-class session kind: it lists in the Library's
+# Sessions tab through the SAME row vocabulary and serves a FULL detail page on /sessions/{id}
+# (one route, the record decides; the slide-over renders its ?slide=1 variant) — persona +
+# prototype header with the verified badge, verdict lead, liked/friction reads, the per-step
+# timeline reusing the replay renderer (screenshots from the retained browser-session dir),
+# predicted behaviors.
+
+
+def _proto_reaction(**kw):
+    base = {
+        "summary": "tested the journey end to end",
+        "verdict": "Two of three objections fixed; the delivery channel stays open.",
+        "liked": ["the counter-proposal speaks my chosen block"],
+        "friction": ["the trigger is still a calendar invite"],
+        "steps": [
+            {"index": 0, "action": {"type": "look", "target": "Screen 1", "detail": "first look"},
+             "monologue": "thinking aloud at proto step 0", "state": {"screen": "proto-screen-0"},
+             "friction": {"level": "none", "note": ""},
+             "verdict": {"would_continue": True, "reason": "clear"}},
+            {"index": 1, "action": {"type": "click", "target": "Button X", "detail": "clicked X"},
+             "monologue": "thinking aloud at proto step 1", "state": {"screen": "proto-screen-1"},
+             "friction": {"level": "hesitation", "note": "unusual pattern"},
+             "verdict": {"would_continue": True, "reason": "works"}},
+        ],
+        "predicted_behaviors": [
+            {"action": "sets the EN block as a status text", "step": 1, "likelihood": "likely",
+             "trigger": "next week's daily huddles", "refs": []}],
+        "observed_state_refs": ["proto-screen-0", "proto-screen-1"],
+    }
+    base.update(kw)
+    return base
+
+
+def _proto_session(store, **kw):
+    proj = services.create_research_project("PS", store=store)
+    proto = prototypes.register_prototype("proto-journey", "Journey prototype", "prototypes/j",
+                                          project_id=proj["id"], store=store)
+    pid = create_persona(store, "Greta Walker")
+    sess = services.record_prototype_session(
+        pid, proto["id"], "psession_test", "2026-06-11", _proto_reaction(**kw),
+        key="ps1", store=store)["prototype_session"]
+    return proj, proto, pid, sess
+
+
+def test_prototype_session_full_detail_page(store):
+    from sonaloop.web._i18n import STRINGS
+    proj, proto, pid, sess = _proto_session(store)
+    assert sess["id"].startswith("protosession_")
+    html = _client().get(f'/sessions/{sess["id"]}?lang=en').text
+    # shared header anatomy (§8.2): kind eyebrow, prototype title, persona chip
+    assert STRINGS["en"]["session_kind_prototype"] in html
+    assert "Journey prototype" in html and "Greta Walker" in html
+    # verdict lead + liked/friction reads + predicted behaviors
+    assert "Two of three objections fixed" in html
+    assert STRINGS["en"]["proto_liked_h"] in html and "counter-proposal" in html
+    assert STRINGS["en"]["friction_rail_h"] in html and "calendar invite" in html
+    assert STRINGS["en"]["predicted_behaviors_h"] in html and "status text" in html
+    assert STRINGS["en"]["likelihood_likely"] in html        # the scale label, not the raw token
+    # the per-step timeline reuses the replay renderer: anchors, monologue, friction accent
+    assert 'id="step-0"' in html and 'id="step-1"' in html
+    assert "thinking aloud at proto step 1" in html
+    assert "--sfc:var(--accent)" in html                     # hesitation accent from the scale
+    # no screenshot files for this session id -> text screens, no <img> rows
+    assert "proto-screen-0" in html and 'class="sess-shot"' not in html
+    # the properties rail: prototype + project links, the unverified grounding read
+    assert f'/prototypes/{proto["slug"]}' in html and f'/projects/{proj["id"]}' in html
+    assert STRINGS["en"]["grounded_no"] in html              # no live session log -> unverified
+
+
+def test_prototype_sessions_list_in_library_tab_and_slideover(store):
+    proj, proto, pid, sess = _proto_session(store)
+    client = _client()
+    html = client.get("/sessions?lang=en").text
+    # one row vocabulary: persona title, subject desc, steps meta, canonical href = drawer URL
+    assert f'/sessions/{sess["id"]}' in html
+    assert "Greta Walker" in html and "Journey prototype" in html and "2 steps" in html
+    assert f'data-drawer="/sessions/{sess["id"]}"' in html
+    # the slide-over fragment serves the FULL detail content (no 500 on protosession ids):
+    # the verdict lead and the step timeline, not an essence preview
+    slide = client.get(f'/sessions/{sess["id"]}?slide=1&lang=en')
+    assert slide.status_code == 200 and "Two of three objections fixed" in slide.text
+    assert 'id="step-1"' in slide.text                       # the full timeline rides along
+    assert slide.text.startswith('<div class="sl-slide">') and "sl-sidebar" not in slide.text
+    # the prototype detail page rows its sessions through the same vocabulary
+    proto_html = client.get(f'/prototypes/{proto["slug"]}?lang=en').text
+    assert f'href="/sessions/{sess["id"]}"' in proto_html
+
+
+def test_prototype_session_timeline_shows_screenshots_when_files_exist(store, tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    d = config.sessions_dir() / "psession_test"
+    d.mkdir(parents=True)
+    (d / "step-0.png").write_bytes(b"\x89PNG fake")
+    proj, proto, pid, sess = _proto_session(store)
+    html = _client().get(f'/sessions/{sess["id"]}?lang=en').text
+    # the harness convention <browser session_id>/step-<n>.png resolves without a stored path
+    assert '<img class="sess-shot" src="/sessions-files/psession_test/step-0.png"' in html
+    # step 1 has no file -> the recorded screen text
+    assert "proto-screen-1" in html

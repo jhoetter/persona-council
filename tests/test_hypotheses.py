@@ -282,12 +282,12 @@ def test_hypothesis_is_a_resolvable_ref_kind(store):
     assert artifacts.resolve_ref({"kind": "hypothesis", "id": "hyp_missing"}, store)["exists"] is False
 
 
-# ----------------------------------------------- inspector: project rows + the hypothesis peek
+# ---------------------------------------- inspector: project rows + the hypothesis slide-over
 
-def test_project_page_rows_and_hypothesis_peek(store):
-    """UX P2 (spec/ux-contract.md §3.4, decision §7.1): a hypothesis is an outline ROW like
-    everything else (status pill, anchor); its predicted-vs-observed essence lives in the
-    /peek/hypothesis/{id} drawer fragment; the Ref route keeps deep-linking into the row."""
+def test_project_page_rows_and_hypothesis_slideover(store):
+    """UX P2 (spec/ux-contract.md §3.4) + U6 (§8.1): a hypothesis is an outline ROW like
+    everything else (status pill, anchor); its data-drawer carries the CANONICAL detail URL,
+    whose ?slide=1 fragment renders the FULL predicted-vs-observed detail content."""
     from starlette.testclient import TestClient
     from sonaloop import web
     from sonaloop.web._i18n import STRINGS
@@ -307,18 +307,27 @@ def test_project_page_rows_and_hypothesis_peek(store):
     assert STRINGS["en"]["hyp_status_open"] in html      # lifecycle pills on the rows
     assert STRINGS["en"]["hyp_status_validated"] in html
     assert f'id="hyp-{resolved["id"]}"' in html          # the row IS the anchor target
-    assert f'data-drawer="/peek/hypothesis/{resolved["id"]}"' in html
-    # the peek carries the essence: predicted vs observed + the derived-from chip
-    peek = client.get(f'/peek/hypothesis/{resolved["id"]}?lang=en').text
-    assert STRINGS["en"]["hyp_predicted"] in peek and STRINGS["en"]["hyp_observed"] in peek
-    assert "38" in peek and "close enough" in peek
-    open_peek = client.get(f'/peek/hypothesis/{open_bet["id"]}?lang=en').text
-    assert f'/councils/{council["id"]}' in open_peek     # derived-from chip via render_ref
-    assert client.get("/peek/hypothesis/nope").status_code == 404
-    # the Ref route deep-links back into the project page row
-    r = client.get(f'/hypotheses/{resolved["id"]}', follow_redirects=False)
-    assert r.status_code in (302, 307)
-    assert r.headers["location"] == f'/projects/{proj["id"]}#hyp-{resolved["id"]}'
+    assert f'data-drawer="/hypotheses/{resolved["id"]}"' in html   # canonical URL (§8.1)
+    # the slide-over fragment = the SAME detail renderer, content only: predicted vs
+    # observed + the derived-from chip, no app shell
+    slide = client.get(f'/hypotheses/{resolved["id"]}?slide=1&lang=en').text
+    assert slide.startswith('<div class="sl-slide">') and "sl-sidebar" not in slide
+    assert STRINGS["en"]["hyp_predicted"] in slide and STRINGS["en"]["hyp_observed"] in slide
+    assert "38" in slide and "close enough" in slide
+    open_slide = client.get(f'/hypotheses/{open_bet["id"]}?slide=1&lang=en').text
+    assert f'/councils/{council["id"]}' in open_slide    # derived-from chip via render_ref
+    # the Ref route serves a REAL detail page on the shared anatomy (UX U7, §8.2): kind
+    # eyebrow + lifecycle pill + predicted/observed + the rail's project-anchor link
+    r = client.get(f'/hypotheses/{resolved["id"]}?lang=en')
+    assert r.status_code == 200
+    detail = r.text
+    assert STRINGS["en"]["hypothesis_kind"] in detail and STRINGS["en"]["hyp_status_validated"] in detail
+    assert resolved["text"] in detail
+    assert STRINGS["en"]["hyp_predicted"] in detail and STRINGS["en"]["hyp_observed"] in detail
+    assert "38" in detail and "close enough" in detail
+    # the rail's Project link lands ON the bet's row (round-2 audit: the old
+    # "View in project" meta-line link retired — no other kind carried one)
+    assert f'/projects/{proj["id"]}#hyp-{resolved["id"]}' in detail
     assert STRINGS["en"]["runtime_maybe_cleared"] in client.get("/hypotheses/nope?lang=en").text
     # a project without hypotheses shows no hypothesis rows (and no empty chrome)
     other = _project(store, "Quiet study")
@@ -342,21 +351,21 @@ def test_global_hypotheses_list_renders_empty_and_populated(store):
     assert page.status_code == 200
     html = page.text
     # the URL stays canonical; the content is the LIBRARY with the Hypotheses tab active
-    # (ux-contract §3.5) — lifecycle-pilled rows, the predicted/observed card in the peek
+    # (ux-contract §3.5) — lifecycle-pilled rows, the slide-over carrying the full detail
     assert STRINGS["en"]["library_h"] in html
     assert STRINGS["en"]["hyp_status_open"] in html and STRINGS["en"]["hyp_status_validated"] in html
     assert open_bet["text"] in html and resolved["text"] in html
-    assert f'data-drawer="/peek/hypothesis/{resolved["id"]}"' in html
-    # each row deep-links into ITS project's bets section, named after the project
-    assert f'/projects/{pa["id"]}#hyp-{open_bet["id"]}' in html
-    assert f'/projects/{pb["id"]}#hyp-{resolved["id"]}' in html
+    assert f'data-drawer="/hypotheses/{resolved["id"]}"' in html
+    # each row's href IS the canonical detail URL (§8.1); the project shows as the desc line
+    assert f'href="/hypotheses/{open_bet["id"]}"' in html
+    assert f'href="/hypotheses/{resolved["id"]}"' in html
     assert "Project A" in html and "Project B" in html
     # the GLOBAL hit-rate strip (over resolved bets across all projects)
     assert STRINGS["en"]["hyp_hit_rate"] in html and "1/1" in html
-    # the list route does not shadow the canonical /hypotheses/{id} redirect
-    r = client.get(f'/hypotheses/{resolved["id"]}', follow_redirects=False)
-    assert r.status_code in (302, 307)
-    assert r.headers["location"] == f'/projects/{pb["id"]}#hyp-{resolved["id"]}'
+    # the list route does not shadow the canonical /hypotheses/{id} DETAIL page (UX U7)
+    r = client.get(f'/hypotheses/{resolved["id"]}?lang=en')
+    assert r.status_code == 200 and resolved["text"] in r.text
+    assert f'/projects/{pb["id"]}#hyp-{resolved["id"]}' in r.text  # secondary view-in-project link
 
 
 # --------------------------------------------------------------- review fixes (audit-trail integrity)

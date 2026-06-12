@@ -107,9 +107,15 @@ def test_absorbed_kinds_are_outline_rows_on_the_default_view(store):
     assert "projsection" not in html and "projjump" not in html
     for anchor in ("#open-questions", "#assets", "#surveys"):
         assert f'href="{anchor}"' not in html, f"retired jump-chip {anchor} resurfaced"
-    # every absorbed row opens a peek (decision §7.3: click = peek, universally)
-    for kind in ("open_question", "asset", "survey"):
-        assert f'data-drawer="/peek/{kind}/' in html, f"{kind} row lost its peek"
+    # absorbed rows with a detail page open it as a slide-over (§8.1: drawer URL = canonical
+    # href); open questions live inline in the row and assets await their U8 detail surface
+    assert 'data-drawer="/surveys/' in html, "survey row lost its slide-over"
+    import re as _re
+    for kind in ("open_question", "asset"):
+        for chunk in html.split('class="olrow')[1:]:
+            head = chunk.split(">", 1)[0]
+            if f'data-rkind="{kind}"' in head:
+                assert "data-drawer=" not in head, f"{kind} row armed a drawer without a detail page"
 
 
 def test_empty_kinds_render_no_chrome(store):

@@ -1,14 +1,13 @@
-"""Hypotheses: the cross-project list page + the shared bet renderers.
+"""Hypotheses: the real /hypotheses/{id} detail page (UX U7, spec/ux-contract.md §8.2), the
+cross-project list page + the shared bet renderers.
 
-A hypothesis LIVES on its project page — an outline row in its phase context (UX P2,
-spec/ux-contract.md §3.4 / decision §7.1); the canonical Ref route /hypotheses/{id} (registered
-in projects.py) redirects into that row's anchor. This module owns everything bet-shaped that is
-shared between the global /hypotheses index and the hypothesis peek (web/pages/peek.py): the
-predicted/observed row card and the hit-rate strip (the lifecycle pills live in web/_presence,
-shared with the outline chips). The list is READ-ONLY like every page; rows deep-link into their
-project's row. /hypotheses and /hypotheses/{id} have distinct path shapes, so the list route
-never shadows the redirect regardless of registration order (we still register it after
-projects' routes — see pages/__init__)."""
+A hypothesis ALSO lives on its project page — an outline row in its phase context (UX P2, §3.4 /
+decision §7.1) — and the detail page keeps that anchor as the secondary "view in project" link.
+This module owns everything bet-shaped that is shared between the global /hypotheses index, the
+detail page and the hypothesis slide-over (the detail's ?slide=1 variant, §8.1): the predicted/observed reads and the
+hit-rate strip (the lifecycle pills live in web/_presence, shared with the outline chips).
+READ-ONLY like every page. /hypotheses and /hypotheses/{id} have distinct path shapes, so the
+list route never shadows the detail route."""
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
@@ -20,6 +19,7 @@ from .._render import render_ref
 # reuses it — co-located here with its primary owner).
 register_css(r"""
 .hyp{border:1px solid var(--line-2);border-radius:9px;padding:10px 14px;margin:8px 0;background:var(--panel)}
+.hyp p{margin:4px 0 0}
 .hypvals{display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;font-size:var(--t-sm)}
 .hyprate{display:flex;gap:10px;align-items:center;margin:6px 0 12px}
 .hypstrip{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line-2);flex:1;max-width:340px}
@@ -43,11 +43,9 @@ def _hyp_predicted_text(pred: dict) -> str:
     return out
 
 
-def _hypothesis_row(hx: dict, store, *, title_href: str | None = None,
-                    project_title: str | None = None) -> str:
-    """One bet card. On the project page the card is the anchor target (plain bold title); on the
-    cross-project list `title_href` links the title into that anchor and `project_title` names
-    where the bet lives."""
+def _hypothesis_reads(hx: dict, store):
+    """The bet's record reads, shared by the row card and the detail page: predicted vs observed
+    values, the resolution note, the observation's source chip and the derived-from chips."""
     pred = hx.get("prediction") or {}
     res = hx.get("result") or {}
     vals = [h("span", {}, h("span", {"class_": "muted"}, t("hyp_predicted"), ": "),
@@ -55,24 +53,33 @@ def _hypothesis_row(hx: dict, store, *, title_href: str | None = None,
     if res:
         vals.append(h("span", {}, h("span", {"class_": "muted"}, t("hyp_observed"), ": "),
                       str(res.get("observed_value", ""))))
-    note = (h("p", {"class_": "muted small", "style": "margin:4px 0 0"}, res["note"])
+    note = (h("p", {"class_": "muted small"}, res["note"])
             if res.get("note") else None)
-    src = (h("p", {"class_": "muted small turn-refs", "style": "margin:4px 0 0"},
+    src = (h("p", {"class_": "muted small turn-refs"},
              t("hyp_observed"), ": ", raw(render_ref(res["source"], store)))
            if res.get("source") else None)
-    derived = (h("p", {"class_": "muted small turn-refs", "style": "margin:4px 0 0"},
+    derived = (h("p", {"class_": "muted small turn-refs"},
                  t("rel_based_on"), ": ",
                  fragment(*(raw(render_ref(r, store)) for r in hx["derived_from"])))
                if hx.get("derived_from") else None)
+    return h("div", {"class_": "hypvals"}, fragment(*vals)), note, src, derived
+
+
+def _hypothesis_row(hx: dict, store, *, title_href: str | None = None,
+                    project_title: str | None = None) -> str:
+    """One bet card. On the project page the card is the anchor target (plain bold title); on the
+    cross-project list `title_href` links the title into that anchor and `project_title` names
+    where the bet lives."""
     status = hx.get("status", "open")
     title = h("b", {}, hx.get("text", ""))
     if title_href:
         title = h("a", {"href": title_href}, title)
     proj = (h("span", {"class_": "muted small", "style": "margin-left:8px"}, project_title)
             if project_title else None)
+    vals, note, src, derived = _hypothesis_reads(hx, store)
     return h("div", {"class_": "hyp", "id": f'hyp-{hx["id"]}'},
              h("div", {}, raw(hypothesis_status_pill(status)), " ", title, proj),
-             h("div", {"class_": "hypvals"}, fragment(*vals)), note, src, derived)
+             vals, note, src, derived)
 
 
 def _hyp_hit_rate_strip(hyps: list) -> str:
@@ -100,11 +107,50 @@ def _hyp_hit_rate_strip(hyps: list) -> str:
 
 def register_hypotheses(app) -> None:
     @app.get("/hypotheses", response_class=HTMLResponse)
-    def hypotheses_list() -> str:
+    def hypotheses_list(project: str = Query(default=""), status: str = Query(default="")) -> str:
         """Every bet across all projects — the Library's Hypotheses tab (ux-contract §3.5),
-        keeping the GLOBAL hit-rate strip: how often do our predictions survive reality?"""
-        from .library import library_page
+        keeping the GLOBAL hit-rate strip: how often do our predictions survive reality?
+        Filterable by project + status (U10, the shared FilterBar grammar)."""
+        from .library import library_filters, library_page
         store = Store()
         hyps = services.list_hypotheses(store=store)
         strip = str(_hyp_hit_rate_strip(hyps)) if hyps else ""
-        return library_page("hypotheses", store, pre_extra=strip)
+        return library_page("hypotheses", store, pre_extra=strip,
+                            flt=library_filters(project, status), base="/hypotheses")
+
+    @app.get("/hypotheses/{hypothesis_id}", response_class=HTMLResponse)
+    def hypothesis_detail(hypothesis_id: str) -> str:
+        """A hypothesis's REAL detail page (UX U7 — every kind, one scaffold; supersedes the old
+        redirect into the project anchor, which stays reachable as the secondary 'view in
+        project' link): the bet on the shared anatomy — kind eyebrow + lifecycle pill header,
+        predicted vs observed, the resolution note, source + derived-from chips — with the
+        properties rail (project, dates)."""
+        store = Store()
+        try:
+            hx = services.get_hypothesis(hypothesis_id, store=store)
+        except KeyError:
+            return _layout(t("not_found"),
+                           _empty_state(t("hypotheses_h"), t("runtime_maybe_cleared"), icon="target"),
+                           store, active="library")
+        proj = (store.get_research_project(hx.get("project_id")) if hx.get("project_id") else None)
+        vals, note, src, derived = _hypothesis_reads(hx, store)
+        body = h("div", {"class_": "sec", "id": "sec-bet"}, vals, note, src, derived)
+        # Project-rooted crumb (§8.2 — the council pattern); kind root only for orphans.
+        crumbs = ([(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}')]
+                  if proj else [(t("hypotheses_h"), "/hypotheses")])
+        crumbs.append((_display_title(hx.get("text", "")), None))
+        anchor = (f'/projects/{hx["project_id"]}#hyp-{hx["id"]}' if hx.get("project_id") else "")
+        # The rail's project link lands ON the bet's row (the #hyp- anchor) — replaces the old
+        # "View in project" meta-line link, which no other kind carried (round 2, §8.2).
+        proj_link = (h("a", {"href": anchor or f'/projects/{proj["id"]}'}, proj["title"]) if proj else "")
+        prop_rows = [
+            ("projects", t("project"), proj_link),
+            ("dot", t("created"), (hx.get("created_at") or "")[:10]),
+        ]
+        return detail_page(
+            store, title=hx.get("text", ""), active="library", crumbs=crumbs,
+            icon="target", kind=t("hypothesis_kind"),
+            pills=[hypothesis_status_pill(hx.get("status", "open"))],
+            hid="sec-head", body=body, prop_rows=prop_rows,
+            rail_sections=[("sec-bet", t("hypothesis_kind"))],
+            star=("hypothesis", hx["id"], hx.get("text", "")[:60], f'/hypotheses/{hx["id"]}'))

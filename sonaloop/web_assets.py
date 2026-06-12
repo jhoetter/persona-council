@@ -25,9 +25,9 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
    .sl-topbar · .sl-usermenu) is the shared design-system layer (COMPONENTS_CSS); its
    behaviour is _shell.SHELL_JS. Only the app-specific favorites/footer rows live here. */
 .sb-quick{display:flex;flex-direction:column;gap:1px}
-.sb-quick a{display:block;padding:5px 9px;border-radius:var(--radius-sm);color:var(--muted);font-size:var(--t-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-quick a{display:block;padding:var(--s-1) var(--s-2);border-radius:var(--radius-sm);color:var(--muted);font-size:var(--t-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sb-quick a:hover{background:var(--hover);color:var(--ink)}
-.sb-foot{padding:10px 14px;border-top:1px solid var(--line);font-size:var(--t-sm)}
+.sb-foot{padding:var(--s-2) var(--s-4);border-top:1px solid var(--line);font-size:var(--t-sm)}
 .sb-foot a{color:var(--muted)}.sb-foot a:hover{color:var(--accent)}
 /* The sidebar user/settings menu is the shared .sl-usermenu / .sl-um-* layer (COMPONENTS_CSS).
    Theme + language switchers use the shared .sl-segmented (--fill --stacked) from
@@ -57,7 +57,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgn-sub{margin-top:2px;font-size:var(--t-sm);line-height:1.3;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rgctrls{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.12)}
 .rgctrls .rgzl{font-size:var(--t-xs);color:var(--muted);text-align:center;padding:3px 0;border-bottom:1px solid var(--line-2);user-select:none}
-.rgbtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:0;border-bottom:1px solid var(--line-2);background:var(--panel);color:var(--ink);cursor:pointer;font-size:var(--t-md);line-height:1}
+.rgbtn{width:var(--ctl-sm);height:var(--ctl-sm);display:flex;align-items:center;justify-content:center;border:0;border-bottom:1px solid var(--line-2);background:var(--panel);color:var(--ink);cursor:pointer;font-size:var(--t-md);line-height:1}
 .rgbtn:last-child{border-bottom:0}
 .rgbtn:hover{background:var(--hover);color:var(--accent)}
 .rgmini{position:absolute;right:12px;bottom:12px;width:172px;height:118px;background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);backdrop-filter:blur(2px)}
@@ -238,7 +238,10 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .proj-graph .rgwrap{flex:1;border:0;border-top:1px solid var(--line);border-radius:0}
 .proj-graph #rg{height:100%}
 .oqpanel{position:fixed;right:26px;bottom:26px;width:380px;max-width:calc(100vw - 320px);max-height:62vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:0 16px 44px rgba(0,0,0,.22);padding:14px 16px;z-index:60}
-.oqp-h{font-size:var(--t-sm);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.oqp-h{font-size:var(--t-sm);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:14px}
+.oqp-h:first-child{margin-top:0}
+.oqpanel .pills{margin:6px 0 14px}
+.oqpanel>ul{margin:6px 0 0 18px}
 
 /* ---- generic ---- */
 h1,h2,h3,h4{color:var(--ink)}

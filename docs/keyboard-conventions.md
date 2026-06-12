@@ -21,7 +21,8 @@ from that declaration, never hand-maintain the two in parallel.
 | `g` `d`   | Global | Go to documentation |
 | `Esc`     | Global | Close overlays; cancel a pending chord |
 | `j` / `k` | Lists  | Move row focus down/up (visible focus style) |
-| `Enter`   | Lists  | Open the focused row |
+| `Enter`   | Lists  | Open the focused row (slide-over with the full detail page; `Esc` closes it) |
+| `o`       | Lists  | Open the focused row straight as a full page |
 | `[` / `]` | Detail | Previous / next sibling record |
 
 ## Behavior rules

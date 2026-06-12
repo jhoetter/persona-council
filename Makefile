@@ -53,10 +53,12 @@ install:
 # --reload is scoped to the Python source: without --reload-dir the stat-poller
 # walks the whole tree every 250ms (.venv/, data/ with its constantly-changing
 # SQLite WAL, prototypes/) and pegs a CPU, which can wedge the server over time.
+# --timeout-graceful-shutdown: open SSE streams (/api/events) otherwise block reload forever.
 dev: kill-ports
 	@echo "→ Web   http://127.0.0.1:$(WEB_PORT)"
 	$(UV) run python -m uvicorn 'sonaloop.web:create_app' --factory --reload \
 	  --reload-dir sonaloop --reload-exclude '*/data/*' \
+	  --timeout-graceful-shutdown 3 \
 	  --host 127.0.0.1 --port $(WEB_PORT)
 
 # Forwarded dev profile for viewing this machine through an SSH tunnel.

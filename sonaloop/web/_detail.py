@@ -8,7 +8,27 @@ from .. import services
 from ._i18n import t
 from ._components import _esc, _icon, _hero, _doc, _layout, _star, _prose, _avatar, _label  # noqa: F401
 from ._rail import _page_rail
-from ._html import h, raw, fragment
+from ._slide import slide_mode
+from ._html import h, raw, fragment, register_css
+
+# The shared header's first line (ux-contract §8.2 — ONE detail anatomy): the kind eyebrow +
+# the status pills ride the design-system `sl-page-header__top` slot; the generic `.eyebrow`
+# brings its own bottom margin (the _study_lead context), which the flex top slot neutralises.
+register_css(".sl-page-header__top .eyebrow{margin:0}")
+
+# The slide-over variant (§8.1): in the ~700px panel there is no second column, so the
+# Properties→Relations aside becomes a quiet in-flow card right under the header — the
+# Notion anatomy (title, properties, then the content). Same .rail chrome, static flow.
+register_css(".rail--slide{position:static;margin:2px 0 22px;padding-bottom:8px}")
+
+
+def detail_eyebrow(kind: str, pills=()) -> str:
+    """The first line of EVERY detail header (ux-contract §8.2): the kind eyebrow ("COUNCIL",
+    "DECISION", "PROTOTYPE SESSION", …) followed by the record's status pills. Pages pass the
+    result as `_hero(top=…)` / `detail_page(kind=…, pills=…)` so the anatomy is identical by
+    construction across all artifact kinds."""
+    return fragment(h("span", {"class_": "eyebrow"}, kind),
+                    *[raw(str(p)) for p in pills if p])
 
 
 def _relations_html(store, study_id: str, proj_id: str | None,
@@ -76,6 +96,7 @@ def _properties_html(rows, aside: bool = False) -> str:
 
 def detail_page(store, *, title: str, active: str, crumbs: list, body,
                 hero=None, icon: str | None = None, sub=None, hid: str | None = None,
+                kind: str | None = None, pills=(),
                 prop_rows: list | None = None,
                 rel_study_id: str | None = None, rel_proj_id: str | None = None,
                 rel_extra_in: list | None = None, rel_extra_out: list | None = None,
@@ -87,20 +108,40 @@ def detail_page(store, *, title: str, active: str, crumbs: list, body,
     section minimap (`rail_sections` + auto Properties/Relations anchors) · a topbar favourite star.
 
     - `hero`: a pre-built hero (Safe) — e.g. the synthesis syn-head, or "" to omit. If None, the
-      component builds `_hero(title, icon=, sub=, hid=)`.
+      component builds `_hero(title, icon=, sub=, hid=)` — with the shared eyebrow line
+      (`kind` + status `pills`, §8.2) in the header's top slot when `kind` is given. Pages that
+      build their own hero compose the same line via detail_eyebrow() + `_hero(top=…)`.
     - `body`: the content after the hero (Safe).
     - `prop_rows`: `[(icon, label, value), …]` for Properties (empty values are skipped).
     - `rel_study_id`/`rel_proj_id`/`rel_extra_*`: build the Relations panel from the project graph.
     - `star`: `(kind, ident, label, href)` for the topbar favourite.
     - `actions`: extra topbar HTML (e.g. the Edit affordance) rendered before the star.
     """
-    hero_html = hero if hero is not None else _hero(title, icon=icon, sub=sub, hid=hid)
-    main = fragment(raw(hero_html), body)
+    top = detail_eyebrow(kind, pills) if kind else None
+    hero_html = hero if hero is not None else _hero(title, icon=icon, sub=sub, hid=hid, top=top)
     props = _properties_html(prop_rows, aside=True) if prop_rows else ""
     rel = ""
     if rel_study_id:
         rel = _relations_html(store, rel_study_id, rel_proj_id, extra_in=rel_extra_in,
                               extra_out=rel_extra_out, aside=True)
+    # The slide-over variant (§8.1) — the SAME renderer, one flag: header, then the aside as an
+    # in-flow properties card (the Notion anatomy), then the content; the fixed-position minimap
+    # is skipped (it would overlay the host page, not the panel). _layout strips the chrome.
+    if slide_mode():
+        aside = (str(h("aside", {"class_": "rail rail--slide"}, raw(props), raw(rel)))
+                 if (props or rel) else "")
+        body_html = str(body)
+        if aside and not str(hero_html):
+            # hero-less pages (the report shell) open with their own <header> cover at the head
+            # of the body — the properties card slots right UNDER it, never above the title.
+            cut = body_html.find("</header>")
+            cut = cut + len("</header>") if cut != -1 else 0
+            content = raw(body_html[:cut] + aside + body_html[cut:])
+        else:
+            content = raw(str(hero_html) + aside + body_html)
+        page = h("div", {"class_": "page"}, h("div", {"class_": "doc-main"}, content))
+        return _layout(title, page, store, crumbs=crumbs, active=active)
+    main = fragment(raw(hero_html), body)
     # The right-edge TOC (scrollspy) indexes the MAIN-content sections only — Properties/Relations live in
     # the aside, not the scrolling column, so they must NOT appear as TOC ticks.
     rail = list(rail_sections or [])

@@ -41,6 +41,13 @@ class PrototypesMixin:
              json.dumps(sess, ensure_ascii=False), sess["created_at"]))
         self.conn.commit()
 
+    def get_prototype_session(self, session_id: str) -> dict[str, Any] | None:
+        """One recorded prototype reaction by its protosession_* id (the /sessions/{id} detail
+        route dispatches here when the id is not a usability session)."""
+        row = self.conn.execute(
+            "SELECT data FROM prototype_sessions WHERE id=?", (session_id,)).fetchone()
+        return json.loads(row["data"]) if row else None
+
     def list_prototype_sessions(self, prototype_id: str | None = None,
                                 persona_id: str | None = None) -> list[dict[str, Any]]:
         q, params = "SELECT data FROM prototype_sessions", []

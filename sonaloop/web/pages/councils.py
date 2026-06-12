@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .. import ui
+from .._forms import overflow_delete as _overflow_delete
 from .._keymap import sibling_attrs, sibling_urls
 from .._render import render_statements
 from .._synthesis import _stacked, _vote_parts
@@ -106,11 +107,11 @@ def _red_team_result_html(rt: dict) -> str:
 
 def register_councils(app) -> None:
     @app.get("/councils", response_class=HTMLResponse)
-    def councils() -> str:
+    def councils(project: str = Query(default=""), status: str = Query(default="")) -> str:
         # The URL stays canonical; the content is the Library with the Councils tab
-        # active (ux-contract §3.5 — one browser, no redirects).
-        from .library import library_page
-        return library_page("councils")
+        # active (ux-contract §3.5 — one browser, no redirects) + the shared FilterBar (U10).
+        from .library import library_filters, library_page
+        return library_page("councils", flt=library_filters(project, status), base="/councils")
 
     @app.get("/councils/{session_id}", response_class=HTMLResponse)
     def council_detail(session_id: str) -> str:
@@ -181,7 +182,7 @@ def register_councils(app) -> None:
             _, vparts = _vote_parts([session])
             strip = _stacked(vparts, thin=True)
         else:                                          # discovery: stance lean of the statements, if any
-            from .peek import _value_strip
+            from .surveys import _value_strip
             scounts: dict = {}
             for st in statements:
                 v = (st.get("stance") or {}).get("value")
@@ -203,7 +204,6 @@ def register_councils(app) -> None:
         rt_block = (h("div", {"class_": "sec", "id": "red-team"}, h("h2", {}, t("rt_title")),
                       h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, t("rt_lead")),
                       raw(rt_html)) if is_rt else "")
-        from .._forms import danger_zone, delete_button_form
         body = fragment(
             opener,
             summary_lead,
@@ -213,16 +213,7 @@ def register_councils(app) -> None:
             # server-provided prev/next sibling URLs for the keymap's [ / ] bindings
             raw(sibling_attrs(*sibling_urls(
                 [f'/councils/{c["id"]}' for c in services.list_councils(store=store)],
-                f'/councils/{session_id}'))),
-            # delete-only (no content editing): the statements are generated prose
-            raw(danger_zone(raw(delete_button_form(f'/councils/{session_id}/delete',
-                                                   t("delete_council"))))))
-        prop_rows = [("councils", t("type_h"), t("council_mode_" + mode)), ("personas", personas_h, str(n_voices))]
-        if mode != "discovery":                               # the vote panel only where a vote/reaction exists
-            # value-bucketed via the scale (votes ARE stances; legacy tokens resolve through the aliases)
-            vals = [st["value"] for x in session["votes"] if (st := _A.vote_stance(x)) is not None]
-            prop_rows += [("dot", t(r["label_key"]), str(vals.count(r["value"]))) for r in _A.stance_terms()]
-        prop_rows.append(("dot", created_h, session["created_at"][:10]))
+                f'/councils/{session_id}'))))
         # Forward, project-rooted crumb: Projects > [Project] > [Council]. (A Discover council FEEDS
         # the Define synthesis — it is not nested under it; and the project lookup must work for
         # plan-based projects, where the council is scoped directly to the project.)
@@ -233,9 +224,23 @@ def register_councils(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
+        # Rail order is the §8.2 anatomy: project → kind-specifics → dates.
+        proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "")
+        prop_rows = [("projects", t("project"), proj_link),
+                     ("councils", t("type_h"), t("council_mode_" + mode)),
+                     ("personas", personas_h, str(n_voices))]
+        if mode != "discovery":                               # the vote panel only where a vote/reaction exists
+            # value-bucketed via the scale (votes ARE stances; legacy tokens resolve through the aliases)
+            vals = [st["value"] for x in session["votes"] if (st := _A.vote_stance(x)) is not None]
+            prop_rows += [("dot", t(r["label_key"]), str(vals.count(r["value"]))) for r in _A.stance_terms()]
+        prop_rows.append(("dot", created_h, session["created_at"][:10]))
+        mode_pill = _label(t("council_mode_" + mode), "var(--blue)") if mode in (
+            "discovery", "evaluation", "decision") else None
         return detail_page(
             store, title=short_title, active="projects", crumbs=crumbs,
-            hero=_hero(session["prompt"], icon="councils", sub=council_sub, hid="sec-question"), body=body,
+            hero=_hero(session["prompt"], icon="councils", sub=council_sub, hid="sec-question",
+                       top=detail_eyebrow(t("council_kind"), [mode_pill] if mode_pill else [])),
+            body=body,
             prop_rows=prop_rows,
             rel_study_id=f"council:{session_id}", rel_proj_id=(proj["id"] if proj else None),
             rail_sections=([("sec-question", t("question")),
@@ -244,4 +249,7 @@ def register_councils(app) -> None:
                            + ([("h2h", t("h2h_title"))] if is_h2h else [])
                            + ([("red-team", t("rt_title"))] if is_rt else [])
                            + [("stimmen", t("voices"))]),
-            star=("council", session_id, short_title, f"/councils/{session_id}"))
+            star=("council", session_id, short_title, f"/councils/{session_id}"),
+            # delete-only (no content editing — the statements are generated prose):
+            # the subtle header overflow (U9 §8.4), never a danger zone
+            actions=_overflow_delete(f'/councils/{session_id}/delete', t("delete_council")))

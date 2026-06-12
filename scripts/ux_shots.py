@@ -42,7 +42,10 @@ SETTLE_MS = 600           # post-load settle (SSE keeps the network busy; never 
 # ---------------------------------------------------------------- seed (env BEFORE import)
 
 _TMP = Path(tempfile.mkdtemp(prefix="sonaloop-ux-"))
-os.environ["SONALOOP_DATA_DIR"] = str(_TMP)
+# DATA_DIR = _TMP/data and (seed-side) services.ROOT = _TMP — the source-checkout layout
+# (DATA_DIR == ROOT/data), so asset binaries written under ROOT/data/assets are served by
+# the app's /data mount.
+os.environ["SONALOOP_DATA_DIR"] = str(_TMP / "data")
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP / 'sonaloop.db'}"
 os.environ["PERSONA_COUNCIL_DISABLE_EMBEDDINGS"] = "1"
 os.environ["PERSONA_COUNCIL_CONTENT_LANGUAGE"] = "en"
@@ -57,27 +60,61 @@ def seed() -> dict[str, str]:
     from sonaloop import services
     from sonaloop.storage import Store
 
+    # Asset binaries write under services.ROOT/data/assets (the conftest pattern): point it at
+    # the temp dir so the seed never touches the repo's real asset store — and the server
+    # subprocess serves the same files from its /data mount (DATA_DIR = the same temp dir).
+    services.ROOT = _TMP
     store = Store()
     premium = services.load_example("premium-pricing-study", store=store)
     positioning = services.load_example("positioning-council", store=store)
     council = sorted(services.list_councils(store=store), key=lambda c: c["id"])[0]
     synthesis = sorted(services.list_syntheses(store=store), key=lambda s: s["id"])[0]
     persona = sorted(store.list_personas(), key=lambda p: p["id"])[0]
+    # Assets (UX U8): one evidence input + one generated deliverable on the positioning project,
+    # so the asset detail page + the project files lens are in the regression net. created_at is
+    # pinned (attach stamps load time, which would drift the row dates across days).
+    pid = positioning["project_id"]
+    services.attach_asset(pid, path=str(ROOT / "docs" / "assets" / "sonaloop-council.png"),
+                          title="Stakeholder sketch", source="mcp: shared by the user",
+                          notes="Reference screen from the kickoff", store=store)
+    services.attach_asset(pid, content_base64="UEsDBA==", filename="positioning-report.pptx",
+                          title="Positioning report (PPTX)", direction="out",
+                          source=f'synthesis:{synthesis["id"]}', store=store)
+    proj = store.get_research_project(pid)
+    for i, a in enumerate(proj["assets"]):
+        a["created_at"] = f"2026-06-{10 + i:02d}T09:00:00+00:00"
+    store.upsert_research_project(proj)
+    evidence = next(a for a in proj["assets"] if a.get("direction") != "out")
     return {
         "project_premium": premium["project_id"],
         "project_positioning": positioning["project_id"],
         "council": council["id"],
         "synthesis": synthesis["id"],
+        # the positioning project's own synthesis — the ?d= SSR screen opens it over its project
+        "synthesis_positioning": sorted(proj.get("study_ids") or [])[0],
         "persona": persona["id"],
+        "asset": evidence["id"],
     }
 
 
-def screens(ids: dict[str, str]) -> list[tuple[str, str]]:
-    """The ~12 canonical screens (name, path) — shot in light AND dark."""
+def screens(ids: dict[str, str]) -> list[tuple]:
+    """The ~12 canonical screens (name, path[, click-selector]) — shot in light AND dark.
+    An optional third element is clicked after load (waiting for the slide-over), so the
+    set covers the row → slide-over interaction (§8.1), not just plain pages."""
     return [
         ("projects", "/projects"),
         ("project-premium", f'/projects/{ids["project_premium"]}'),
         ("project-positioning", f'/projects/{ids["project_positioning"]}'),
+        # the Linear-grade FilterBar (UX U10): active chips + the server-filtered outline
+        ("project-filtered", f'/projects/{ids["project_positioning"]}?kind=decision,hypothesis'),
+        # the Notion-style slide-over open over the outline (UX U6/U11): full detail page
+        # in the wide drawer, list visible behind, the CONTEXT URL (?d=) pushed
+        ("project-slideover", f'/projects/{ids["project_positioning"]}',
+         '[data-drawer^="/syntheses/"]'),
+        # the same anatomy reached by ADDRESS (UX U11): direct load of the ?d= context URL
+        # SSR-renders background + open panel — reload keeps the list context
+        ("project-slideover-ssr",
+         f'/projects/{ids["project_positioning"]}?d=%2Fsyntheses%2F{ids["synthesis_positioning"]}'),
         ("personas", "/personas"),
         ("persona", f'/personas/{ids["persona"]}'),
         ("councils", "/councils"),
@@ -85,6 +122,10 @@ def screens(ids: dict[str, str]) -> list[tuple[str, str]]:
         ("synthesis", f'/syntheses/{ids["synthesis"]}'),
         ("decisions", "/decisions"),
         ("hypotheses", "/hypotheses"),
+        # assets as a first-class surface (UX U8): the detail page (preview + provenance) and
+        # the project files lens (chronological in/out provenance timeline)
+        ("asset", f'/assets/{ids["asset"]}'),
+        ("project-files", f'/projects/{ids["project_positioning"]}?view=files'),
         ("activity", "/activity"),
         ("documentation", "/documentation"),
     ]
@@ -120,7 +161,7 @@ def boot(port: int) -> subprocess.Popen:
 # ---------------------------------------------------------------- shoot + compare
 
 
-def shoot(base: str, shots: list[tuple[str, str]], out_dir: Path) -> list[Path]:
+def shoot(base: str, shots: list[tuple], out_dir: Path) -> list[Path]:
     from playwright.sync_api import sync_playwright
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -132,11 +173,15 @@ def shoot(base: str, shots: list[tuple[str, str]], out_dir: Path) -> list[Path]:
             # HEAD_JS applies localStorage.theme as [data-theme] before first paint.
             ctx.add_init_script(f"try{{localStorage.setItem('theme','{theme}')}}catch(e){{}}")
             page = ctx.new_page()
-            for name, path in shots:
+            for name, path, *click in shots:
                 page.goto(base + path, wait_until="load")  # SSE forbids networkidle
                 page.add_style_tag(content="*{animation:none!important;transition:none!important;"
                                            "caret-color:transparent!important}")
                 page.wait_for_timeout(SETTLE_MS)
+                if click:                                  # interaction screens (the slide-over)
+                    page.click(click[0] + " >> nth=0")
+                    page.wait_for_selector("#drawer.is-open .sl-slide")
+                    page.wait_for_timeout(SETTLE_MS)
                 # Pin volatile SEED-TIME stamps (activity feed, project updated_at — minute
                 # precision, different every run) to a fixed same-width string so the diff
                 # only sees real layout/style drift, not the clock.

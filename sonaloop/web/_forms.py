@@ -6,9 +6,12 @@ generated/authored prose (council statements, synthesis prose, memories, SOUL
 content) is never editable here — see docs/web-mutations.md for the full contract.
 
 The ONE pattern every write route follows:
-  GET  /thing/new | /thing/{id}/edit  -> plain HTML form (this module's components)
-  POST same URL                       -> write_gate (CSRF + access guard)
-                                         -> validate -> service call -> 303 See Other
+  GET  /thing/{id}/edit  -> plain HTML form (this module's components)
+  POST same URL          -> write_gate (CSRF + access guard)
+                            -> validate -> service call -> 303 See Other
+Creation is NOT a UI affordance (UX U9, ux-contract §8.4 — the inspector inspects + edits;
+creation belongs to the MCP/CLI host): the POST /thing/new routes stay as API surface, but
+no GET form and no "New …" button renders anywhere.
 Failure codes: 400 validation (form re-rendered with inline errors), 403 CSRF or
 guard denial, 404 unknown id. All mutations go through sonaloop.services — never
 the Store directly — so lifecycle events / hooks / cloud guards keep working.
@@ -129,9 +132,9 @@ def field(name: str, label: str, value: str = "", *, error: str = "", required: 
 
 def form_page(store, *, title: str, crumbs: list, active: str, action: str,
               fields: list, submit_label: str, cancel_href: str, lead: str = "",
-              danger: str = "") -> str:
+              actions: str = "") -> str:
     """The shared form-page shell: heading, the POST form (CSRF field included),
-    submit/cancel, and an optional danger zone below."""
+    submit/cancel. `actions` is topbar HTML — the overflow delete on edit pages."""
     body = h("div", {"class_": "page"},
              h("h1", {"class_": "h1"}, title),
              h("p", {"class_": "lead"}, lead) if lead else None,
@@ -139,52 +142,61 @@ def form_page(store, *, title: str, crumbs: list, active: str, action: str,
                raw(csrf_field()), fragment(*fields),
                h("div", {"class_": "wform-actions"},
                  h("button", {"class_": "sl-btn sl-btn--primary", "type": "submit"}, submit_label),
-                 h("a", {"class_": "sl-btn", "href": cancel_href}, t("cancel")))),
-             raw(danger))
-    return _layout(title, body, store, crumbs=crumbs, active=active)
+                 h("a", {"class_": "sl-btn", "href": cancel_href}, t("cancel")))))
+    return _layout(title, body, store, crumbs=crumbs, active=active, actions=actions)
 
 
-def danger_zone(*forms) -> str:
-    """The ONE destructive-actions area — same red-bordered block on every page
-    that can delete something."""
-    return h("div", {"class_": "danger-zone"},
-             h("h2", {}, raw(_icon("warning")), " ", t("danger_zone")), fragment(*forms))
+def overflow_delete(action: str, label: str, *, expected: str | None = None,
+                    error: str = "", dialog_id: str = "del-dialog") -> str:
+    """THE deletion affordance (UX U9, ux-contract §8.4): subtle, never a danger zone.
 
-
-def confirm_delete_modal(action: str, expected: str, button_label: str, *,
-                         error: str = "", dialog_id: str = "del-dialog") -> str:
-    """Typed-confirmation delete (projects/personas): a native <dialog> modal asking
-    the user to type the entity name; the SERVER re-checks `confirm` == name (the JS
-    is convenience, never the protection). On mismatch the form page re-renders with
-    the inline error and the dialog re-opened."""
+    An overflow "…" button in the detail/edit page header (a native <details> popover —
+    keyboard-toggleable without JS; the script below only adds Esc/outside-click dismiss)
+    holds the single destructive action. Choosing it opens the confirm <dialog>:
+    with `expected` set (projects/personas) the user must TYPE the entity name and the
+    SERVER re-checks `confirm == name` (the JS is convenience, never the protection — on
+    mismatch the page re-renders with the inline `error` and the dialog re-opened);
+    without it (notes/sections/councils/syntheses/prototypes) the same modal simply asks
+    for confirmation. ONE pattern on every surface that can delete."""
+    confirm_row = (raw(field("confirm", t("confirm_type_name", name=expected),
+                             error=error, required=True)) if expected is not None
+                   else h("p", {}, t("delete_confirm_q")))
     dlg = h("dialog", {"class_": "danger-dialog", "id": dialog_id},
             h("form", {"method": "post", "action": action},
               raw(csrf_field()),
-              h("h3", {}, button_label),
-              raw(field("confirm", t("confirm_type_name", name=expected),
-                        error=error, required=True)),
+              h("h3", {}, label),
+              confirm_row,
+              h("p", {"class_": "sl-field__hint"}, t("delete_hint")),
               h("div", {"class_": "wform-actions"},
-                h("button", {"class_": "sl-btn btn-danger", "type": "submit"}, button_label),
+                h("button", {"class_": "sl-btn btn-danger", "type": "submit"}, label),
                 h("button", {"class_": "sl-btn", "type": "button",
                              "onclick": f"document.getElementById('{dialog_id}').close()"},
                   t("cancel")))))
-    opener = h("button", {"class_": "sl-btn btn-danger", "type": "button",
-                          "onclick": f"document.getElementById('{dialog_id}').showModal()"},
-               raw(_icon("trash")), " ", button_label)
+    item = h("button", {"class_": "sl-menu-item sl-menu-item--danger", "type": "button",
+                        "onclick": "this.closest('details').removeAttribute('open');"
+                                   f"document.getElementById({json.dumps(dialog_id)}).showModal()"},
+             raw(_icon("trash")), " ", label)
     reopen = (raw("<script>document.getElementById(" + json.dumps(dialog_id)
                   + ").showModal()</script>") if error else "")
-    return fragment(opener, h("p", {"class_": "sl-field__hint"}, t("delete_hint")), dlg, reopen)
+    menu = h("details", {"class_": "sl-overflow"},
+             h("summary", {"class_": "sl-iconbtn", "role": "button",
+                           "aria-label": t("more_actions"), "title": t("more_actions")},
+               raw(_icon("more"))),
+             h("div", {"class_": "sl-popover sl-popover--bottom-end"}, item))
+    return fragment(menu, dlg, reopen, raw(_OVERFLOW_JS))
 
 
-def delete_button_form(action: str, button_label: str) -> str:
-    """One-click delete with a JS confirm (notes/sections/councils/syntheses/
-    prototypes — structural rows without a typed-confirmation requirement)."""
-    return h("form", {"method": "post", "action": action, "class_": "danger-row",
-                      "onsubmit": f"return confirm({json.dumps(t('delete_confirm_q'))})"},
-             raw(csrf_field()),
-             h("button", {"class_": "sl-btn btn-danger", "type": "submit"},
-               raw(_icon("trash")), " ", button_label),
-             h("span", {"class_": "sl-field__hint"}, t("delete_hint")))
+# Light-dismiss for the overflow <details> (Esc + outside click) — enhancement only; the
+# summary itself toggles natively. Idempotent across multiple renders on one page.
+_OVERFLOW_JS = """
+<script>(function(){if(window.__slov)return;window.__slov=1;
+document.addEventListener('click',function(e){
+  document.querySelectorAll('details.sl-overflow[open]').forEach(function(d){
+    if(!d.contains(e.target))d.removeAttribute('open');});});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')
+  document.querySelectorAll('details.sl-overflow[open]').forEach(function(d){d.removeAttribute('open');});});
+})();</script>
+"""
 
 
 def edit_button(href: str) -> str:
@@ -192,19 +204,23 @@ def edit_button(href: str) -> str:
     return h("a", {"class_": "sl-btn", "href": href}, raw(_icon("pencil")), " ", t("edit"))
 
 
-# Co-located CSS (spec/roadmap.md R3): the write-form shell + the danger area/modal.
+# Co-located CSS (spec/roadmap.md R3): the write-form shell, the overflow menu + confirm modal.
 register_css(r"""
 /* ---- write forms (web CRUD) ---- */
 .wform{max-width:560px;display:flex;flex-direction:column;gap:14px;margin-top:10px}
 .wform-actions{display:flex;gap:10px;margin-top:6px}
 .btn-danger{border-color:var(--red,#ea4335);color:var(--red,#ea4335)}
 .btn-danger:hover{background:var(--red,#ea4335);border-color:var(--red,#ea4335);color:#fff}
-.danger-zone{max-width:560px;margin-top:34px;border:1px solid var(--red,#ea4335);border-radius:var(--radius);padding:14px 16px}
-.danger-zone h2{display:flex;align-items:center;gap:7px;color:var(--red,#ea4335);font-size:var(--t-md);margin:0 0 10px}
-.danger-zone h2 svg{width:16px;height:16px}
-.danger-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 0}
-.danger-zone .sl-field{margin-top:8px}
+/* ---- the overflow ("…") menu (U9): a quiet header affordance, not a red block ---- */
+.sl-overflow{position:relative;display:inline-flex}
+.sl-overflow>summary{list-style:none;cursor:pointer}
+.sl-overflow>summary::-webkit-details-marker{display:none}
+.sl-overflow .sl-popover{min-width:170px}
+.sl-menu-item--danger{color:var(--red,#ea4335)}
+.sl-menu-item--danger svg{width:15px;height:15px;color:var(--red,#ea4335)}
+.sl-menu-item--danger:hover{background:color-mix(in srgb,var(--red,#ea4335) 10%,transparent)}
 .danger-dialog{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--ink);padding:18px;max-width:420px}
 .danger-dialog h3{margin:0 0 12px}
+.danger-dialog p{margin:0 0 6px;color:var(--muted)}
 .danger-dialog::backdrop{background:rgba(0,0,0,.45)}
 """)

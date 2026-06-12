@@ -19,9 +19,12 @@ PAGES_DIR = Path(__file__).resolve().parent.parent / "sonaloop" / "web" / "pages
 # Inline style attributes across web/pages/*.py — both the h() attr form ("style": "…")
 # and any literal style="…" in legacy f-strings. Measured 2026-06-11; lowered by P2
 # (the project-page appendix sections retired), P3 (the list pages folded into the
-# Library browser's primitive_row rendering) and P4 (the survey detail rebuilt on
-# question/response rows). ONLY lower it.
-STYLE_BASELINE = 53
+# Library browser's primitive_row rendering), P4 (the survey detail rebuilt on
+# question/response rows), U7 (the hyp/decision card margins moved into the
+# co-located `.hyp p` rule), U8 (the 7 repeated oqp-h margins moved into the
+# .oqp-h rule itself, web_assets.py) and U9/U10 (the oqpanel pills/ul margins moved
+# into the .oqpanel rules). ONLY lower it.
+STYLE_BASELINE = 38
 
 
 def _pages() -> list[Path]:

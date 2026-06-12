@@ -22,7 +22,14 @@ def register_projects(app) -> None:
         return _projects_page(page, q)
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
-    def project_detail(project_id: str, view: str = "list") -> str:
+    def project_detail(project_id: str, view: str = "list",
+                       kind: str = Query(default=""), phase: str = Query(default=""),
+                       persona: str = Query(default=""), status: str = Query(default="")) -> str:
+        if view == "files":
+            # The project FILES lens (UX U8 §8.3): all assets chronologically, in + out —
+            # reachable from the header's "N files" chip; same scaffold, same rows.
+            from .assets import project_files_page
+            return project_files_page(project_id)
         store = Store()
         try:
             graph = services.get_project_graph(project_id, store=store)
@@ -83,7 +90,9 @@ def register_projects(app) -> None:
                     r = s.get("reaction", {})
                     gv = _icon("check") if s.get("grounded_verified") else _icon("circle")
                     nm = r.get("persona") or (store.get_persona(s.get("persona_id", "")) or {}).get("display_name") or s.get("persona_id", "")
-                    sl.append(h("li", {}, h("b", {}, nm), ": ", raw(_prose(r.get("verdict") or r.get("reaction_text") or "")),
+                    # the persona name deep-links into the session's detail page (UX U7 §8.2)
+                    sl.append(h("li", {}, h("a", {"href": f'/sessions/{s["id"]}'}, h("b", {}, nm)), ": ",
+                                raw(_prose(r.get("verdict") or r.get("reaction_text") or "")),
                                 " ", h("span", {"class_": "muted small"}, raw(gv), " ", t("grounded_yes"))))
                 sl_html = (h("ul", {"style": "margin:4px 0 0 18px"}, fragment(*sl)) if sl
                            else h("div", {"class_": "muted small"}, f'— {t("no_sessions")} —'))
@@ -94,7 +103,7 @@ def register_projects(app) -> None:
                               h("span", {"class_": "pill"}, pill), " ", h("span", {"class_": "muted small"}, p.get("version", "")), " ",
                               h("a", {"class_": "sl-btn", "style": "padding:2px 8px", "href": f'/prototypes/{p["slug"]}'},
                                 t("open"), " ", raw(_icon("external"))), sl_html))
-            proto_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("prototypes_h")} ({len(protos)})'),
+            proto_html = fragment(h("div", {"class_": "oqp-h"}, f'{t("prototypes_h")} ({len(protos)})'),
                                   fragment(*rows))
         # Artifacts in the council pool: real URLs / prototype links / A/B variants, each with its
         # captured-at + grounded snapshot status (ticket artifacts-into-council). Read-only.
@@ -115,14 +124,14 @@ def register_projects(app) -> None:
                                  raw(_icon("external")), h("b", {}, a.get("title") or a.get("url", ""))), " ",
                                h("span", {"class_": "pill"}, kind_label), " ",
                                h("span", {"class_": "muted small"}, raw(cap_icon), " ", cap_txt)))
-            arts_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("artifacts_h")} ({len(arts)})'),
+            arts_html = fragment(h("div", {"class_": "oqp-h"}, f'{t("artifacts_h")} ({len(arts)})'),
                                  fragment(*arows))
         # Evidence assets: files/images/screenshots attached via MCP (ticket attach-evidence-files-mcp).
         # Read-only; the rows are shared with the default view's #assets section (_presence).
         assets = graph.get("assets") or []
         assets_html = ""
         if assets:
-            assets_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("assets_h")} ({len(assets)})'),
+            assets_html = fragment(h("div", {"class_": "oqp-h"}, f'{t("assets_h")} ({len(assets)})'),
                                    raw(asset_rows(assets)))
         # Sections outline (methodology-independent groupings) — a navigable list in the panel.
         from ... import presentation as _pres
@@ -138,7 +147,7 @@ def register_projects(app) -> None:
                                 h("span", {"class_": "pill", "style": f'border-color:{pr["color"]};color:{pr["color"]}'},
                                   glyph, s.get("title", ""))), " ",
                               h("span", {"class_": "muted small"}, f'{pr.get("short", s.get("kind",""))} · {len(s.get("member_ids",[]))}')))
-            sec_html = fragment(h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, f'{t("sections")} ({len(secs)})'), fragment(*rows))
+            sec_html = fragment(h("div", {"class_": "oqp-h"}, f'{t("sections")} ({len(secs)})'), fragment(*rows))
         # Project pulse (assess_project) — a self-documenting status line for in-flight long runs.
         pulse_html = ""
         try:
@@ -177,7 +186,7 @@ def register_projects(app) -> None:
                          f'{t("coverage_recommend")}: ', "; ".join(r["description"] for r in recs[:2]))
                        if recs else "")
             coverage_html = fragment(
-                h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("coverage_h")),
+                h("div", {"class_": "oqp-h"}, t("coverage_h")),
                 h("div", {"class_": "strow"},
                   h("span", {"class_": "pill"}, t("coverage_level_" + ind["level"])), " ",
                   h("span", {"class_": "muted small"},
@@ -188,10 +197,10 @@ def register_projects(app) -> None:
             coverage_html = ""
         # Open questions + legend + prototypes live in a floating panel so the graph keeps the canvas.
         panel = h("div", {"class_": "oqpanel", "id": "oqpanel", "hidden": True}, pulse_html, coverage_html,
-                  h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("build_order_edges_h")),
-                  h("div", {"class_": "pills", "style": "margin:6px 0 14px"}, edge_leg), sec_html,
-                  h("div", {"class_": "oqp-h", "style": "margin-top:14px"}, t("open_questions_h")),
-                  h("ul", {"style": "margin:6px 0 0 18px"}, oq_html), proto_html, arts_html, assets_html)
+                  h("div", {"class_": "oqp-h"}, t("build_order_edges_h")),
+                  h("div", {"class_": "pills"}, edge_leg), sec_html,
+                  h("div", {"class_": "oqp-h"}, t("open_questions_h")),
+                  h("ul", {}, oq_html), proto_html, arts_html, assets_html)
         oq_js = ("<script>(function(){var b=document.getElementById('oqbtn'),"
                  "p=document.getElementById('oqpanel');if(!b||!p)return;"
                  "b.addEventListener('click',function(e){e.stopPropagation();p.hidden=!p.hidden;});"
@@ -221,60 +230,50 @@ def register_projects(app) -> None:
                   + len(graph["open_questions"])
                   + sum(1 + len(g["sessions"]) for g in sess_groups.values()))
         card_cls = "outlinecard" + ("" if n_rows > 8 else " ol-compact")
+        # U10 (§8.5): the Linear-grade FilterBar over the outline — facet state lives in the
+        # URL (?kind=…&phase=…&persona=…&status=…; comma = OR, params AND), the outline
+        # filters server-side, and the bar renders the facet menu + removable chips.
+        from .._filterbar import filter_bar, parse_multi
+        selected = {"kind": parse_multi(kind), "phase": parse_multi(phase),
+                    "persona": parse_multi(persona), "status": parse_multi(status)}
+        facets: list = []
         outline = _outline_html(graph, sessions=sess_groups, decisions=decisions,
-                                hypotheses=hypotheses, surveys=surveys)
+                                hypotheses=hypotheses, surveys=surveys,
+                                filters=selected, facets_out=facets,
+                                clear_href=f'/projects/{proj["id"]}')
+        bar = filter_bar(f'/projects/{proj["id"]}', facets, selected) if not is_graph else ""
         # data-keynav arms the keymap's j/k row walk on the outline (ux-contract C7).
         main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
-                     if is_graph else h("div", {"class_": card_cls, "data-keynav": True}, raw(outline)))
+                     if is_graph else fragment(bar, h("div", {"class_": card_cls, "data-keynav": True}, raw(outline))))
         # The run-state chip (ux-contract §3.5 / decision §7.4): `▶ Run · state` with a
         # popover (last activity · next-ready/resume hint · /runs journal link). Runs left
         # the nav; this header chip is where a project's driver status now surfaces.
         from .._runs_widget import project_run_chip
         run_chip = project_run_chip(proj["id"], store)
+        # The FILES lens entry (UX U8): a quiet chip next to the run chip — every asset of the
+        # project (evidence in + deliverables out) chronologically, the provenance timeline.
+        files_chip = h("a", {"class_": "pill", "href": f'/projects/{proj["id"]}?view=files'},
+                       raw(_icon("file")), " ",
+                       t("one_file") if len(assets) == 1 else t("n_files", n=len(assets)))
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
-                   h("p", {"class_": "lead"}, proj.get("goal", "")), raw(run_chip), head_tools),
+                   h("p", {"class_": "lead"}, proj.get("goal", "")), raw(run_chip), files_chip,
+                   head_tools),
                  main_view)
-        # Write affordances (web CRUD): create a note/section in THIS project, edit the
-        # project's structural metadata (the edit page also hosts the typed-confirm delete).
+        # Write affordances (web CRUD, U9 §8.4): EDIT the project's structural metadata only —
+        # no create buttons (notes/sections/projects are created by the MCP/CLI host); the
+        # edit page hosts the subtle overflow delete.
         from .._forms import edit_button
-        new_note_btn = h("a", {"class_": "sl-btn", "href": f'/projects/{proj["id"]}/notes/new'},
-                         raw(_icon("plus")), " ", t("new_note"))
-        new_sec_btn = h("a", {"class_": "sl-btn", "href": f'/projects/{proj["id"]}/sections/new'},
-                        raw(_icon("plus")), " ", t("new_section"))
-        actions = fragment(top_btn, new_note_btn, new_sec_btn,
+        actions = fragment(top_btn,
                            raw(edit_button(f'/projects/{proj["id"]}/edit')),
                            raw(_star("project", proj["id"], proj["title"], f'/projects/{proj["id"]}')))
         return _layout(proj["title"], body, store, active="projects",
                        crumbs=[(t("projects"), "/projects"), (proj["title"], None)], actions=actions)
 
-    # ---- A hypothesis lives on its project page (the bets list); the canonical Ref route
-    #      /hypotheses/{id} deep-links into that section (artifacts.ref_href). ----
-    @app.get("/hypotheses/{hypothesis_id}")
-    def hypothesis_detail(hypothesis_id: str):
-        store = Store()
-        try:
-            hx = services.get_hypothesis(hypothesis_id, store=store)
-        except KeyError:
-            return HTMLResponse(_layout(t("not_found"),
-                                        _empty_state(t("hypotheses_h"), t("runtime_maybe_cleared"),
-                                                     icon="projects"),
-                                        store, active="projects"))
-        return RedirectResponse(f'/projects/{hx["project_id"]}#hyp-{hx["id"]}')
-
-    # ---- A decision lives on its project page (the decisions list); the canonical Ref route
-    #      /decisions/{id} deep-links into that section (artifacts.ref_href). ----
-    @app.get("/decisions/{decision_id}")
-    def decision_detail(decision_id: str):
-        store = Store()
-        try:
-            dec = services.get_decision(decision_id, store=store)
-        except KeyError:
-            return HTMLResponse(_layout(t("not_found"),
-                                        _empty_state(t("decisions_h"), t("runtime_maybe_cleared"),
-                                                     icon="projects"),
-                                        store, active="projects"))
-        return RedirectResponse(f'/projects/{dec["project_id"]}#dec-{dec["id"]}')
+    # ---- Hypotheses/decisions still anchor on their project page (the bets/decisions rows),
+    #      but their canonical Ref routes /hypotheses/{id} and /decisions/{id} now serve REAL
+    #      detail pages (UX U7, §8.2) — registered with their kind modules (pages/hypotheses,
+    #      pages/decisions); the old redirects retired. ----
 
     # ---- A report is a project-scope synthesis; its canonical URL is /syntheses/{id} (+ .pdf).
     #      /projects/{id}/meta is a convenience → the project's latest report. ----

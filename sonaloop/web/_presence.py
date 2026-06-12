@@ -19,14 +19,14 @@ presence_violations() is the single check the gate asserts empty.
 Since UX P2 (spec/ux-contract.md §3.4) every kind is an OUTLINE ROW in its phase context — the
 tier-3 appendix sections + header jump-chips retired (the row items are built by
 web/_graph_outline_extras). The module keeps the SHARED pill/row renderers (survey lifecycle,
-decision + hypothesis status pills, asset rows) used by the outline chips, the peeks and the
+decision + hypothesis status pills, asset rows) used by the outline chips, the detail pages and the
 cross-project list pages alike."""
 from __future__ import annotations
 
 import inspect
 
 from ._components import _icon, _label
-from ._html import h, raw
+from ._html import h, raw, register_css
 from ._i18n import t
 
 # ------------------------------------------------------------------ the presence declarations
@@ -177,7 +177,7 @@ def presence_violations() -> list[str]:
 
 def survey_status_pill(status: str) -> str:
     """Survey lifecycle pill (a lifecycle, not a vocabulary). Resolved per request so the labels
-    follow the active UI language. Shared by the survey pages, the outline chips and the peek."""
+    follow the active UI language. Shared by the survey pages and the outline chips."""
     pills = {"draft": (t("survey_status_draft"), "var(--muted)"),
              "open": (t("survey_status_open"), "var(--green)"),
              "closed": (t("survey_status_closed"), "var(--violet)")}
@@ -186,7 +186,7 @@ def survey_status_pill(status: str) -> str:
 
 
 # Decision / hypothesis lifecycle pill colors (lifecycles, not vocabularies — labels are i18n
-# keys resolved per request). Shared by the outline chips, the peeks, the project rows and the
+# keys resolved per request). Shared by the outline chips, the detail pages, the project rows and the
 # cross-project /decisions + /hypotheses lists, so a status reads identically everywhere.
 _DEC_STATUS_COLORS = {"proposed": "var(--accent)", "adopted": "var(--green)",
                       "superseded": "var(--muted)"}
@@ -222,6 +222,42 @@ def open_question_status_pill(status: str) -> str:
     return _label(t("oq_status_resolved"), "var(--muted)")
 
 
+def record_status(kind: str, rec: dict) -> str:
+    """The honest status a record ACTUALLY carries — the U10 filter facet's value extractor
+    (ux-contract §8.5: no dead options, no invented lifecycle). Kinds without a lifecycle
+    (councils, reports, notes, prototypes, assets) return "" and simply don't fill the facet.
+    Sessions read their grounding (verified against real observed usage or not)."""
+    if kind in ("decision",):
+        return rec.get("status") or "proposed"
+    if kind in ("hypothesis",):
+        return rec.get("status") or "open"
+    if kind in ("survey",):
+        return rec.get("status") or "draft"
+    if kind in ("open_question",):
+        return "open" if (rec.get("status") or "open") == "open" else "resolved"
+    if kind in ("session",):
+        return "verified" if rec.get("grounded_verified") else "unverified"
+    return ""
+
+
+def status_filter_label(kind: str, status: str) -> str:
+    """The display label for a record_status value — the SAME words the kind's status pill
+    shows, so the filter menu and the rows always agree."""
+    if kind in ("decision",):
+        return decision_status_label(status)
+    if kind in ("hypothesis",):
+        return hypothesis_status_label(status)
+    if kind in ("survey",):
+        labels = {"draft": t("survey_status_draft"), "open": t("survey_status_open"),
+                  "closed": t("survey_status_closed")}
+        return labels.get(status, status)
+    if kind in ("open_question",):
+        return t("oq_status_open") if status == "open" else t("oq_status_resolved")
+    if kind in ("session",):
+        return t("grounded_yes") if status == "verified" else t("grounded_no")
+    return status
+
+
 def asset_direction(asset: dict) -> str:
     """An asset record's flow direction: `out` (deliverable produced from the project) or `in`
     (evidence brought into it). Direction-less records predate the field and ARE evidence —
@@ -229,32 +265,98 @@ def asset_direction(asset: dict) -> str:
     return "out" if asset.get("direction") == "out" else "in"
 
 
-def asset_rows(assets: list) -> str:
+def asset_kind_pill(asset: dict) -> str:
+    """The asset's kind pill (image/screenshot/document/file) — one label everywhere (§3.2)."""
+    return _label(t("asset_kind_" + (asset.get("kind") or "file")))
+
+
+def asset_direction_pill(asset: dict) -> str:
+    """The asset's direction pill: deliverable out (green) vs evidence in (quiet) — shared by the
+    outline chips, primitive_row, the asset detail page and the files lens (UX U8)."""
+    return (_label(t("asset_dir_out"), "var(--green)") if asset_direction(asset) == "out"
+            else _label(t("asset_dir_in")))
+
+
+def asset_size(asset: dict) -> str:
+    """'12 KB' — a unit, not a UI string; the one size format every asset surface shows."""
+    return f'{max(1, int(asset.get("bytes") or 0) // 1024)} KB'
+
+
+def asset_source_chip(asset: dict, store=None) -> str:
+    """The asset's PROVENANCE source as a chip (UX U8 §8.3): a record-pointing source
+    ('synthesis:<id>' / 'prototype:<id>' — the part_address format) resolves LIVE through
+    render_ref (current title, deep link, honest broken state); a free source (the attach-time
+    file path, an MCP note) renders as quiet text — honest, never invented. Empty source → ''."""
+    source = asset.get("source") or ""
+    if ":" in source:
+        from .. import artifacts as _A
+        from ._render import render_ref
+        ref = _A.parse_address(source)
+        if ref.get("id") and _A.ref_href(ref):
+            return render_ref(ref, store)
+    return h("span", {"class_": "muted small"}, source) if source else ""
+
+
+# Co-located CSS for the U8 asset-detail content blocks (the house pattern: shared asset
+# renderers live HERE, used by the detail page and the files lens alike).
+register_css(".assetprev{margin:6px 0 18px}"
+             ".assetprev img{max-width:100%;border:1px solid var(--line);border-radius:var(--radius);display:block}")
+
+
+def asset_preview_html(asset: dict) -> str:
+    """The detail page's content lead (UX U8): image assets render a full-width preview from the
+    static /data mount; other kinds render nothing here (the file card carries the download)."""
+    if asset.get("kind") in ("image", "screenshot") and asset.get("url"):
+        return h("div", {"class_": "assetprev"},
+                 h("a", {"href": asset["url"], "target": "_blank", "rel": "noopener"},
+                   h("img", {"src": asset["url"], "alt": asset.get("title") or asset.get("filename", ""),
+                             "loading": "lazy"})))
+    return ""
+
+
+def asset_file_card(asset: dict) -> str:
+    """The download affordance on the asset detail page: one sl-entity row — file icon ·
+    filename · size + media type — whose click downloads the binary (deliverables) or opens
+    it (evidence images/documents render in a tab)."""
+    is_out = asset_direction(asset) == "out"
+    link = ({"href": asset.get("url", "#"), "download": asset.get("filename", "")} if is_out
+            else {"href": asset.get("url", "#"), "target": "_blank", "rel": "noopener"})
+    return h("a", {"class_": "sl-entity sl-entity--button", **link},
+             h("span", {"class_": "sl-entity__visual"}, raw(_icon("download" if is_out else "file"))),
+             h("div", {"class_": "sl-entity__content"},
+               h("div", {"class_": "sl-entity__title"}, asset.get("filename", "")),
+               h("div", {"class_": "sl-entity__desc"}, asset.get("media_type", ""))),
+             h("span", {"class_": "sl-entity__trailing"}, asset_size(asset), raw(_icon("download"))))
+
+
+def asset_rows(assets: list, store=None) -> str:
     """Asset rows (files/images/screenshots, ticket attach-evidence-files-mcp): image assets
     render a thumbnail from the static /data mount; every row carries kind + direction pills and
-    `filename · size`. Deliverables (direction out) link as downloads. Used by the graph view's
-    floating panel (the default view shows assets as outline rows since UX P2)."""
+    `filename · size`. Since UX U8 the title deep-links to the asset's detail page (slide-over
+    armed); the file itself stays one click away on the thumb / the trailing download link.
+    Used by the graph view's floating panel (the default view shows assets as outline rows)."""
     rows = []
     for a in assets:
         is_img = a.get("kind") in ("image", "screenshot")
         is_out = asset_direction(a) == "out"
+        detail = f'/assets/{a.get("id", "")}'
         link = {"href": a.get("url", "#"), "target": "_blank", "rel": "noopener"}
         if is_out:  # a deliverable file: hand it to the user, don't render it in a tab
             link = {"href": a.get("url", "#"), "download": a.get("filename", "")}
         thumb = (h("a", dict(link),
                    h("img", {"src": a.get("url", ""), "alt": a.get("title", ""), "loading": "lazy",
                              "style": "max-height:64px;max-width:120px;border-radius:6px;display:block"}))
-                 if is_img else raw(_icon("download" if is_out else "external")))
-        size_kb = f'{max(1, int(a.get("bytes", 0)) // 1024)} KB'
-        dir_pill = (h("span", {"class_": "pill", "style": "border-color:var(--green);color:var(--green)"},
-                      t("asset_dir_out")) if is_out else h("span", {"class_": "pill"}, t("asset_dir_in")))
+                 if is_img else raw(_icon("download" if is_out else "file")))
         rows.append(h("div", {"class_": "strow"},
                       thumb, " ",
-                      h("a", dict(link), h("b", {}, a.get("title") or a.get("filename", ""))), " ",
-                      h("span", {"class_": "pill"}, t("asset_kind_" + (a.get("kind") or "file"))), " ",
-                      dir_pill, " ",
-                      h("span", {"class_": "muted small"}, f'{a.get("filename", "")} · {size_kb}'
-                        + (f' · {a.get("notes")}' if a.get("notes") else ""))))
+                      h("a", {"href": detail, "data-drawer": detail,
+                              "data-drawer-title": a.get("title") or a.get("filename", "")},
+                        h("b", {}, a.get("title") or a.get("filename", ""))), " ",
+                      raw(asset_kind_pill(a)), " ",
+                      raw(asset_direction_pill(a)), " ",
+                      h("span", {"class_": "muted small"}, f'{a.get("filename", "")} · {asset_size(a)}'
+                        + (f' · {a.get("notes")}' if a.get("notes") else "")), " ",
+                      h("a", dict(link), raw(_icon("download" if is_out else "external")))))
     return "".join(rows)
 
 

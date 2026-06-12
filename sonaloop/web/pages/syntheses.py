@@ -27,10 +27,11 @@ def _informed_decisions_html(synthesis_id: str, store) -> str:
 
 def register_syntheses(app) -> None:
     @app.get("/syntheses", response_class=HTMLResponse)
-    def syntheses() -> str:
-        # ONE concept — a Report; the list is the Library's Reports tab (ux-contract §3.5).
-        from .library import library_page
-        return library_page("reports")
+    def syntheses(project: str = Query(default=""), status: str = Query(default="")) -> str:
+        # ONE concept — a Report; the list is the Library's Reports tab (ux-contract §3.5),
+        # filterable by project (U10, the shared FilterBar grammar).
+        from .library import library_filters, library_page
+        return library_page("reports", flt=library_filters(project, status), base="/syntheses")
 
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:
@@ -49,19 +50,36 @@ def register_syntheses(app) -> None:
         if proj:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
-        from .._forms import danger_zone, delete_button_form
         # One renderer, plus the section list → the right-edge scrollspy rail (§3.6c): the
         # report's structure stays navigable even when the clamped prose sections are short.
         report_html, toc = render_report(syn, store, with_toc=True)
-        body = h("div", {"class_": "page"}, raw(report_html),
-                 raw(_informed_decisions_html(synthesis_id, store)),
-                 # server-provided prev/next sibling URLs for the keymap's [ / ] bindings
-                 raw(sibling_attrs(*sibling_urls(
-                     [f'/syntheses/{x["id"]}' for x in store.list_syntheses()],
-                     f'/syntheses/{synthesis_id}'))),
-                 # delete-only (no content editing): report prose is authored/generated
-                 raw(danger_zone(raw(delete_button_form(f'/syntheses/{synthesis_id}/delete',
-                                                        t("delete_synthesis"))))))
-        body = raw(body) + raw(_page_rail(toc))
-        actions = raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}"))
-        return _layout(short_title, body, store, crumbs=crumbs, active="library", actions=actions)
+        body = fragment(raw(report_html),
+                        raw(_informed_decisions_html(synthesis_id, store)),
+                        # server-provided prev/next sibling URLs for the keymap's [ / ] bindings
+                        raw(sibling_attrs(*sibling_urls(
+                            [f'/syntheses/{x["id"]}' for x in store.list_syntheses()],
+                            f'/syntheses/{synthesis_id}'))))
+        # The shared detail scaffold (UX U7, §8.2): the report shell keeps its own cover (the
+        # REPORT eyebrow + title + meta line ARE the header anatomy), detail_page adds what the
+        # page was missing — the properties rail (project, sources, dates) beside the document.
+        proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "")
+        n_sources = (len({x for sec in syn.get("sections") or [] for x in sec.get("source_study_ids", [])})
+                     if is_project else len(syn.get("council_ids") or []))
+        # Rail order is the §8.2 anatomy (project → kind-specifics → dates); no "Type: Report"
+        # row — the cover's REPORT eyebrow already states the kind (round-2 audit, TX).
+        prop_rows = [
+            ("projects", t("project"), proj_link),
+            ("link", t("rel_based_on"), raw(_label(t("chip_sources_n", n=n_sources)))),
+            ("clock", t("created"), (syn.get("created_at") or "")[:10]),
+        ]
+        from .._forms import overflow_delete
+        return detail_page(
+            store, title=short_title, active="library", crumbs=crumbs,
+            hero="", body=body, prop_rows=prop_rows,
+            rel_study_id=f"synthesis:{synthesis_id}",
+            rel_proj_id=(proj["id"] if proj else None),
+            rail_sections=toc,
+            star=("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}"),
+            # delete-only (report prose is authored/generated): the subtle header
+            # overflow (U9 §8.4), never a danger zone
+            actions=overflow_delete(f'/syntheses/{synthesis_id}/delete', t("delete_synthesis")))

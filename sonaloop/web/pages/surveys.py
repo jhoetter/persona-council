@@ -53,6 +53,18 @@ def _stance_strip(counts: dict, total: int) -> str:
     return h("div", {"class_": "pvbar"}, fragment(*segs))
 
 
+def _value_strip(stance_counts: dict, store=None) -> str:
+    """A council's stance lean as the survey-style distribution strip — value counts mapped onto
+    the canonical scale terms (artifacts.stance_meta), nothing stance-y hardcoded."""
+    by_term = {}
+    for term in _A.stance_terms():
+        n = int(stance_counts.get(term["value"]) or stance_counts.get(str(term["value"])) or 0)
+        if n:
+            by_term[term["term"]] = n
+    total = sum(by_term.values())
+    return _stance_strip(by_term, total) if total else ""
+
+
 def _option_strip(options: list, counts: dict, total: int) -> str:
     """The answer-distribution strip for a NON-stance question (the row's at-a-glance result):
     one segment per answered option in authored order, a graded accent ramp (options carry no
@@ -160,10 +172,11 @@ def _response_row(resp: dict, qmap: dict, store) -> str:
 
 def register_surveys(app) -> None:
     @app.get("/surveys", response_class=HTMLResponse)
-    def surveys() -> str:
-        # The Library's Surveys tab under the canonical URL (ux-contract §3.5).
-        from .library import library_page
-        return library_page("surveys")
+    def surveys(project: str = Query(default=""), status: str = Query(default="")) -> str:
+        # The Library's Surveys tab under the canonical URL (ux-contract §3.5),
+        # filterable by project + status (U10, the shared FilterBar grammar).
+        from .library import library_filters, library_page
+        return library_page("surveys", flt=library_filters(project, status), base="/surveys")
 
     @app.get("/surveys/{survey_id}", response_class=HTMLResponse)
     def survey_detail(survey_id: str) -> str:
@@ -202,13 +215,14 @@ def register_surveys(app) -> None:
         proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")
         return detail_page(
             store, title=s["title"], active="library", crumbs=crumbs,
-            icon="plan", sub=fragment(t("surveys_h"), " ", raw(_status_pill(s.get("status", "draft")))),
+            icon="plan", kind=t("survey_kind"), pills=[_status_pill(s.get("status", "draft"))],
+            sub=f'{t("n_questions", n=len(s["questions"]))} · {t("n_responses", n=n_resp)}',
             body=body,
-            # label/value discipline: "5 responses → 5" duplicated the number; the kind is
-            # singular ("Survey", not the section name) — ux-audit P5 finding.
-            prop_rows=[("dot", t("type_h"), t("survey_kind")),
+            # label/value discipline: "5 responses → 5" duplicated the number (P5 finding);
+            # rail order is the §8.2 anatomy (project → kind-specifics → dates) and the
+            # "Type: Survey" row retired — the SURVEY eyebrow already states the kind (round 2).
+            prop_rows=[("projects", t("project"), proj_link),
                        ("personas", t("respondents_h"), str(results["respondents"])),
-                       ("projects", t("project"), proj_link),
                        ("clock", t("created"), s.get("created_at", "")[:10])],
             rail_sections=[("sec-questions", t("n_questions", n=len(s["questions"]))),
                            ("sec-responses", t("n_responses", n=n_resp))],

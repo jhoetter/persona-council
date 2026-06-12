@@ -37,10 +37,9 @@ def _first_steps_html() -> str:
     steps = (
         (True, t("fs_step_install_h"), fragment(t("fs_step_install_d"), " ",
                                                 h("code", {}, REGISTER_CLAUDE_CODE))),
-        # The create-project step links the REAL create form (web CRUD) as the no-agent path.
-        (False, t("fs_step_project_h"), fragment(t("fs_step_project_d"), " ",
-                                                 h("a", {"href": "/projects/new"},
-                                                   t("fs_step_project_link")))),
+        # Creation belongs to the agent (U9, ux-contract §8.4) — the step TELLS, it never links
+        # a browser create form (the UI is an inspector: inspect + edit, never create).
+        (False, t("fs_step_project_h"), t("fs_step_project_d")),
         (False, t("fs_step_council_h"), t("fs_step_council_d")),
     )
     rows = fragment(*(
@@ -90,11 +89,13 @@ def _projects_page(page: int = 1, q: str = "") -> str:
     visible, page, pages = _page_window(projects, page)
     rows = []
     for p in visible:
+        def _cnt(n: int, one_key: str, many: str) -> str:      # "1 Prototype", "4 Prototypes"
+            return t(one_key) if n == 1 else f"{n} {many}"
         counts = fragment(                                     # the project's real contents (non-zero only)
-            h("span", {}, f'{p["councils"]} {t("councils")}') if p.get("councils") else None,
-            h("span", {}, f'{p["studies"]} {t("syntheses")}') if p["studies"] else None,
-            h("span", {}, f'{p["prototypes"]} {t("prototypes_h")}') if p.get("prototypes") else None,
-            h("span", {}, f'{p["notes"]} {t("notes")}') if p.get("notes") else None)
+            h("span", {}, _cnt(p["councils"], "councils_one", t("councils"))) if p.get("councils") else None,
+            h("span", {}, _cnt(p["studies"], "syntheses_one", t("syntheses"))) if p["studies"] else None,
+            h("span", {}, _cnt(p["prototypes"], "prototypes_h_one", t("prototypes_h"))) if p.get("prototypes") else None,
+            h("span", {}, _cnt(p["notes"], "notes_one", t("notes"))) if p.get("notes") else None)
         # a project with open work and no driver is invisible-silent otherwise — badge it
         stalled = (p.get("run_state") or {}).get("state") == "stalled"
         meta = fragment(_label(t("stalled"), "var(--amber)") if stalled else None,
@@ -104,14 +105,14 @@ def _projects_page(page: int = 1, q: str = "") -> str:
         # Truly fresh database (no projects AND no personas): orient instead of an empty list.
         return _layout(t("first_steps_h"), _first_steps_html(), store,
                        crumbs=[(t("projects"), None)], active="projects")
-    new_btn = h("a", {"class_": "sl-btn sl-btn--primary", "href": "/projects/new"},
-                raw(_icon("plus")), " ", t("new_project"))
-    # the quiet, always-available tour entry point on the home page (web/_tour.py)
+    # No "New project" affordance (U9, ux-contract §8.4): creation belongs to the MCP/CLI
+    # host — the empty state TEACHES the agent verb instead of offering a form.
+    # The quiet, always-available tour entry point on the home page (web/_tour.py):
     from ._tour import tour_link
     take_tour = h("p", {"class_": "tour-take-row"}, raw(tour_link()))
     return _list_page(store, title=t("projects"), lead=t("projects_lead"), rows=rows,
                       empty_icon="projects", empty_msg=t("no_projects"), active="projects",
-                      actions=new_btn, empty_action=(t("new_project"), "/projects/new", "plus"),
+                      empty_teach=t("fs_step_project_d"),
                       pre=_list_filter_box("/projects", q) if (q or pages > 1) else "",
                       count=len(projects), after=_pager("/projects", page, pages, q) + take_tour)
 
@@ -152,17 +153,20 @@ def register_lists(app) -> None:
             return not_found()
         return see_other(out["url"])
 
+    from fastapi import Query
+
     @app.get("/prototypes", response_class=HTMLResponse)
-    def prototypes_list() -> str:
-        # The Library's Prototypes tab under the canonical URL (ux-contract §3.5).
-        from .pages.library import library_page
-        return library_page("prototypes")
+    def prototypes_list(project: str = Query(default=""), status: str = Query(default="")) -> str:
+        # The Library's Prototypes tab under the canonical URL (ux-contract §3.5),
+        # filterable by project (U10, the shared FilterBar grammar).
+        from .pages.library import library_filters, library_page
+        return library_page("prototypes", flt=library_filters(project, status), base="/prototypes")
 
     @app.get("/notes", response_class=HTMLResponse)
-    def notes_list() -> str:
+    def notes_list(project: str = Query(default=""), status: str = Query(default="")) -> str:
         # The Library's Notes tab — ONE note entity (concepts merged in).
-        from .pages.library import library_page
-        return library_page("notes")
+        from .pages.library import library_filters, library_page
+        return library_page("notes", flt=library_filters(project, status), base="/notes")
 
 # Co-located CSS (spec/roadmap.md R3): the shared linear list rows used by every index page.
 register_css(r"""

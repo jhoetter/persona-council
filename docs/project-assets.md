@@ -40,10 +40,31 @@ In a council brief, every project asset rides each participant's
 `agent_context` as an `EVIDENCE ASSETS IN THE ROOM` block: image assets
 instruct the host to `view_asset` them first; document excerpts are inline.
 
+## Direction & provenance
+
+An asset flows `in` (evidence brought INTO the project — the default; every
+pre-direction record reads as `in`) or `out` (a deliverable PRODUCED from it —
+`export_synthesis_deliverable` attaches the rendered PPTX/PDF with
+`source: synthesis:<id>`). A re-export supersedes the stale deliverable record
+and records the chain on the survivor (`supersedes: [{id, filename,
+created_at}]`), so the provenance of "several versions over time" stays
+readable. `record_asset_supersession` is the service seam that writes it.
+
+## In the inspector (UX U8)
+
+- **Detail page** `/assets/{id}` (global id resolution): image preview / file
+  card with download, and a provenance block — received/generated timestamp,
+  source resolved as a chip, direction, supersede chain, notes.
+- **Library → Assets tab** (`/assets`): every asset across projects, badged by
+  kind + direction, owning project on the row.
+- **Project files lens** (`/projects/{id}?view=files`, the "N files" header
+  chip): all of a project's assets chronologically — inputs received across
+  many MCP messages interleaved with the documents generated from them.
+
 ## Persistence
 
-- Assets appear read-only on the project page in the web inspector
-  (thumbnails for images, served from the static `/data` mount).
+- Assets appear read-only in the web inspector (thumbnails for images, served
+  from the static `/data` mount); every asset row deep-links to its detail page.
 - `export-snapshot` now includes research projects and copies asset binaries to
   `data/export/assets/`; `import-snapshot` restores both — the evidence survives
   the portable round-trip.

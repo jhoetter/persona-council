@@ -25,19 +25,22 @@ from ._components import _icon
 from ._html import h, raw
 from ._i18n import t
 
-# Row kinds that open a peek (spec §3.3 / decision §7.3: click = peek must be universally true).
-# url_artifact / live_url / flow rows are external or synthesized subjects — no peek target.
+# Row kinds that open as a slide-over (spec §8.1: click = the kind's FULL detail page sliding
+# over the outline; the drawer URL IS the row's canonical href). Universally true for every kind
+# that HAS a detail page — assets included since UX U8 (/assets/{id}; the row's download chip
+# keeps the file itself one click away); url_artifact / live_url / flow rows are external or
+# synthesized subjects, and open questions live inline in the row.
 # (A tuple head keeps the kind-vocabulary grep gates clean — no kind-literal set heads in web/.)
-PEEK_KINDS = frozenset(("council", "synthesis", "report", "note", "prototype", "session",
-                        "decision", "survey", "hypothesis", "open_question", "asset"))
+DRAWER_KINDS = frozenset(("council", "synthesis", "report", "note", "prototype", "session",
+                          "decision", "survey", "hypothesis", "asset"))
 
 
-def peek_url(rkind: str, oid: str) -> str | None:
-    """The drawer-fragment URL for an outline row (oid may carry the `kind:` graph prefix)."""
-    if rkind not in PEEK_KINDS:
+def drawer_url(rkind: str, href: str) -> str | None:
+    """The slide-over URL for an outline row: its OWN canonical detail href (§8.1 — pushState
+    makes it the address, so it must be a real internal page), or None for kinds without one."""
+    if rkind not in DRAWER_KINDS or not href or not href.startswith("/"):
         return None
-    bare = str(oid).split(":", 1)[1] if ":" in str(oid) else str(oid)
-    return f"/peek/{rkind}/{bare}"
+    return href
 
 
 # ------------------------------------------------------------------ phase placement helpers
@@ -112,7 +115,7 @@ def extra_outline_items(graph: dict, *, decisions: list, hypotheses: list, surve
         it = {"oid": oid, "color": color, "title": title, "kind": kind, "href": href,
               "plabel": pl or kind, "po": po, "round": rnd, "order": order or ts, "ts": ts,
               "indent": 0, "last_child": False, "rkind": rkind, "node": node,
-              "evidence": evidence, "deliverable": deliverable}
+              "evidence": evidence, "deliverable": deliverable, "pk": pk or ""}
         if anchor:
             it["anchor"] = anchor
         if lead:
@@ -155,10 +158,16 @@ def extra_outline_items(graph: dict, *, decisions: list, hypotheses: list, surve
             pk, order, rnd = last_key, f"~~{ts}", max(node_round.values(), default=0)
         else:                                 # the phase's Evidence sub-group, after its rows
             pk, order, rnd = _phase_round_at(ts, nodes, node_round, default_phase)[0], f"~{ts}", None
-        out.append(item(a["id"], color="#0f9d8f" if deliverable else "#8a6d3b",
-                        title=a.get("title") or a.get("filename", ""),
-                        kind=t("asset_kind_" + (a.get("kind") or "file")), href=a.get("url", ""),
-                        pk=pk, ts=ts, rkind="asset", node=a, order=order, rnd=rnd,
-                        lead=_asset_lead(a), external=True, evidence=not deliverable,
-                        deliverable=deliverable))
+        it = item(a["id"], color="#0f9d8f" if deliverable else "#8a6d3b",
+                  title=a.get("title") or a.get("filename", ""),
+                  kind=t("asset_kind_" + (a.get("kind") or "file")), href=f'/assets/{a["id"]}',
+                  pk=pk, ts=ts, rkind="asset", node=a, order=order, rnd=rnd,
+                  lead=_asset_lead(a), evidence=not deliverable, deliverable=deliverable)
+        # The row opens the asset's detail page (slide-over, §8.1/U8); the file ITSELF stays one
+        # click away as a trailing chip — the funnel-chip idiom (a real link layered over the
+        # row's stretched target), downloading deliverables, opening evidence in a tab.
+        if a.get("url"):
+            it["chip"] = ({"href": a["url"], "text": t("download"), "download": a.get("filename", "")}
+                          if deliverable else {"href": a["url"], "text": t("open"), "target": "_blank"})
+        out.append(it)
     return out

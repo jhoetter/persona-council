@@ -224,13 +224,14 @@ def test_plan_export_gains_a_decisions_section_with_citations(store):
     assert "`superseded`" in md and "`proposed`" in md
 
 
-# ----------------------------------------------------- inspector: project rows + the decision peek
+# ------------------------------------------ inspector: project rows + the decision slide-over
 
-def test_project_page_rows_and_decision_peek(store):
-    """UX P2 (spec/ux-contract.md §3.4 + §3.3): a decision is an outline ROW (status pill +
-    evidence count); its ESSENCE (clamped body, evidence + rejected chips, supersede links)
-    lives in the /peek/decision/{id} drawer fragment; the Ref route keeps deep-linking into
-    the row's anchor."""
+def test_project_page_rows_and_decision_slideover(store):
+    """UX P2 (spec/ux-contract.md §3.4) + U6/U7 (§8.1/§8.2): a decision is an outline ROW
+    (status pill + evidence count) whose data-drawer carries its CANONICAL detail URL — the
+    slide-over renders the FULL detail content via the route's ?slide=1 fragment variant;
+    the same Ref route serves the full page, which keeps the row's anchor as the secondary
+    link."""
     from starlette.testclient import TestClient
     from sonaloop import web
     from sonaloop.web._i18n import STRINGS
@@ -250,22 +251,35 @@ def test_project_page_rows_and_decision_peek(store):
         assert STRINGS["en"][key] in html                     # the three lifecycle pills, on rows
     assert adopted["title"] in html and proposed["title"] in html and succ["title"] in html
     assert html.count('data-rkind="decision"') == 3           # rows, not a wall of text (C6)
-    assert adopted["decision"] not in html                    # the ADR body lives in the peek
+    assert adopted["decision"] not in html                    # the ADR body lives behind the row
     assert f'id="dec-{adopted["id"]}"' in html                # the row IS the anchor target
-    assert f'data-drawer="/peek/decision/{adopted["id"]}"' in html
-    # the peek carries the essence: clamped body, evidence + rejected chips, supersede links
-    peek = client.get(f'/peek/decision/{adopted["id"]}?lang=en').text
-    assert adopted["decision"] in peek
-    assert f'/councils/{council["id"]}' in peek               # evidence chip via render_ref
-    assert f'/councils/{alt["id"]}' in peek                   # rejected chip deep-links too
-    assert "banks gatekeep" in peek                           # the why-not note
-    assert STRINGS["en"]["dec_superseded_by"] in peek
-    assert f'/decisions/{adopted["id"]}' in peek              # the explicit Open ↗ deep link
-    assert client.get("/peek/decision/nope").status_code == 404
-    # the Ref route deep-links back into the project page row
-    r = client.get(f'/decisions/{adopted["id"]}', follow_redirects=False)
-    assert r.status_code in (302, 307)
-    assert r.headers["location"] == f'/projects/{proj["id"]}#dec-{adopted["id"]}'
+    # the row's drawer URL IS the canonical detail URL (§8.1 — pushState makes it the address)
+    assert f'data-drawer="/decisions/{adopted["id"]}"' in html
+    # the slide-over fragment = the SAME detail renderer, content only: full ADR body,
+    # evidence + rejected chips, supersede links — and no app shell around it
+    slide = client.get(f'/decisions/{adopted["id"]}?slide=1&lang=en').text
+    assert slide.startswith('<div class="sl-slide">') and "sl-sidebar" not in slide
+    assert adopted["decision"] in slide
+    assert f'/councils/{council["id"]}' in slide              # evidence chip via render_ref
+    assert f'/councils/{alt["id"]}' in slide                  # rejected chip deep-links too
+    assert "banks gatekeep" in slide                          # the why-not note
+    assert STRINGS["en"]["dec_superseded_by"] in slide
+    assert client.get("/decisions/nope?slide=1").status_code == 200  # honest empty state, no 500
+    # the Ref route serves a REAL detail page on the shared anatomy (UX U7, §8.2): kind
+    # eyebrow + status pill + the full ADR record + the secondary view-in-project anchor link
+    r = client.get(f'/decisions/{adopted["id"]}?lang=en')
+    assert r.status_code == 200
+    detail = r.text
+    assert STRINGS["en"]["decision_kind"] in detail           # the kind eyebrow
+    # the supersede flow demoted this record — the header pill says so honestly
+    assert STRINGS["en"]["dec_status_superseded"] in detail
+    assert adopted["title"] in detail and adopted["decision"] in detail
+    assert f'/councils/{council["id"]}' in detail             # evidence chip resolved
+    assert f'/councils/{alt["id"]}' in detail and "banks gatekeep" in detail
+    assert f'/decisions/{succ["id"]}' in detail               # supersede → the sibling DETAIL page
+    # the rail's Project link lands ON the deciding row (round-2 audit: the old
+    # "View in project" meta-line link retired — no other kind carried one)
+    assert f'/projects/{proj["id"]}#dec-{adopted["id"]}' in detail
     assert STRINGS["en"]["runtime_maybe_cleared"] in client.get("/decisions/nope?lang=en").text
     # a project without decisions shows no decision rows (and no empty chrome)
     other = _project(store, "Quiet study")
@@ -289,23 +303,23 @@ def test_global_decisions_list_renders_empty_and_populated(store):
     assert page.status_code == 200
     html = page.text
     # the URL stays canonical; the content is the LIBRARY with the Decisions tab active
-    # (ux-contract §3.5) — status-pilled rows, peek for the essence, no redirect
+    # (ux-contract §3.5) — status-pilled rows, slide-over on click, no redirect
     assert STRINGS["en"]["library_h"] in html
     assert STRINGS["en"]["dec_status_adopted"] in html and STRINGS["en"]["dec_status_proposed"] in html
     assert adopted["title"] in html and proposed["title"] in html
-    # each row deep-links into ITS project's decisions section, named after the project
-    assert f'/projects/{pa["id"]}#dec-{adopted["id"]}' in html
-    assert f'/projects/{pb["id"]}#dec-{proposed["id"]}' in html
-    assert "Project A" in html and "Project B" in html
-    # the essence (evidence + rejected chips, why-not note) lives in the row's peek
-    assert f'data-drawer="/peek/decision/{adopted["id"]}"' in html
-    peek = client.get(f'/peek/decision/{adopted["id"]}?lang=en').text
-    assert f'/councils/{council["id"]}' in peek and f'/councils/{alt["id"]}' in peek
-    assert "banks gatekeep" in peek
-    # the list route does not shadow the canonical /decisions/{id} redirect
-    r = client.get(f'/decisions/{adopted["id"]}', follow_redirects=False)
-    assert r.status_code in (302, 307)
-    assert r.headers["location"] == f'/projects/{pa["id"]}#dec-{adopted["id"]}'
+    # each row's href IS the canonical detail URL (§8.1) and doubles as its slide-over target
+    assert f'href="/decisions/{adopted["id"]}"' in html
+    assert f'href="/decisions/{proposed["id"]}"' in html
+    assert "Project A" in html and "Project B" in html        # the owning project, as the desc line
+    assert f'data-drawer="/decisions/{adopted["id"]}"' in html
+    # the slide-over fragment carries the full record (evidence + rejected chips, why-not note)
+    slide = client.get(f'/decisions/{adopted["id"]}?slide=1&lang=en').text
+    assert f'/councils/{council["id"]}' in slide and f'/councils/{alt["id"]}' in slide
+    assert "banks gatekeep" in slide
+    # the list route does not shadow the canonical /decisions/{id} DETAIL page (UX U7)
+    r = client.get(f'/decisions/{adopted["id"]}?lang=en')
+    assert r.status_code == 200 and adopted["decision"] in r.text
+    assert f'/projects/{pa["id"]}#dec-{adopted["id"]}' in r.text   # secondary view-in-project link
 
 
 def test_synthesis_page_shows_informed_decisions(store):

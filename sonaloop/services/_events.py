@@ -31,7 +31,7 @@ _ENTITY: dict[str, tuple[str, str, str]] = {
     "day.recorded": ("persona", "persona_id", "date"),
     "prediction.scored": ("project", "project_id", ""),
     "calibration.round_recorded": ("project", "scope", ""),
-    "asset.attached": ("project", "project_id", "filename"),
+    "asset.attached": ("asset", "asset_id", "filename"),
     "council.recorded": ("council", "council_id", "prompt"),
     "synthesis.recorded": ("synthesis", "synthesis_id", "title"),
     "project.created": ("project", "project_id", "title"),
@@ -41,7 +41,8 @@ _ENTITY: dict[str, tuple[str, str, str]] = {
 
 # entity_type -> the inspector detail route (the toast/feed link target).
 _ENTITY_ROUTE = {"persona": "/personas/", "council": "/councils/",
-                 "synthesis": "/syntheses/", "project": "/projects/"}
+                 "synthesis": "/syntheses/", "project": "/projects/",
+                 "asset": "/assets/"}        # the U8 asset detail page (global id resolution)
 
 
 def event_url(entity_type: str, entity_id: str, project_id: str | None) -> str:

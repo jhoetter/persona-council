@@ -133,6 +133,8 @@ def attach_asset(project_id: str, path: str | None = None, content_base64: str |
         "created_at": (existing or {}).get("created_at") or utc_now_iso(),
         "updated_at": utc_now_iso(),
     }
+    if (existing or {}).get("supersedes"):       # the provenance chain survives a re-attach upsert
+        record["supersedes"] = existing["supersedes"]
     if existing:
         assets[assets.index(existing)] = record
     else:
@@ -170,6 +172,28 @@ def get_asset(project_id: str, asset_id: str, store: Store | None = None) -> dic
     project = _require_research_project(store, project_id)  # noqa: F821 (bound)
     for a in _project_assets(project):
         if a["id"] == asset_id or a.get("filename") == asset_id:
+            return a
+    raise KeyError(f"Unknown asset '{asset_id}' in project {project_id}")
+
+
+def record_asset_supersession(project_id: str, asset_id: str, replaced: list[dict[str, Any]],
+                              store: Store | None = None) -> dict[str, Any]:
+    """Record the supersede chain on a SURVIVING asset record (UX U8 — provenance: which earlier
+    version this file replaced). `replaced` entries are lean `{id, filename, created_at}` stubs:
+    the stale records themselves are already detached (remove_asset — a deliverable re-export
+    keeps exactly one live record per (synthesis, format)), so the chain keeps enough of each to
+    read honestly on the asset's provenance block. Idempotent per replaced id."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)  # noqa: F821 (bound)
+    for a in _project_assets(project):
+        if a["id"] == asset_id:
+            seen = {s.get("id") for s in a.get("supersedes") or []}
+            new = [r for r in replaced if r.get("id") and r["id"] not in seen and r["id"] != asset_id]
+            if new:
+                a["supersedes"] = (a.get("supersedes") or []) + new
+                a["updated_at"] = utc_now_iso()
+                project["updated_at"] = utc_now_iso()
+                store.upsert_research_project(project)
             return a
     raise KeyError(f"Unknown asset '{asset_id}' in project {project_id}")
 

@@ -47,6 +47,7 @@ BINDINGS: list[dict] = [
     {"keys": "j", "scope": "lists", "desc": lambda: t("kbd_list_next"), "action": {"hook": "list-next"}},
     {"keys": "k", "scope": "lists", "desc": lambda: t("kbd_list_prev"), "action": {"hook": "list-prev"}},
     {"keys": "enter", "scope": "lists", "desc": lambda: t("kbd_list_open"), "action": {"hook": "list-open"}},
+    {"keys": "o", "scope": "lists", "desc": lambda: t("kbd_list_open_full"), "action": {"hook": "list-open-full"}},
     {"keys": "[", "scope": "detail", "desc": lambda: t("kbd_sib_prev"), "action": {"hook": "sib-prev"}},
     {"keys": "]", "scope": "detail", "desc": lambda: t("kbd_sib_next"), "action": {"hook": "sib-next"}},
 ]
@@ -185,9 +186,13 @@ function run(b){ var a=b.action||{};
     case 'list-next': focusRow(1); return true;
     case 'list-prev': focusRow(-1); return true;
     case 'list-open': var rs=rows(); if(ri>=0&&rs[ri]){
-      // Enter opens the focused row: its peek (data-drawer) or its href — a funnel-chip row's
-      // main target is the stretched overlay link, so click that when present.
+      // Enter opens the focused row: its slide-over (data-drawer) or its href — a funnel-chip
+      // row's main target is the stretched overlay link, so click that when present.
       var el=rs[ri].querySelector('.ol-stretch')||rs[ri]; el.click(); return true; } return false;
+    case 'list-open-full': var rf=rows(); if(ri>=0&&rf[ri]){
+      // 'o' skips the slide-over: navigate straight to the row's full detail page.
+      var af=rf[ri].matches&&rf[ri].matches('a[href]')?rf[ri]:rf[ri].querySelector('a[href]');
+      if(af&&af.getAttribute('href')){ location.href=af.getAttribute('href'); return true; } } return false;
     case 'sib-prev': case 'sib-next':
       var s=document.getElementById('km-siblings'); if(!s) return false;   // no siblings: skip gracefully
       var u=s.getAttribute(a.hook==='sib-prev'?'data-prev':'data-next');

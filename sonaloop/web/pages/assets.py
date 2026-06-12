@@ -1,0 +1,160 @@
+"""Assets as a first-class surface (UX U8, spec/ux-contract.md §8.3): which input files the
+project RECEIVED (evidence in — possibly across many MCP messages over time) and which documents
+the software GENERATED (deliverables out — possibly several versions, the supersede chain).
+
+Three routes on the shared anatomy, zero new presentation:
+  - /assets             — the Library's Assets tab (cross-project rows, §3.5).
+  - /assets/{id}        — the asset detail page (U7 scaffold: preview / file card, provenance
+                          block, properties rail). GLOBAL id resolution across projects, like
+                          every other kind's detail route (get_asset is project-scoped, so the
+                          lookup scans the project records — assets ride the project JSON blob).
+  - /projects/{id}?view=files — the project FILES lens (project_files_page, dispatched by the
+                          project route): ALL of the project's assets chronologically, in + out
+                          interleaved with day separators — the across-many-messages story,
+                          reachable from the project header's "N files" chip.
+
+The shared pill/size/source-chip/preview renderers live in web/_presence (the house pattern);
+rows are ui.primitive_row, so the slide-over (§8.1) works from every surface."""
+from __future__ import annotations
+
+from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .. import ui
+from .._presence import (
+    asset_direction, asset_direction_pill, asset_file_card, asset_kind_pill,
+    asset_preview_html, asset_size, asset_source_chip,
+)
+
+
+def find_asset(store, asset_id: str) -> tuple[dict | None, dict | None]:
+    """(project, asset) for an asset id (or filename) resolved ACROSS projects — the global
+    /assets/{id} route's lookup. Returns (None, None) when nothing matches."""
+    for proj in store.list_research_projects():
+        for a in proj.get("assets") or []:
+            if a.get("id") == asset_id or a.get("filename") == asset_id:
+                return proj, a
+    return None, None
+
+
+def _provenance_section(a: dict, store) -> str:
+    """The PROVENANCE block (§8.3): received/generated timestamp · source resolved as a chip ·
+    direction · the supersede chain when recorded · notes — the sl-props row contract, so
+    provenance reads like structure, not prose."""
+    is_out = asset_direction(a) == "out"
+    when = (a.get("created_at") or "")[:16].replace("T", " ")
+    chain = a.get("supersedes") or []
+    chain_html = fragment(*(
+        h("div", {"class_": "muted small"},
+          f'{s.get("filename", "") or s.get("id", "")} · {(s.get("created_at") or "")[:16].replace("T", " ")}')
+        for s in chain)) if chain else None
+    rows = [
+        ("dot", t("asset_generated") if is_out else t("asset_received"), when),
+        ("link", t("asset_source"), raw(asset_source_chip(a, store))),
+        ("exchange", t("direction_h"), raw(asset_direction_pill(a))),
+        ("download", t("asset_supersedes"), chain_html),
+        ("panel", t("notes_h"), a.get("notes", "")),
+    ]
+    props = [h("div", {"class_": "sl-prop"},
+               h("span", {"class_": "sl-prop__k"}, raw(_icon(ic)), lbl),
+               h("span", {"class_": "sl-prop__v"}, val))
+             for ic, lbl, val in rows if val not in (None, "", "—")]
+    # The same .sec/h2 heading idiom as the page's other sections (sec-file, sec-excerpt) —
+    # ui.section's title rendered visibly heavier here (round-2 audit, HD consistency).
+    return h("div", {"class_": "sec", "id": "sec-provenance"},
+             h("h2", {}, t("provenance_h")),
+             h("div", {"class_": "sl-props"}, fragment(*props)))
+
+
+def project_files_page(project_id: str) -> str:
+    """The project FILES lens (?view=files): every asset of the project chronologically —
+    evidence in and deliverables out interleaved by created_at with day separators, each row
+    carrying its direction pill and source line. The across-many-MCP-messages story (§8.3)."""
+    store = Store()
+    try:
+        proj = services.get_research_project(project_id, store=store)
+    except KeyError:
+        return _layout(t("not_found"), _empty_state(t("not_found"), t("runtime_maybe_cleared"), icon="projects"),
+                       store, active="projects")
+    assets = sorted(services.list_assets(project_id, store=store),
+                    key=lambda a: a.get("created_at", ""))
+    rows: list = []
+    day = None
+    for a in assets:
+        if (a.get("created_at") or "")[:10] != day:
+            day = (a.get("created_at") or "")[:10]
+            rows.append(ui.group_header(ui._fmt_day(day)))
+        src = asset_source_chip(a, store)
+        rows.append(ui.primitive_row("asset", a, store, href=f'/assets/{a["id"]}', drawer=True,
+                                     desc=raw(src) if src else ""))
+    if rows:
+        rows_html = h("div", {"class_": "rows", "data-keynav": True}, fragment(*(raw(str(r)) for r in rows)))
+    else:
+        rows_html = h("div", {"class_": "sl-empty"},
+                      h("div", {"class_": "sl-empty__icon"}, raw(_icon("clipboard"))),
+                      h("h2", {"class_": "sl-empty__title"}, t("no_assets")),
+                      h("p", {"class_": "sl-empty__body"}, t("assets_teach")))
+    body = h("div", {"class_": "page"},
+             h("h1", {"class_": "h1"}, t("files_h"),
+               h("span", {"class_": "h1cnt"}, str(len(assets))) if assets else None),
+             h("p", {"class_": "lead"}, t("files_lead")),
+             rows_html)
+    return _layout(f'{proj["title"]} — {t("files_h")}', body, store, active="projects",
+                   crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{project_id}'),
+                           (t("files_h"), None)])
+
+
+def register_assets(app) -> None:
+    @app.get("/assets", response_class=HTMLResponse)
+    def assets_list(project: str = Query(default=""), status: str = Query(default=""),
+                    direction: str = Query(default="")) -> str:
+        # The Library's Assets tab under the canonical URL (ux-contract §3.5), with the
+        # shared FilterBar (U10): project + status + direction, same URL grammar.
+        from .library import library_filters, library_page
+        return library_page("assets", flt=library_filters(project, status, direction),
+                            base="/assets")
+
+    @app.get("/assets/{asset_id}", response_class=HTMLResponse)
+    def asset_detail(asset_id: str) -> str:
+        """An asset's REAL detail page (UX U8 — the U7 anatomy): ASSET eyebrow + kind/direction
+        pills, image preview / file card with download, the text excerpt for documents, the
+        PROVENANCE block (when received/generated, source chip, direction, supersede chain,
+        notes), and the properties rail (project · kind · direction · size · created)."""
+        store = Store()
+        proj, a = find_asset(store, asset_id)
+        if a is None:
+            return _layout(t("not_found"),
+                           _empty_state(t("assets_h"), t("runtime_maybe_cleared"), icon="clipboard"),
+                           store, active="library")
+        title = a.get("title") or a.get("filename", "")
+        is_out = asset_direction(a) == "out"
+        sub = f'{a.get("filename", "")} · {asset_size(a)} · {a.get("media_type", "")}'
+        excerpt = (a.get("text_excerpt") or "").strip()
+        body = fragment(
+            raw(asset_preview_html(a)),
+            h("div", {"class_": "sec", "id": "sec-file"}, raw(asset_file_card(a))),
+            (h("div", {"class_": "sec", "id": "sec-excerpt"},
+               h("h2", {}, t("asset_excerpt_h")),
+               ui.clamp(excerpt, threshold=ui.SECTION_CLAMP)) if excerpt else None),
+            raw(_provenance_section(a, store)))
+        proj_link = h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"])
+        n_proj_files = len(proj.get("assets") or [])
+        files_link = h("a", {"href": f'/projects/{proj["id"]}?view=files'},
+                       t("one_file") if n_proj_files == 1 else t("n_files", n=n_proj_files))
+        prop_rows = [
+            ("projects", t("project"), proj_link),
+            ("file", t("files_h"), files_link),
+            ("square", t("type_h"), t("asset_kind_" + (a.get("kind") or "file"))),
+            ("exchange", t("direction_h"), t("asset_dir_out") if is_out else t("asset_dir_in")),
+            ("database", t("size"), asset_size(a)),
+            ("dot", t("created"), (a.get("created_at") or "")[:10]),
+        ]
+        return detail_page(
+            store, title=title, active="library",
+            # Project-rooted crumb (§8.2 — the council pattern; an asset always has a project).
+            crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'),
+                    (title, None)],
+            icon="file", kind=t("asset_kind"),
+            pills=[asset_kind_pill(a), asset_direction_pill(a)],
+            sub=sub, body=body, prop_rows=prop_rows,
+            rail_sections=([("sec-excerpt", t("asset_excerpt_h"))] if excerpt else [])
+                          + [("sec-provenance", t("provenance_h"))],
+            star=("asset", a["id"], title[:60], f'/assets/{a["id"]}'))

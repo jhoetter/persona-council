@@ -3,21 +3,29 @@
 The web inspector started as a strictly read-only SSR surface. It now carries a
 **structural write path**: metadata and container operations are editable in the
 browser, while every piece of authored or generated text stays host-authored
-(the HOST-AUTHORS-ALL-TEXT invariant). This page documents the boundary, the
-write-path pattern, and why some operations remain MCP-only.
+(the HOST-AUTHORS-ALL-TEXT invariant). The affordance policy (UX U9,
+spec/ux-contract.md §8.4) on top of it: **the UI inspects and edits — it never
+creates.** Creation of projects and project elements belongs to the MCP/CLI
+host; the browser offers no "New …" button and no create form anywhere. This
+page documents the boundary, the write-path pattern, and why some operations
+remain MCP-only.
 
 ## The mutation boundary
 
 | Entity | Create | Edit | Delete | Notes |
 | --- | --- | --- | --- | --- |
-| Project | ✅ web (`/projects/new`) | ✅ title/goal/description | ✅ typed-confirmation (type the project title) | container metadata only; the graph/plan stays agent-driven |
+| Project | ❌ UI (MCP/CLI: `start_project` / `create_research_project`; `POST /projects/new` stays as API surface) | ✅ title/goal/description | ✅ typed-confirmation (type the project title) | container metadata only; the graph/plan stays agent-driven |
 | Persona | ❌ MCP-only (`brief_persona` → `record_persona`) | ✅ metadata: name, role title, segment, industry | ✅ typed-confirmation (type the display name) | see "Why persona create is MCP-only" |
-| Note | ✅ web (`/projects/{id}/notes/new`) | ✅ title/text | ✅ | notes are *user/host-authored observations*, not generated prose — typing one in the browser **is** authoring |
-| Section | ✅ web (`/projects/{id}/sections/new`) | ✅ title/kind/note | ✅ (member nodes untouched) | a section is a view; membership editing stays MCP (`add_to_section` …) |
+| Note | ❌ UI (MCP: `create_note`; `POST /projects/{id}/notes/new` stays as API surface) | ✅ title/text | ✅ | notes are observations the agent records; editing their text in the browser stays fine |
+| Section | ❌ UI (MCP: `create_section`; `POST /projects/{id}/sections/new` stays as API surface) | ✅ title/kind/note | ✅ (member nodes untouched) | a section is a view; membership editing stays MCP (`add_to_section` …) |
 | Council | ❌ | ❌ | ✅ delete only | statements are generated prose — never editable |
 | Synthesis / report | ❌ | ❌ | ✅ delete only | report prose is authored/generated — never editable |
 | Prototype | ❌ | ❌ | ✅ delete only | recorded artifacts |
 | Memories, SOUL, evidence, councils' content, calendar days | ❌ | ❌ | ❌ | host-authored / generated — MCP/CLI only |
+
+The `POST …/new` routes remain registered (CSRF + access-guard gated) so hosts and
+automations keep a stable HTTP surface, but their GET forms are gone and nothing in
+the UI links them.
 
 Everything in the ✅ columns goes through the **existing service layer**
 (`sonaloop.services`) — the web routes never touch the `Store` for writes, so
@@ -42,9 +50,10 @@ delete** only; creation stays with the agent.
 
 Every mutating route follows one shape:
 
-1. `GET /thing/new` or `/thing/{id}/edit` renders a plain HTML form
-   (`form_page`/`field`, design-system `.sl-field` markup, no JS required).
-2. `POST` to the same URL runs `write_gate(form, operation, resource)`:
+1. `GET /thing/{id}/edit` renders a plain HTML form (`form_page`/`field`,
+   design-system `.sl-field` markup, no JS required). Create endpoints are
+   POST-only — no GET form (the affordance policy above).
+2. `POST` runs `write_gate(form, operation, resource)`:
    - **CSRF** check first (403 on failure),
    - then the **cloud access-guard seam** (403 on `PermissionError`).
 3. Server-side validation; on failure the SAME form re-renders with inline
@@ -53,10 +62,14 @@ Every mutating route follows one shape:
    (POST-redirect-GET — a refresh never re-submits).
 5. Unknown ids answer HTTP **404** (the calm empty-state page).
 
-Destructive actions live in one consistent **danger zone** (red-bordered block).
-Projects and personas use a typed-confirmation modal (a native `<dialog>`; the
-server re-checks `confirm == name` — the JS is convenience, not protection).
-The other entities use a one-click delete form with a JS `confirm()`.
+Deletion is **subtle, never a danger zone** (UX U9): every surface that can
+delete carries a quiet overflow ("…") button in its detail/edit page header
+(`overflow_delete`, a keyboard-accessible `<details>` popover) whose single
+action opens a confirm `<dialog>`. Projects and personas keep the
+typed-confirmation field there (the server re-checks `confirm == name` — the
+JS is convenience, not protection); the other entities confirm in the same
+modal without typing. One pattern across project / persona / note / section /
+council / synthesis / prototype.
 
 ### CSRF: double-submit cookie
 
