@@ -41,10 +41,11 @@ def tour_steps() -> list[dict]:
     return [
         {"sel": '.sl-nav a[href="/projects"]', "title": t("tour_projects_h"), "body": t("tour_projects_d")},
         {"sel": '.sl-nav a[href="/personas"]', "title": t("tour_personas_h"), "body": t("tour_personas_d")},
-        {"sel": '.sl-nav a[href="/councils"]', "title": t("tour_councils_h"), "body": t("tour_councils_d")},
-        {"sel": '.sl-nav a[href="/syntheses"]', "title": t("tour_syntheses_h"), "body": t("tour_syntheses_d")},
+        {"sel": '.sl-nav a[href="/library"]', "title": t("tour_library_h"), "body": t("tour_library_d")},
+        {"sel": '.sl-nav a[href="/activity"]', "title": t("tour_activity_h"), "body": t("tour_activity_d")},
         {"sel": ".sl-cmdk-trigger", "title": t("tour_cmdk_h"), "body": t("tour_cmdk_d")},
-        {"sel": '.sl-nav a[href="/documentation"]', "title": t("tour_docs_h"), "body": t("tour_docs_d")},
+        # Documentation/Feedback live in the settings footer cluster now (ux-contract §3.5).
+        {"sel": ".sl-um-trigger", "title": t("tour_docs_h"), "body": t("tour_docs_d")},
     ]
 
 

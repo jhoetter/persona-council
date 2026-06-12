@@ -282,9 +282,12 @@ def test_hypothesis_is_a_resolvable_ref_kind(store):
     assert artifacts.resolve_ref({"kind": "hypothesis", "id": "hyp_missing"}, store)["exists"] is False
 
 
-# --------------------------------------------------------------- inspector: the project-page section
+# ----------------------------------------------- inspector: project rows + the hypothesis peek
 
-def test_project_page_shows_open_bets_resolved_and_hit_rate(store):
+def test_project_page_rows_and_hypothesis_peek(store):
+    """UX P2 (spec/ux-contract.md §3.4, decision §7.1): a hypothesis is an outline ROW like
+    everything else (status pill, anchor); its predicted-vs-observed essence lives in the
+    /peek/hypothesis/{id} drawer fragment; the Ref route keeps deep-linking into the row."""
     from starlette.testclient import TestClient
     from sonaloop import web
     from sonaloop.web._i18n import STRINGS
@@ -299,22 +302,27 @@ def test_project_page_shows_open_bets_resolved_and_hit_rate(store):
                                       note="close enough", store=store)
     client = TestClient(web.create_app())
     html = client.get(f'/projects/{proj["id"]}?lang=en').text
-    assert STRINGS["en"]["hypotheses_h"] in html
-    assert STRINGS["en"]["hyp_open_bets"] in html and STRINGS["en"]["hyp_resolved"] in html
+    assert html.count('data-rkind="hypothesis"') == 2    # both bets are rows
     assert open_bet["text"] in html and resolved["text"] in html
-    # predicted vs observed per row + the hit-rate strip over resolved bets only
-    assert STRINGS["en"]["hyp_predicted"] in html and STRINGS["en"]["hyp_observed"] in html
-    assert "38" in html and STRINGS["en"]["hyp_hit_rate"] in html
+    assert STRINGS["en"]["hyp_status_open"] in html      # lifecycle pills on the rows
     assert STRINGS["en"]["hyp_status_validated"] in html
-    assert f'/councils/{council["id"]}' in html              # derived-from chip via render_ref
-    # the Ref route deep-links back into the project page section
+    assert f'id="hyp-{resolved["id"]}"' in html          # the row IS the anchor target
+    assert f'data-drawer="/peek/hypothesis/{resolved["id"]}"' in html
+    # the peek carries the essence: predicted vs observed + the derived-from chip
+    peek = client.get(f'/peek/hypothesis/{resolved["id"]}?lang=en').text
+    assert STRINGS["en"]["hyp_predicted"] in peek and STRINGS["en"]["hyp_observed"] in peek
+    assert "38" in peek and "close enough" in peek
+    open_peek = client.get(f'/peek/hypothesis/{open_bet["id"]}?lang=en').text
+    assert f'/councils/{council["id"]}' in open_peek     # derived-from chip via render_ref
+    assert client.get("/peek/hypothesis/nope").status_code == 404
+    # the Ref route deep-links back into the project page row
     r = client.get(f'/hypotheses/{resolved["id"]}', follow_redirects=False)
     assert r.status_code in (302, 307)
     assert r.headers["location"] == f'/projects/{proj["id"]}#hyp-{resolved["id"]}'
     assert STRINGS["en"]["runtime_maybe_cleared"] in client.get("/hypotheses/nope?lang=en").text
-    # a project without hypotheses shows no section (and no empty chrome)
+    # a project without hypotheses shows no hypothesis rows (and no empty chrome)
     other = _project(store, "Quiet study")
-    assert STRINGS["en"]["hyp_open_bets"] not in client.get(f'/projects/{other["id"]}?lang=en').text
+    assert 'data-rkind="hypothesis"' not in client.get(f'/projects/{other["id"]}?lang=en').text
 
 
 # --------------------------------------------------------------- inspector: the cross-project list
@@ -333,8 +341,12 @@ def test_global_hypotheses_list_renders_empty_and_populated(store):
     page = client.get("/hypotheses?lang=en")
     assert page.status_code == 200
     html = page.text
-    assert STRINGS["en"]["hyp_open_bets"] in html and STRINGS["en"]["hyp_resolved"] in html
+    # the URL stays canonical; the content is the LIBRARY with the Hypotheses tab active
+    # (ux-contract §3.5) — lifecycle-pilled rows, the predicted/observed card in the peek
+    assert STRINGS["en"]["library_h"] in html
+    assert STRINGS["en"]["hyp_status_open"] in html and STRINGS["en"]["hyp_status_validated"] in html
     assert open_bet["text"] in html and resolved["text"] in html
+    assert f'data-drawer="/peek/hypothesis/{resolved["id"]}"' in html
     # each row deep-links into ITS project's bets section, named after the project
     assert f'/projects/{pa["id"]}#hyp-{open_bet["id"]}' in html
     assert f'/projects/{pb["id"]}#hyp-{resolved["id"]}' in html

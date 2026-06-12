@@ -1,14 +1,122 @@
-"""Library detail pages: sections, notes, prototypes (spec/roadmap.md R2)."""
+"""The Library — ONE browser over every produced primitive (spec/ux-contract.md §3.5) —
+plus the library detail pages: sections, notes, prototypes (spec/roadmap.md R2).
+
+/library renders `ui.tabs` across the 8 produced kinds; every tab is the SAME shape:
+the kind's existing list read rendered as `ui.primitive_row` rows (deep-link href +
+peek data-drawer) through the shared _list_page shell. The old list routes (/councils,
+/syntheses, /prototypes, /sessions, /surveys, /hypotheses, /decisions, /notes) stay
+registered — their handlers render the library with that tab active, so deep links and
+`next_recommended_tool` hints survive without redirects; the tab links use the
+canonical routes, ?tab= addresses a tab on /library itself. Detail routes unchanged."""
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .sessions import _sessions_section
+from .. import ui
 from .._forms import danger_zone, delete_button_form, edit_button
 from .._render import render_statements
 from ... import artifacts as _artifacts
 
+# (key, canonical route, icon, label, empty-state msg, lead) — labels are lambdas so they
+# resolve per request (i18n, the _nav_seed idiom). Tab order is the methodology arc:
+# debate → synthesis → build → test → measure → bet → decide → note.
+LIBRARY_TABS: tuple = (
+    ("councils", "/councils", "councils",
+     lambda: t("councils"), lambda: t("no_councils"), lambda: t("councils_lead")),
+    ("reports", "/syntheses", "syntheses",
+     lambda: t("syntheses"), lambda: t("no_synthesis"), lambda: t("syntheses_lead")),
+    ("prototypes", "/prototypes", "prototype",
+     lambda: t("prototypes_h"), lambda: t("no_prototypes"), lambda: t("prototypes_lead")),
+    ("sessions", "/sessions", "activity",
+     lambda: t("sessions"), lambda: t("no_sessions"), lambda: t("sessions_lead")),
+    ("surveys", "/surveys", "plan",
+     lambda: t("surveys_h"), lambda: t("no_surveys"), lambda: t("surveys_lead")),
+    ("hypotheses", "/hypotheses", "target",
+     lambda: t("hypotheses_h"), lambda: t("no_hypotheses"), lambda: t("hypotheses_lead")),
+    ("decisions", "/decisions", "flag",
+     lambda: t("decisions_h"), lambda: t("no_decisions"), lambda: t("decisions_lead")),
+    ("notes", "/notes", "panel",
+     lambda: t("notes"), lambda: t("no_notes"), lambda: t("notes_lead")),
+)
+
+
+def _tab_rows(key: str, store: Store, sessions: list | None = None) -> list:
+    """The active tab's rows: the kind's EXISTING list read mapped through the one row
+    vocabulary (ui.primitive_row — §3.2), with the owning project's title as the muted
+    desc line (this is a CROSS-project browser — the row must say where it lives; the
+    library mockup in §4 shows exactly this). Hypotheses/decisions deep-link into their
+    project's outline anchor (their canonical home); everything else to its detail page."""
+    projects = {p["id"]: p["title"] for p in store.list_research_projects()}
+    in_proj = lambda rec: projects.get(rec.get("project_id") or "", "")
+    if key == "councils":
+        return [ui.primitive_row("council", {**c, "mode": services.council_mode(c)}, store,
+                                 href=f'/councils/{c["id"]}', peek_url=f'/peek/council/{c["id"]}',
+                                 desc=in_proj(c))
+                for c in store.list_council_sessions()]
+    if key == "reports":
+        return [ui.primitive_row("synthesis", s, store, href=f'/syntheses/{s["id"]}',
+                                 peek_url=f'/peek/synthesis/{s["id"]}', desc=in_proj(s))
+                for s in store.list_syntheses()]
+    if key == "prototypes":
+        return [ui.primitive_row(
+                    "prototype",
+                    {**p, "n_sessions": len(store.list_prototype_sessions(prototype_id=p["id"]))},
+                    store, href=f'/prototypes/{p["slug"]}', peek_url=f'/peek/prototype/{p["id"]}',
+                    desc=in_proj(p))
+                for p in store.list_prototypes()]
+    if key == "sessions":
+        if sessions is None:
+            sessions = services.list_usability_sessions(store=store)
+        # desc stays the per-kind default: the walked subject says more than the project here.
+        return [ui.primitive_row("session", s, store, href=f'/sessions/{s["id"]}',
+                                 peek_url=f'/peek/session/{s["id"]}')
+                for s in sessions]
+    if key == "surveys":
+        return [ui.primitive_row("survey", s, store, href=f'/surveys/{s["id"]}',
+                                 peek_url=f'/peek/survey/{s["id"]}', desc=in_proj(s))
+                for s in services.list_surveys(store=store)]
+    if key == "hypotheses":
+        return [ui.primitive_row("hypothesis", x, store,
+                                 href=f'/projects/{x["project_id"]}#hyp-{x["id"]}',
+                                 peek_url=f'/peek/hypothesis/{x["id"]}', desc=in_proj(x))
+                for x in services.list_hypotheses(store=store)]
+    if key == "decisions":
+        return [ui.primitive_row("decision", d, store,
+                                 href=f'/projects/{d["project_id"]}#dec-{d["id"]}',
+                                 peek_url=f'/peek/decision/{d["id"]}', desc=in_proj(d))
+                for d in services.list_decisions(store=store)]
+    if key == "notes":
+        return [ui.primitive_row("note", n, store, href=f'/notes/{n["id"]}',
+                                 peek_url=f'/peek/note/{n["id"]}', desc=proj["title"])
+                for proj in store.list_research_projects()
+                for n in services.list_notes(proj["id"], store=store)]
+    return []
+
+
+def library_page(tab: str = "councils", store: Store | None = None, *,
+                 sessions: list | None = None, pre_extra: str = "") -> str:
+    """The one Library browser. `sessions` lets the /sessions route keep its honest
+    project/subject query filters; `pre_extra` carries a tab's extra read (the sessions
+    funnel, the hypotheses hit-rate strip) between the tab bar and the rows."""
+    store = store or Store()
+    keys = [k for k, *_ in LIBRARY_TABS]
+    if tab not in keys:
+        tab = keys[0]
+    tabs_html = ui.tabs([{"key": k, "label": label(), "href": route}
+                         for k, route, _icon_, label, _e, _l in LIBRARY_TABS], tab)
+    _k, _route, icon, _label, empty_msg, lead = next(
+        row for row in LIBRARY_TABS if row[0] == tab)
+    rows = _tab_rows(tab, store, sessions=sessions)
+    return _list_page(store, title=t("library_h"), lead=lead(), rows=rows,
+                      empty_icon=icon, empty_msg=empty_msg(), active="library",
+                      pre=str(tabs_html) + pre_extra, count=len(rows))
+
 
 def register_library(app) -> None:
+    @app.get("/library", response_class=HTMLResponse)
+    def library(tab: str = Query(default="councils")) -> str:
+        return library_page(tab)
+
     @app.get("/sections/{section_id}", response_class=HTMLResponse)
     def section_view(section_id: str) -> str:
         store = Store()
@@ -50,7 +158,7 @@ def register_library(app) -> None:
         klabel = t("notes_h")                                          # ONE note entity (concepts merged in)
         ntitle = note.get("title") or klabel
         return detail_page(
-            store, title=ntitle, active="note",
+            store, title=ntitle, active="library",
             crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (ntitle, None)],
             icon="panel", sub=klabel, hid="sec-content",
             body=h("div", {"class_": "sl-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))),
@@ -119,7 +227,7 @@ def register_library(app) -> None:
         n_grounded = sum(1 for s in sessions if s.get("grounded_verified"))
         proj_link = (h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else "—")
         return detail_page(
-            store, title=p["name"], active="prototype", crumbs=crumbs,
+            store, title=p["name"], active="library", crumbs=crumbs,
             hero=_hero(proto_title, icon="prototype", sub=f'{p.get("version","")} · {slug}'), body=body,
             prop_rows=[("square", t("fidelity"), _ap.get("disc") or _ap.get("label") or ""),
                        ("personas", t("sessions"), str(len(sessions))),

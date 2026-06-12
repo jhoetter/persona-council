@@ -73,8 +73,11 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .rgphase-sub{fill:var(--muted);font-size:var(--t-xs)}
 .rground-sep{stroke:var(--line);stroke-width:1;stroke-dasharray:3 7;opacity:.7}
 .rground-label{fill:var(--muted);font-size:var(--t-sm);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-/* Linear-style project OUTLINE (primary view) — grouped, collapsible, never overlaps */
-.outlinecard{flex:1;overflow:auto;padding:8px 0 40px}
+/* Linear-style project OUTLINE (primary view) — phase-grouped, collapsible, never overlaps.
+   flex:1 0 auto: the outline GROWS to fill a sparse first screen but NEVER shrinks below its
+   content — the page (.proj) scrolls as one document. Since UX P2 the outline IS the whole
+   page (every primitive is a row in its phase group; the appendix sections retired). */
+.outlinecard{flex:1 0 auto;padding:8px 0 40px}
 .outline{max-width:900px;margin:0 auto;padding:0 24px}
 .ol-phase{border-bottom:1px solid var(--line-2)}
 .ol-phase>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:13px 6px;font-size:var(--t-body);position:sticky;top:0;background:var(--bg);z-index:1}
@@ -85,6 +88,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .olrow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius-sm);color:var(--ink);text-decoration:none;font-size:var(--t-body)}
 .olrow:hover{background:var(--hover)}
 .ol-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+/* per-kind leading icon (§3.2 row atom) — same slot as the dot, tinted per kind */
+.ol-ico{display:inline-flex;align-items:center;justify-content:center;width:16px;flex-shrink:0}
+.ol-ico svg{width:15px;height:15px}
+.ol-thumb{width:18px;height:18px;object-fit:cover;border-radius:4px;display:block}
 .olrow .ol-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .olrow .ol-kind{color:var(--muted);font-size:var(--t-xs);flex-shrink:0;white-space:nowrap;border:1px solid var(--line);border-radius:var(--radius-full);padding:1px 9px;background:var(--panel-2)}
 .olrow .ol-crew{display:inline-flex;align-items:center;flex-shrink:0}
@@ -132,7 +139,7 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .pt-evs .ev{font-size:var(--t-xs);color:var(--muted);background:var(--panel-2);border:1px solid var(--line);padding:1px 8px;border-radius:var(--radius-full);text-decoration:none;white-space:nowrap}
 .pt-evs a.ev:hover{color:var(--accent);border-color:var(--accent)}
 .ol-rcap{font-size:var(--t-body);font-weight:400;color:var(--muted);margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ol-ptag{flex-shrink:0;width:74px;font-size:var(--t-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
+.ol-ptag{flex-shrink:0;width:86px;font-size:var(--t-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ol-flat{padding-top:4px}
 .olrow.ol-tw{position:relative}
 /* Continuous tree spine: ::before is ONE straight vertical (full height for a middle child so it joins
@@ -156,11 +163,10 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
    above the fold (tracker: outline-drops-study-nodes-on-plan-less-projects); a full outline
    still fills the viewport. */
 .outlinecard.ol-compact{flex:0 1 auto}
-.proj:has(.outlinecard.ol-compact){overflow-y:auto}
-/* hypotheses/decisions remain sections for now (pending their own outline-row treatment) but read
-   WITH the page, not as bolt-ons: the outline's centered measure + the quiet .sec heading idiom. */
-#hypotheses,#decisions{flex:none;width:100%;max-width:900px;margin:14px auto 0;padding:8px 24px 24px}
-#hypotheses>h2,#decisions>h2{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+/* Long authored bodies (decision records) clamp via the shared .sl-clamp/.sl-clamp-toggle
+   contract (COMPONENTS_CSS, ui.clamp) — the P0 app-local .clamp rules graduated there.
+   The P0 bridge section classes + header jump chips retired with UX P2: every kind is an
+   outline row in its phase group now (spec/ux-contract.md §3.4). */
 /* relationship hover-highlight (replaces graph edges): related rows light up, the rest dim */
 .outline .olrow{transition:opacity .12s,background .12s}
 .outline .olrow.rel{background:var(--accent-weak)}
@@ -224,7 +230,7 @@ section{padding:26px 30px;overflow:auto;scroll-behavior:smooth}
 .page.wide{max-width:none}
 /* Project detail = full-bleed graph hero */
 .sl-main>section:has(.proj){flex:1;min-height:0;padding:0;display:flex;flex-direction:column;overflow:hidden}
-.proj{flex:1;min-height:0;display:flex;flex-direction:column}
+.proj{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto}
 .proj-head{flex-shrink:0;width:100%;max-width:900px;margin:0 auto;padding:22px 24px 12px}
 .proj-head .stats{margin:0 0 14px}
 .proj-head .ptoolbar{margin:0}
@@ -291,7 +297,7 @@ details.sec[open]>summary::before,details.block[open]>summary.bh::before{transfo
 .rec:last-child{border-bottom:0}.rec .sl-prose,.rec p{max-width:none}
 .prio{display:inline-block;font-size:var(--t-xs);font-weight:700;letter-spacing:.03em;color:#fff;border-radius:var(--radius-sm);padding:3px 7px;text-align:center;white-space:nowrap}
 .prio-1{background:#b3493f}.prio-2{background:#a66b1f}.prio-3{background:#2f6f9f}.prio-4{background:#3d7b5f}.prio-5{background:#6d7378}
-.srcchip{display:inline-block;font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 6px;margin-left:6px;background:var(--panel-2);white-space:nowrap}
+.srcchip{display:inline-block;font-size:var(--t-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 6px;margin-left:6px;background:var(--panel-2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 a.srcchip{text-decoration:none}a.srcchip:hover{border-color:var(--accent);color:var(--ink)}
 .xref .xref-role{opacity:.7;font-variant:all-small-caps;letter-spacing:.02em}
 .xref-broken{border-style:dashed;color:var(--red);opacity:.75}

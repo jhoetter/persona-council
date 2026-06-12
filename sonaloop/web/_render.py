@@ -8,8 +8,25 @@ from __future__ import annotations
 
 from .. import artifacts as _A
 from ._i18n import t
-from ._html import h, raw, fragment
+from ._html import h, raw, fragment, register_css
 from ._components import _prose, _avatar, _label, _icon
+
+# Co-located CSS for the §3.6 dosing affordances this renderer emits: collapsible prompt
+# rounds (the banner doubles as the <summary>) and expandable verbatim quotes on a statement.
+register_css(r"""
+details.qround>summary{position:relative;list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:10px}
+details.qround>summary::-webkit-details-marker{display:none}
+details.qround>summary .qround-q{padding-right:64px}
+.qround-cnt{position:absolute;right:14px;top:12px;color:var(--accent);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 9px;font-size:var(--t-xs);font-weight:600}
+details.qround>summary:hover .qround-q{border-color:var(--accent)}
+.turn-quotes{margin:8px 0 0}
+.turn-quotes>summary{cursor:pointer;list-style:none}
+.turn-quotes>summary::-webkit-details-marker{display:none}
+.turn-quotes>summary::before{content:"▸ "}
+.turn-quotes[open]>summary::before{content:"▾ "}
+.turn-quote{margin:8px 0 0;padding:6px 12px;border-left:2px solid var(--line-2);font-size:var(--t-sm);color:var(--muted)}
+.turn-quote p{margin:0 0 3px;font-style:italic}
+""")
 
 
 def render_stance(st: dict | None) -> str:
@@ -76,10 +93,24 @@ def _backlinks_line(st: dict, backlinks) -> str:
     return h("p", {"class_": "muted small turn-refs"}, t("cited_by"), ": ", fragment(*chips))
 
 
-def _statement_body(st: dict, store=None, backlinks=None) -> str:
+def _quotes_details(refs: list, store=None) -> str:
+    """Grounding refs that carry verbatim QUOTES, dosed as an expandable list (ux-contract §3.6):
+    a quiet summary with the count, each quote as a small blockquote with its source chip. Refs
+    without a quote keep the plain chip line (the caller appends it)."""
+    return h("details", {"class_": "turn-quotes"},
+             h("summary", {"class_": "muted small"}, t("n_quotes", n=len(refs))),
+             fragment(*(h("blockquote", {"class_": "turn-quote"},
+                          h("p", {}, f"„{r['quote']}“"), raw(render_ref(r, store)))
+                        for r in refs)))
+
+
+def _statement_body(st: dict, store=None, backlinks=None, *, clamp_at: int | None = None,
+                    expand_quotes: bool = False) -> str:
     """One utterance's body: optional focus line, input snapshot, the prose, pushback, shift, refs, and
     the reverse cross-refs ('cited by'). The wrapper carries id=<part-id> so other artifacts can
-    deep-link to this exact statement."""
+    deep-link to this exact statement. `clamp_at` doses a long turn through ui.clamp (§3.6);
+    `expand_quotes` renders quote-bearing refs as an expandable quote list instead of bare chips."""
+    from . import ui
     meta = st.get("meta") or {}
     focus = h("p", {"class_": "muted small", "style": "font-style:italic;margin:0 0 4px"}, meta["focus"]) if meta.get("focus") else None
     given = h("details", {"class_": "turn-input"},
@@ -93,12 +124,21 @@ def _statement_body(st: dict, store=None, backlinks=None) -> str:
     attrs = {"class_": "turn-ans"}
     if st.get("id"):
         attrs["id"] = st["id"]
-    return h("div", attrs, focus, given, h("p", {}, raw(_prose(st.get("text", "")))),
-             pushback, shift_html, raw(_refs_line(st.get("refs") or [], t("council_drew_on"), store)),
+    prose_html = raw(_prose(st.get("text", "")))
+    text_html = (ui.clamp(prose_html, threshold=clamp_at) if clamp_at
+                 else h("p", {}, prose_html))
+    refs = st.get("refs") or []
+    quoted = [r for r in refs if r.get("quote")] if expand_quotes else []
+    plain = [r for r in refs if r not in quoted]
+    return h("div", attrs, focus, given, text_html,
+             pushback, shift_html,
+             raw(_quotes_details(quoted, store)) if quoted else None,
+             raw(_refs_line(plain, t("council_drew_on"), store)),
              raw(_backlinks_line(st, backlinks)))
 
 
-def _persona_card(sts: list, store, *, head_extra=None, backlinks=None, show_persona=True) -> str:
+def _persona_card(sts: list, store, *, head_extra=None, backlinks=None, show_persona=True,
+                  clamp_at: int | None = None, expand_quotes: bool = False) -> str:
     """The ONE .turn statement card — a persona's avatar + name + stance + life-context, then one or more
     utterance bodies (a persona answering several questions merges into a single card, not repeated heads).
     `show_persona=False` drops the avatar/name/life-context — used on the persona's OWN page where the
@@ -127,13 +167,16 @@ def _persona_card(sts: list, store, *, head_extra=None, backlinks=None, show_per
     rel_html = h("span", {"class_": "muted small"}, f" · {rel}") if rel else None
     head = h("div", {"class_": "hd"}, who, (" " if who else ""), stance_chip, grounded_chip, head_extra, rel_html, ctx_html)
     return h("div", {"class_": "turn" + ("" if show_persona else " turn-bare")},
-             head, fragment(*(_statement_body(s, store, backlinks) for s in sts)))
+             head, fragment(*(_statement_body(s, store, backlinks, clamp_at=clamp_at,
+                                              expand_quotes=expand_quotes) for s in sts)))
 
 
-def render_statement(st: dict, store, *, head_extra=None, show_persona=True) -> str:
+def render_statement(st: dict, store, *, head_extra=None, show_persona=True,
+                     clamp_at: int | None = None, expand_quotes: bool = False) -> str:
     """A single persona statement → the .turn card (used by prototype sessions). `head_extra` is an extra
     header chip (e.g. a session's grounded badge); `show_persona=False` drops the persona header."""
-    return _persona_card([st], store, head_extra=head_extra, show_persona=show_persona)
+    return _persona_card([st], store, head_extra=head_extra, show_persona=show_persona,
+                         clamp_at=clamp_at, expand_quotes=expand_quotes)
 
 
 def _by_persona(items: list) -> list:
@@ -147,12 +190,29 @@ def _by_persona(items: list) -> list:
 
 
 def render_statements(items: list, store, *, group_by: str = "persona", prompts: list | None = None,
-                      backlinks=None) -> str:
+                      backlinks=None, clamp_at: int | None = None, expand_quotes: bool = False,
+                      collapsible: bool = False) -> str:
     """Render statements as the SAME .turn cards. group_by='prompt' → a moderated transcript (a question
     header from `prompts` + the statements answering it via Statement.about.id, grouped per persona);
     group_by='persona' → a flat list of per-persona cards. `backlinks` ({part_id: [referrers]}) adds the
-    reverse 'cited by' cross-references under each statement."""
+    reverse 'cited by' cross-references under each statement. `clamp_at`/`expand_quotes` dose long turn
+    prose / quote-bearing refs (§3.6); `collapsible` renders each prompt round as a <details> group
+    (open, like the outline's ol-phase idiom) so a long transcript collapses per round."""
     items = [s for s in items if s]
+
+    def cards(group):
+        return fragment(*(_persona_card(g, store, backlinks=backlinks, clamp_at=clamp_at,
+                                        expand_quotes=expand_quotes) for g in _by_persona(group)))
+
+    def round_group(header, group):
+        answers = h("div", {"class_": "qround-a"}, cards(group))
+        if collapsible:
+            return h("details", {"class_": "qround", "open": True},
+                     h("summary", {}, raw(header),
+                       h("span", {"class_": "qround-cnt"}, str(len({s.get("persona_id") for s in group})))),
+                     answers)
+        return h("div", {"class_": "qround"}, raw(header), answers)
+
     if group_by == "prompt" and prompts:
         ids = {p.get("id") for p in prompts}
         single = len(prompts) == 1                     # one prompt (synthesis study-question / session focus)
@@ -161,17 +221,14 @@ def render_statements(items: list, store, *, group_by: str = "persona", prompts:
             qs = items if single else [s for s in items if (s.get("about") or {}).get("id") == p.get("id")]
             if not qs:
                 continue
-            rounds.append(h("div", {"class_": "qround"}, raw(render_prompt(p, n=(None if single else n))),
-                            h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store, backlinks=backlinks) for g in _by_persona(qs))))))
+            rounds.append(round_group(render_prompt(p, n=(None if single else n)), qs))
         rest = [] if single else [s for s in items if (s.get("about") or {}).get("id") not in ids]
         if rest:
-            rounds.append(h("div", {"class_": "qround"},
-                            h("div", {"class_": "qround-q"}, raw(_icon("bulb")),
-                              h("div", {}, h("div", {"class_": "qround-n"}, t("further_answers")))),
-                            h("div", {"class_": "qround-a"}, fragment(*(_persona_card(g, store, backlinks=backlinks) for g in _by_persona(rest))))))
+            rounds.append(round_group(h("div", {"class_": "qround-q"}, raw(_icon("bulb")),
+                                        h("div", {}, h("div", {"class_": "qround-n"}, t("further_answers")))),
+                                      rest))
         return h("div", {"class_": "qrounds"}, fragment(*rounds))
-    return h("div", {"style": "display:flex;flex-direction:column;gap:10px"},
-             fragment(*(_persona_card(g, store, backlinks=backlinks) for g in _by_persona(items))))
+    return h("div", {"style": "display:flex;flex-direction:column;gap:10px"}, cards(items))
 
 
 def render_finding(f: dict, *, n: int | None = None, store=None) -> str:

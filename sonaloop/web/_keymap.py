@@ -37,6 +37,7 @@ BINDINGS: list[dict] = [
      "action": {"hook": "palette"}},
     {"keys": "g h", "scope": "global", "desc": lambda: t("kbd_go_home"), "action": {"nav": "/"}},
     {"keys": "g p", "scope": "global", "desc": lambda: t("kbd_go_personas"), "action": {"nav": "/personas"}},
+    {"keys": "g l", "scope": "global", "desc": lambda: t("kbd_go_library"), "action": {"nav": "/library"}},
     {"keys": "g c", "scope": "global", "desc": lambda: t("kbd_go_councils"), "action": {"nav": "/councils"}},
     {"keys": "g s", "scope": "global", "desc": lambda: t("kbd_go_syntheses"), "action": {"nav": "/syntheses"}},
     {"keys": "g a", "scope": "global", "desc": lambda: t("kbd_go_activity"), "action": {"nav": "/activity"}},
@@ -137,8 +138,8 @@ KEYMAP_CSS = r"""
 .km-d{flex:1;min-width:0}
 .km-keys{display:inline-flex;gap:4px;flex:none}
 .km-keys kbd{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 6px;font-size:var(--t-xs);color:var(--ink);min-width:18px;text-align:center}
-/* the j/k row focus on list pages — visible, distinct from hover */
-.row.kfocus{background:var(--hover);box-shadow:inset 2px 0 0 var(--accent)}
+/* the j/k row focus on list pages + the project outline — visible, distinct from hover */
+.row.kfocus,.olrow.kfocus,.sl-entity.kfocus{background:var(--hover);box-shadow:inset 2px 0 0 var(--accent)}
 /* the sidebar's discovery hint */
 .sl-kbd-hint{display:flex;align-items:center;gap:7px;width:100%;border:0;background:none;cursor:pointer;color:var(--faint);font-size:var(--t-xs);padding:7px 14px;text-align:left}
 .sl-kbd-hint:hover{color:var(--muted)}
@@ -169,7 +170,8 @@ function closeOv(){ ov.hidden=true; }
 function typing(e){ var el=e.target, tag=(el.tagName||'').toLowerCase();
   return tag==='input'||tag==='textarea'||tag==='select'||el.isContentEditable; }
 function rows(){ var c=document.querySelector('[data-keynav]');
-  return c?[].slice.call(c.querySelectorAll('a.row')):[]; }
+  // list rows (a.row), outline rows (.olrow) and entity rows (.sl-entity) share the walk (C7)
+  return c?[].slice.call(c.querySelectorAll('a.row,.olrow,.sl-entity')):[]; }
 var ri=-1;
 document.addEventListener('spa:load',function(){ ri=-1; });
 function focusRow(d){ var rs=rows(); if(!rs.length) return;
@@ -182,7 +184,10 @@ function run(b){ var a=b.action||{};
     case 'cheatsheet': if(ov.hidden) openOv(); else closeOv(); return true;
     case 'list-next': focusRow(1); return true;
     case 'list-prev': focusRow(-1); return true;
-    case 'list-open': var rs=rows(); if(ri>=0&&rs[ri]){ rs[ri].click(); return true; } return false;
+    case 'list-open': var rs=rows(); if(ri>=0&&rs[ri]){
+      // Enter opens the focused row: its peek (data-drawer) or its href — a funnel-chip row's
+      // main target is the stretched overlay link, so click that when present.
+      var el=rs[ri].querySelector('.ol-stretch')||rs[ri]; el.click(); return true; } return false;
     case 'sib-prev': case 'sib-next':
       var s=document.getElementById('km-siblings'); if(!s) return false;   // no siblings: skip gracefully
       var u=s.getAttribute(a.hook==='sib-prev'?'data-prev':'data-next');

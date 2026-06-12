@@ -10,7 +10,6 @@ from pathlib import Path
 from fastapi.responses import FileResponse, Response
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
-from .._components import _hifi
 from .._render import render_statements
 from .._synthesis import _stacked, _legend
 from .._html import register_css
@@ -276,26 +275,18 @@ def register_sessions(app) -> None:
     def sessions_list(project: str | None = Query(default=None),
                       subject_kind: str | None = Query(default=None),
                       subject: str | None = Query(default=None)) -> str:
+        """The Library's Sessions tab under the canonical URL (ux-contract §3.5) — the
+        honest project/subject query filters stay, and a subject filter with ≥2 recorded
+        walks keeps earning its cross-session funnel above the rows."""
+        from .library import library_page
         store = Store()
         subj = ({"kind": subject_kind, "id": subject} if (subject_kind and subject)
                 else subject or None)
         sessions = services.list_usability_sessions(project_id=project, subject=subj, store=store)
-        # The cross-session read: a subject filter with ≥2 recorded walks earns its funnel above the
-        # rows (per-step entered/continued/dropped with the drop reasons).
         funnel_html = ""
         if subject_kind and subject and len(sessions) >= 2:
             funnel_html = _funnel_html(services.get_session_funnel(subject_kind, subject, store=store))
-        rows = [_session_row(s, store) for s in sessions]
-        rows_html = (raw("".join(str(r) for r in rows)) if rows else
-                     h("div", {"class_": "sl-empty"},
-                       h("div", {"class_": "sl-empty__icon"}, raw(_hifi("activity", 44))),
-                       h("p", {"class_": "sl-empty__body"}, t("no_sessions"))))
-        cnt = h("span", {"class_": "h1cnt"}, str(len(rows))) if rows else ""
-        body = h("div", {"class_": "page"}, h("h1", {"class_": "h1"}, t("sessions"), cnt),
-                 h("p", {"class_": "lead"}, t("sessions_lead")), raw(funnel_html),
-                 # data-keynav: the keymap's j/k row-focus hook (web/_keymap.py)
-                 h("div", {"class_": "rows", "data-keynav": True}, rows_html))
-        return _layout(t("sessions"), body, store, crumbs=[(t("sessions"), None)], active="sessions")
+        return library_page("sessions", store, sessions=sessions, pre_extra=funnel_html)
 
     @app.get("/sessions/{session_id}", response_class=HTMLResponse)
     def session_detail(session_id: str) -> str:
@@ -304,7 +295,7 @@ def register_sessions(app) -> None:
         if not sess:
             return _layout(t("not_found"),
                            _empty_state(t("session_not_found"), t("runtime_maybe_cleared"), icon="activity"),
-                           store, active="sessions")
+                           store, active="library")
         subject = sess.get("subject") or {}
         title = subject.get("label") or session_id
         caps = sess.get("capabilities_snapshot") or {}
@@ -340,7 +331,9 @@ def register_sessions(app) -> None:
             ("compass", t("subject_h"), _subject_link(store, subject)),
             ("plan", t("steps_h"), str(len(steps))),
             ("projects", t("project"), h("a", {"href": f'/projects/{proj["id"]}'}, proj["title"]) if proj else ""),
-            ("check", t("grounded_yes") if grounded else t("grounded_no"),
+            # static "Grounding" label — the old code repeated the value as its own label
+            # ("grounded → grounded", ux-audit P5 finding).
+            ("check", t("grounding_h"),
              raw(_label(t("grounded_yes") if grounded else t("grounded_no"),
                         "var(--green)" if grounded else "var(--muted)")) if grounded is not None else ""),
             ("dot", t("created"), (sess.get("created_at") or "")[:10]),
@@ -349,7 +342,7 @@ def register_sessions(app) -> None:
                          + [("sec-replay", t("replay_h"))]
                          + ([("sec-statements", t("voices"))] if statements_html else []))
         return detail_page(
-            store, title=_display_title(title), active="sessions", crumbs=crumbs,
+            store, title=_display_title(title), active="library", crumbs=crumbs,
             hero=_hero(title, icon="activity", sub=sub, hid="sec-head"), body=body,
             prop_rows=prop_rows, rel_proj_id=sess.get("project_id") or None,
             rail_sections=rail_sections,

@@ -163,12 +163,20 @@ def search_rows(q: str, store: Store | None = None, limit: int = 20) -> list[dic
 
 def nav_commands() -> list[dict[str, str]]:
     """Every registered nav item (core seeds AND extension registrations — the nav
-    registry is the source of truth) as a palette jump command, plus the chrome
-    surfaces without a route: the ? cheat sheet (web/_keymap.py opens the overlay on
-    #shortcuts) and the settings popover (web/_palette.py opens it on #settings)."""
+    registry is the source of truth) as a palette jump command, plus the surfaces the
+    4-item sidebar deliberately does NOT carry (ux-contract §3.5) but that stay one
+    keystroke away: the Library tabs under their canonical routes, the /runs journal
+    and the documentation hub — and the chrome overlays without a route: the ? cheat
+    sheet (web/_keymap.py opens the overlay on #shortcuts) and the settings popover
+    (web/_palette.py opens it on #settings)."""
     from ._ext import nav_model, resolve_label
+    from .pages.library import LIBRARY_TABS   # late: pages import web modules, not vice versa
     cmds = [{"title": resolve_label(it["label"]), "url": it["href"], "type": "go"}
             for _sec, items in nav_model() for it in items]
+    cmds += [{"title": label(), "url": route, "type": "go"}
+             for _k, route, _i, label, _e, _l in LIBRARY_TABS]
+    cmds.append({"title": t("runs_h"), "url": "/runs", "type": "go"})
+    cmds.append({"title": t("documentation"), "url": "/documentation", "type": "go"})
     cmds.append({"title": t("kbd_cheatsheet_h"), "url": "#shortcuts", "type": "go"})
     cmds.append({"title": t("settings"), "url": "#settings", "type": "go"})
     return cmds

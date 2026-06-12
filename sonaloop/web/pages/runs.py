@@ -23,7 +23,7 @@ from typing import Any, Callable
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._html import register_css
-from .._runs_widget import collect_run_states
+from .._runs_widget import collect_run_states, resume_html
 
 # ---------------------------------------------------------------- extension seam
 
@@ -61,22 +61,6 @@ def _meta_line(r: dict) -> str:
              if r["next_ready"] else None)
 
 
-def _resume_html(note: str) -> str:
-    """The stalled row's resume affordance: the run-state note verbatim, with its
-    `start_run(...)` call rendered as a copyable snippet (one click → clipboard)."""
-    if "resume with " in note:
-        prefix, snippet = note.rsplit("resume with ", 1)
-        prefix += "resume with"
-    else:
-        prefix, snippet = note, ""
-    return h("div", {"class_": "run-resume"},
-             h("span", {"class_": "muted small"}, prefix),
-             fragment(h("code", {}, snippet),
-                      h("button", {"type": "button", "class_": "run-copy", "data-copy": snippet,
-                                   "data-copied": t("copied")}, t("copy_btn")))
-             if snippet else None)
-
-
 def _run_row(r: dict, *, stalled: bool = False) -> str:
     return h("div", {"class_": "runrow" + (" runrow-stalled" if stalled else "")},
              h("div", {"class_": "runrow-head"},
@@ -84,7 +68,7 @@ def _run_row(r: dict, *, stalled: bool = False) -> str:
                _label(t("stalled"), "var(--amber)") if stalled else
                _label(t("runs_active_h"), "var(--green)")),
              _meta_line(r),
-             raw(_resume_html(r["note"])) if stalled and r.get("note") else None)
+             raw(resume_html(r["note"])) if stalled and r.get("note") else None)
 
 
 _RUNS_CSS = register_css(r"""
@@ -104,21 +88,6 @@ _RUNS_CSS = register_css(r"""
 .runs-sec .cnt{color:var(--muted);font-weight:500}
 details.runs-fin summary{cursor:pointer;margin:18px 0 6px;font-size:var(--t-md);font-weight:600;color:var(--muted)}
 """)
-
-# Copy-to-clipboard for the resume snippets. Delegated + window-guarded: the SPA
-# re-executes page scripts on every visit, so a bare listener would stack.
-_COPY_JS = """<script>(function(){
-if(window.__slRunCopy) return; window.__slRunCopy=1;
-document.addEventListener('click',function(e){
-  var b=e.target.closest&&e.target.closest('[data-copy]'); if(!b) return;
-  var txt=b.getAttribute('data-copy'), done=b.getAttribute('data-copied')||'';
-  function ok(){ var old=b.textContent; b.textContent=done; setTimeout(function(){ b.textContent=old; },1400); }
-  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok); }
-  else{ var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
-        ta.select(); try{ document.execCommand('copy'); ok(); }catch(_){ } document.body.removeChild(ta); }
-});
-})();</script>"""
-
 
 def _section(label: str, rows: list) -> str:
     if not rows:
@@ -147,11 +116,14 @@ def register_runs(app) -> None:
             core = fragment(
                 raw(_section(t("runs_stalled_h"), stalled)),   # stalled first: the loud lane
                 raw(_section(t("runs_active_h"), active)),
-                h("details", {"class_": "runs-fin"},
+                # When nothing is stalled or active, the finished journal IS the page — render
+                # it open instead of greeting the reader with one collapsed chevron (ux-audit P5).
+                h("details", {"class_": "runs-fin", "open": True if not (stalled or active) else None},
                   h("summary", {}, f'{t("runs_finished_h")} ({len(finished)})'),
                   fragment(*finished)) if finished else None)
+        # (the data-copy clipboard handler ships with the chrome — RUNS_WIDGET_JS)
         body = h("div", {"class_": "page"},
                  h("h1", {"class_": "h1"}, t("runs_h")),
                  h("p", {"class_": "lead"}, t("runs_lead")),
-                 core, raw(_extension_sections(store)), raw(_COPY_JS))
+                 core, raw(_extension_sections(store)))
         return _layout(t("runs_h"), body, store, crumbs=[(t("runs_h"), None)], active="runs")

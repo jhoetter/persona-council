@@ -64,8 +64,6 @@ def _hifi(name: str, size: int = 44) -> str:
 register_css(_ICON_ANIM_CSS)
 
 
-_AV_COLORS = ["#3d7b5f", "#2f6f9f", "#a66b1f", "#7a5ea6", "#b3493f", "#4a7d7d", "#5a6b8a"]
-
 # Sonaloop-mark favicon — the brand loop + nodes (same geometry as the `sonaloop` icon),
 # indigo and theme-aware, inlined as a data-URI so the tab icon needs no static route.
 _FAVICON_SVG = (
@@ -88,15 +86,7 @@ _FAVICON_SVG = (
 _FAVICON_HREF = "data:image/svg+xml," + _urlquote(_FAVICON_SVG, safe="")
 
 
-def _avatar(p: dict, size: int = 36) -> str:
-    if (p.get("avatar") or {}).get("path"):
-        return h("img", {"class_": "sl-avatar", "style": f"width:{size}px;height:{size}px",
-                         "src": f'/{p["avatar"]["path"]}', "alt": ""})
-    name = p.get("display_name", "?")
-    ini = "".join(w[0] for w in name.split()[:2]).upper() or "?"
-    c = _AV_COLORS[sum(map(ord, p.get("id", "x"))) % len(_AV_COLORS)]
-    fs = max(10, size // 3)
-    return h("span", {"class_": "sl-avatar", "style": f"width:{size}px;height:{size}px;background:{c};font-size:{fs}px"}, ini)
+from ._avatar import _avatar, _avatar_src  # noqa: F401,E402  (split out for the LOC bar; re-exported)
 
 
 def _status_color(s: str) -> str:
@@ -271,7 +261,8 @@ SPA_JS = """
 # `.is-open` class (the panel/scrim transition in AND out — see .sl-drawer in COMPONENTS_CSS). The
 # trigger keeps its href as a graceful fallback (deep-linkable full page when JS is off).
 # Only the in-drawer .page reset is app-local; the panel/scrim/header chrome is the shared component.
-DRAWER_CSS = register_css(".sl-drawer__body .page{padding:0;max-width:none}")
+DRAWER_CSS = register_css(".sl-drawer__body .page{padding:0;max-width:none}"
+                          ".sl-drawer__body img{max-width:100%;height:auto}")
 
 DRAWER_MARKUP = (
     '<div class="sl-drawer" id="drawer">'
@@ -303,7 +294,8 @@ DRAWER_JS = """
       if(!r.ok) throw 0; return r.text();
     }).then(function(html){
       var doc=new DOMParser().parseFromString(html, 'text/html');
-      var sec=doc.querySelector('#main section') || doc.getElementById('main');
+      // full pages peek their #main section; the /peek/{kind}/{id} partials are bare fragments
+      var sec=doc.querySelector('#main section') || doc.getElementById('main') || doc.body.firstElementChild;
       body.innerHTML='';
       if(sec){ var imp=document.importNode(sec, true); body.appendChild(imp); runScripts(body); }
       body.scrollTop=0;
@@ -312,7 +304,11 @@ DRAWER_JS = """
   }
   document.addEventListener('click', function(e){
     var t=e.target.closest && e.target.closest('[data-drawer]');
-    if(t){ e.preventDefault(); e.stopPropagation(); open(t.getAttribute('data-drawer'), t.getAttribute('data-drawer-title')||(t.textContent||'').trim(), t); return; }
+    if(t){ e.preventDefault(); e.stopPropagation();
+      // Title fallback prefers the row's title slot — full textContent would concatenate
+      // title+desc+badges into one run-on header (ux-audit P5 finding).
+      var tt=t.querySelector && t.querySelector('.sl-entity__title');
+      open(t.getAttribute('data-drawer'), t.getAttribute('data-drawer-title')||((tt||t).textContent||'').trim(), t); return; }
     if(e.target.closest && e.target.closest('[data-drawer-close]')){ e.preventDefault(); close(); }
   });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape' && wrap.classList.contains('is-open')) close(); });
@@ -348,15 +344,13 @@ def _user_menu() -> str:
     """Modern user/settings menu pinned to the bottom of the sidebar — a popover with a
     sun/system/moon theme switch and a language switch (replaces the old topbar buttons)."""
     cur = _lang()
-    themes = [("light", "sun", t("theme_light")), ("system", "monitor", t("theme_system")),
-              ("dark", "moon", t("theme_dark"))]
+    themes = [("light", "sun", t("theme_light")), ("system", "monitor", t("theme_system")), ("dark", "moon", t("theme_dark"))]
     theme_opts = [h("button", {"type": "button", "class_": "sl-segmented__item", "data-theme-set": val,
                                 "title": label, "aria-label": label}, raw(_icon(icon)), h("span", {}, label))
                   for val, icon, label in themes]
     langs = [("de", "Deutsch", "DE"), ("en", "English", "EN")]
     lang_opts = [h("a", {"class_": f'sl-segmented__item{" is-active" if code == cur else ""}', "href": f"?lang={code}",
-                         "title": full, "aria-label": full}, h("span", {}, short))
-                 for code, full, short in langs]
+                         "title": full, "aria-label": full}, h("span", {}, short)) for code, full, short in langs]
     return h("div", {"class_": "sl-usermenu"},
              h("div", {"class_": "sl-um-pop", "hidden": True},
                h("div", {"class_": "sl-um-sec"}, h("div", {"class_": "sl-um-lbl"}, t("theme")),
@@ -367,7 +361,9 @@ def _user_menu() -> str:
                  h("button", {"type": "button", "class_": "sl-btn", "data-tour-start": True},
                    raw(_icon("compass")), " ", t("tour_restart")), " ",
                  h("a", {"class_": "sl-btn", "href": "/feedback"},  # inbox: linked from HERE only
-                   raw(_icon("chat")), " ", t("feedback_h")))),
+                   raw(_icon("chat")), " ", t("feedback_h")), " ",
+                 # Documentation = reference, not workspace (ux-contract §3.5): footer cluster, off the 4-item nav.
+                 h("a", {"class_": "sl-btn", "href": "/documentation"}, raw(_icon("overview")), " ", t("documentation")))),
              h("button", {"type": "button", "class_": "sl-um-trigger pi-hover",
                           "aria-haspopup": "true", "aria-expanded": "false"},
                h("span", {"class_": "sl-um-ava"}, raw(_icon("settings", animate=True))),

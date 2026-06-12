@@ -16,18 +16,17 @@ house pattern of the chip contract / LOC budget / i18n parity):
 
 presence_violations() is the single check the gate asserts empty.
 
-The module also owns the tier-3 RESCUE section renderers the default project view embeds below
-the outline — open questions, evidence assets and surveys, each following the hypotheses/
-decisions idiom (an anchored `outlinecard` section + a header jump-chip on the project head, no
-empty chrome). URL artifacts (A/B captures) are rescued as outline ROWS instead (_graph_outline
-+ the _outline_chips registry). Pure read-only rendering: the page route fetches the lists (it
-holds the Store) and passes them in."""
+Since UX P2 (spec/ux-contract.md §3.4) every kind is an OUTLINE ROW in its phase context — the
+tier-3 appendix sections + header jump-chips retired (the row items are built by
+web/_graph_outline_extras). The module keeps the SHARED pill/row renderers (survey lifecycle,
+decision + hypothesis status pills, asset rows) used by the outline chips, the peeks and the
+cross-project list pages alike."""
 from __future__ import annotations
 
 import inspect
 
 from ._components import _icon, _label
-from ._html import h, raw, fragment
+from ._html import h, raw
 from ._i18n import t
 
 # ------------------------------------------------------------------ the presence declarations
@@ -72,12 +71,15 @@ REGISTRY: dict[str, Declared] = {
     "session": Declared(NESTED_CHILD, "an indented child row under its subject (prototype/live_url/flow)"),
     "section": Declared(OUTLINE_ROW, "the theme filter bar + phase/round groupings OVER the outline "
                                      "(an overlay grouping of nodes, not a row of its own)"),
-    "hypothesis": Declared(SECTION_WITH_HEADER_CHIP, "#hypotheses section below the outline + header jump-chip"),
-    "decision": Declared(SECTION_WITH_HEADER_CHIP, "#decisions section below the outline + header jump-chip"),
-    "open_question": Declared(SECTION_WITH_HEADER_CHIP, "#open-questions section + header jump-chip (open count)"),
-    "asset": Declared(SECTION_WITH_HEADER_CHIP, "#assets thumbnail section + header jump-chip "
-                                                "(deliverables out first, then evidence in)"),
-    "survey": Declared(SECTION_WITH_HEADER_CHIP, "#surveys section (rows → /surveys/{id}) + header jump-chip"),
+    "hypothesis": Declared(OUTLINE_ROW, "a row (status pill) in the phase active at created_at; "
+                                        "anchor #hyp-{id} keeps the /hypotheses/{id} deep link"),
+    "decision": Declared(OUTLINE_ROW, "a row in the phase whose gate judgment cites it / whose verify "
+                                      "task produced it; anchor #dec-{id} keeps the deep link"),
+    "open_question": Declared(OUTLINE_ROW, "a row (open/resolved pill) in the phase active at created_at"),
+    "asset": Declared(OUTLINE_ROW, "deliverables (direction out) in the final Deliver group; evidence "
+                                   "assets in their phase's Evidence sub-group (ux-contract §7.2)"),
+    "survey": Declared(OUTLINE_ROW, "a row (lifecycle pill, question/response counts) under the phase "
+                                    "of the act task that produced it; links to /surveys/{id}"),
 }
 
 # Every list_*(project_id=…) family on the services/storage surface → its registered kind.
@@ -170,17 +172,54 @@ def presence_violations() -> list[str]:
     return out
 
 
-# ------------------------------------------------------- the tier-3 rescue section renderers
+# ------------------------------------------------- shared per-kind pill / row renderers
 
 
 def survey_status_pill(status: str) -> str:
     """Survey lifecycle pill (a lifecycle, not a vocabulary). Resolved per request so the labels
-    follow the active UI language. Shared by the survey pages and the project surveys section."""
+    follow the active UI language. Shared by the survey pages, the outline chips and the peek."""
     pills = {"draft": (t("survey_status_draft"), "var(--muted)"),
              "open": (t("survey_status_open"), "var(--green)"),
              "closed": (t("survey_status_closed"), "var(--violet)")}
     label, color = pills.get(status, pills["draft"])
     return _label(label, color)
+
+
+# Decision / hypothesis lifecycle pill colors (lifecycles, not vocabularies — labels are i18n
+# keys resolved per request). Shared by the outline chips, the peeks, the project rows and the
+# cross-project /decisions + /hypotheses lists, so a status reads identically everywhere.
+_DEC_STATUS_COLORS = {"proposed": "var(--accent)", "adopted": "var(--green)",
+                      "superseded": "var(--muted)"}
+HYP_STATUS_COLORS = {"open": "var(--accent)", "validated": "var(--green)", "refuted": "var(--red)",
+                     "inconclusive": "var(--amber)", "dropped": "var(--muted)"}
+
+
+def decision_status_label(status: str) -> str:
+    labels = {"proposed": t("dec_status_proposed"), "adopted": t("dec_status_adopted"),
+              "superseded": t("dec_status_superseded")}
+    return labels.get(status, status)
+
+
+def decision_status_pill(status: str) -> str:
+    return _label(decision_status_label(status), _DEC_STATUS_COLORS.get(status, "var(--muted)"))
+
+
+def hypothesis_status_label(status: str) -> str:
+    labels = {"open": t("hyp_status_open"), "validated": t("hyp_status_validated"),
+              "refuted": t("hyp_status_refuted"), "inconclusive": t("hyp_status_inconclusive"),
+              "dropped": t("hyp_status_dropped")}
+    return labels.get(status, status)
+
+
+def hypothesis_status_pill(status: str) -> str:
+    return _label(hypothesis_status_label(status), HYP_STATUS_COLORS.get(status, "var(--muted)"))
+
+
+def open_question_status_pill(status: str) -> str:
+    """Open questions are a two-state lifecycle: open (amber — work to do) or resolved (muted)."""
+    if status == "open":
+        return _label(t("oq_status_open"), "var(--amber)")
+    return _label(t("oq_status_resolved"), "var(--muted)")
 
 
 def asset_direction(asset: dict) -> str:
@@ -193,8 +232,8 @@ def asset_direction(asset: dict) -> str:
 def asset_rows(assets: list) -> str:
     """Asset rows (files/images/screenshots, ticket attach-evidence-files-mcp): image assets
     render a thumbnail from the static /data mount; every row carries kind + direction pills and
-    `filename · size`. Deliverables (direction out) link as downloads. Shared by the default-view
-    #assets section and the retired graph view's floating panel."""
+    `filename · size`. Deliverables (direction out) link as downloads. Used by the graph view's
+    floating panel (the default view shows assets as outline rows since UX P2)."""
     rows = []
     for a in assets:
         is_img = a.get("kind") in ("image", "screenshot")
@@ -219,65 +258,5 @@ def asset_rows(assets: list) -> str:
     return "".join(rows)
 
 
-def assets_section_html(assets: list) -> str:
-    """The project's assets as a default-view section (anchor #assets): the deliverables that went
-    OUT of the project first (download links), then the evidence that came in — each group with its
-    own sub-heading when both exist, plain rows when only one direction is present. Empty string
-    when there are none (no empty chrome)."""
-    if not assets:
-        return ""
-    outgoing = [a for a in assets if asset_direction(a) == "out"]
-    incoming = [a for a in assets if asset_direction(a) == "in"]
-    if outgoing and incoming:
-        body = fragment(h("div", {"class_": "oqp-h"}, f'{t("asset_deliverables_h")} ({len(outgoing)})'),
-                        raw(asset_rows(outgoing)),
-                        h("div", {"class_": "oqp-h", "style": "margin-top:10px"},
-                          f'{t("asset_evidence_h")} ({len(incoming)})'),
-                        raw(asset_rows(incoming)))
-    else:
-        body = raw(asset_rows(outgoing + incoming))
-    return h("div", {"class_": "outlinecard", "id": "assets", "style": "margin-top:14px"},
-             h("h2", {"style": "margin:0 0 6px"}, f'{t("assets_h")} ({len(assets)})'), body)
-
-
-def open_questions_section_html(oqs: list) -> str:
-    """The project's open questions as a default-view section (anchor #open-questions): the open
-    ones up front (the header counts these), resolved ones muted below — formerly only the
-    ?view=graph floating panel showed them. Empty string when there are none."""
-    if not oqs:
-        return ""
-    open_qs = [o for o in oqs if o.get("status") == "open"]
-    resolved = [o for o in oqs if o.get("status") != "open"]
-    blocks = []
-    if open_qs:
-        blocks.append(h("ul", {"style": "margin:6px 0 0 18px"},
-                        fragment(*(h("li", {}, o.get("text", "")) for o in open_qs))))
-    if resolved:
-        blocks.append(h("div", {"class_": "oqp-h", "style": "margin-top:10px"},
-                        f'{t("oq_resolved_h")} ({len(resolved)})'))
-        blocks.append(h("ul", {"class_": "muted", "style": "margin:6px 0 0 18px"},
-                        fragment(*(h("li", {}, o.get("text", "")) for o in resolved))))
-    return h("div", {"class_": "outlinecard", "id": "open-questions", "style": "margin-top:14px"},
-             h("h2", {"style": "margin:0 0 6px"}, f'{t("open_questions_h")} ({len(open_qs)})'),
-             fragment(*blocks))
-
-
-def surveys_section_html(surveys: list) -> str:
-    """The project's surveys as a default-view section (anchor #surveys): each row links to its
-    /surveys/{id} detail with the lifecycle pill + question/response counts — surveys carry a
-    project_id but never appeared on the project page before this contract. Empty when none."""
-    if not surveys:
-        return ""
-    rows = []
-    for s in surveys:
-        rows.append(h("div", {"class_": "strow"},
-                      h("a", {"href": f'/surveys/{s["id"]}'},
-                        raw(_icon("plan")), " ", h("b", {}, s.get("title", ""))), " ",
-                      raw(survey_status_pill(s.get("status", "draft"))), " ",
-                      h("span", {"class_": "muted small"},
-                        f'{t("n_questions", n=len(s.get("questions") or []))} · '
-                        f'{t("n_responses", n=s.get("response_count") or 0)} · '
-                        f'{(s.get("created_at") or "")[:10]}')))
-    return h("div", {"class_": "outlinecard", "id": "surveys", "style": "margin-top:14px"},
-             h("h2", {"style": "margin:0 0 6px"}, f'{t("surveys_h")} ({len(surveys)})'),
-             fragment(*rows))
+# The former tier-3 rescue sections (assets_section_html / open_questions_section_html /
+# surveys_section_html) retired with UX P2 — these kinds are outline rows now (§3.4, C3).

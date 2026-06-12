@@ -3,7 +3,7 @@ FORWARDED_WEB_PORT ?= 18787
 
 UV ?= uv
 
-.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons check-icons hooks template-deck
+.PHONY: install dev dev-forwarded mcp snapshot restore skills test test-smoke kill-ports playwright icons check-icons hooks template-deck ux
 
 # Install the repo's git hooks (pre-push runs `check-icons`, so a stale vendored
 # copy is caught locally before the design-sync CI goes red). Idempotent; `make
@@ -70,6 +70,11 @@ mcp:
 # Full test suite (pytest, dev dependency-group). Hermetic: temp DB, no network.
 test:
 	$(UV) run --group dev pytest -q
+
+# Visual regression (spec/ux-contract.md §5): seed a temp demo store, screenshot the canonical
+# screens light+dark, pixel-diff against tests/ux_goldens/. UPDATE=1 rewrites the goldens.
+ux:
+	$(UV) run python scripts/ux_shots.py $(if $(UPDATE),--update,)
 
 test-smoke:
 	$(UV) run python -m compileall sonaloop

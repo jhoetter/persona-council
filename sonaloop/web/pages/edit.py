@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import Request
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from ...prototypes import PrototypeError
 from .._forms import (
     confirm_delete_modal, danger_zone, delete_button_form, field, form_page,
     not_found, see_other, write_gate,
@@ -69,7 +70,7 @@ def _note_form(store, proj: dict, note: dict | None, values: dict, errors: dict)
     danger = "" if new else danger_zone(raw(
         delete_button_form(f'/notes/{note["id"]}/delete', t("delete_note"))))
     return form_page(
-        store, title=title, active="note",
+        store, title=title, active="library",
         crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (title, None)],
         action=action,
         fields=[raw(field("title", t("f_title"), values.get("title", ""))),
@@ -247,7 +248,7 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         try:
             data = services.get_note(note_id, store=store)
         except KeyError:
-            return not_found(icon="panel", active="note")
+            return not_found(icon="panel", active="library")
         return _note_form(store, data["project"], data["note"],
                           {"title": data["note"].get("title", ""), "text": data["note"].get("text", "")}, {})
 
@@ -260,7 +261,7 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         try:
             data = services.get_note(note_id, store=store)
         except KeyError:
-            return not_found(icon="panel", active="note")
+            return not_found(icon="panel", active="library")
         values = {k: _s(form, k) for k in ("title", "text")}
         if not values["text"]:
             return HTMLResponse(_note_form(store, data["project"], data["note"], values,
@@ -277,7 +278,7 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         try:
             data = services.get_note(note_id, store=store)
         except KeyError:
-            return not_found(icon="panel", active="note")
+            return not_found(icon="panel", active="library")
         services.delete_note(data["project"]["id"], note_id, store=store)
         return see_other(f'/projects/{data["project"]["id"]}')
 
@@ -359,7 +360,7 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         if (gate := write_gate(form, "delete_council", {"council_id": session_id})) is not None:
             return gate
         if not store.get_council_session(session_id):
-            return not_found(icon="councils", active="councils")
+            return not_found(icon="councils", active="library")
         services.delete_council(session_id, store=store)
         return see_other("/councils")
 
@@ -370,7 +371,7 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
         if (gate := write_gate(form, "delete_synthesis", {"synthesis_id": synthesis_id})) is not None:
             return gate
         if not store.get_synthesis(synthesis_id):
-            return not_found(icon="syntheses", active="syntheses")
+            return not_found(icon="syntheses", active="library")
         services.delete_synthesis(synthesis_id, store=store)
         return see_other("/syntheses")
 
@@ -382,7 +383,7 @@ def register_edit(app) -> None:  # noqa: C901  (route table — one block per en
             return gate
         try:
             p = services.get_prototype_artifact(slug, store=store)
-        except Exception:
-            return not_found(icon="prototype", active="prototype")
+        except PrototypeError:  # UNKNOWN_PROTOTYPE — the lookup's only input-triggered raise
+            return not_found(icon="prototype", active="library")
         services.delete_prototype_artifact(p["id"], store=store)
         return see_other("/prototypes")

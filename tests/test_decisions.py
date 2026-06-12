@@ -224,9 +224,13 @@ def test_plan_export_gains_a_decisions_section_with_citations(store):
     assert "`superseded`" in md and "`proposed`" in md
 
 
-# --------------------------------------------------------------- inspector: the project-page section
+# ----------------------------------------------------- inspector: project rows + the decision peek
 
-def test_project_page_groups_decisions_with_evidence_chips(store):
+def test_project_page_rows_and_decision_peek(store):
+    """UX P2 (spec/ux-contract.md §3.4 + §3.3): a decision is an outline ROW (status pill +
+    evidence count); its ESSENCE (clamped body, evidence + rejected chips, supersede links)
+    lives in the /peek/decision/{id} drawer fragment; the Ref route keeps deep-linking into
+    the row's anchor."""
     from starlette.testclient import TestClient
     from sonaloop import web
     from sonaloop.web._i18n import STRINGS
@@ -242,23 +246,30 @@ def test_project_page_groups_decisions_with_evidence_chips(store):
     services.update_decision(adopted["id"], superseded_by=succ["id"], store=store)
     client = TestClient(web.create_app())
     html = client.get(f'/projects/{proj["id"]}?lang=en').text
-    assert STRINGS["en"]["decisions_h"] in html
     for key in ("dec_status_adopted", "dec_status_proposed", "dec_status_superseded"):
-        assert STRINGS["en"][key] in html                     # the three groups
+        assert STRINGS["en"][key] in html                     # the three lifecycle pills, on rows
     assert adopted["title"] in html and proposed["title"] in html and succ["title"] in html
-    assert adopted["decision"] in html
-    assert f'/councils/{council["id"]}' in html               # evidence chip via render_ref
-    assert f'/councils/{alt["id"]}' in html                   # rejected chip deep-links too
-    assert "banks gatekeep" in html                           # the why-not note
-    assert STRINGS["en"]["dec_superseded_by"] in html and STRINGS["en"]["dec_supersedes"] in html
-    # the Ref route deep-links back into the project page section
+    assert html.count('data-rkind="decision"') == 3           # rows, not a wall of text (C6)
+    assert adopted["decision"] not in html                    # the ADR body lives in the peek
+    assert f'id="dec-{adopted["id"]}"' in html                # the row IS the anchor target
+    assert f'data-drawer="/peek/decision/{adopted["id"]}"' in html
+    # the peek carries the essence: clamped body, evidence + rejected chips, supersede links
+    peek = client.get(f'/peek/decision/{adopted["id"]}?lang=en').text
+    assert adopted["decision"] in peek
+    assert f'/councils/{council["id"]}' in peek               # evidence chip via render_ref
+    assert f'/councils/{alt["id"]}' in peek                   # rejected chip deep-links too
+    assert "banks gatekeep" in peek                           # the why-not note
+    assert STRINGS["en"]["dec_superseded_by"] in peek
+    assert f'/decisions/{adopted["id"]}' in peek              # the explicit Open ↗ deep link
+    assert client.get("/peek/decision/nope").status_code == 404
+    # the Ref route deep-links back into the project page row
     r = client.get(f'/decisions/{adopted["id"]}', follow_redirects=False)
     assert r.status_code in (302, 307)
     assert r.headers["location"] == f'/projects/{proj["id"]}#dec-{adopted["id"]}'
     assert STRINGS["en"]["runtime_maybe_cleared"] in client.get("/decisions/nope?lang=en").text
-    # a project without decisions shows no section (and no empty chrome)
+    # a project without decisions shows no decision rows (and no empty chrome)
     other = _project(store, "Quiet study")
-    assert 'id="decisions"' not in client.get(f'/projects/{other["id"]}?lang=en').text
+    assert 'data-rkind="decision"' not in client.get(f'/projects/{other["id"]}?lang=en').text
 
 
 def test_global_decisions_list_renders_empty_and_populated(store):
@@ -277,15 +288,20 @@ def test_global_decisions_list_renders_empty_and_populated(store):
     page = client.get("/decisions?lang=en")
     assert page.status_code == 200
     html = page.text
+    # the URL stays canonical; the content is the LIBRARY with the Decisions tab active
+    # (ux-contract §3.5) — status-pilled rows, peek for the essence, no redirect
+    assert STRINGS["en"]["library_h"] in html
     assert STRINGS["en"]["dec_status_adopted"] in html and STRINGS["en"]["dec_status_proposed"] in html
     assert adopted["title"] in html and proposed["title"] in html
     # each row deep-links into ITS project's decisions section, named after the project
     assert f'/projects/{pa["id"]}#dec-{adopted["id"]}' in html
     assert f'/projects/{pb["id"]}#dec-{proposed["id"]}' in html
     assert "Project A" in html and "Project B" in html
-    # evidence + rejected chips render via render_ref, with the why-not note
-    assert f'/councils/{council["id"]}' in html and f'/councils/{alt["id"]}' in html
-    assert "banks gatekeep" in html
+    # the essence (evidence + rejected chips, why-not note) lives in the row's peek
+    assert f'data-drawer="/peek/decision/{adopted["id"]}"' in html
+    peek = client.get(f'/peek/decision/{adopted["id"]}?lang=en').text
+    assert f'/councils/{council["id"]}' in peek and f'/councils/{alt["id"]}' in peek
+    assert "banks gatekeep" in peek
     # the list route does not shadow the canonical /decisions/{id} redirect
     r = client.get(f'/decisions/{adopted["id"]}', follow_redirects=False)
     assert r.status_code in (302, 307)
@@ -354,9 +370,9 @@ def test_export_flattens_multiline_host_text(store):
     assert "Honest title ## Injected heading" in md
 
 
-def test_project_head_chips_jump_to_hypotheses_and_decisions(store):
-    """The sections live below the outline — the header carries count chips (anchor jumps) so they
-    stay visible above the fold and can't be scrolled past unnoticed."""
+def test_decision_rows_replace_the_header_jump_chips(store):
+    """UX P2: the appendix + header jump-chips retired — decisions are outline rows; the group
+    headers carry the honest counts (C8) instead of anchor-jump chips."""
     from starlette.testclient import TestClient
     from sonaloop import web
     proj = _project(store)
@@ -365,9 +381,10 @@ def test_project_head_chips_jump_to_hypotheses_and_decisions(store):
     _record(store, proj["id"], council=council, key="b")
     client = TestClient(web.create_app())
     html = client.get(f'/projects/{proj["id"]}?lang=en').text
-    assert 'href="#decisions"' in html and "2 · Decisions" in html
-    assert 'href="#hypotheses"' not in html              # no hypotheses → no chip
-    # ... and a project with neither shows no jump chips at all
+    assert html.count('data-rkind="decision"') == 2      # both decisions are rows
+    assert 'href="#decisions"' not in html and "projjump" not in html
+    assert 'id="decisions"' not in html                  # the appendix section is gone
+    # ... and a project without decisions shows no decision chrome at all
     other = _project(store, "Quiet study")
     other_html = client.get(f'/projects/{other["id"]}?lang=en').text
-    assert 'href="#decisions"' not in other_html and 'href="#hypotheses"' not in other_html
+    assert 'data-rkind="decision"' not in other_html and 'href="#decisions"' not in other_html

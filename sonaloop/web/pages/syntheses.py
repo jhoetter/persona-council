@@ -28,32 +28,16 @@ def _informed_decisions_html(synthesis_id: str, store) -> str:
 def register_syntheses(app) -> None:
     @app.get("/syntheses", response_class=HTMLResponse)
     def syntheses() -> str:
-        store = Store()
-        rows = []
-        for s in store.list_syntheses():
-            # ONE concept — a Report. It can be short or exhaustive; that's just block count, not a type.
-            done = s.get("status", "done") == "done"
-            status_pill = _label(t("done") if done else t("running"),
-                                 "var(--green)" if done else "var(--amber)")
-            n_sec = len(s.get("sections", []))
-            blocks = (t("n_sections", n=n_sec) if n_sec
-                      else f'{len(s.get("council_ids", []))} {t("councils")}')
-            rows.append(h("a", {"class_": "row", "href": f'/syntheses/{s["id"]}'},
-                          h("span", {"class_": "rico", "style": "color:var(--violet)"},
-                            raw(_icon("report"))),
-                          h("span", {"class_": "title"}, s["title"]),
-                          h("span", {"class_": "right"}, status_pill, h("span", {}, blocks),
-                            h("span", {}, s["created_at"][:10]),
-                            raw(_star("synthesis", s["id"], s["title"], f"/syntheses/{s['id']}")))))
-        return _list_page(store, title=t("syntheses"), lead=t("syntheses_lead"), rows=rows,
-                          empty_icon="syntheses", empty_msg=t("no_synthesis"), active="syntheses")
+        # ONE concept — a Report; the list is the Library's Reports tab (ux-contract §3.5).
+        from .library import library_page
+        return library_page("reports")
 
     @app.get("/syntheses/{synthesis_id}", response_class=HTMLResponse)
     def synthesis_detail(synthesis_id: str) -> str:
         store = Store()
         syn = store.get_synthesis(synthesis_id)
         if not syn:
-            return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared"), icon="syntheses"), store, active="syntheses")
+            return _layout(t("not_found"), _empty_state(t("synthesis_not_found"), t("runtime_maybe_cleared"), icon="syntheses"), store, active="library")
         # ONE renderer for every scope (spec/unified-synthesis-report.md §3): the report shell — a
         # convergence synthesis shows its structured analysis (findings → 2×2, voices), a project report
         # its narrative sections; both report-grade + PDF-exportable.
@@ -66,7 +50,10 @@ def register_syntheses(app) -> None:
             crumbs.append((proj["title"], f"/projects/{proj['id']}"))
         crumbs.append((short_title, None))
         from .._forms import danger_zone, delete_button_form
-        body = h("div", {"class_": "page"}, raw(render_report(syn, store)),
+        # One renderer, plus the section list → the right-edge scrollspy rail (§3.6c): the
+        # report's structure stays navigable even when the clamped prose sections are short.
+        report_html, toc = render_report(syn, store, with_toc=True)
+        body = h("div", {"class_": "page"}, raw(report_html),
                  raw(_informed_decisions_html(synthesis_id, store)),
                  # server-provided prev/next sibling URLs for the keymap's [ / ] bindings
                  raw(sibling_attrs(*sibling_urls(
@@ -75,5 +62,6 @@ def register_syntheses(app) -> None:
                  # delete-only (no content editing): report prose is authored/generated
                  raw(danger_zone(raw(delete_button_form(f'/syntheses/{synthesis_id}/delete',
                                                         t("delete_synthesis"))))))
+        body = raw(body) + raw(_page_rail(toc))
         actions = raw(_star("synthesis", synthesis_id, short_title, f"/syntheses/{synthesis_id}"))
-        return _layout(short_title, body, store, crumbs=crumbs, active="syntheses", actions=actions)
+        return _layout(short_title, body, store, crumbs=crumbs, active="library", actions=actions)

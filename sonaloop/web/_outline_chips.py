@@ -16,6 +16,10 @@ from .. import presentation as _pres
 from ._components import _label
 from ._html import h, raw
 from ._i18n import t
+from ._presence import (
+    asset_direction, decision_status_pill, hypothesis_status_pill, open_question_status_pill,
+    survey_status_pill,
+)
 
 
 class NoChips:
@@ -45,9 +49,15 @@ def _council_chips(item: dict) -> str:
 
 
 def _synthesis_chips(item: dict) -> str:
-    """Finding count, always (a 0 reads as 'thin', not as a missing chip) + amber while in progress."""
+    """Finding count when the synthesis carries structured findings; a NARRATIVE synthesis
+    (arc/gesamtbild prose, zero findings records) shows its source count instead — '0 findings'
+    on a rich Define synthesis reads like a defect, not like 'thin' (ux-audit P5). A genuinely
+    empty synthesis (no findings, no sources) still shows the honest 0. Amber while in progress."""
     node = item.get("node") or {}
-    chips = [_label(t("chip_findings_n", n=int(node.get("n_findings") or 0)))]
+    n_findings = int(node.get("n_findings") or 0)
+    n_sources = int(node.get("council_count") or 0)
+    chips = [_label(t("chip_sources_n", n=n_sources)) if n_findings == 0 and n_sources
+             else _label(t("chip_findings_n", n=n_findings))]
     if node.get("status") == "in_progress":
         chips.append(_label(t("running"), "var(--amber)"))
     return "".join(chips)
@@ -94,8 +104,8 @@ def _url_artifact_chips(item: dict) -> str:
 
 
 def _session_chips(item: dict) -> str:
-    """Outcome (completed green / dropped red) + the friction count — the session child-row
-    chips that previously lived in _graph_outline_sessions, now routed through the registry."""
+    """Outcome (completed green / dropped red) + friction count + the verified check when the
+    walk is grounded + the step count (§3.2) — routed through the registry like every kind."""
     sess = item.get("session") or {}
     out = sess.get("outcome") or {}
     chips = [_label(t("completed"), "var(--green)") if out.get("completed")
@@ -103,7 +113,57 @@ def _session_chips(item: dict) -> str:
     n_fr = _friction_count(sess)
     if n_fr:
         chips.append(_label(t("friction_n", n=n_fr), "var(--amber)"))
+    if sess.get("grounded_verified"):
+        chips.append(_label(t("grounded_yes"), "var(--green)"))
+    chips.append(_label(t("chip_steps_n", n=len(sess.get("steps") or []))))
     return "".join(str(c) for c in chips)
+
+
+def _prototype_chips(item: dict) -> str:
+    """Fidelity tag + sessions count (§3.2). The count covers recorded reactions AND usability
+    walks (node['n_sessions'], enriched by the graph builder); when the row already carries the
+    aggregate funnel chip the count would repeat it, so only the fidelity remains."""
+    node = item.get("node") or {}
+    chips = []
+    if node.get("fidelity"):
+        chips.append(_label(_pres.present(node["fidelity"])["short"], "#00897b"))
+    if not item.get("chip") or not chips:             # the funnel chip already says "N sessions · …"
+        chips.append(_label(t("sessions_n", n=int(node.get("n_sessions") or 0))))
+    return "".join(chips)
+
+
+def _decision_chips(item: dict) -> str:
+    """Status pill (adopted/proposed/superseded) + the evidence count it rests on (§3.2)."""
+    node = item.get("node") or {}
+    return decision_status_pill(node.get("status", "proposed")) + _label(
+        t("chip_evidence_n", n=len(node.get("based_on") or [])))
+
+
+def _survey_chips(item: dict) -> str:
+    """Lifecycle pill + n questions · n responses (§3.2) — the same honest counts the old
+    appendix section showed."""
+    node = item.get("node") or {}
+    return (survey_status_pill(node.get("status", "draft"))
+            + _label(t("n_questions", n=len(node.get("questions") or [])))
+            + _label(t("n_responses", n=int(node.get("response_count") or 0))))
+
+
+def _hypothesis_chips(item: dict) -> str:
+    return hypothesis_status_pill((item.get("node") or {}).get("status", "open"))
+
+
+def _open_question_chips(item: dict) -> str:
+    return open_question_status_pill((item.get("node") or {}).get("status", "open"))
+
+
+def _asset_chips(item: dict) -> str:
+    """Kind + direction pill + size (§3.2): deliverable (out, green) vs evidence (in, quiet)."""
+    node = item.get("node") or {}
+    is_out = asset_direction(node) == "out"
+    direction = (_label(t("asset_dir_out"), "var(--green)") if is_out
+                 else _label(t("asset_dir_in")))
+    size_kb = f'{max(1, int(node.get("bytes") or 0) // 1024)} KB'   # a unit, not a UI string
+    return direction + _label(size_kb)
 
 
 REGISTRY: dict[str, object] = {}
@@ -119,8 +179,13 @@ _register("report", _report_chips)
 _register("note", _note_chips)
 _register("session", _session_chips)
 _register("url_artifact", _url_artifact_chips)
+_register("prototype", _prototype_chips)
+_register("decision", _decision_chips)
+_register("survey", _survey_chips)
+_register("hypothesis", _hypothesis_chips)
+_register("open_question", _open_question_chips)
+_register("asset", _asset_chips)
 # Declared chip-less — each reason names the affordance that already carries the signal:
-_register("prototype", NoChips("the fidelity kind pill + the parent funnel chip carry it"))
 _register("live_url", NoChips("the funnel chip + its session child rows carry the signal"))
 _register("flow", NoChips("the funnel chip + its session child rows carry the signal"))
 

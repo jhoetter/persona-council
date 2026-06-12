@@ -82,7 +82,8 @@ def _record(store, pid, persona_id, subject, fidelity, key, completed=True):
 def _every_kind_project(store) -> str:
     """One project whose outline emits EVERY row kind: plan-based council + synthesis, a plain
     note + a built concept note (paired prototype), a standalone prototype with two walks (the
-    funnel chip), a live_url subject, a flow subject, and a report."""
+    funnel chip), a live_url subject, a flow subject, a report — and the UX-P2 absorbed kinds
+    (decision, survey, hypothesis, open question, evidence + deliverable assets)."""
     proj = services.create_research_project("Chip contract", goal="g", store=store)
     pid = proj["id"]
     P.save_plan(P.new_plan(pid, goal="hmw?", methodology="double_diamond_deep", tasks=[
@@ -134,6 +135,21 @@ def _every_kind_project(store) -> str:
     # A/B label + capture-status chips (tracker: sonaloop/project-presence-contract)
     services.add_artifact(pid, "https://example.test/landing", kind="url", title="Landing A",
                           capture=False, store=store)
+    # the UX-P2 absorbed kinds — every one an outline row with declared chips (§3.4):
+    services.record_decision(pid, "Adopt the new flow", "We adopt it.",
+                             based_on=[{"kind": "council", "id": "cA"}],
+                             key="d1", status="adopted", store=store)
+    services.record_survey(pid, "Pricing survey",
+                           [{"id": "q1", "kind": "text", "text": "Why this price?"}], store=store)
+    services.record_hypothesis(pid, "Half would pay",
+                               {"metric": "conversion", "expected_direction": "increase"},
+                               key="h1", store=store)
+    services.record_open_questions(pid, ["What about pricing?"], store=store)
+    import base64
+    services.attach_asset(pid, content_base64=base64.b64encode(b"field note").decode(),
+                          filename="note.txt", title="Field note", store=store)
+    services.attach_asset(pid, content_base64=base64.b64encode(b"deck bytes").decode(),
+                          filename="final.pptx", title="Final deck", direction="out", store=store)
     return pid
 
 
@@ -184,6 +200,24 @@ def test_planless_fallback_rows_carry_chips(store):
     html = _client().get(f'/projects/{proj["id"]}?lang=en').text
     _assert_chip_contract(html)
     assert 'data-rkind="synthesis"' in html and "2 findings" in html
+
+
+# ----------------------------------------------------------------- peek universality (§7.3)
+
+def test_every_row_kind_opens_a_resolving_peek(store):
+    """'Click a row → peek' must be universally true (spec/ux-contract.md §3.3, decision §7.3):
+    every peek-armed outline row's data-drawer URL resolves, and every peekable kind is armed.
+    External/synthesized rows (url_artifact, live_url/flow subjects) legitimately carry none."""
+    import re as _re
+    pid = _every_kind_project(store)
+    client = _client()
+    html = client.get(f"/projects/{pid}?lang=en").text
+    urls = sorted(set(_re.findall(r'data-drawer="(/peek/[^"]+)"', html)))
+    kinds = {u.split("/")[2] for u in urls}
+    assert {"council", "synthesis", "report", "note", "prototype", "session",
+            "decision", "survey", "hypothesis", "open_question", "asset"} <= kinds, kinds
+    for u in urls:
+        assert client.get(u).status_code == 200, f"peek fragment {u} did not resolve"
 
 
 # ------------------------------------------------------------------- the chips themselves

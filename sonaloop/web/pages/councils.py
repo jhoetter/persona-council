@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .. import ui
 from .._keymap import sibling_attrs, sibling_urls
 from .._render import render_statements
+from .._synthesis import _stacked, _vote_parts
 from .._html import register_css
 from ... import artifacts as _A
 
@@ -105,31 +107,17 @@ def _red_team_result_html(rt: dict) -> str:
 def register_councils(app) -> None:
     @app.get("/councils", response_class=HTMLResponse)
     def councils() -> str:
-        store = Store()
-        rows = []
-        for c in services.list_councils(store=store):
-            # the tally is keyed by canonical stance term — segments/colors/labels from the scale
-            v = c["votes"]; tot = max(1, sum(v.values())); terms = _A.stance_terms()
-            bar = h("span", {"class_": "votebar",
-                             "title": " · ".join(f'{t(r["label_key"])} {v.get(r["term"], 0)}'
-                                                 for r in terms if v.get(r["term"]))},
-                    *[h("i", {"style": f'width:{v.get(r["term"], 0)/tot*100}%;background:{r["color"]}'})
-                      for r in terms if v.get(r["term"])])
-            rows.append(h("a", {"class_": "row", "href": f'/councils/{c["id"]}'},
-                          h("span", {"class_": "rico", "style": "color:var(--blue)"}, raw(_icon("councils"))),
-                          h("span", {"class_": "title"}, c["prompt"]),
-                          h("span", {"class_": "right"}, bar, h("span", {}, f'{c["personas"]} {t("personas")}'),
-                            h("span", {}, c["created_at"][:10]),
-                            raw(_star("council", c["id"], c["prompt"][:60], f"/councils/{c['id']}")))))
-        return _list_page(store, title=t("councils"), lead=t("councils_lead"), rows=rows,
-                          empty_icon="councils", empty_msg=t("no_councils"), active="councils")
+        # The URL stays canonical; the content is the Library with the Councils tab
+        # active (ux-contract §3.5 — one browser, no redirects).
+        from .library import library_page
+        return library_page("councils")
 
     @app.get("/councils/{session_id}", response_class=HTMLResponse)
     def council_detail(session_id: str) -> str:
         store = Store()
         session = store.get_council_session(session_id)
         if not session:
-            return _layout(t("not_found"), _empty_state(t("council_not_found"), t("runtime_maybe_cleared"), icon="councils"), store, active="councils")
+            return _layout(t("not_found"), _empty_state(t("council_not_found"), t("runtime_maybe_cleared"), icon="councils"), store, active="library")
         proposal_short_h = t("proposal_short_summary")
         proposal_h = t("proposal"); summary_h = t("summary")
         sentiment_title = t("sentiment_this_council")
@@ -171,16 +159,43 @@ def register_councils(app) -> None:
         backlinks = {s["id"]: _idx.get(_A.part_address("council", session["id"], s["id"]), [])
                      for s in statements if s.get("id")}
         backlinks = {k: v for k, v in backlinks.items() if v}
-        voices_html = (render_statements(statements, store, group_by="prompt", prompts=group_prompts, backlinks=backlinks)
-                       if group_prompts else render_statements(statements, store, group_by="persona", backlinks=backlinks))
+        # Rounds collapse per prompt and long turns clamp (§3.6): the transcript scans as rows,
+        # every word stays one toggle away.
+        voices_html = (render_statements(statements, store, group_by="prompt", prompts=group_prompts,
+                                         backlinks=backlinks, clamp_at=ui.TURN_CLAMP, collapsible=True)
+                       if group_prompts else
+                       render_statements(statements, store, group_by="persona", backlinks=backlinks,
+                                         clamp_at=ui.TURN_CLAMP))
         sentiment = "" if mode == "discovery" else (_sentiment_section(store, [session], title=sentiment_title) or "")
         kicker = (t("rt_kicker", n=n_voices) if is_rt else t("h2h_kicker", n=n_voices) if is_h2h
                   else t("council_kicker_" + mode, n=n_voices))
         council_sub = f'{kicker} · {session["selection_reason"]}'
         short_title = _display_title(session["prompt"])        # short form for breadcrumb / tab / favourite only
+        # Structure before prose (§3.6): the hero IS the prompt header; directly under it the
+        # participants avatar row + the council's stance/vote strip open the page, and only then
+        # the authored summaries follow (clamped at the section threshold).
+        avgroup = h("span", {"class_": "sl-avatar-group"},
+                    fragment(*(raw(_avatar(p, 22)) for p in pmap.values() if p)))
+        names = ", ".join((p or {}).get("display_name") or pid for pid, p in pmap.items())
+        if mode != "discovery" and session.get("votes"):
+            _, vparts = _vote_parts([session])
+            strip = _stacked(vparts, thin=True)
+        else:                                          # discovery: stance lean of the statements, if any
+            from .peek import _value_strip
+            scounts: dict = {}
+            for st in statements:
+                v = (st.get("stance") or {}).get("value")
+                if v is not None:
+                    scounts[int(v)] = scounts.get(int(v), 0) + 1
+            strip = _value_strip(scounts)
+        opener = fragment(
+            ui.entity_row(names, visual=avgroup, id="sec-participants",
+                          meta=[f"{n_voices} {personas_h}"]),
+            h("div", {"class_": "sec"}, raw(strip)) if strip else None)
         # Executive Summary (the short TL;DR) sits at the TOP — same block/name as the synthesis.
         has_summary = bool((session.get("summary") or "").strip())
-        summary_lead = (raw(_study_lead(_md(session["summary"]), t("answer_exec_summary"), qid="sec-summary"))
+        summary_lead = (raw(_study_lead(ui.clamp(raw(_md(session["summary"])), threshold=ui.SECTION_CLAMP),
+                                        t("answer_exec_summary"), qid="sec-summary"))
                         if has_summary else "")
         h2h_block = (h("div", {"class_": "sec", "id": "h2h"}, h("h2", {}, t("h2h_title")),
                        h("p", {"class_": "muted small", "style": "margin:-4px 0 14px"}, t("h2h_lead")),
@@ -190,7 +205,10 @@ def register_councils(app) -> None:
                       raw(rt_html)) if is_rt else "")
         from .._forms import danger_zone, delete_button_form
         body = fragment(
-            summary_lead, raw(_study_lead(exec_html, vm["answer_label"])), h2h_block, rt_block, raw(sentiment),
+            opener,
+            summary_lead,
+            raw(_study_lead(ui.clamp(raw(exec_html), threshold=ui.SECTION_CLAMP), vm["answer_label"])),
+            h2h_block, rt_block, raw(sentiment),
             h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices")), intro, raw(voices_html)),
             # server-provided prev/next sibling URLs for the keymap's [ / ] bindings
             raw(sibling_attrs(*sibling_urls(
@@ -220,7 +238,8 @@ def register_councils(app) -> None:
             hero=_hero(session["prompt"], icon="councils", sub=council_sub, hid="sec-question"), body=body,
             prop_rows=prop_rows,
             rel_study_id=f"council:{session_id}", rel_proj_id=(proj["id"] if proj else None),
-            rail_sections=([("sec-question", t("question"))]
+            rail_sections=([("sec-question", t("question")),
+                            ("sec-participants", t("participants"))]
                            + ([("sec-summary", t("answer_exec_summary"))] if has_summary else [])
                            + ([("h2h", t("h2h_title"))] if is_h2h else [])
                            + ([("red-team", t("rt_title"))] if is_rt else [])

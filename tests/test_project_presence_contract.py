@@ -2,12 +2,12 @@
 
 User decision (2026-06-10): nothing project-scoped may be invisible on the DEFAULT project page.
 Every artifact kind carrying a project_id declares its presence in the web/_presence REGISTRY
-(outline row · nested child · section + header jump-chip; hidden is forbidden — ALLOWED_HIDDEN
-is empty), and every list_*(project_id=…) family on the services/storage surface must map to a
-registered kind. The gate enumerates the real surface, so a NEW project-scoped kind fails here
-until it declares where it shows. The rendering half proves the tier-3 rescue: open questions,
-URL artifacts, evidence assets and surveys are visible WITHOUT ?view=graph, with header
-jump-chips for every non-empty section kind (and no chrome for empty ones).
+(outline row · nested child; hidden is forbidden — ALLOWED_HIDDEN is empty), and every
+list_*(project_id=…) family on the services/storage surface must map to a registered kind. The
+gate enumerates the real surface, so a NEW project-scoped kind fails here until it declares
+where it shows. The rendering half proves the UX-P2 absorption (spec/ux-contract.md §3.4): open
+questions, URL artifacts, assets and surveys are OUTLINE ROWS on the default view — no appendix
+sections, no header jump-chips, and no chrome at all for empty kinds.
 """
 from __future__ import annotations
 
@@ -90,39 +90,43 @@ def _seed_tier3(store) -> str:
     return pid
 
 
-def test_tier3_kinds_visible_on_the_default_view(store):
+def test_absorbed_kinds_are_outline_rows_on_the_default_view(store):
     pid = _seed_tier3(store)
     html = _client().get(f"/projects/{pid}?lang=en").text   # the DEFAULT view — no ?view=graph
-    # open questions: anchored section + the question text
-    assert 'id="open-questions"' in html and "What about pricing?" in html
+    # open questions: an outline row with the open/resolved pill
+    assert 'data-rkind="open_question"' in html and "What about pricing?" in html
     # URL artifacts: an outline row (chip contract kind) with the capture-status chip
     assert 'data-rkind="url_artifact"' in html and "Landing A" in html
     assert "not captured — reference only" in html
-    # evidence assets: anchored section with the asset row
-    assert 'id="assets"' in html and "Field note" in html
-    # surveys: anchored section, row deep-links to the survey detail, lifecycle pill
-    assert 'id="surveys"' in html and "Pricing survey" in html
+    # evidence assets: an outline row with the direction pill
+    assert 'data-rkind="asset"' in html and "Field note" in html and "Evidence" in html
+    # surveys: an outline row deep-linking to the survey detail, lifecycle pill
+    assert 'data-rkind="survey"' in html and "Pricing survey" in html
     assert "/surveys/" in html and "Draft" in html
-    # header jump-chips for every non-empty section kind
+    # the appendix is GONE (ux-contract §3.4): no sections, no header jump-chips
+    assert "projsection" not in html and "projjump" not in html
     for anchor in ("#open-questions", "#assets", "#surveys"):
-        assert f'href="{anchor}"' in html, f"missing header jump-chip {anchor}"
+        assert f'href="{anchor}"' not in html, f"retired jump-chip {anchor} resurfaced"
+    # every absorbed row opens a peek (decision §7.3: click = peek, universally)
+    for kind in ("open_question", "asset", "survey"):
+        assert f'data-drawer="/peek/{kind}/' in html, f"{kind} row lost its peek"
 
 
 def test_empty_kinds_render_no_chrome(store):
     proj = services.create_research_project("Empty", goal="g", store=store)
     html = _client().get(f'/projects/{proj["id"]}?lang=en').text
+    for kind in ("hypothesis", "decision", "open_question", "asset", "survey"):
+        assert f'data-rkind="{kind}"' not in html, f"empty kind {kind} rendered a row"
     for anchor in ("#hypotheses", "#decisions", "#open-questions", "#assets", "#surveys"):
         assert f'href="{anchor}"' not in html, f"empty kind grew a jump-chip {anchor}"
-    for sec in ('id="open-questions"', 'id="assets"', 'id="surveys"'):
-        assert sec not in html, f"empty kind rendered its section {sec}"
 
 
-def test_surveys_chip_counts_surveys_and_responses(store):
+def test_survey_row_counts_questions_and_responses(store):
     pid = _seed_tier3(store)
     sv = services.list_surveys(project_id=pid, store=store)[0]
     services.import_survey_responses(
         sv["id"], [{"respondent_key": "r1", "answers": [{"question_id": "q1", "value": "too high"}]}],
         store=store)
     html = _client().get(f"/projects/{pid}?lang=en").text
-    # the "N surveys · M responses" header chip + the per-row response count
-    assert "1 · Surveys · 1 responses" in html
+    # the survey row's honest counts (C8): question + response chips
+    assert "1 questions" in html and "1 responses" in html

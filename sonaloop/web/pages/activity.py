@@ -17,11 +17,16 @@ def register_activity(app) -> None:
         labels = event_labels()
         rows = []
         for ev in store.list_recent_events(limit=200):
+            title = labels.get(ev["event"], ev["event"])
             label = ev["data"].get("label") or ""
+            # Drop a detail label the event title already states ("Run finished · finished") —
+            # text discipline, ux-contract C6 (ux-audit P5 finding).
+            if label and label.casefold() in title.casefold():
+                label = ""
             rows.append(h("a", {"class_": "row", "href": ev["data"].get("url") or "/projects"},
                           h("span", {"class_": "rico", "style": "color:var(--accent)"},
                             raw(_icon("activity"))),
-                          h("span", {"class_": "title"}, labels.get(ev["event"], ev["event"]),
+                          h("span", {"class_": "title"}, title,
                             h("span", {"class_": "muted small"}, f" · {label}") if label else None),
                           h("span", {"class_": "right"},
                             h("span", {}, ev["ts"][:16].replace("T", " ")))))

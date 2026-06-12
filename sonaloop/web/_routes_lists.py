@@ -11,7 +11,7 @@ from fastapi import Request
 from .. import services
 from ..storage import Store
 from ._i18n import t
-from ._components import _icon, _avatar, _label, _star, _list_page, _layout, _artifact_present
+from ._components import _icon, _avatar, _label, _star, _list_page, _layout
 from ._pager import _list_filter_box, _page_window, _pager
 from ._html import h, raw, fragment, register_css
 from ._docs import register_docs
@@ -154,34 +154,15 @@ def register_lists(app) -> None:
 
     @app.get("/prototypes", response_class=HTMLResponse)
     def prototypes_list() -> str:
-        store = Store()
-        rows = []
-        for p in store.list_prototypes():
-            ap = _artifact_present(p)
-            proj = store.get_research_project(p["project_id"]) if p.get("project_id") else None
-            nsess = len(store.list_prototype_sessions(prototype_id=p["id"]))
-            right = fragment(
-                h("span", {"class_": "muted small"}, proj["title"]) if proj else None,
-                h("span", {}, f'{t("sessions")} {nsess}') if nsess else None,
-                h("span", {"class_": "muted small"}, p["version"]) if p.get("version") else None,
-                raw(_star("prototype", p["id"], p["name"], f'/prototypes/{p["slug"]}')))
-            rows.append(_row(f'/prototypes/{p["slug"]}', "prototype", p["name"], right,
-                             color=ap["color"], sub=ap["disc"] or ap["label"]))
-        return _list_page(store, title=t("prototypes_h"), lead=t("prototypes_lead"), rows=rows,
-                          empty_icon="prototype", empty_msg=t("no_prototypes"), active="prototype")
+        # The Library's Prototypes tab under the canonical URL (ux-contract §3.5).
+        from .pages.library import library_page
+        return library_page("prototypes")
 
     @app.get("/notes", response_class=HTMLResponse)
     def notes_list() -> str:
-        store = Store()
-        rows = []
-        for proj in store.list_research_projects():
-            for n in services.list_notes(proj["id"], store=store):   # ONE note entity (concepts merged in)
-                right = fragment(h("span", {"class_": "muted small"}, proj["title"]),
-                                 raw(_star("note", n["id"], n.get("title", ""), f'/notes/{n["id"]}')))
-                title = n.get("title") or (n.get("text", "")[:60] or "—")
-                rows.append(_row(f'/notes/{n["id"]}', "panel", title, right, color="#f29900"))
-        return _list_page(store, title=t("notes"), lead=t("notes_lead"), rows=rows,
-                          empty_icon="panel", empty_msg=t("no_notes"), active="note")
+        # The Library's Notes tab — ONE note entity (concepts merged in).
+        from .pages.library import library_page
+        return library_page("notes")
 
 # Co-located CSS (spec/roadmap.md R3): the shared linear list rows used by every index page.
 register_css(r"""

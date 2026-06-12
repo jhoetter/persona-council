@@ -66,6 +66,29 @@ def test_topbar_widget_present_on_every_page(store):
     assert "sl:live-event" in html                              # live update wiring (SSE re-dispatch)
 
 
+def test_project_header_run_chip_with_popover(store):
+    """UX P3 (ux-contract §3.5 / decision §7.4): runs left the nav — a project with a
+    plan carries the run-state chip in its header; the popover holds the state, last
+    activity, the copyable resume hint (stalled) and the /runs journal link."""
+    sid = _planned(store, "Stalled Proj")                      # open work, nobody driving
+    html = _client().get(f"/projects/{sid}?lang=en").text
+    assert 'class="runchip runchip--stalled"' in html          # the rendered chip, not the chrome CSS/JS
+    assert f'{web.STRINGS["en"]["run_chip"]} · {web.STRINGS["en"]["runs_stalled_h"]}' in html
+    pop = html.split('id="runchip-fly"')[1][:2500]
+    assert web.STRINGS["en"]["run_last_activity"] in pop
+    assert "start_run(" in pop                                        # copyable resume hint
+    assert 'data-copy=' in html and 'href="/runs"' in html            # journal link
+    # an active run flips the chip state
+    aid = _planned(store, "Active Proj")
+    S.start_run(aid, store=store)
+    active_html = _client().get(f"/projects/{aid}?lang=en").text
+    assert 'class="runchip runchip--active"' in active_html
+    assert f'{web.STRINGS["en"]["run_chip"]} · {web.STRINGS["en"]["runs_active_h"]}' in active_html
+    # a project without a plan shows no chip — there is no driver to show
+    bare = S.create_research_project("No plan", goal="g", store=store)
+    assert 'class="runchip-wrap"' not in _client().get(f'/projects/{bare["id"]}?lang=en').text
+
+
 def test_api_runs_returns_grouped_states(store):
     aid = _planned(store, "Active Proj")
     S.start_run(aid, store=store)

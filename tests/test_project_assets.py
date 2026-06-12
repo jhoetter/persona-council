@@ -217,20 +217,29 @@ def test_export_synthesis_deliverable_without_project_skips_attach(store, tmp_pa
     assert "asset_id" not in res and "project_id" not in res
 
 
-def test_assets_section_renders_deliverables_first(store, project, tmp_path, monkeypatch):
+def test_assets_render_as_outline_rows_with_direction_pills(store, project, tmp_path, monkeypatch):
+    """UX P2 (spec/ux-contract.md §3.4 / §7.2): assets are outline rows — evidence in its phase
+    flow, the deliverable at the END (the Deliver group); direction pills on both; the asset
+    peek carries the download action."""
     monkeypatch.setattr(services, "export_synthesis_pptx", lambda sid, store=None: b"PK deck")
     evidence = tmp_path / "field-note.txt"
     evidence.write_text("observed in the field")
     services.attach_asset(project["id"], path=str(evidence), title="Field note", store=store)
     syn = _project_synthesis(store, project)
     services.export_synthesis_deliverable(syn["id"], "pptx", str(tmp_path / "finder.pptx"), store=store)
-    from sonaloop.web._presence import assets_section_html
-    html = assets_section_html(services.list_assets(project["id"], store=store))
-    assert 'id="assets"' in html and "download" in html
-    # deliverables group first, evidence group after it; direction pills on the rows
-    assert html.index("Deliverables (1)") < html.index("Evidence (1)")
-    assert html.index("Component finder (PPTX)") < html.index("Field note")
-    assert "Deliverable" in html and "Evidence" in html
+    from starlette.testclient import TestClient
+    from sonaloop import web
+    client = TestClient(web.create_app())
+    html = client.get(f'/projects/{project["id"]}?lang=en').text
+    assert html.count('data-rkind="asset"') == 2
+    assert "Deliverable" in html and "Evidence" in html       # direction pills on the rows
+    # the evidence row sits in the flow; the deliverable closes the outline (Deliver group)
+    assert html.index("Field note") < html.index("Component finder (PPTX)")
+    # the peek carries the deliverable's download action
+    deliverable = next(a for a in services.list_assets(project["id"], store=store)
+                       if a.get("direction") == "out")
+    peek = client.get(f'/peek/asset/{deliverable["id"]}?lang=en').text
+    assert "download" in peek and deliverable["filename"] in peek
 
 
 def test_attach_prototype_shot_uses_capture(store, project, monkeypatch, tmp_path):

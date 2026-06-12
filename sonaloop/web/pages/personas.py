@@ -186,8 +186,12 @@ def register_personas(app) -> None:
         selected_date = date_value or (data["daily_summaries"][-1]["date"] if data["daily_summaries"] else date.today().isoformat())
         view = view if view in {"week", "month", "year"} else "month"
         period = services.get_calendar_period(p["id"], selected_date, view, store)
-        avatar = (h("img", {"class_": "avatar", "src": f'/{p["avatar"]["path"]}', "alt": ""})
-                  if p.get("avatar") else h("div", {}, _avatar(p, 120)))
+        # _avatar_src guards against avatar records whose image file is missing on this
+        # machine (snapshots carry the record, not always the binary) — initials, not a
+        # broken <img> frame.
+        portrait_src = _avatar_src(p)
+        avatar = (h("img", {"class_": "avatar", "src": portrait_src, "alt": ""})
+                  if portrait_src else h("div", {}, _avatar(p, 120)))
         has_sim = bool(data["daily_summaries"]) or bool(period.get("days"))
         voices = _persona_voices_html(store, p["id"])
         # This persona's recorded usability sessions — each row deep-links into the replay view.

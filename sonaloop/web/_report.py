@@ -54,9 +54,11 @@ def _resolve_figure(f: dict, store) -> dict | None:
         if p and p.get("shot"):
             return {"url": asset_url(p["shot"]), "caption": cap or p.get("name", "")}
     if kind == "avatar" and f.get("id"):
+        from ._components import _avatar_src
         p = store.get_persona(f["id"])
-        if p and p.get("avatar", {}).get("path"):
-            return {"url": "/" + p["avatar"]["path"], "caption": cap or p.get("display_name", "")}
+        src = _avatar_src(p or {})
+        if src:
+            return {"url": src, "caption": cap or p.get("display_name", "")}
     if kind == "chart":
         # Author-supplied charts dispatch through the modular registry (charts_catalogue), which is
         # the single source of truth for which `of` exists, how to call its design-system renderer,
@@ -86,13 +88,21 @@ def _figure_html(fig: dict) -> str:
              h("figcaption", {}, fig["caption"]) if fig.get("caption") else "")
 
 
+def _prose_run(md_text: str) -> str:
+    """One uninterrupted prose run, dosed through ui.clamp at the SECTION threshold (ux-contract
+    §3.6d): a normal section reads naturally, a genuinely long one collapses to 5 lines with an
+    in-place expand. Callouts/figures never clamp — they ARE the structure between the runs."""
+    from . import ui
+    return ui.clamp(raw(_md(md_text)), threshold=ui.SECTION_CLAMP)
+
+
 def _segment(md_text: str) -> str:
     """A markdown segment with :::callout::: blocks lifted into styled boxes."""
     out, pos = [], 0
     for m in _DIRECTIVE.finditer(md_text):
         pre = md_text[pos:m.start()].strip()
         if pre:
-            out.append(raw(_md(pre)))
+            out.append(_prose_run(pre))
         icon, cls = _CALLOUT.get(m.group(1).lower(), ("dot", "insight"))
         out.append(h("div", {"class_": f"rp-call rp-{cls}"},
                      h("div", {"class_": "rp-call-ic"}, raw(_icon(icon))),
@@ -100,7 +110,7 @@ def _segment(md_text: str) -> str:
         pos = m.end()
     rest = md_text[pos:].strip()
     if rest:
-        out.append(raw(_md(rest)))
+        out.append(_prose_run(rest))
     return fragment(*out)
 
 
@@ -123,10 +133,12 @@ def _body(md_text: str, figs: list) -> str:
     return fragment(*out)
 
 
-def render_report(report: dict, store) -> str:
+def render_report(report: dict, store, *, with_toc: bool = False):
     """Report-grade render of ANY synthesis (spec/unified-synthesis-report.md §3 — one renderer):
     project scope → narrative sections + figures; convergence scope → the structured analysis
-    (findings → 2×2, voices) in the SAME report shell (cover + report typography)."""
+    (verdict card → charts → findings → 2×2, voices) in the SAME report shell (cover + report
+    typography). `with_toc=True` additionally returns the [(anchor_id, label)] section list so
+    the detail page can hang the scrollspy rail (`_page_rail`) beside the document (§3.6c)."""
     de = content_language() == "de"
     _t = report.get("title", "")           # the default title ends in " — Report"; custom titles show as-is
     project_title = _t[:-len(" — Report")] if _t.endswith(" — Report") else _t
@@ -143,16 +155,24 @@ def render_report(report: dict, store) -> str:
                   h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind")),
                   h("h1", {"class_": "rp-title"}, project_title),
                   h("div", {"class_": "rp-metaline"}, meta_line))
-        body, _toc = _synthesis_html(store, report, embed=True)
-        return h("article", {"class_": "report report-syn"}, cover, raw(body))
+        body, toc = _synthesis_html(store, report, embed=True)
+        article = h("article", {"class_": "report report-syn"}, cover, raw(body))
+        return (article, toc) if with_toc else article
 
     rtitle = _ref_titler(report, store)
     sections = report.get("sections", [])
     n_studies = len({x for sec in sections for x in sec.get("source_study_ids", [])})
+    # The cover meta line is part of the printable DOCUMENT (PDF export reuses this markup),
+    # so the whole line follows the content language — `t()` would mix the UI language into
+    # an authored German report ("6 sections · 5 Studien", ux-audit P5 finding).
+    n_sec = len(sections)
+    sections_word = (("Abschnitt" if n_sec == 1 else "Abschnitte") if de
+                     else ("section" if n_sec == 1 else "sections"))
+    studies_word = (("Studie" if n_studies == 1 else "Studien") if de
+                    else ("study" if n_studies == 1 else "studies"))
     meta_line = " · ".join([
-        t("n_sections", n=len(sections)),
-        f"{n_studies} " + (("Studie" if n_studies == 1 else "Studien") if de
-                           else ("study" if n_studies == 1 else "studies")),
+        f"{n_sec} {sections_word}",
+        f"{n_studies} {studies_word}",
         (report.get("created_at") or "")[:10],
     ])
 
@@ -171,7 +191,9 @@ def render_report(report: dict, store) -> str:
     for i, sec in enumerate(sections, 1):
         figs = [rf for rf in (_resolve_figure(f, store) for f in (sec.get("figures") or [])) if rf]
         body_html = (_body(sec["markdown"], figs) if sec.get("markdown")
-                     else h("p", {"class_": "muted"}, f"_({'noch nicht verfasst' if de else 'not yet authored'})_"))
+                     # plain <em>, not markdown syntax — this string is never md-rendered
+                     else h("p", {"class_": "muted"},
+                            h("em", {}, f"({'noch nicht verfasst' if de else 'not yet authored'})")))
         cites = ""
         if sec.get("citations"):
             rows = []
@@ -189,7 +211,10 @@ def render_report(report: dict, store) -> str:
         secs.append(h("section", {"class_": "rp-sec", "id": f"rp-s{i}"},
                       h("h2", {}, h("span", {"class_": "rp-num"}, f"{i:02d}"), sec["heading"]),
                       body_html, cites, src))
-    return h("article", {"class_": "report"}, cover, toc, *secs)
+    article = h("article", {"class_": "report"}, cover, toc, *secs)
+    if with_toc:
+        return article, [(f"rp-s{i}", sec["heading"]) for i, sec in enumerate(sections, 1)]
+    return article
 
 
 register_css(r"""
@@ -252,6 +277,9 @@ register_css(r"""
   .shell,.content,.page,main{margin:0!important;padding:0!important;max-width:none!important}
   body{background:#fff}
   .report{max-width:none}
+  /* print/PDF gets the FULL prose — clamps are a screen-dosing device, never an export cut */
+  .sl-clamp{display:block;-webkit-line-clamp:unset;overflow:visible}
+  .sl-clamp-toggle{display:none}
   .rp-sec{break-inside:avoid}
   .rp-call,.report blockquote,.rp-cites,.rp-fig{break-inside:avoid}
   .rp-cover{break-after:avoid}

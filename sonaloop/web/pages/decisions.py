@@ -1,29 +1,20 @@
 """Decision records: the cross-project list page + the shared row renderers.
 
-A decision LIVES on its project page — the decisions section there (projects.py) renders through
-the helpers below, and the canonical Ref route /decisions/{id} (registered in projects.py)
-redirects into that anchor. This module owns the rendering shared by the section and the global
-/decisions index: the lifecycle pills and the decision card (evidence chips via render_ref,
-rejected alternatives with why-not notes, supersede links in both directions). READ-ONLY like
-every page; list rows deep-link into their project's section. The card's `.hyp` CSS is
-co-located with its primary owner in hypotheses.py. /decisions and /decisions/{id} have distinct
-path shapes, so the list route never shadows the redirect (registered after projects' routes
-anyway — see pages/__init__)."""
+A decision LIVES on its project page — an outline row in the phase whose gate it decided (UX P2,
+spec/ux-contract.md §3.4); the canonical Ref route /decisions/{id} (registered in projects.py)
+redirects into that row's anchor. This module owns the decision CARD shared by the global
+/decisions index and the decision peek (web/pages/peek.py): evidence chips via render_ref,
+rejected alternatives with why-not notes, supersede links in both directions. READ-ONLY like
+every page; list rows deep-link into their project's row. The card's `.hyp` CSS is co-located
+with its primary owner in hypotheses.py; the status pills live in web/_presence (shared with the
+outline chips). /decisions and /decisions/{id} have distinct path shapes, so the list route
+never shadows the redirect (registered after projects' routes anyway — see pages/__init__)."""
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
+from .. import ui
+from .._presence import decision_status_pill
 from .._render import render_ref
-
-# Decision lifecycle pill colors (proposed → adopted → superseded; labels are i18n keys below).
-_DEC_STATUS_COLORS = {"proposed": "var(--accent)", "adopted": "var(--green)",
-                      "superseded": "var(--muted)"}
-
-
-def _dec_status_label(status: str) -> str:
-    """Resolved per request so the labels follow the active UI language."""
-    labels = {"proposed": t("dec_status_proposed"), "adopted": t("dec_status_adopted"),
-              "superseded": t("dec_status_superseded")}
-    return labels.get(status, status)
 
 
 def _decision_row(d: dict, store, by_id: dict, *, title_href: str | None = None,
@@ -56,54 +47,21 @@ def _decision_row(d: dict, store, by_id: dict, *, title_href: str | None = None,
         title = h("a", {"href": title_href}, title)
     proj = (h("span", {"class_": "muted small", "style": "margin-left:8px"}, project_title)
             if project_title else None)
+    # ADR bodies are LONG by design (ranking rationales, shortlist, must-haves) — ui.clamp keeps
+    # the record scanning like a row: 5 lines + an expand toggle above the threshold, a plain
+    # paragraph below it (no toggle chrome for three lines of text). UX contract C6.
+    body = ui.clamp(d.get("decision", ""))
     return h("div", {"class_": "hyp", "id": f'dec-{d["id"]}'},
-             h("div", {}, raw(_label(_dec_status_label(status),
-                                     _DEC_STATUS_COLORS.get(status, "var(--muted)"))),
-               " ", title, proj),
-             h("p", {"style": "margin:4px 0 0"}, d.get("decision", "")),
+             h("div", {}, raw(decision_status_pill(status)), " ", title, proj),
+             body,
              based, rejected, fragment(*links))
-
-
-def _decisions_html(project_id: str, store) -> str:
-    """The project's decision records, grouped adopted / proposed / superseded — what the research
-    led to, on which evidence, rejecting what (ticket decision-record-artifact)."""
-    decs = services.list_decisions(project_id, store=store)
-    if not decs:
-        return ""
-    by_id = {d["id"]: d for d in decs}
-    groups = []
-    for status in ("adopted", "proposed", "superseded"):
-        rows = [d for d in decs if d.get("status") == status]
-        if not rows:
-            continue
-        groups.append(h("div", {"class_": "oqp-h", "style": "margin-top:10px"},
-                        f'{_dec_status_label(status)} ({len(rows)})'))
-        groups += [_decision_row(d, store, by_id) for d in rows]
-    return h("div", {"class_": "outlinecard", "id": "decisions", "style": "margin-top:14px"},
-             h("h2", {"style": "margin:0 0 6px"}, f'{t("decisions_h")} ({len(decs)})'),
-             fragment(*groups))
 
 
 def register_decisions(app) -> None:
     @app.get("/decisions", response_class=HTMLResponse)
     def decisions_list() -> str:
-        """Every decision record across all projects, grouped adopted / proposed / superseded —
-        the audit trail of what the research changed."""
-        store = Store()
-        decs = services.list_decisions(store=store)
-        projects = {p["id"]: p["title"] for p in store.list_research_projects()}
-        by_id = {d["id"]: d for d in decs}
-        rows: list = []
-        for status in ("adopted", "proposed", "superseded"):
-            group = [d for d in decs if d.get("status") == status]
-            if not group:
-                continue
-            rows.append(h("div", {"class_": "group"}, _dec_status_label(status),
-                          h("span", {"class_": "cnt"}, str(len(group)))))
-            rows += [_decision_row(d, store, by_id,
-                                   title_href=f'/projects/{d["project_id"]}#dec-{d["id"]}',
-                                   project_title=projects.get(d["project_id"]))
-                     for d in group]
-        return _list_page(store, title=t("decisions_h"), lead=t("decisions_lead"), rows=rows,
-                          empty_icon="flag", empty_msg=t("no_decisions"), active="decisions",
-                          count=len(decs))
+        """Every decision record across all projects — the Library's Decisions tab
+        (ux-contract §3.5): one status-pilled row per record, the audit trail of what
+        the research changed; the full ADR card lives in the peek and on the project."""
+        from .library import library_page
+        return library_page("decisions")

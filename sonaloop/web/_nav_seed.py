@@ -5,42 +5,28 @@ items via register_nav_section/register_nav_item exactly as sonaloop-cloud or
 sonaloop-research would, so downstream sections sit beside these (ordered by `order`).
 Imported for its side effects by _components (the render side lives in _nav there).
 
-Workspace = the inputs/containers; Library = the methodology-agnostic primitives any
-methodology produces (council/concept/prototype/session/synthesis/survey/hypothesis/
-decision). Labels are lambdas so they resolve per request (i18n). Within a section,
-item order follows list order.
-"""
+Four workspace items, period (spec/ux-contract.md §3.5): Projects and Personas are the
+inputs/containers, the Library is ONE browser over every produced primitive (council/
+report/prototype/session/survey/hypothesis/decision/note — tabs on /library, the old
+list routes render it with their tab active), Activity is the live feed. Runs retired
+from the nav (the project-header run chip + /runs journal carry it); Documentation
+lives in the settings/footer cluster (web/_components._user_menu) — reference, not
+workspace. Labels are lambdas so they resolve per request (i18n)."""
 from __future__ import annotations
 
 from ._i18n import t
 from ._ext import register_nav_section, register_nav_item
 
 register_nav_section("workspace", label=None, order=0)
-register_nav_section("library", label=lambda: t("library_h"), order=10)
 
 _CORE_NAV = {
     "workspace": [
         ("/projects", "projects", "projects", lambda: t("projects")),
         ("/personas", "personas", "personas", lambda: t("personas")),
+        ("/library", "library", "book", lambda: t("library_h")),
         # The live feed of recorded events (ticket live-event-stream): a workspace
-        # surface (what's happening NOW), not a produced primitive — hence not library.
+        # surface (what's happening NOW), not a produced primitive — hence last.
         ("/activity", "activity", "clock", lambda: t("activity_h")),
-        # The runs panel (ticket agents-running-panel): driver status across projects —
-        # a live workspace surface like /activity, not a produced primitive.
-        ("/runs", "runs", "play", lambda: t("runs_h")),
-        ("/documentation", "docs", "overview", lambda: t("documentation")),
-    ],
-    "library": [
-        ("/notes", "note", "panel", lambda: t("notes")),
-        ("/councils", "councils", "councils", lambda: t("councils")),
-        ("/prototypes", "prototype", "prototype", lambda: t("prototypes_h")),
-        # Sessions are produced primitives like councils — the session IS the deliverable,
-        # and councils/syntheses cite it — so they sit in the library, not the workspace.
-        ("/sessions", "sessions", "activity", lambda: t("sessions")),
-        ("/syntheses", "syntheses", "report", lambda: t("syntheses")),
-        ("/surveys", "surveys", "clipboard", lambda: t("surveys_h")),
-        ("/hypotheses", "hypotheses", "target", lambda: t("hypotheses_h")),
-        ("/decisions", "decisions", "flag", lambda: t("decisions_h")),
     ],
 }
 

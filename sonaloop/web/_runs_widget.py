@@ -15,13 +15,12 @@ and /api/runs all share (deliberately NOT importing any page module, so _compone
 can import this without a cycle)."""
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from .._icons import icon as _picon     # direct import avoids a cycle (_components imports this module)
 from ..storage import Store
 from ._i18n import t
-from ._html import h, raw
+from ._html import h, raw, fragment
 
 
 def collect_run_states(store: Store | None = None) -> dict[str, list[dict[str, Any]]]:
@@ -44,6 +43,58 @@ def collect_run_states(store: Store | None = None) -> dict[str, list[dict[str, A
     return out
 
 
+def resume_html(note: str) -> str:
+    """A stalled run's resume affordance: the run-state note verbatim, with its
+    `start_run(...)` call rendered as a copyable snippet (one click → clipboard).
+    Shared by the /runs journal rows and the project-header run-chip popover."""
+    if "resume with " in note:
+        prefix, snippet = note.rsplit("resume with ", 1)
+        prefix += "resume with"
+    else:
+        prefix, snippet = note, ""
+    return h("div", {"class_": "run-resume"},
+             h("span", {"class_": "muted small"}, prefix),
+             raw(str(h("code", {}, snippet))
+                 + str(h("button", {"type": "button", "class_": "run-copy", "data-copy": snippet,
+                                    "data-copied": t("copied")}, t("copy_btn"))))
+             if snippet else None)
+
+
+def project_run_chip(project_id: str, store: Store) -> str:
+    """The project-header run chip (ux-contract §3.5 / decision §7.4): `▶ Run · state`
+    in the state's color, opening a small popover with the state, the last activity,
+    the next-ready steps or the copyable resume hint, and the /runs journal link.
+    '' when the project has no plan — there is no driver to show."""
+    from .. import services
+    try:
+        rs = services.project_run_state(project_id, store=store)
+    except Exception:  # noqa: BLE001 — the chip is chrome; never break the page
+        rs = None
+    if not rs or rs.get("state") not in ("active", "stalled", "finished"):
+        return ""
+    state = rs["state"]
+    label = {"active": t("runs_active_h"), "stalled": t("runs_stalled_h"),
+             "finished": t("runs_finished_h")}[state]
+    last = (rs.get("last_activity") or "")[:16].replace("T", " ")
+    ready = rs.get("next_ready") or []
+    btn = h("button", {"type": "button", "class_": f"runchip runchip--{state}",
+                       "data-runchip-toggle": True, "aria-haspopup": "true",
+                       "aria-expanded": "false"},
+            raw(_picon("play")), f'{t("run_chip")} · {label}')
+    fly = h("div", {"class_": "runchip-fly", "id": "runchip-fly", "hidden": True},
+            h("div", {"class_": "runsw-h"}, f'{t("run_chip")} · {label}'),
+            h("div", {"class_": "run-meta"},
+              h("span", {"class_": "muted small"},
+                f'{t("run_last_activity")}: {last}') if last else None,
+              fragment(h("span", {"class_": "muted small"}, f'{t("run_next_ready")}: '),
+                       fragment(*(h("span", {"class_": "pill"}, step) for step in ready[:4])))
+              if ready else None),
+            raw(resume_html(rs["note"])) if state == "stalled" and rs.get("note") else None,
+            h("a", {"class_": "runsw-all", "href": "/runs"},
+              raw(_picon("arrowRight")), " ", t("runs_view_all")))
+    return h("div", {"class_": "runchip-wrap", "id": "runchip"}, btn, fly)
+
+
 RUNS_WIDGET_CSS = r"""
 .runsw{position:relative;display:inline-flex}
 .runsw-btn{display:inline-flex;align-items:center;gap:7px}
@@ -61,6 +112,20 @@ RUNS_WIDGET_CSS = r"""
 .runsw-row .runsw-ts{flex:none;color:var(--muted);font-size:var(--t-sm)}
 .runsw-empty{color:var(--muted);font-size:var(--t-sm);padding:10px 8px}
 .runsw-all{display:block;text-align:center;font-size:var(--t-sm);color:var(--accent);text-decoration:none;border-top:1px solid var(--line-2);margin-top:4px;padding:7px 8px 4px}
+/* ---- project-header run chip (+ popover) ---- */
+.runchip-wrap{position:relative;display:inline-flex;margin:6px 0 0}
+.runchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;
+  background:var(--panel);color:var(--muted);font-size:var(--t-sm);font-weight:500;padding:2px 10px;cursor:pointer}
+.runchip svg{width:12px;height:12px}
+.runchip:hover{background:var(--hover)}
+.runchip--active{color:var(--green,#34a853);border-color:color-mix(in srgb,var(--green,#34a853) 45%,var(--line))}
+.runchip--stalled{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}
+.runchip-fly{position:absolute;left:0;top:calc(100% + 8px);width:min(380px,86vw);z-index:160;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 14px 40px rgba(0,0,0,.3);padding:6px 8px 8px}
+.runchip-fly[hidden]{display:none}
+.runchip-fly .run-meta{padding:2px 8px}
+.runchip-fly .run-resume{padding:4px 8px 2px}
+.runchip-fly .run-resume code{font-size:var(--t-sm);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:2px 7px}
 """
 
 
@@ -98,15 +163,30 @@ RUNS_WIDGET_JS = r"""<script>(function(){
 if(window.__slRunsWidget) return; window.__slRunsWidget=1;
 function el(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-// Delegated toggle: the widget lives inside #main, which SPA navigation replaces.
+// Delegated toggles: the widgets live inside #main, which SPA navigation replaces.
+// Same pattern for the topbar flyout and the project-header run-chip popover.
 document.addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('[data-runsw-toggle]');
   var fly=el('runsw-fly');
   if(b&&fly){ e.preventDefault(); fly.hidden=!fly.hidden; b.setAttribute('aria-expanded',fly.hidden?'false':'true'); return; }
   if(fly&&!fly.hidden&&!(e.target.closest&&e.target.closest('#runsw'))) fly.hidden=true;
+  var c=e.target.closest&&e.target.closest('[data-runchip-toggle]');
+  var cfly=el('runchip-fly');
+  if(c&&cfly){ e.preventDefault(); cfly.hidden=!cfly.hidden; c.setAttribute('aria-expanded',cfly.hidden?'false':'true'); return; }
+  if(cfly&&!cfly.hidden&&!(e.target.closest&&e.target.closest('#runchip'))) cfly.hidden=true;
 });
-document.addEventListener('keydown',function(e){ var fly=el('runsw-fly');
-  if(e.key==='Escape'&&fly&&!fly.hidden) fly.hidden=true; });
+document.addEventListener('keydown',function(e){ if(e.key!=='Escape') return;
+  var fly=el('runsw-fly'); if(fly&&!fly.hidden) fly.hidden=true;
+  var cfly=el('runchip-fly'); if(cfly&&!cfly.hidden) cfly.hidden=true; });
+// Copy-to-clipboard for resume snippets (journal rows + the run-chip popover).
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('[data-copy]'); if(!b) return;
+  var txt=b.getAttribute('data-copy'), done=b.getAttribute('data-copied')||'';
+  function ok(){ var old=b.textContent; b.textContent=done; setTimeout(function(){ b.textContent=old; },1400); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok); }
+  else{ var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+        ta.select(); try{ document.execCommand('copy'); ok(); }catch(_){ } document.body.removeChild(ta); }
+});
 if(!window.EventSource) return;   // static fallback: the server-rendered state stands
 function render(d){
   var w=el('runsw'), list=el('runsw-list'), cnt=el('runsw-count'); if(!w||!list||!cnt) return;

@@ -5,15 +5,11 @@ from fastapi.responses import RedirectResponse
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._graph_outline_sessions import outline_session_groups
-# Presence contract (tracker: sonaloop/project-presence-contract): the tier-3 rescue sections —
-# open questions / evidence assets / surveys — render on the DEFAULT view below the outline.
-from .._presence import (
-    asset_rows, assets_section_html, open_questions_section_html, surveys_section_html,
-)
-# The bet/decision section renderers live with their artifact's page module (which also serves the
-# cross-project /hypotheses and /decisions lists) — the project page embeds the same cards.
-from .hypotheses import _hypotheses_html
-from .decisions import _decisions_html
+# Presence contract (tracker: sonaloop/project-presence-contract) + UX P2 (spec/ux-contract.md
+# §3.4): EVERY project-scoped kind is an outline row in its phase context — decisions, surveys,
+# hypotheses, open questions and assets included (_graph_outline_extras builds their items).
+# asset_rows still feeds the ?view=graph floating panel.
+from .._presence import asset_rows
 
 
 def register_projects(app) -> None:
@@ -212,44 +208,33 @@ def register_projects(app) -> None:
         # and the persona/prototype pages only.
         sess_groups = outline_session_groups(
             services.list_usability_sessions(project_id=proj["id"], store=store), store)
-        # A near-empty outline sizes to content instead of pinning a viewport-high dead zone (the
-        # sections below rise above the fold); a full outline keeps filling the viewport.
+        # UX P2 (§3.4): the absorbed kinds enter the outline as phase rows — the page route
+        # fetches the lists (it holds the Store), _graph_outline_extras places them. The phase
+        # group headers carry the honest counts (C8); the appendix sections + jump chips retired.
+        decisions = services.list_decisions(proj["id"], store=store)
+        hypotheses = services.list_hypotheses(proj["id"], store=store)
+        surveys = services.list_surveys(project_id=proj["id"], store=store)
+        # A near-empty outline sizes to content instead of pinning a viewport-high dead zone;
+        # a full outline keeps filling the viewport.
         n_rows = (len(graph["nodes"]) + len(protos) + len(graph.get("reports") or []) + len(arts)
+                  + len(decisions) + len(hypotheses) + len(surveys) + len(assets)
+                  + len(graph["open_questions"])
                   + sum(1 + len(g["sessions"]) for g in sess_groups.values()))
         card_cls = "outlinecard" + ("" if n_rows > 8 else " ol-compact")
+        outline = _outline_html(graph, sessions=sess_groups, decisions=decisions,
+                                hypotheses=hypotheses, surveys=surveys)
+        # data-keynav arms the keymap's j/k row walk on the outline (ux-contract C7).
         main_view = (fragment(h("div", {"class_": "graphcard proj-graph"}, raw(_graph_interactive(graph))), panel, raw(oq_js))
-                     if is_graph else h("div", {"class_": card_cls}, raw(_outline_html(graph, sessions=sess_groups))))
-        # The section kinds live BELOW the outline — surface their counts as header jump-chips
-        # (anchor-jumps) so they stay visible above the fold and can't be scrolled past unnoticed.
-        # Presence contract: hypotheses · decisions · open questions · assets · surveys — every
-        # non-empty section kind gets a chip, empty kinds render no chrome.
-        n_hyp = len(services.list_hypotheses(proj["id"], store=store))
-        n_dec = len(services.list_decisions(proj["id"], store=store))
-        surveys = services.list_surveys(project_id=proj["id"], store=store)
-        n_resp = sum(s.get("response_count") or 0 for s in surveys)
-        jump_chips = [c for c in (
-            (h("a", {"class_": "pill projjump", "href": "#hypotheses"},
-               raw(_icon("target")), f' {n_hyp} · {t("hypotheses_h")}') if n_hyp else None),
-            (h("a", {"class_": "pill projjump", "href": "#decisions"},
-               raw(_icon("flag")), f' {n_dec} · {t("decisions_h")}') if n_dec else None),
-            (h("a", {"class_": "pill projjump", "href": "#open-questions"},
-               raw(_icon("help")), f' {len(oqs)} · {t("open_questions_h")}') if oqs else None),
-            (h("a", {"class_": "pill projjump", "href": "#assets"},
-               raw(_icon("file")), f' {len(assets)} · {t("assets_h")}') if assets else None),
-            (h("a", {"class_": "pill projjump", "href": "#surveys"},
-               raw(_icon("plan")),
-               f' {len(surveys)} · {t("surveys_h")} · {t("n_responses", n=n_resp)}') if surveys else None),
-        ) if c]
-        jump_html = (h("div", {"class_": "pills", "style": "margin-top:8px"}, *jump_chips)
-                     if jump_chips else "")
+                     if is_graph else h("div", {"class_": card_cls, "data-keynav": True}, raw(outline)))
+        # The run-state chip (ux-contract §3.5 / decision §7.4): `▶ Run · state` with a
+        # popover (last activity · next-ready/resume hint · /runs journal link). Runs left
+        # the nav; this header chip is where a project's driver status now surfaces.
+        from .._runs_widget import project_run_chip
+        run_chip = project_run_chip(proj["id"], store)
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
-                   h("p", {"class_": "lead"}, proj.get("goal", "")), jump_html, head_tools),
-                 main_view, raw(_hypotheses_html(proj["id"], store)),
-                 raw(_decisions_html(proj["id"], store)),
-                 raw(open_questions_section_html(graph["open_questions"])),
-                 raw(assets_section_html(assets)),
-                 raw(surveys_section_html(surveys)))
+                   h("p", {"class_": "lead"}, proj.get("goal", "")), raw(run_chip), head_tools),
+                 main_view)
         # Write affordances (web CRUD): create a note/section in THIS project, edit the
         # project's structural metadata (the edit page also hosts the typed-confirm delete).
         from .._forms import edit_button

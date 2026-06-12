@@ -14,20 +14,50 @@ def test_assets_present_and_app_builds():
     assert "/projects" in paths
 
 
-def test_sidebar_library_lists_surveys_hypotheses_decisions():
-    """The library nav section links the three outbound artifacts (seeded in _nav_seed.py via the
-    same public registry an extension uses) — without these a /surveys etc. page is unreachable."""
+def test_sidebar_is_exactly_four_workspace_items():
+    """The 4-item sidebar (ux-contract §3.5, seeded in _nav_seed.py via the same public
+    registry an extension uses): Projects · Personas · Library · Activity. Runs and the
+    8 library kinds left the nav — they live on the project-header chip and /library;
+    Documentation moved to the settings footer cluster."""
+    import re
     from starlette.testclient import TestClient
     from sonaloop.web._i18n import STRINGS
     html = TestClient(web.create_app()).get("/?lang=en").text
-    for href, label_key in (("/surveys", "surveys_h"),
-                            ("/hypotheses", "hypotheses_h"),
-                            ("/decisions", "decisions_h")):
-        assert f'href="{href}"' in html, f"nav link {href} missing"
-        assert STRINGS["en"][label_key] in html
-    # Sessions are produced primitives (the session IS the deliverable) — they live in the
-    # library group, below its header, not in the unlabeled workspace group above it.
-    assert html.index(STRINGS["en"]["library_h"]) < html.index('href="/sessions"')
+    sidebar = html.split('class="sl-sidebar"')[1].split("</aside>")[0]
+    nav = "".join(re.findall(r'<nav class="sl-nav">.*?</nav>', sidebar, re.S))
+    assert re.findall(r'href="([^"]+)"', nav) == ["/projects", "/personas", "/library", "/activity"]
+    assert STRINGS["en"]["library_h"] in nav
+    # the retired items answer elsewhere: Documentation in the settings popover (footer
+    # cluster), Runs only via the run chip/palette — neither in the nav groups
+    for gone in ("/runs", "/documentation", "/councils", "/syntheses", "/surveys",
+                 "/hypotheses", "/decisions", "/sessions", "/notes", "/prototypes"):
+        assert f'href="{gone}"' not in nav, f"{gone} should have left the nav"
+    pop = sidebar.split('class="sl-um-pop"')[1].split("sl-um-trigger")[0]
+    assert 'href="/documentation"' in pop and STRINGS["en"]["documentation"] in pop
+
+
+def test_library_browser_tabs_and_old_routes(store):
+    """The Library is ONE browser (ux-contract §3.5): /library tabs across all 8 kinds
+    (?tab= addresses one; unknown falls back to the first), and every old list route
+    still answers 200 rendering the library with ITS tab active — no redirects."""
+    from starlette.testclient import TestClient
+    from sonaloop.web._i18n import STRINGS
+    from sonaloop.web.pages.library import LIBRARY_TABS
+    client = TestClient(web.create_app())
+    html = client.get("/library?lang=en").text
+    assert STRINGS["en"]["library_h"] in html
+    for key, route, *_ in LIBRARY_TABS:                       # all 8 tabs render in the bar
+        assert f'href="{route}"' in html, f"tab link {route} missing"
+    assert 'class="sl-tab is-active"' in html                 # default = first tab (councils)
+    assert 'aria-selected="true"' in html.split('href="/councils"')[1][:120]
+    dec = client.get("/library?tab=decisions&lang=en").text
+    assert 'aria-selected="true"' in dec.split('href="/decisions"')[1][:120]
+    fallback = client.get("/library?tab=nope&lang=en").text   # unknown tab → first tab
+    assert 'aria-selected="true"' in fallback.split('href="/councils"')[1][:120]
+    for _key, route, *_ in LIBRARY_TABS:                      # old URLs answer 200, as the library
+        r = client.get(f"{route}?lang=en")
+        assert r.status_code == 200 and STRINGS["en"]["library_h"] in r.text, route
+        assert 'aria-selected="true"' in r.text.split(f'href="{route}"')[1][:120], route
 
 
 def test_vote_tally_is_case_robust():

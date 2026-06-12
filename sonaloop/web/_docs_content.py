@@ -286,6 +286,27 @@ RIGOUR_STEPS = [
 # What the inspector itself offers the human at the keyboard — the features you SEE, in plain
 # language. Shape: (anchor, icon, (title_de, title_en), (body_de, body_en)); bodies are Markdown.
 INSPECTOR_SECTIONS = [
+    ("orientation", "book",
+     ("Orientierung: vier Punkte, ein Modell", "Getting around: four items, one model"),
+     ("Die Seitenleiste hat genau **vier** Einträge: **Projekte · Personas · Library · Activity** "
+      "(Einstellungen & Doku sitzen im Footer). Das Denkmodell ist überall dasselbe: *Projekt → "
+      "Phasen → Zeilen; Klick = Peek.* Das **Projekt ist das Zuhause** — alles, was eine Studie "
+      "erzeugt (Councils, Reports, Entscheidungen, Umfragen, Prototypen, Sessions, Assets), ist "
+      "eine Zeile in seiner Phase. Die **Library** ist der projektübergreifende Browser: eine "
+      "Seite mit Tabs (Councils · Reports · Prototypen · Sessions · Umfragen · Hypothesen · "
+      "Entscheidungen · Notizen), überall dieselben Zeilen. Ein Klick auf eine Zeile öffnet erst "
+      "den **Peek** (Seitenpanel mit der Essenz); die volle Detailseite ist einen Klick weiter — "
+      "und jede behält ihre eigene URL. Den **Run-Status** eines Projekts zeigt ein Chip im "
+      "Projekt-Kopf (verlinkt aufs Run-Journal).",
+      "The sidebar has exactly **four** items: **Projects · Personas · Library · Activity** "
+      "(settings & docs live in the footer). One mental model runs the whole app: *project → "
+      "phases → rows; click = peek.* The **project is the home** — everything a study produces "
+      "(councils, reports, decisions, surveys, prototypes, sessions, assets) is a row in its "
+      "phase. The **Library** is the cross-project browser: one page with tabs (Councils · "
+      "Reports · Prototypes · Sessions · Surveys · Hypotheses · Decisions · Notes), the same "
+      "rows everywhere. Clicking a row opens the **peek** first (a side panel with the essence); "
+      "the full detail page is one more click — and every record keeps its own URL. A project's "
+      "**run state** shows as a chip in the project header (linking to the run journal).")),
     ("examples", "package",
      ("Beispielprojekte", "Example projects"),
      ("Zwei fertige Demo-Studien liegen bei — eine B2B-Positioning-Studie und eine B2C-Pricing-Studie "
@@ -309,27 +330,34 @@ INSPECTOR_SECTIONS = [
       "affected. The **Activity** feed (`g` `a`) lists everything recent in order. You watch the study "
       "come together — no manual refreshing.")),
     ("runs", "play",
-     ("Laufende Runs", "Runs panel"),
+     ("Laufende Runs", "Runs"),
      ("Oben in der Leiste zeigt ein Status-Punkt, ob gerade Studien **aktiv** laufen — er wird "
-      "**gelb**, wenn ein Projekt feststeckt (das stille Scheitern soll laut sein). Ein Klick öffnet "
-      "die Liste; die **Runs**-Seite (`g` `r`) zeigt jeden Projekt-Run mit letzter Aktivität.",
+      "**gelb**, wenn ein Projekt feststeckt (das stille Scheitern soll laut sein). Im "
+      "Projekt-Kopf trägt jedes Projekt seinen eigenen **Run-Chip** (Zustand · letzte Aktivität). "
+      "Beide verlinken auf das **Run-Journal** (`g` `r`) — eine bewusst schlichte Telemetrie-Seite "
+      "mit jedem Projekt-Run und seiner letzten Aktivität; als Navigationspunkt taucht sie nicht "
+      "auf.",
       "A status dot in the top bar shows whether studies are **running** right now — it turns "
-      "**amber** when a project is stalled (the silent failure mode should be loud). Click it for the "
-      "list; the **Runs** page (`g` `r`) shows every project run with its last activity.")),
+      "**amber** when a project is stalled (the silent failure mode should be loud). In the "
+      "project header every project carries its own **run chip** (state · last activity). Both "
+      "link to the **run journal** (`g` `r`) — a deliberately plain telemetry page listing every "
+      "project run with its last activity; it isn't a nav item.")),
     ("keyboard", "command",
      ("Tastatur & Palette", "Keyboard & palette"),
      ("`?` öffnet das Shortcut-Cheat-Sheet. **⌘K / Ctrl+K** öffnet die Befehls-Palette: Suche über "
       "alles (Personas, Councils, Reports, Sessions, Hypothesen, Entscheidungen, Umfragen …) plus "
       "Sprungbefehle zu jeder Seite. Navigation per Chords: `g` `h` Home, `g` `p` Personas, `g` `c` "
-      "Councils, `g` `s` Reports, `g` `a` Activity, `g` `r` Runs, `g` `d` Doku. In Listen: `j`/`k` "
-      "bewegt den Fokus, `Enter` öffnet; auf Detailseiten blättern `[`/`]` zum Nachbarn. Beim Tippen "
-      "in Felder ist alles deaktiviert.",
+      "Councils, `g` `s` Reports, `g` `a` Activity, `g` `r` Runs, `g` `d` Doku. In Listen und im "
+      "Projekt-Outline: `j`/`k` bewegt den Fokus, `Enter` öffnet die Zeile als **Peek** "
+      "(Seitenpanel), `Esc` schließt ihn — von dort öffnet „Öffnen“ die volle Detailseite. Auf "
+      "Detailseiten blättern `[`/`]` zum Nachbarn. Beim Tippen in Felder ist alles deaktiviert.",
       "`?` opens the shortcut cheat sheet. **⌘K / Ctrl+K** opens the command palette: search across "
       "everything (personas, councils, reports, sessions, hypotheses, decisions, surveys …) plus jump "
       "commands for every page. Navigate with chords: `g` `h` home, `g` `p` personas, `g` `c` "
-      "councils, `g` `s` reports, `g` `a` activity, `g` `r` runs, `g` `d` docs. In lists `j`/`k` move "
-      "focus and `Enter` opens; on detail pages `[`/`]` step to the sibling record. Everything is "
-      "disabled while you type in a field.")),
+      "councils, `g` `s` reports, `g` `a` activity, `g` `r` runs, `g` `d` docs. In lists and the "
+      "project outline `j`/`k` move focus, `Enter` opens the row as a **peek** (side panel) and "
+      "`Esc` closes it — “Open” inside the peek goes to the full detail page. On detail pages "
+      "`[`/`]` step to the sibling record. Everything is disabled while you type in a field.")),
     ("tour", "compass",
      ("Produkt-Tour", "Product tour"),
      ("Eine optionale 60-Sekunden-Tour zeigt die Oberfläche in sechs Schritten. Sie startet **nie von "

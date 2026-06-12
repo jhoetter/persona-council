@@ -56,8 +56,11 @@ def test_sessions_list_renders_empty_and_populated(store):
     assert "no sessions" in html
     sess = _record(store)
     html = client.get("/sessions?lang=en").text
+    # the URL stays canonical; the content is the LIBRARY with the Sessions tab active
+    # (ux-contract §3.5): one sl-entity row per walk — subject desc, steps meta, peek
     assert f'/sessions/{sess["id"]}' in html
-    assert "Signup prototype" in html and "Prototype" in html and "Completed" in html
+    assert "Signup prototype" in html and "2 steps" in html
+    assert f'data-drawer="/peek/session/{sess["id"]}"' in html
     # the project filter narrows honestly
     assert f'/sessions/{sess["id"]}' not in client.get("/sessions?project=nope&lang=en").text
 

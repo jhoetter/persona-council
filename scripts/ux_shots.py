@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""Visual-regression harness for the inspector (spec/ux-contract.md §5 item 2): `make ux`.
+
+Seeds a TEMP data dir with the two bundled example projects (services.load_example — the same
+deterministic record_* replay the tests use), boots the app on a free port, and screenshots the
+canonical screens (SCREENS below) in light AND dark at 1440x900 via Playwright.
+
+Modes:
+  --update    write the shots as goldens to tests/ux_goldens/<name>.png (commit them)
+  (default)   compare fresh shots against the goldens: a small per-pixel tolerance absorbs
+              antialiasing; a screen fails when more than DIFF_RATIO of its pixels move.
+              Failing diffs (golden | current | heat overlay) land in /tmp/ux-diff/; exit 1.
+
+Determinism notes: the seed is replayed fresh on every run (stable ids; council/synthesis
+timestamps come from the fixtures). Entities stamped at LOAD time (project created/updated,
+activity events) render "today"/"just now" relative dates — those drift inside the pixel
+tolerance day-to-day; refresh with --update if a date rollover ever trips the threshold.
+Pixel comparison uses Pillow, which ships as a hard transitive dependency (python-pptx).
+The SSE stream (/api/events) keeps the network busy forever — wait for 'load' + a settle,
+NEVER 'networkidle'.
+"""
+from __future__ import annotations
+
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+GOLDEN_DIR = ROOT / "tests" / "ux_goldens"
+DIFF_DIR = Path("/tmp/ux-diff")
+VIEWPORT = {"width": 1440, "height": 900}
+PIXEL_TOLERANCE = 24      # per-channel delta treated as "same" (antialiasing / font hinting)
+DIFF_RATIO = 0.005        # fail when > 0.5% of pixels move beyond the tolerance
+SETTLE_MS = 600           # post-load settle (SSE keeps the network busy; never networkidle)
+
+# ---------------------------------------------------------------- seed (env BEFORE import)
+
+_TMP = Path(tempfile.mkdtemp(prefix="sonaloop-ux-"))
+os.environ["SONALOOP_DATA_DIR"] = str(_TMP)
+os.environ["DATABASE_URL"] = f"sqlite:///{_TMP / 'sonaloop.db'}"
+os.environ["PERSONA_COUNCIL_DISABLE_EMBEDDINGS"] = "1"
+os.environ["PERSONA_COUNCIL_CONTENT_LANGUAGE"] = "en"
+os.environ["PERSONA_COUNCIL_UI_LANGUAGE"] = "en"
+
+sys.path.insert(0, str(ROOT))
+
+
+def seed() -> dict[str, str]:
+    """Load both bundled examples through the real record_* layer and resolve the detail-page
+    ids for the screen list. Deterministic: every entity id is stable per fixture key."""
+    from sonaloop import services
+    from sonaloop.storage import Store
+
+    store = Store()
+    premium = services.load_example("premium-pricing-study", store=store)
+    positioning = services.load_example("positioning-council", store=store)
+    council = sorted(services.list_councils(store=store), key=lambda c: c["id"])[0]
+    synthesis = sorted(services.list_syntheses(store=store), key=lambda s: s["id"])[0]
+    persona = sorted(store.list_personas(), key=lambda p: p["id"])[0]
+    return {
+        "project_premium": premium["project_id"],
+        "project_positioning": positioning["project_id"],
+        "council": council["id"],
+        "synthesis": synthesis["id"],
+        "persona": persona["id"],
+    }
+
+
+def screens(ids: dict[str, str]) -> list[tuple[str, str]]:
+    """The ~12 canonical screens (name, path) — shot in light AND dark."""
+    return [
+        ("projects", "/projects"),
+        ("project-premium", f'/projects/{ids["project_premium"]}'),
+        ("project-positioning", f'/projects/{ids["project_positioning"]}'),
+        ("personas", "/personas"),
+        ("persona", f'/personas/{ids["persona"]}'),
+        ("councils", "/councils"),
+        ("council", f'/councils/{ids["council"]}'),
+        ("synthesis", f'/syntheses/{ids["synthesis"]}'),
+        ("decisions", "/decisions"),
+        ("hypotheses", "/hypotheses"),
+        ("activity", "/activity"),
+        ("documentation", "/documentation"),
+    ]
+
+
+# ---------------------------------------------------------------- server
+
+
+def free_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def boot(port: int) -> subprocess.Popen:
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "sonaloop.web:create_app", "--factory",
+         "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning"],
+        cwd=ROOT, env=os.environ.copy())
+    base = f"http://127.0.0.1:{port}"
+    for _ in range(100):
+        try:
+            urllib.request.urlopen(f"{base}/projects", timeout=1)
+            return proc
+        except OSError:
+            if proc.poll() is not None:
+                raise RuntimeError("app process died during boot")
+            time.sleep(0.2)
+    proc.terminate()
+    raise RuntimeError("app did not come up on " + base)
+
+
+# ---------------------------------------------------------------- shoot + compare
+
+
+def shoot(base: str, shots: list[tuple[str, str]], out_dir: Path) -> list[Path]:
+    from playwright.sync_api import sync_playwright
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        for theme in ("light", "dark"):
+            ctx = browser.new_context(viewport=VIEWPORT, device_scale_factor=1)
+            # HEAD_JS applies localStorage.theme as [data-theme] before first paint.
+            ctx.add_init_script(f"try{{localStorage.setItem('theme','{theme}')}}catch(e){{}}")
+            page = ctx.new_page()
+            for name, path in shots:
+                page.goto(base + path, wait_until="load")  # SSE forbids networkidle
+                page.add_style_tag(content="*{animation:none!important;transition:none!important;"
+                                           "caret-color:transparent!important}")
+                page.wait_for_timeout(SETTLE_MS)
+                # Pin volatile SEED-TIME stamps (activity feed, project updated_at — minute
+                # precision, different every run) to a fixed same-width string so the diff
+                # only sees real layout/style drift, not the clock.
+                page.evaluate(
+                    """() => { const re = /\\b\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}\\b/g;
+                       const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+                       for (let n = walk.nextNode(); n; n = walk.nextNode())
+                         if (re.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(re, '2026-01-01 00:00'); }""")
+                target = out_dir / f"{name}--{theme}.png"
+                page.screenshot(path=str(target))
+                paths.append(target)
+            ctx.close()
+        browser.close()
+    return paths
+
+
+def compare(current: Path, golden: Path) -> float:
+    """Fraction of pixels that differ beyond PIXEL_TOLERANCE (0.0 = identical enough)."""
+    from PIL import Image, ImageChops
+
+    with Image.open(golden) as g, Image.open(current) as c:
+        g, c = g.convert("RGB"), c.convert("RGB")
+        if g.size != c.size:
+            return 1.0
+        diff = ImageChops.difference(g, c).convert("L").point(
+            lambda v: 255 if v > PIXEL_TOLERANCE else 0)
+        hist = diff.histogram()
+        return hist[255] / (diff.width * diff.height)
+
+
+def write_diff(current: Path, golden: Path, name: str) -> None:
+    from PIL import Image, ImageChops
+
+    DIFF_DIR.mkdir(parents=True, exist_ok=True)
+    with Image.open(golden) as g, Image.open(current) as c:
+        g, c = g.convert("RGB"), c.convert("RGB")
+        shutil.copy(golden, DIFF_DIR / f"{name}--golden.png")
+        shutil.copy(current, DIFF_DIR / f"{name}--current.png")
+        if g.size == c.size:
+            mask = ImageChops.difference(g, c).convert("L").point(
+                lambda v: 255 if v > PIXEL_TOLERANCE else 0)
+            heat = c.copy()
+            heat.paste((255, 0, 80), mask=mask)
+            heat.save(DIFF_DIR / f"{name}--diff.png")
+
+
+# ---------------------------------------------------------------- main
+
+
+def main() -> int:
+    update = "--update" in sys.argv[1:]
+    ids = seed()
+    port = free_port()
+    proc = boot(port)
+    try:
+        shot_dir = GOLDEN_DIR if update else Path(tempfile.mkdtemp(prefix="sonaloop-ux-shots-"))
+        paths = shoot(f"http://127.0.0.1:{port}", screens(ids), shot_dir)
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+        shutil.rmtree(_TMP, ignore_errors=True)
+
+    if update:
+        print(f"wrote {len(paths)} goldens to {GOLDEN_DIR}/ — review + commit them")
+        return 0
+
+    if DIFF_DIR.exists():
+        shutil.rmtree(DIFF_DIR)
+    failures = []
+    for current in paths:
+        golden = GOLDEN_DIR / current.name
+        if not golden.exists():
+            failures.append((current.name, "no golden — run `make ux UPDATE=1`"))
+            continue
+        ratio = compare(current, golden)
+        if ratio > DIFF_RATIO:
+            write_diff(current, golden, current.stem)
+            failures.append((current.name, f"{ratio:.2%} of pixels moved (limit {DIFF_RATIO:.2%})"))
+        else:
+            print(f"  ok   {current.name}  ({ratio:.3%})")
+    if failures:
+        print(f"\n✗ {len(failures)}/{len(paths)} screens drifted — diffs in {DIFF_DIR}/")
+        for name, why in failures:
+            print(f"  FAIL {name}: {why}")
+        return 1
+    print(f"✓ all {len(paths)} screens match the goldens")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

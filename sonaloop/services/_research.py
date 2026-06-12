@@ -281,6 +281,22 @@ def _study_node(store: Store, study_id: str) -> dict[str, Any] | None:
     }
 
 
+def _protos_with_session_counts(project_id: str, store: Store) -> list[dict]:
+    """The project's prototypes, each enriched with `n_sessions` — recorded persona reactions
+    (prototype sessions) PLUS usability walks whose subject is this prototype. Feeds the outline
+    row's sessions-count chip (spec/ux-contract.md §3.2) so the count is honest by construction."""
+    protos = list_prototypes_artifacts(project_id, store=store)
+    by_subj: dict[str, int] = {}
+    for s in list_usability_sessions(project_id=project_id, store=store):
+        key = str((s.get("subject") or {}).get("id") or "")
+        if key:
+            by_subj[key] = by_subj.get(key, 0) + 1
+    for p in protos:
+        p["n_sessions"] = (len(store.list_prototype_sessions(prototype_id=p["id"]))
+                           + by_subj.get(p["id"], 0) + by_subj.get(p.get("slug", ""), 0))
+    return protos
+
+
 def _attach_reports(g: dict, project_id: str, store: Store) -> dict:
     """Reports (project-scope syntheses) are first-class project artifacts — expose them on the graph so
     the outline lists them inline (among the methodology rows), not just as a top-bar button."""
@@ -318,7 +334,7 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
                     "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", []),
                     "methodology": project.get("methodology", ""), "phase": project.get("phase", "")},
         "methodology_state": None,
-        "prototypes": list_prototypes_artifacts(project["id"], store=store),
+        "prototypes": _protos_with_session_counts(project["id"], store),
         "artifacts": list(project.get("artifacts") or []),
         "assets": list(project.get("assets") or []),
         "sections": list(project.get("sections") or []),
@@ -531,7 +547,7 @@ def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
                     "persona_ids": project.get("persona_ids", []), "themes": project.get("themes", []),
                     "methodology": plan.get("methodology", ""), "phase": ""},
         "methodology_state": ms,
-        "prototypes": list_prototypes_artifacts(project["id"], store=store),
+        "prototypes": _protos_with_session_counts(project["id"], store),
         "artifacts": list(project.get("artifacts") or []),
         "assets": list(project.get("assets") or []),
         "sections": list(project.get("sections") or []),

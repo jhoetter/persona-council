@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import re
 from collections import Counter, defaultdict
 
 from .. import services
 from ..storage import Store
 from ._i18n import t
 from ._components import (
-    _esc, _icon, _avatar, _label, _md, _srcchips, _prose, _rec_row_n,
-    _effort_impact, _star, _study_lead,
+    _esc, _icon, _avatar, _label, _md, _md_inline, _srcchips, _prose, _rec_row_n,
+    _effort_impact, _star, _study_lead, _display_title,
 )
-from ._render import render_findings, render_statement
+from ._render import render_findings, render_statement, render_statements
 from .. import artifacts as _A
+from . import ui
 from ._vm import study_head
 from ._html import h, raw, fragment, register_css
 
@@ -91,6 +93,11 @@ register_css(r"""
 .cc-es p{margin:0 0 7px}.cc-es ul{margin:0 0 7px;padding-left:18px}
 .cc-jump{font-weight:600;color:var(--accent);font-size:var(--t-body)}
 .syn-main [id]{scroll-margin-top:26px}
+/* verdict/POV card — the structural opener of every report (ux-contract §3.6a) */
+.syn-verdict{margin:6px 0 26px}
+.syn-verdict .sl-card__title{font-size:var(--t-md);line-height:1.45;margin-top:.5em}
+.syn-verdict .sl-card__body{margin-top:.4em}
+.syn-verdict .sl-card__body p{margin:0}
 /* effort·impact chart is a design-system component now (.sl-quad/.sl-legend, vendored from
    sonaloop-design via _components_css.py) — no local chart CSS here. */
 .reclist .rec{display:flex;gap:11px;padding:10px 8px;border-bottom:1px solid var(--line-2);scroll-margin-top:72px}
@@ -104,6 +111,12 @@ register_css(r"""
 
 # ----------------------------- chart primitives ----------------------------- #
 # Vanilla inline charts (CSS/conic-gradient/SVG) — no build step, dark-mode safe.
+# Deliberately NOT sonaloop._charts (the vendored design-system library): those functions emit
+# complete <figure class="sl-chart"> blocks with a coupled title/legend and positional series
+# colours, while these are bare composable FRAGMENTS — a thin stance-coloured strip that embeds
+# inside link rows (.ref-row/.crow/.prow), a legendless donut composed with strip + legend in
+# .dnrow, and bars/area sized to the insight-card grid. Where a full design-system figure fits,
+# we delegate instead (see _components._effort_impact → _charts.effort_impact).
 
 
 def _stacked(parts: list[tuple], thin: bool = False) -> str:
@@ -241,8 +254,11 @@ def _stance_dist_html(sessions: list[dict]) -> str:
 
 
 def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment",
-                       title: str | None = None, per_council: bool = False) -> str | None:
-    """Reusable sentiment analytics block, embedded ON a council or synthesis."""
+                       title: str | None = None, per_council: bool = False,
+                       overview: bool = True) -> str | None:
+    """Reusable sentiment analytics block, embedded ON a council or synthesis. `overview=False`
+    keeps only the breakdowns (per-council, per-persona) — used when the page already opened
+    with the sentiment/stance charts row (§3.6), so nothing renders twice."""
     if title is None:
         title = t("sentiment_block")
     sessions = [s for s in sessions if s]
@@ -253,7 +269,7 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
         return None
     scope = t("sentiment_scope_chain") if per_council else t("sentiment_scope_session")
     blocks = [h("p", {"class_": "ihint"}, t("sentiment_intro", scope=scope))]
-    if nvotes:
+    if nvotes and overview:
         blocks.append(_overview_html(parts))
     if per_council and len(sessions) > 1:
         pc = _per_council_html(sessions)
@@ -262,10 +278,62 @@ def _sentiment_section(store: Store, sessions: list[dict], sid: str = "sentiment
     pbs = _personas_by_sentiment_html(store, sessions)
     if pbs:
         blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("personas_by_sentiment")), pbs))
+    if overview:
+        sd = _stance_dist_html(sessions)
+        if sd:
+            blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("stance_of_contributions")), sd))
+    if len(blocks) == 1:                       # nothing but the intro hint → no block at all
+        return None
+    return h("div", {"class_": "sec", "id": sid}, h("h2", {}, title), fragment(*blocks))
+
+
+def _verdict_card(syn: dict) -> str:
+    """The verdict/POV card that OPENS a report (ux-contract §3.6a): a crisp headline finding
+    (the first key_problem) as the card title where one exists, plus a 2-3 sentence lead cut
+    from the executive opening (sentence boundaries only before an uppercase start, so 'Min.'
+    or '+40 Min. wegen …' never splits). Without an exec opening the first recommendation
+    stands in as the title. Pure derivation from authored data — nothing new is written, the
+    full prose still follows (clamped) further down."""
+    findings = _A.synthesis_findings(syn)
+    heads = [f for f in findings if f.get("kind") in ("key_problem",)]
+    head_text = heads[0].get("text", "") if heads else ""
+    first_para = (syn.get("gesamtbild") or "").strip().split("\n\n", 1)[0]
+    sentences = [s for s in re.split(r"(?<=[.!?])\s+(?=[«„\"'(]?[A-ZÄÖÜ])", first_para) if s]
+    lead = sentences[0] if sentences else ""
+    for s in sentences[1:3]:
+        if len(lead) + len(s) > 460:
+            break
+        lead = f"{lead} {s}"
+    if not lead:                                       # no exec opening → a recommendation stands in
+        recs = [f for f in findings if f.get("kind") in ("recommendation",)]
+        head_text = head_text or (recs[0].get("text", "") if recs else "")
+    if not head_text and not lead:
+        return ""
+    return h("div", {"class_": "sl-card syn-verdict", "id": "verdict"},
+             h("div", {"class_": "sl-eyebrow"}, t("verdict_h")),
+             (h("div", {"class_": "sl-card__title"}, raw(_md_inline(_display_title(head_text, 180))))
+              if head_text else None),
+             h("div", {"class_": "sl-card__body"}, raw(_md(lead))) if lead else None)
+
+
+def _charts_row(sessions: list[dict]) -> str:
+    """The sentiment + stance charts ROW under the verdict card (§3.6b): the vote overview and
+    the contribution-stance distribution as two insight cards, computed over the cited council
+    chain. "" when the chain carries neither votes nor stanced statements."""
+    sessions = [s for s in sessions if s]
+    _tot, parts = _vote_parts(sessions)
+    nvotes = sum(v for v, _, _ in parts)
+    cards = []
+    if nvotes:
+        cards.append(h("div", {"class_": "insight"}, h("h3", {}, t("sentiment_block")),
+                       raw(_overview_html(parts))))
     sd = _stance_dist_html(sessions)
     if sd:
-        blocks.append(fragment(h("p", {"class_": "ihint", "style": "margin-top:18px"}, t("stance_of_contributions")), sd))
-    return h("div", {"class_": "sec", "id": sid}, h("h2", {}, title), fragment(*blocks))
+        cards.append(h("div", {"class_": "insight"}, h("h3", {}, t("stance_of_contributions")),
+                       raw(sd)))
+    if not cards:
+        return ""
+    return h("div", {"class_": "insights"}, fragment(*cards))
 
 
 def _persona_voices_html(store: Store, pid: str) -> str:
@@ -299,12 +367,21 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
     def _block(bid, label, inner):                            # the shared section wrapper
         return h("div", {"class_": "block", "id": bid}, h("h2", {"class_": "bh"}, label), inner)
 
-    # 1) Executive Summary — the unified Question → Answer lead (shared with the council 'finding'),
-    # fed by the shared study view-model so council/synthesis never branch on field names.
+    syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]
+    # 1) Structure before prose (ux-contract §3.6): the derived verdict/POV card opens the report,
+    # the sentiment + stance charts row follows — only THEN the authored prose (clamped).
+    if (verdict := _verdict_card(syn)):
+        sec.append(("verdict", t("verdict_h"), verdict))
+    if (charts := _charts_row(syn_sessions)):
+        sec.append(("charts", t("sentiment_block"), _block("charts", t("sentiment_block"), charts)))
+    # 2) Executive Summary — the unified Question → Answer lead (shared with the council 'finding'),
+    # fed by the shared study view-model so council/synthesis never branch on field names. Long
+    # authored bodies clamp at the section threshold (C6) — depth stays, dosed.
     if syn.get("gesamtbild"):
         vm = study_head(syn, is_synthesis=True)
         sec.append(("exec", t("summary"), _study_lead(
-            _md(vm["answer_md"]), vm["answer_label"], question=vm["question"], qlabel=t("question"))))
+            ui.clamp(raw(_md(vm["answer_md"])), threshold=ui.SECTION_CLAMP),
+            vm["answer_label"], question=vm["question"], qlabel=t("question"))))
     # 2) Cited evidence — councils are DECOUPLED: this synthesis is a standalone answer that may
     # CITE councils (or none). Render them as a compact reference list, NOT as the synthesis body.
     belege = None
@@ -350,7 +427,8 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
     if syn.get("positionierung"):
         sec.append(("positionierung", t("positioning"),
                     _block("positionierung", t("positioning"),
-                           h("div", {"class_": "sl-prose sm"}, raw(_md(syn["positionierung"]))))))
+                           h("div", {"class_": "sl-prose sm"},
+                             ui.clamp(raw(_md(syn["positionierung"])), threshold=ui.SECTION_CLAMP)))))
     # Structured convergence blocks (GAP-3): a methodology's key problems / affinity clusters /
     # down-select ranking + shortlist render as first-class answer content when present (data-driven —
     # labels via i18n, content free-text; no methodology value hardcoded).
@@ -362,14 +440,23 @@ def _synthesis_html(store: Store, syn: dict, *, embed: bool = False):
         sec.append(s)
     if (s := _fsec("shortlist", t("shortlist"))):
         sec.append(s)
-    # A synthesis does NOT re-host council voices (spec/artifact-cross-references.md): the personas'
-    # actual words live ONCE, in the councils, and the findings above cross-reference the specific
-    # statements they derive from. Here we show only the AGGREGATE — the sentiment across the council
-    # chain — which is genuine cross-council analysis, not a copied transcript.
-    syn_sessions = [store.get_council_session(cid) for cid in syn.get("council_ids", [])]
-    sent = _sentiment_section(store, syn_sessions, title=t("sentiment_over_chain"), per_council=True)
+    # Voices (Stimmen) — the synthesis' OWN per-persona statements (verdict + shift + quoted
+    # evidence; spec/unified-artifact-schema). These are cross-council ANALYSIS, not a re-hosted
+    # transcript (spec/artifact-cross-references.md): each row is the persona's distilled key
+    # argument, with the verbatim council quotes expandable underneath (§3.6e).
+    voices = _A.synthesis_statements(syn)
+    if voices:
+        sec.append(("stimmen", t("voices"),
+                    _block("stimmen", t("voices"),
+                           raw(render_statements(voices, store, clamp_at=ui.TURN_CLAMP,
+                                                 expand_quotes=True)))))
+    # The sentiment BREAKDOWN across the chain (per council, per persona) — the aggregate charts
+    # already opened the page (charts row), so overview=False keeps this block duplication-free.
+    sent = _sentiment_section(store, syn_sessions, sid="sentiment", title=t("sentiment_over_chain"),
+                              per_council=True, overview=False)
     if sent:
-        sec.append(("stimmen", t("sentiment_block"), h("div", {"class_": "block", "id": "stimmen"}, raw(sent))))
+        sec.append(("sentiment-detail", t("sentiment_over_chain"),
+                    h("div", {"class_": "block", "id": "sentiment-detail"}, raw(sent))))
     # supporting analysis (omit when empty — an empty section reads as a broken box)
     if (s := _fsec("segment", t("segments"))):
         sec.append(s)

@@ -1,17 +1,19 @@
 """Hypotheses: the cross-project list page + the shared bet renderers.
 
-A hypothesis LIVES on its project page — the bets section there (projects.py) renders through
-the helpers below, and the canonical Ref route /hypotheses/{id} (registered in projects.py)
-redirects into that anchor. This module owns everything bet-shaped that is shared between the
-project section and the global /hypotheses index: the lifecycle pills, the predicted/observed
-row card, and the hit-rate strip. The list is READ-ONLY like every page; rows deep-link into
-their project's section. /hypotheses and /hypotheses/{id} have distinct path shapes, so the
-list route never shadows the redirect regardless of registration order (we still register it
-after projects' routes — see pages/__init__)."""
+A hypothesis LIVES on its project page — an outline row in its phase context (UX P2,
+spec/ux-contract.md §3.4 / decision §7.1); the canonical Ref route /hypotheses/{id} (registered
+in projects.py) redirects into that row's anchor. This module owns everything bet-shaped that is
+shared between the global /hypotheses index and the hypothesis peek (web/pages/peek.py): the
+predicted/observed row card and the hit-rate strip (the lifecycle pills live in web/_presence,
+shared with the outline chips). The list is READ-ONLY like every page; rows deep-link into their
+project's row. /hypotheses and /hypotheses/{id} have distinct path shapes, so the list route
+never shadows the redirect regardless of registration order (we still register it after
+projects' routes — see pages/__init__)."""
 from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._html import register_css
+from .._presence import HYP_STATUS_COLORS, hypothesis_status_label, hypothesis_status_pill
 from .._render import render_ref
 
 # Card CSS shared by hypothesis AND decision rows (.hyp is the generic artifact card; decisions.py
@@ -23,19 +25,6 @@ register_css(r"""
 .hypstrip{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line-2);flex:1;max-width:340px}
 .hypseg{height:100%}
 """)
-
-# Hypothesis lifecycle pill colors (a lifecycle, not a vocabulary — labels are i18n keys below;
-# the hit-rate strip reuses the same colors so verdicts read identically everywhere).
-_HYP_STATUS_COLORS = {"open": "var(--accent)", "validated": "var(--green)", "refuted": "var(--red)",
-                      "inconclusive": "var(--amber)", "dropped": "var(--muted)"}
-
-
-def _hyp_status_label(status: str) -> str:
-    """Resolved per request so the labels follow the active UI language."""
-    labels = {"open": t("hyp_status_open"), "validated": t("hyp_status_validated"),
-              "refuted": t("hyp_status_refuted"), "inconclusive": t("hyp_status_inconclusive"),
-              "dropped": t("hyp_status_dropped")}
-    return labels.get(status, status)
 
 
 def _hyp_predicted_text(pred: dict) -> str:
@@ -82,9 +71,7 @@ def _hypothesis_row(hx: dict, store, *, title_href: str | None = None,
     proj = (h("span", {"class_": "muted small", "style": "margin-left:8px"}, project_title)
             if project_title else None)
     return h("div", {"class_": "hyp", "id": f'hyp-{hx["id"]}'},
-             h("div", {}, raw(_label(_hyp_status_label(status),
-                                     _HYP_STATUS_COLORS.get(status, "var(--muted)"))),
-               " ", title, proj),
+             h("div", {}, raw(hypothesis_status_pill(status)), " ", title, proj),
              h("div", {"class_": "hypvals"}, fragment(*vals)), note, src, derived)
 
 
@@ -102,8 +89,8 @@ def _hyp_hit_rate_strip(hyps: list) -> str:
         if n:
             segs.append(h("span", {"class_": "hypseg",
                                    "style": (f"width:{n / len(scored) * 100:.1f}%;"
-                                             f"background:{_HYP_STATUS_COLORS[status]}"),
-                                   "title": f"{_hyp_status_label(status)}: {n}"}))
+                                             f"background:{HYP_STATUS_COLORS[status]}"),
+                                   "title": f"{hypothesis_status_label(status)}: {n}"}))
     rate = (f"{hits}/{len(decisive)} · {hits / len(decisive) * 100:.0f}%" if decisive
             else t("hyp_no_decisive"))
     return h("div", {"class_": "hyprate"},
@@ -111,47 +98,13 @@ def _hyp_hit_rate_strip(hyps: list) -> str:
              h("div", {"class_": "hypstrip"}, fragment(*segs)))
 
 
-def _hypotheses_html(project_id: str, store) -> str:
-    """The project's bets section: open vs resolved, predicted-vs-observed per row, and the
-    hit-rate strip. Empty string when the project has no bets (no empty chrome)."""
-    hyps = services.list_hypotheses(project_id, store=store)
-    if not hyps:
-        return ""
-    open_bets = [x for x in hyps if x.get("status") == "open"]
-    resolved = [x for x in hyps if x.get("status") != "open"]
-    groups = []
-    if open_bets:
-        groups.append(h("div", {"class_": "oqp-h"}, f'{t("hyp_open_bets")} ({len(open_bets)})'))
-        groups += [_hypothesis_row(x, store) for x in open_bets]
-    if resolved:
-        groups.append(h("div", {"class_": "oqp-h", "style": "margin-top:10px"},
-                        f'{t("hyp_resolved")} ({len(resolved)})'))
-        groups += [_hypothesis_row(x, store) for x in resolved]
-    return h("div", {"class_": "outlinecard", "id": "hypotheses", "style": "margin-top:14px"},
-             h("h2", {"style": "margin:0 0 6px"}, f'{t("hypotheses_h")} ({len(hyps)})'),
-             raw(_hyp_hit_rate_strip(hyps)), fragment(*groups))
-
-
 def register_hypotheses(app) -> None:
     @app.get("/hypotheses", response_class=HTMLResponse)
     def hypotheses_list() -> str:
-        """Every bet across all projects, open vs resolved, with the GLOBAL hit-rate strip —
-        the calibration view: how often do our predictions survive reality?"""
+        """Every bet across all projects — the Library's Hypotheses tab (ux-contract §3.5),
+        keeping the GLOBAL hit-rate strip: how often do our predictions survive reality?"""
+        from .library import library_page
         store = Store()
         hyps = services.list_hypotheses(store=store)
-        projects = {p["id"]: p["title"] for p in store.list_research_projects()}
-        rows: list = []
-        for label, group in ((t("hyp_open_bets"), [x for x in hyps if x.get("status") == "open"]),
-                             (t("hyp_resolved"), [x for x in hyps if x.get("status") != "open"])):
-            if not group:
-                continue
-            rows.append(h("div", {"class_": "group"}, label,
-                          h("span", {"class_": "cnt"}, str(len(group)))))
-            rows += [_hypothesis_row(x, store,
-                                     title_href=f'/projects/{x["project_id"]}#hyp-{x["id"]}',
-                                     project_title=projects.get(x["project_id"]))
-                     for x in group]
         strip = str(_hyp_hit_rate_strip(hyps)) if hyps else ""
-        return _list_page(store, title=t("hypotheses_h"), lead=t("hypotheses_lead"), rows=rows,
-                          empty_icon="target", empty_msg=t("no_hypotheses"), active="hypotheses",
-                          pre=strip, count=len(hyps))
+        return library_page("hypotheses", store, pre_extra=strip)

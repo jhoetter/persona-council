@@ -7,6 +7,7 @@ read adapters that map current records onto the primitives. Reusable by web, exp
 """
 from __future__ import annotations
 
+import ast
 import json
 from functools import lru_cache
 from typing import Any
@@ -322,7 +323,7 @@ def _clean(d: dict) -> dict:
 
 _REF_ROUTES = {"council": "/councils/", "synthesis": "/syntheses/", "persona": "/personas/",
                "survey": "/surveys/", "session": "/sessions/", "hypothesis": "/hypotheses/",
-               "decision": "/decisions/"}
+               "decision": "/decisions/", "prototype": "/prototypes/", "note": "/notes/"}
 
 
 def ref_href(r: dict) -> str | None:
@@ -575,16 +576,32 @@ def validate_event(d: dict) -> dict:
 # them). council_prompts BUILDS the prompt primitives from the council's canonical question/proposal
 # fields; session_statements maps a prototype session's reaction → a statement.
 
+def _prompt_text(value: Any) -> str:
+    """Defensive read for a real host slip: a prompt/question recorded as the REPR of a prompt
+    dict ("{'id': 'q0', 'kind': 'question', 'text': '…'}") unwraps to the inner text instead of
+    surfacing as JSON on the page. Anything else passes through untouched."""
+    s = str(value or "")
+    t = s.strip()
+    if t.startswith("{") and t.endswith("}"):
+        try:
+            parsed = ast.literal_eval(t)
+        except (ValueError, SyntaxError):
+            return s
+        if isinstance(parsed, dict) and parsed.get("text"):
+            return str(parsed["text"])
+    return s
+
+
 def council_prompts(c: dict) -> list[dict]:
     if c.get("prompts"):
-        return list(c["prompts"])
+        return [{**p, "text": _prompt_text(p.get("text"))} for p in c["prompts"]]
     out = []
     if c.get("prompt"):
         out.append(prompt(c["prompt"], kind="question", id="prompt"))
     if c.get("proposal"):
         out.append(prompt(c["proposal"], kind="proposal", id="proposal"))
     for i, q in enumerate(c.get("questions") or []):
-        out.append(prompt(q, kind="question", id=f"q{i}"))
+        out.append(prompt(_prompt_text(q), kind="question", id=f"q{i}"))
     return out
 
 

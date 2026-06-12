@@ -172,6 +172,21 @@ then `uv build && uv publish`. The `uvx sonaloop-mcp` one-liner is backed by the
 distribution in [`packaging/sonaloop-mcp/`](packaging/sonaloop-mcp/) — bump its version in
 lockstep and publish it the same way. Refresh the vendored icons with `make icons`.
 
+### Dev checks
+
+- `make test` — the full hermetic pytest suite (temp DB, no network).
+- `make ux` — **the UX drift gate** ([spec/ux-contract.md](spec/ux-contract.md) §5): seeds a
+  deterministic demo store, screenshots the ~12 canonical screens (light + dark) and pixel-diffs
+  them against the committed goldens in `tests/ux_goldens/`. Run it after ANY change that touches
+  `web/`, the design-system vendoring (`make icons`) or page composition — a red diff with the
+  heat overlay lands in `/tmp/ux-diff/`. When a change is *deliberate*, refresh with
+  `make ux UPDATE=1`, eyeball the new goldens, and commit them alongside the code (a golden
+  change in a PR is the visual review surface). The structural ratchets
+  (`tests/test_ux_contract.py`: inline-style count, class whitelist) run inside `make test`
+  and may only ever go down.
+- `make check-icons` — vendored design-system files in sync with `../sonaloop-design`
+  (pre-push hook installs via `make hooks`).
+
 ## Operating rules & docs
 
 The host agent follows [AGENTS.md](AGENTS.md) (and [CLAUDE.md](CLAUDE.md), which
