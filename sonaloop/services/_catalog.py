@@ -16,9 +16,12 @@ imports `sonaloop_data` at module level):
    idempotent re-pulls), facet derivation + the deterministic `recommend` scorer.
 2. **Not installed**: `catalog_search`, `catalog_pull` and `catalog_status` keep
    working against the PUBLISHED catalog through a thin built-in fallback
-   (stdlib urllib, zero extra dependencies) that mirrors sonaloop-data's
-   raw.githubusercontent URL contract (`manifest.json`, `packs/<id>.json`,
-   `personas/<slug>/<file>`) and its `provenance.catalog` stamp. The duplication
+   (stdlib urllib, zero extra dependencies) that mirrors sonaloop-data's URL
+   contract (`manifest.json`, `packs/<id>.json`, `personas/<slug>/<file>`) and
+   its `provenance.catalog` stamp. The published catalog is the deployed site —
+   data.sonaloop.com serves the raw files next to the UI (override with
+   SONALOOP_CATALOG_BASE_URL); an explicit git `ref` goes to
+   raw.githubusercontent instead (the site only serves the current state). The duplication
    is deliberate and small (~60 lines): browse+pull must be usable from ANY
    sonaloop install, and the price is keeping `_PERSONA_FILES`/`RAW_URL`/the
    stamp shape in sync with `sonaloop_data.remote` — guarded by tests on both
@@ -43,6 +46,7 @@ limit default 25 + opaque cursor, {items,total,has_more,next_cursor} envelope).
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import urllib.error
 import urllib.request
@@ -54,6 +58,14 @@ from ..storage import Store
 
 CATALOG_REPO = "jhoetter/sonaloop-data"
 RAW_URL = "https://raw.githubusercontent.com/{repo}/{ref}/{path}"
+DEFAULT_BASE_URL = "https://data.sonaloop.com"
+
+
+def _base_url() -> str:
+    """The published catalog's HTTP base — the deployed site serves the raw catalog
+    files next to the UI (sonaloop-data ui/scripts/publish-catalog.mjs). Override
+    with SONALOOP_CATALOG_BASE_URL. Keep in lockstep with sonaloop_data.remote."""
+    return os.environ.get("SONALOOP_CATALOG_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
 
 # Mirror of sonaloop_data.remote.PERSONA_FILES (the per-persona snapshot files;
 # profile.json is required, the rest optional). Keep in lockstep.
@@ -62,8 +74,9 @@ _PERSONA_FILES = ("profile.json", "SOUL.md", "MEMORY.md", "calendar.json",
 
 INSTALL_NOTE = ("The sonaloop-data package is not installed — catalog_search, catalog_status "
                 "and catalog_pull keep working against the published catalog "
-                f"(github.com/{CATALOG_REPO}), but facet filtering, recommendation and "
-                "local-checkout pulls need it: `uv add sonaloop-data` (or pip install).")
+                "(data.sonaloop.com; override with SONALOOP_CATALOG_BASE_URL), but facet "
+                "filtering, recommendation and local-checkout pulls need it: "
+                "`uv add sonaloop-data` (or pip install).")
 
 FORCE_HINT = ("skipped personas were modified locally after their last pull — "
               "catalog_pull(force=True) overwrites them; catalog_status shows the drift")
@@ -109,7 +122,10 @@ def _fetch_bytes(url: str) -> bytes | None:
 
 
 def _get(ref: str, path: str, *, required: bool = False) -> bytes | None:
-    url = RAW_URL.format(repo=CATALOG_REPO, ref=ref, path=path)
+    # Default ref -> the published catalog API (data.sonaloop.com); explicit ref ->
+    # git raw (the site only serves the CURRENT state; history stays a git concern).
+    url = (f"{_base_url()}/{path}" if ref == "main"
+           else RAW_URL.format(repo=CATALOG_REPO, ref=ref, path=path))
     data = _fetch_bytes(url)
     if data is None and required:
         raise CatalogFetchError(f"{path} not found at {url}")
@@ -357,6 +373,8 @@ def _builtin_pull(store: Store, persona_slugs: list[str] | None, pack: str | Non
                              "schema_version": manifest.get("schema_version"),
                              "pulled_at": utc_now_iso(),
                              "repo": CATALOG_REPO, "ref": ref}
+    if ref == "main":
+        stamp["base_url"] = _base_url()
     if pack:
         stamp["pack"] = pack
 

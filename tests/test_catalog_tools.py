@@ -35,11 +35,12 @@ def _no_data_pkg(monkeypatch):
 
 
 def _serve(files: dict[str, bytes], monkeypatch):
-    """Serve a fake published catalog: path-after-ref -> bytes (None == 404)."""
+    """Serve a fake published catalog (the data.sonaloop.com contract): path -> bytes
+    (None == 404)."""
+    base = cat._base_url() + "/"
     def fake_fetch(url: str) -> bytes | None:
-        assert url.startswith("https://raw.githubusercontent.com/jhoetter/sonaloop-data/")
-        path = url.split("/", 6)[-1]                     # https://host/{owner}/{repo}/{ref}/{path}
-        return files.get(path)
+        assert url.startswith(base), f"unexpected URL shape: {url}"
+        return files.get(url[len(base):])
     monkeypatch.setattr(cat, "_fetch_bytes", fake_fetch)
 
 
@@ -413,6 +414,24 @@ def test_status_uses_local_checkout_timestamps(monkeypatch, tmp_path):
     assert [i["status"] for i in out["items"]] == ["behind"]
 
 
+def test_builtin_explicit_ref_uses_git_raw(monkeypatch, tmp_path):
+    """The site serves only the CURRENT catalog — an explicit git ref goes to
+    raw.githubusercontent (mirrors sonaloop_data.remote)."""
+    _no_data_pkg(monkeypatch)
+    seen: list[str] = []
+    def fake_fetch(url: str) -> bytes | None:
+        seen.append(url)
+        if url.endswith("manifest.json"):
+            return json.dumps({"generated_at": "x", "schema_version": 4,
+                               "personas": []}).encode()
+        return None
+    monkeypatch.setattr(cat, "_fetch_bytes", fake_fetch)
+    with pytest.raises(ValueError, match="Unknown persona slug"):
+        cat.catalog_pull(persona_slugs=["ghost"], ref="v2", store=Store(tmp_path / "d.db"))
+    assert seen and all(
+        u.startswith(f"https://raw.githubusercontent.com/{cat.CATALOG_REPO}/v2/") for u in seen)
+
+
 # --------------------------------------------------------------------------- #
 # the avatar_url escape hatch (ticket avatar-policy-lean-distribution)         #
 # --------------------------------------------------------------------------- #
@@ -430,11 +449,12 @@ def test_pull_prefers_manifest_avatar_url_over_repo_path(monkeypatch, tmp_path):
     files["manifest.json"] = json.dumps(manifest).encode()
 
     fetched: list[str] = []
+    base = cat._base_url() + "/"
     def fake_fetch(url: str) -> bytes | None:
         fetched.append(url)
         if url == cdn:
             return b"PNG-FROM-CDN"
-        return files.get(url.split("/", 6)[-1])
+        return files.get(url[len(base):])
     monkeypatch.setattr(cat, "_fetch_bytes", fake_fetch)
 
     cat.catalog_pull(persona_slugs=[slug], store=Store(tmp_path / "dest.db"))

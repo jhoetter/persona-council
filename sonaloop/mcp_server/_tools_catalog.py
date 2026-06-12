@@ -24,7 +24,8 @@ def register_catalog(mcp):
         ({facet -> [values]}, e.g. {"lebensphase": ["schichtarbeit"]}) needs the sonaloop-data
         package with a local catalog. Paginated per the shared convention (docs/pagination.md):
         `limit` (default 25) + opaque `cursor`; answers {items, total, has_more, next_cursor}.
-        Works WITHOUT the sonaloop-data package via the published manifest at git `ref`."""
+        Works WITHOUT the sonaloop-data package via the published catalog API
+        (data.sonaloop.com; SONALOOP_CATALOG_BASE_URL overrides; explicit `ref` reads git raw)."""
         t = time.perf_counter()
         return _env("catalog_search", services.catalog_search(query, facets, limit, cursor, ref), t)
 
@@ -46,7 +47,7 @@ def register_catalog(mcp):
         (coarse: the catalog index has no per-persona timestamp at this ref), `locally_modified`
         (the persona lived on here after the pull), `diverged` (both) or `removed_upstream`.
         Compares against the local checkout when sonaloop-data is installed, else the
-        published manifest at git `ref`. Plain catalog_pull refreshes `behind` personas;
+        published catalog API at data.sonaloop.com. Plain catalog_pull refreshes `behind` personas;
         locally_modified/diverged need catalog_pull(force=True)."""
         t = time.perf_counter()
         return _env("catalog_status", services.catalog_status(persona_slugs, ref), t)

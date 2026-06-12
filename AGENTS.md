@@ -136,7 +136,8 @@ Core MCP tools:
 - `brief_council` (gather candidates/contexts) → `record_council` (persist authored
   turns + synthesis), `get_council`, `list_councils`, `brief_ask`
 - `get_language`, `set_language` (UI + generated-content language, de|en)
-- Persona catalog (github:jhoetter/sonaloop-data): `catalog_search` (browse: slugs/
+- Persona catalog (github:jhoetter/sonaloop-data, published at data.sonaloop.com —
+  the deployed site serves the raw files as the API): `catalog_search` (browse: slugs/
   names/roles + facet summary; paginated) → `catalog_recommend` (deterministic,
   explainable persona-set recommendation; needs the sonaloop-data package) →
   `catalog_pull` (import personas/packs into the current store with
