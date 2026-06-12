@@ -67,6 +67,12 @@ def partition_dir() -> Path:
     return _REQUEST_PARTITION.get() or DATA_DIR
 
 
+def request_partition() -> Path | None:
+    """The RAW request-bound partition (None when unbound — callers that outlive the
+    binding request, e.g. an SSE stream, capture this and re-bind per access)."""
+    return _REQUEST_PARTITION.get()
+
+
 def load_env(path: Path | None = None) -> None:
     """Load a simple .env file without requiring python-dotenv at import time.
 

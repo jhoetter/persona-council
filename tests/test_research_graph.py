@@ -203,3 +203,56 @@ def test_council_modes_discovery_evaluation_decision(store):
     ev = services.record_council(pid, "Reaktion", [], [{"persona_id": "p1", "text": "gut"}], proposal="Das Konzept",
                                  store=store, key="e")
     assert services.council_mode(ev) == "evaluation"
+
+
+def test_plan_graph_absorbs_unplanned_project_evidence(store):
+    """Remote MCP hosts record councils/syntheses OUTSIDE the governed loop (no run_step/
+    checkpoint_step ever ran) — the project still owns that evidence, so the graph, the
+    outline and every derived count must show it instead of silently dropping it."""
+    pid = services.start_project("Remote study", "what lands?", store=store)["id"]
+    council = services.record_council(pid, "what would make you notice?", [],
+                                      [{"persona_id": "p1", "text": "a trigger event"}],
+                                      store=store, key="rc")
+    syn = services.record_synthesis("Awareness report", "arc",
+                                    council_ids=[council["id"]], store=store)
+
+    g = services.get_project_graph(pid, store=store)
+    nodes = {n["study_id"]: n for n in g["nodes"]}
+    assert f'council:{council["id"]}' in nodes
+    assert f'synthesis:{syn["id"]}' in nodes        # cites only owned councils → absorbed
+    # absorbed evidence sits in a REAL phase (the frame active at creation) — phase-less
+    # rows are dropped by the outline, which is exactly the bug this guards against
+    assert nodes[f'council:{council["id"]}']["phase"]
+    assert nodes[f'synthesis:{syn["id"]}']["phase"]
+    assert {"from_study": f'council:{council["id"]}', "to_study": f'synthesis:{syn["id"]}',
+            "type": "refines", "rationale": ""} in g["edges"]
+    listed = next(p for p in services.list_research_projects(store=store) if p["id"] == pid)
+    assert listed["councils"] == 1 and listed["studies"] == 1
+
+
+def test_synthesis_absorption_does_not_leak_across_projects(store):
+    """A synthesis citing ANOTHER project's councils (or nothing at all) stays off this
+    project's graph; project-scope reports keep riding _attach_reports, never the node list."""
+    pid_a = services.start_project("A", "?", store=store)["id"]
+    pid_b = services.start_project("B", "?", store=store)["id"]
+    ca = services.record_council(pid_a, "Q-A", [], [{"persona_id": "p1", "text": "x"}],
+                                 store=store, key="ca")
+    services.record_synthesis("Cites A", "arc", council_ids=[ca["id"]], store=store)
+    services.record_synthesis("Cites nothing", "arc", store=store)
+
+    gb = services.get_project_graph(pid_b, store=store)
+    assert not any(n["kind"] == "synthesis" for n in gb["nodes"])
+    assert not any(n["kind"] == "council" for n in gb["nodes"])
+
+
+def test_record_synthesis_project_id_links_and_validates(store):
+    pid = services.start_project("Linked", "goal?", store=store)["id"]
+    syn = services.record_synthesis("Standalone", "arc", project_id=pid, store=store)
+    assert syn["project_id"] == pid
+    g = services.get_project_graph(pid, store=store)
+    assert f'synthesis:{syn["id"]}' in {n["study_id"] for n in g["nodes"]}
+    # update in place keeps the link when project_id is omitted
+    again = services.record_synthesis("Standalone v2", "arc", synthesis_id=syn["id"], store=store)
+    assert again["project_id"] == pid
+    with pytest.raises(KeyError):
+        services.record_synthesis("Bad", "arc", project_id="rproject_missing", store=store)

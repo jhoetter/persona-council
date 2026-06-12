@@ -284,14 +284,15 @@ def register_council(mcp):
         return _env("brief_synthesis", services.brief_synthesis(council_ids, title, start_input, goal), t)
 
     @mcp.tool()
-    def record_synthesis(title: str, start_input: str, council_ids: list[str] | None = None, payload: dict[str, Any] | None = None, goal: str = "", synthesis_id: str | None = None, key: str | None = None) -> dict[str, Any]:
+    def record_synthesis(title: str, start_input: str, council_ids: list[str] | None = None, payload: dict[str, Any] | None = None, goal: str = "", synthesis_id: str | None = None, key: str | None = None, project_id: str = "") -> dict[str, Any]:
         """Persist/UPDATE a host-authored synthesis. A synthesis is DECOUPLED from councils:
         `council_ids` is OPTIONAL (may be empty — affinity over notes, a synthesis over syntheses, or
-        a standalone analysis); councils are cited evidence, not sub-parts. Pass the same synthesis_id
-        (or a stable `key`) to update in place / make a long run resumable. Link it to its verify task
-        with link_evidence."""
+        a standalone analysis); councils are cited evidence, not sub-parts. Pass `project_id` when the
+        synthesis answers one project's inquiry so it lists on that project's page. Pass the same
+        synthesis_id (or a stable `key`) to update in place / make a long run resumable. Link it to
+        its verify task with link_evidence."""
         t = time.perf_counter()
-        return _env("record_synthesis", services.record_synthesis(title, start_input, council_ids, payload, goal, synthesis_id, key), t)
+        return _env("record_synthesis", services.record_synthesis(title, start_input, council_ids, payload, goal, synthesis_id, key, project_id=project_id), t)
 
     @mcp.tool()
     def get_synthesis(synthesis_id: str) -> dict[str, Any]:

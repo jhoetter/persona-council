@@ -28,27 +28,34 @@ def _events_heartbeat_every() -> float:
         return 15.0
 
 
-async def _event_stream(request, last_id: int | None):
+async def _event_stream(request, last_id: int | None, partition=None):
     """Tail the cross-process `events` table as SSE frames. `id:` carries the bus row
     id, so EventSource reconnects replay via Last-Event-ID; a fresh connection (no
-    last id) starts at the current high-water mark — live tail, no history dump."""
+    last id) starts at the current high-water mark — live tail, no history dump.
+
+    `partition` is the request-bound data partition captured BY THE ENDPOINT: this
+    body outlives the middleware that bound the contextvar (its finally resets the
+    binding before the first poll runs), so every table read re-binds explicitly —
+    without it a workspace tenant's stream silently tails the GLOBAL events table."""
+    from ..config import reset_request_partition, set_request_partition
     from ..storage import Store
-    if last_id is None:
-        store = Store()
-        cursor = store.latest_event_id()
-        store.close()
-    else:
-        cursor = last_id
+
+    def _read(fn):
+        token = set_request_partition(partition)
+        store = Store()                              # fresh per poll: never hold a
+        try:                                         # connection across the sleep
+            return fn(store)
+        finally:
+            store.close()
+            reset_request_partition(token)
+
+    cursor = last_id if last_id is not None else _read(lambda s: s.latest_event_id())
     yield ": connected\n\n"                         # immediate flush → onopen fires
     last_beat = time.monotonic()
     while True:
         if await request.is_disconnected():
             return
-        store = Store()                              # fresh per poll: never hold a
-        try:                                         # connection across the sleep
-            rows = store.list_events_after(cursor)
-        finally:
-            store.close()
+        rows = _read(lambda s: s.list_events_after(cursor))
         for row in rows:
             cursor = row["id"]
             payload = {"id": row["id"], "ts": row["ts"], "event": row["event"],
@@ -75,8 +82,10 @@ def register_api(app) -> None:
             last_id = int(raw_last) if raw_last is not None else None
         except ValueError:
             last_id = None
+        from ..config import request_partition
         return StreamingResponse(
-            _event_stream(request, last_id), media_type="text/event-stream",
+            _event_stream(request, last_id, partition=request_partition()),
+            media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     @app.get("/api/runs")

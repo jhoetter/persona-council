@@ -539,11 +539,57 @@ def plan_graph(project_id: str, store: Store | None = None) -> dict[str, Any]:
                 continue
             seen.add(nid)
             nodes.append(_evidence_node(kind, eid, _title(kind, eid, t), t, store))
+    # Absorb project-owned evidence the plan never produced: remote MCP hosts demonstrably
+    # record_council/record_synthesis OUTSIDE the governed run loop, and a council the project
+    # owns (record_council appends every one to project.council_ids) must not vanish from the
+    # graph, the page and every count just because no task checkpointed it. Placement mirrors
+    # the web outline's honest fallback: the phase active at created_at, else the first frame.
+    plan_bound = sorted(nodes, key=lambda n: n.get("created_at", ""))
+    first_frame = next((t["id"] for t in plan["tasks"] if t["bucket"] == "analyze"), "")
+
+    def _phase_at(ts: str) -> str:
+        best = ""
+        for n in plan_bound:
+            if (n.get("created_at") or "") <= (ts or ""):
+                best = n.get("phase", "")
+            else:
+                break
+        return best or first_frame
+
+    for cid in project.get("council_ids") or []:
+        nid = f"council:{cid}"
+        c = store.get_council_session(cid)
+        if nid in seen or not c:
+            continue
+        seen.add(nid)
+        stub = {"bucket": "act", "consumes": [_phase_at(c.get("created_at", ""))]}
+        nodes.append(_evidence_node("council", cid, c.get("prompt", cid), stub, store))
+    owned = {nid.split(":", 1)[1] for nid in seen if nid.startswith("council:")}
+    absorbed_syntheses: list[tuple[str, list[str]]] = []
+    for syn in store.list_syntheses():
+        sid, nid = syn["id"], f"synthesis:{syn['id']}"
+        cited = list(syn.get("council_ids") or [])
+        if syn.get("scope") == "project":  # reports already ride the graph via _attach_reports
+            continue
+        if nid in seen or not (syn.get("project_id") == project_id
+                               or (cited and all(c in owned for c in cited))):
+            continue
+        seen.add(nid)
+        stub = {"bucket": "act", "consumes": [_phase_at(syn.get("created_at", ""))]}
+        nodes.append(_evidence_node("synthesis", sid, syn.get("title", sid), stub, store))
+        absorbed_syntheses.append((sid, cited))
     nodes.extend(note_graph_nodes(project))  # note nodes are first-class (composable primitive)
     nodes.sort(key=lambda n: n.get("created_at", ""))
     # edges: each verify task's synthesis consolidates its act fan's councils (refines)
     edges: list[dict[str, Any]] = []
     node_ids = {n["study_id"] for n in nodes}
+    # An absorbed synthesis still declares its evidence: cited councils that are graph nodes
+    # connect with the same `refines` semantics the verify-fan edges carry.
+    for sid, cited in absorbed_syntheses:
+        for cid in cited:
+            if f"council:{cid}" in node_ids:
+                edges.append({"from_study": f"council:{cid}", "to_study": f"synthesis:{sid}",
+                              "type": "refines", "rationale": ""})
     for t in plan["tasks"]:
         if t["bucket"] != "verify":
             continue

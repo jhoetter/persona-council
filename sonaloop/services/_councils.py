@@ -334,14 +334,31 @@ def record_council(project_id: str, prompt: str, persona_ids: list[str],
     # Soft pre-flight on the RESPONSE only (never stored, never blocking — a thin cohort can be
     # intentional): a "memory-grounded" council over participants with zero simulated memory is
     # ungrounded by construction; say so at record time, not first in assess_project's gap tail.
+    warnings: list[str] = []
     try:
         m = store.count_memory_for_personas(persona_ids)
         if persona_ids and m["facts"] + m["events"] == 0:
-            return {**session, "warnings": [
+            warnings.append(
                 "participants have ZERO simulated memory (0 facts/events) — this council is "
-                "ungrounded; deepen the cohort (simulate-cohort) before relying on it"]}
+                "ungrounded; deepen the cohort (simulate-cohort) before relying on it")
     except Exception:
         pass
+    # Same soft contract for governance: remote hosts demonstrably record outside the governed
+    # loop, leaving the plan untouched ('runs stalled') while evidence piles up beside it. The
+    # graph absorbs such councils (plan_graph), but gates/assessments only stay honest inside
+    # the loop — say so here, where the host is still listening.
+    try:
+        from ..plan_assess import project_run_state
+        rs = project_run_state(project["id"], store=store)
+        if rs and rs.get("state") == "stalled":
+            warnings.append(
+                "recorded OUTSIDE the governed run loop — the project's plan has ready work and "
+                f"no active run ({rs.get('note', '')}); drive councils via start_run → run_step → "
+                "checkpoint_step so plan gates and assess_project stay honest")
+    except Exception:
+        pass
+    if warnings:
+        return {**session, "warnings": warnings}
     return session
 
 

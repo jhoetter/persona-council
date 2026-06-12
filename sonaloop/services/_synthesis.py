@@ -141,19 +141,23 @@ def brief_synthesis(council_ids: list[str], title: str | None = None, start_inpu
 def record_synthesis(title: str, start_input: str, council_ids: list[str] | None = None,
                      payload: dict[str, Any] | None = None,
                      goal: str = "", synthesis_id: str | None = None, key: str | None = None,
-                     predictions: list | None = None,
+                     predictions: list | None = None, project_id: str = "",
                      created_at: str | None = None, store: Store | None = None) -> dict[str, Any]:
     """Persist a host-authored synthesis. A synthesis is a FIRST-CLASS answer/report node and is
     DECOUPLED from councils: `council_ids` is an OPTIONAL list of referenced evidence and may be
     empty — e.g. an affinity-clustering synthesis over observations, a synthesis over other
     syntheses, or a standalone analysis. Councils are independent nodes a synthesis MAY cite (via
-    `references`/`citations`/`voices`); they are not sub-parts of it.
+    `references`/`citations`/`voices`); they are not sub-parts of it. Pass `project_id` when the
+    synthesis answers one project's inquiry so the project graph lists it (a synthesis citing
+    only that project's councils is absorbed even without it).
 
     For the iterative driver loop: pass the SAME synthesis_id each round to update
     one growing study arc in place (chain + interim learnings + next_council_question).
     """
     store = store or Store()
     council_ids = list(council_ids or [])
+    if project_id:                       # validated ownership, never a dangling ref
+        project_id = _require_research_project(store, project_id)["id"]
     if key and not synthesis_id:        # deterministic id → idempotent resumable upsert (HX6)
         synthesis_id = stable_id("synthesis", key)
     data = validate_synthesis_payload(payload or {})
@@ -186,6 +190,11 @@ def record_synthesis(title: str, start_input: str, council_ids: list[str] | None
         statements=statements or prev.get("statements", []),
         findings=findings or prev.get("findings", []),
         prompts=prompts or prev.get("prompts", []),
+        scope=prev.get("scope", "convergence"),
+        project_id=project_id or prev.get("project_id", ""),
+        lead=prev.get("lead", ""),
+        sections=prev.get("sections", []),
+        graph_snapshot=prev.get("graph_snapshot"),
     ).to_dict()
     predictions_out = [_A.validate_predicted_behavior(pb) for pb in (predictions or [])]
     _A.assign_part_ids(predictions_out, "pb")
