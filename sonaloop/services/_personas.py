@@ -365,11 +365,24 @@ def bulk_create_personas(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
 
 
 
-def refresh_persona_from_source(persona_id: str, store: Store | None = None) -> dict[str, Any]:
-    raise NotImplementedError(
-        "Refreshing a profile re-authors it: brief_persona(persona.source_description) "
-        "-> author -> record_persona. " + _PERSONA_AUTHORING_HINT
-    )
+def refresh_persona_from_source(persona_id: str, store: Store | None = None,
+                                force: bool = False) -> dict[str, Any]:
+    """For catalog-pulled personas "refresh from source" has a concrete meaning: re-pull
+    the persona from its recorded catalog ref (drift-safe — a locally modified profile is
+    skipped and reported unless force=True). Native personas re-author instead (hint)."""
+    store = store or Store()
+    persona = store.get_persona(persona_id)
+    if not persona:
+        raise KeyError(f"Unknown persona: {persona_id}")
+    stamp = (persona.get("provenance") or {}).get("catalog")
+    if not stamp:
+        raise NotImplementedError(
+            "Refreshing a NATIVE profile re-authors it: brief_persona(persona.source_description) "
+            "-> author -> record_persona. " + _PERSONA_AUTHORING_HINT
+        )
+    out = catalog_pull(persona_slugs=[persona["slug"]], ref=stamp.get("ref") or "main",  # noqa: F821 (bound)
+                       force=force, store=store)
+    return {**out, "persona_id": persona["id"], "refreshed_from": stamp}
 
 
 

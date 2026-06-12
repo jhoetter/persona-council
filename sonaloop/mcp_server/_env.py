@@ -15,6 +15,7 @@ _NEXT: dict[str, dict[str, Any]] = {
     # --- persona catalog (sonaloop-data): browse -> (recommend) -> pull into the store ---
     "catalog_search": {"name": "catalog_pull", "reason": "pull the chosen personas/pack into this store with provenance"},
     "catalog_recommend": {"name": "catalog_pull", "reason": "pull the recommended set by slug into this store"},
+    "catalog_status": {"name": "catalog_pull", "reason": "refresh the behind personas (force=True for locally modified ones)"},
     "catalog_pull": {"name": "list_personas", "reason": "confirm what landed and pick the cohort"},
     "record_persona": {"name": "brief_day", "reason": "plan the persona's first day before simulating"},
     "brief_day": {"name": "record_day", "reason": "author day_plan + activities, then persist the whole day"},

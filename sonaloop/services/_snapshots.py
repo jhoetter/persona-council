@@ -114,8 +114,11 @@ def export_snapshot(out_dir: str | None = None, store: Store | None = None) -> d
         counts["experience_events"] += len(events)
         counts["entities"] += len(store.list_entities(pid))
         counts["facts"] += len(store.list_persona_facts(pid))
+        # updated_at rides the index so catalog consumers (catalog_status) get exact
+        # per-persona staleness from the manifest alone, without fetching every profile.
         index.append({"slug": p["slug"], "display_name": p["display_name"],
-                      "role": p.get("role", {}).get("title"), "has_avatar": bool(avatar)})
+                      "role": p.get("role", {}).get("title"), "has_avatar": bool(avatar),
+                      "updated_at": p.get("updated_at")})
 
     _w(base / "world_context.json", store.list_world_context())
     sessions = store.list_council_sessions()

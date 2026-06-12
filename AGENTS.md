@@ -131,10 +131,14 @@ Core MCP tools:
   names/roles + facet summary; paginated) → `catalog_recommend` (deterministic,
   explainable persona-set recommendation; needs the sonaloop-data package) →
   `catalog_pull` (import personas/packs into the current store with
-  `provenance.catalog` stamped; idempotent re-pulls). Search + pull also work
-  WITHOUT sonaloop-data installed, via a stdlib fallback against the published
-  catalog. The other pull paths live in sonaloop-data (in-process `load_into`,
-  `sonaloop-data pull` CLI / `pull_remote`).
+  `provenance.catalog` stamped; idempotent re-pulls, drift-SAFE: locally modified
+  personas are skipped + reported unless `force=True`). `catalog_status` is the
+  `git fetch && git status` of the catalog: per pulled persona — up_to_date /
+  behind / locally_modified / diverged / removed_upstream. For catalog personas
+  `refresh_persona_from_source` re-pulls from the recorded ref. Search + status +
+  pull also work WITHOUT sonaloop-data installed, via a stdlib fallback against
+  the published catalog. The other pull paths live in sonaloop-data (in-process
+  `load_into`, `sonaloop-data pull` CLI / `pull_remote`).
 - `attach_evidence`
 - `export_persona`, `export_logs`, `export_council_session`
 - Lifecycle hooks (docs/lifecycle-hooks.md): `list_lifecycle_events` →

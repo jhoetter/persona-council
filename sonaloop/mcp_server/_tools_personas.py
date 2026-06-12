@@ -83,10 +83,14 @@ def register_personas(mcp):
         return _env("suggest_tech_comfort", services.suggest_tech_comfort(), t)
 
     @mcp.tool()
-    def refresh_persona_from_source(persona_id: str) -> dict[str, Any]:
-        """Re-derive a persona's rendered SOUL/profile artifacts from its stored source record."""
+    def refresh_persona_from_source(persona_id: str, force: bool = False) -> dict[str, Any]:
+        """Refresh a persona from where it came from. Catalog-pulled personas re-pull from
+        their recorded catalog ref (drift-safe: a locally modified profile is skipped and
+        reported unless force=True — catalog_status shows the drift). Native personas answer
+        with the re-authoring recipe (brief_persona -> author -> record_persona) in-band."""
         t = time.perf_counter()
-        return _env("refresh_persona_from_source", services.refresh_persona_from_source(persona_id), t)
+        return _env("refresh_persona_from_source",
+                    services.refresh_persona_from_source(persona_id, force=force), t)
 
     @mcp.tool()
     def generate_avatar(persona_id: str, style: str | None = None) -> dict[str, Any]:

@@ -43,7 +43,7 @@ flowchart TD
 
     CLOUD -- "sonaloop.web.extensions<br/>sonaloop.hooks<br/>sonaloop.mcp.tools" --> CORE
     RESEARCH -- "same entry-point groups" --> CORE
-    DATA -- "load_into / pull_remote<br/>catalog_search, catalog_recommend, catalog_pull" --> CORE
+    DATA -- "load_into / pull_remote<br/>catalog_search, catalog_recommend,<br/>catalog_status, catalog_pull" --> CORE
     DESIGN -- "vendored py modules + make icons<br/>_icons.py, _tokens.py, _charts.py, _deck.py" --> CORE
     DESIGN -- "shared React blocks + tokens" --> WEBSITE
     DATA -- "sync-personas script" --> WEBSITE
