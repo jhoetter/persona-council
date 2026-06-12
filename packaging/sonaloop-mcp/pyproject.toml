@@ -1,13 +1,13 @@
 [project]
 name = "sonaloop-mcp"
-version = "0.1.1"
+version = "0.2.0"
 description = "uvx-launchable shim for the Sonaloop MCP server — `uvx sonaloop-mcp` just works."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "Johannes Hötter", email = "jt.hoetter@gmail.com" }]
 keywords = ["mcp", "model-context-protocol", "sonaloop"]
-dependencies = ["sonaloop>=0.1.1"]
+dependencies = ["sonaloop>=0.2.0"]
 
 [project.urls]
 Homepage = "https://github.com/jhoetter/sonaloop"
