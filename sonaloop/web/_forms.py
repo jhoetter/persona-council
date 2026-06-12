@@ -161,7 +161,7 @@ def overflow_menu(items, dialogs="") -> str:
     Esc/outside-click dismiss) holding the entity's actions; the dialogs the items open ride
     along as siblings (showModal works from anywhere — the top layer)."""
     menu = h("details", {"class_": "sl-overflow"},
-             h("summary", {"class_": "sl-iconbtn", "role": "button",
+             h("summary", {"class_": "sl-iconbtn sl-iconbtn--ghost", "role": "button",
                            "aria-label": t("more_actions"), "title": t("more_actions")},
                raw(_icon("more"))),
              h("div", {"class_": "sl-popover sl-popover--bottom-end"}, fragment(*items)))

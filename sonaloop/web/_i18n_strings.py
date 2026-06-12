@@ -140,7 +140,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "rt_sev_low": "gering", "rt_sev_medium": "mittel",
         "rt_sev_high": "hoch", "rt_sev_critical": "kritisch",
         "council_input_given": "Gegebener Input (Prompt + Kontext)",
-        "council_drew_on": "Stützte sich auf",
+        "council_drew_on": "Stützte sich auf", "ref_open_loop": "Offener Loop",
         "further_answers": "Weitere Antworten", "cited_by": "Zitiert von",
         # stance scale labels (the five canonical buckets — stance_scale.json label_keys; votes
         # are stances too, so the vote charts/legends resolve these same keys)
@@ -537,7 +537,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "rt_sev_low": "low", "rt_sev_medium": "medium",
         "rt_sev_high": "high", "rt_sev_critical": "critical",
         "council_input_given": "Input given (prompt + context)",
-        "council_drew_on": "Drew on",
+        "council_drew_on": "Drew on", "ref_open_loop": "Open loop",
         "further_answers": "Further answers", "cited_by": "Cited by",
         # stance scale labels (the five canonical buckets — stance_scale.json label_keys; votes
         # are stances too, so the vote charts/legends resolve these same keys)

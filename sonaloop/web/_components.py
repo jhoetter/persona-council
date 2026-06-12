@@ -254,7 +254,9 @@ def _user_menu() -> str:
 
 
 def _star(kind: str, ident: str, label: str, href: str) -> str:
-    return h("button", {"class_": "starbtn", "data-star": f"{kind}:{ident}", "data-href": href,
+    # W3 (one control vocabulary): the favourite star is a ghost icon button like every
+    # other header icon action; .starbtn only adds the on-state colours.
+    return h("button", {"class_": "sl-iconbtn sl-iconbtn--ghost starbtn", "data-star": f"{kind}:{ident}", "data-href": href,
                         "data-label": label, "data-type": kind, "title": t("favorite"),
                         "aria-label": t("mark_as_favorite")}, raw(_icon("star")))
 
@@ -346,7 +348,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
   </aside>
   <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="{t("sidebar")}"></div>
   <div class="sl-main" id="main">
-    <header class="sl-topbar"><button class="sl-iconbtn" id="sbt" data-sidebar-toggle title="{t("sidebar")} ([)" aria-label="{t("sidebar")}">{_icon("panel")}</button>
+    <header class="sl-topbar"><button class="sl-iconbtn sl-iconbtn--ghost" id="sbt" data-sidebar-toggle title="{t("sidebar")} ([)" aria-label="{t("sidebar")}">{_icon("panel")}</button>
       {_crumbs_html(crumbs)}<span class="sl-spacer"></span>{runs_widget_markup(store)}<span class="sl-tb-actions">{actions}</span></header>
     <section>{body}</section>
   </div>
@@ -355,10 +357,10 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
 
 # First component on the new builder (spec C3): markup via h() (auto-escaped), CSS co-located here.
 _STUDY_LEAD_CSS = register_css(
-    ".es{margin:22px 0 4px}"
+    ".es{margin:24px 0 4px}"
     ".eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin:0 0 12px}"
-    ".qa-q{font-size:var(--t-lg);line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 18px}"
-    ".qa-q::before{content:attr(data-label);display:block;font-size:var(--t-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}")
+    ".qa-q{font-size:var(--t-lg);line-height:1.42;font-weight:600;color:var(--ink);margin:2px 0 16px}"
+    ".qa-q::before{content:attr(data-label);display:block;font-size:var(--t-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}")
 
 
 # Long titles/subs (e.g. a council's full question-prompt) are clamped to a few lines + ellipsis — the
@@ -636,12 +638,13 @@ register_css(r"""
 /* label dot (.sl-dot) and avatars (.sl-avatar) come from the shared COMPONENTS_CSS layer;
    _avatar() still sets per-instance size/colour inline. */
 /* ---- stat strip + persona cards (G2) ---- */
-.stats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
 .stat{display:flex;align-items:baseline;gap:7px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:8px 12px}
 .stat b{font-size:var(--t-lg);font-weight:700}.stat span{color:var(--muted);font-size:var(--t-sm)}
 /* ---- stars / favorites ---- */
-.starbtn{border:0;background:none;cursor:pointer;color:var(--muted);padding:2px;line-height:0;border-radius:var(--radius-sm);display:inline-flex}
-.starbtn:hover{color:#e3a008;background:var(--hover)}
+/* the box model comes from .sl-iconbtn--ghost (W3 one control vocabulary) — only the
+   favourite colours live here */
+.starbtn:hover{color:#e3a008}
 .starbtn .star{fill:none}
 .starbtn.on{color:#e3a008}.starbtn.on .star{fill:#e3a008;stroke:#e3a008}
 #favs a{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -653,38 +656,38 @@ register_css(r"""
 # Co-located CSS (spec/roadmap.md R3): turn cards / detail-page chrome.
 register_css(r"""
 /* ---- turn cards / detail ---- */
-.turn{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:13px}
-.turn .hd{display:flex;align-items:center;gap:8px;margin:0 0 7px;flex-wrap:wrap}.turn .hd b{font-size:var(--t-body)}
+.turn{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:12px}
+.turn .hd{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}.turn .hd b{font-size:var(--t-body)}
 .turn.mod{background:var(--panel-2)}
 .turn-who{display:inline-flex;align-items:center;gap:7px;color:var(--ink);text-decoration:none}
 .turn-who:hover b{color:var(--accent)}
 .turn-ctx{flex-basis:100%;margin:2px 0 0;font-style:italic}
 /* bare card (persona's own page): no avatar/name; lead with the council it was said in */
-.turn-bare{padding:11px 13px}
+.turn-bare{padding:8px 12px}
 .turn-src{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:var(--t-sm);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .turn-src:hover{color:var(--accent)}.turn-src svg{width:13px;height:13px;flex:none;opacity:.8}
 /* empty / not-found state — a calm centered card with a hi-fi product glyph (Linear-style) */
 /* Empty / not-found state = the shared .sl-empty (+__icon/__title/__body) from COMPONENTS_CSS.
    Only the page-positioning (centre, push down from the top) is inspector-local. */
 .sl-empty{margin:8vh auto 0}
-.sl-empty .sl-btn{margin-top:9px}
+.sl-empty .sl-btn{margin-top:8px}
 /* a persona's multiple answers stack in one card, separated by a hairline */
-.turn-ans+.turn-ans{margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)}
+.turn-ans+.turn-ans{margin-top:12px;padding-top:12px;border-top:1px solid var(--line-2)}
 .turn-ans>p{margin:0}
 /* moderated transcript: one round per moderator question (the question, then the answers) */
-.qrounds{display:flex;flex-direction:column;gap:22px}
-.qround{display:flex;flex-direction:column;gap:10px}
-.qround-q{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;background:var(--accent-weak);border:1px solid var(--line);border-radius:var(--radius)}
+.qrounds{display:flex;flex-direction:column;gap:24px}
+.qround{display:flex;flex-direction:column;gap:12px}
+.qround-q{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:var(--accent-weak);border:1px solid var(--line);border-radius:var(--radius)}
 .qround-q>svg{color:var(--accent);flex-shrink:0;width:18px;height:18px;margin-top:1px}
 .qround-q p{margin:2px 0 0;font-weight:600;font-size:var(--t-md);line-height:1.35}
 .qround-n{font-size:var(--t-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
-.qround-a{display:flex;flex-direction:column;gap:10px}
-.turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--bg)}
+.qround-a{display:flex;flex-direction:column;gap:12px}
+.turn-input{margin:2px 0 8px;border:1px dashed var(--line);border-radius:var(--radius);padding:8px 12px;background:var(--bg)}
 .turn-input summary{cursor:pointer}
 /* prototype-session fields, inside the shared .turn statement card — labelled like the sl-prose eyebrows */
-.sfield{margin:10px 0 0}.sfield:first-child{margin-top:2px}.sfield .eyebrow{margin:0 0 3px}.sfield .sl-prose{margin:0}.sfield .sl-prose p{margin:0}
-.detail{max-width:980px}.thought{font-size:var(--t-md);padding:9px 12px;background:var(--panel-2);border-radius:var(--radius)}
-.quote{padding:8px 12px;background:var(--panel-2);margin:6px 0;border-radius:var(--radius)}
+.sfield{margin:12px 0 0}.sfield:first-child{margin-top:2px}.sfield .eyebrow{margin:0 0 3px}.sfield .sl-prose{margin:0}.sfield .sl-prose p{margin:0}
+.detail{max-width:980px}.thought{font-size:var(--t-md);padding:8px 12px;background:var(--panel-2);border-radius:var(--radius)}
+.quote{padding:8px 12px;background:var(--panel-2);margin:8px 0;border-radius:var(--radius)}
 .identity{display:grid;grid-template-columns:160px 1fr;gap:20px;align-items:start}
 .identity .avatar{width:160px;height:200px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--line)}
 """)

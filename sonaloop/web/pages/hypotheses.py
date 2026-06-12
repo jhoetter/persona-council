@@ -13,7 +13,7 @@ from __future__ import annotations
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._html import register_css
 from .._presence import HYP_STATUS_COLORS, hypothesis_status_label, hypothesis_status_pill
-from .._render import render_ref
+from .._render import _refs_line
 
 # Card CSS shared by hypothesis AND decision rows (.hyp is the generic artifact card; decisions.py
 # reuses it — co-located here with its primary owner).
@@ -55,12 +55,9 @@ def _hypothesis_reads(hx: dict, store):
                       str(res.get("observed_value", ""))))
     note = (h("p", {"class_": "muted small"}, res["note"])
             if res.get("note") else None)
-    src = (h("p", {"class_": "muted small turn-refs"},
-             t("hyp_observed"), ": ", raw(render_ref(res["source"], store)))
+    src = (raw(_refs_line([res["source"]], t("hyp_observed"), store))
            if res.get("source") else None)
-    derived = (h("p", {"class_": "muted small turn-refs"},
-                 t("rel_based_on"), ": ",
-                 fragment(*(raw(render_ref(r, store)) for r in hx["derived_from"])))
+    derived = (raw(_refs_line(hx["derived_from"], t("rel_based_on"), store))
                if hx.get("derived_from") else None)
     return h("div", {"class_": "hypvals"}, fragment(*vals)), note, src, derived
 

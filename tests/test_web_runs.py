@@ -91,7 +91,7 @@ def test_project_header_run_chip_with_popover(store):
     activity, the copyable resume hint (stalled) and the /runs journal link."""
     sid = _planned(store, "Stalled Proj")                      # open work, nobody driving
     html = _client().get(f"/projects/{sid}?lang=en").text
-    assert 'class="runchip runchip--stalled"' in html          # the rendered chip, not the chrome CSS/JS
+    assert 'class="sl-toolbtn runchip runchip--stalled"' in html          # the rendered chip, not the chrome CSS/JS
     assert f'{web.STRINGS["en"]["run_chip"]} · {web.STRINGS["en"]["runs_stalled_h"]}' in html
     pop = html.split('id="runchip-fly"')[1][:2500]
     # the popover LEADS with the concept (§9 V8): what a run is, before this run's state
@@ -104,7 +104,7 @@ def test_project_header_run_chip_with_popover(store):
     aid = _planned(store, "Active Proj")
     S.start_run(aid, store=store)
     active_html = _client().get(f"/projects/{aid}?lang=en").text
-    assert 'class="runchip runchip--active"' in active_html
+    assert 'class="sl-toolbtn runchip runchip--active"' in active_html
     assert f'{web.STRINGS["en"]["run_chip"]} · {web.STRINGS["en"]["runs_active_h"]}' in active_html
     # a project without a plan shows no chip — there is no driver to show
     bare = S.create_research_project("No plan", goal="g", store=store)

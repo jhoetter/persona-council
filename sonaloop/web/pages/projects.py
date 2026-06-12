@@ -257,16 +257,18 @@ def register_projects(app) -> None:
         # the nav; this header chip is where a project's driver status now surfaces.
         from .._runs_widget import project_run_chip
         run_chip = project_run_chip(proj["id"], store)
-        # The FILES lens entry (UX U8): a quiet chip next to the run chip — every asset of the
-        # project (evidence in + deliverables out) chronologically, the provenance timeline.
-        files_chip = h("a", {"class_": "pill", "href": f'/projects/{proj["id"]}?view=files'},
+        # The FILES lens entry (UX U8): a status chip next to the run chip — every asset of
+        # the project (evidence in + deliverables out) chronologically, the provenance
+        # timeline. Both chips share the .sl-toolbtn shape family (W3: one toolbar read).
+        files_chip = h("a", {"class_": "sl-toolbtn", "href": f'/projects/{proj["id"]}?view=files'},
                        raw(_icon("file")), " ",
                        t("one_file") if len(assets) == 1 else t("n_files", n=len(assets)))
+        chips = h("div", {"class_": "pills"}, raw(run_chip), files_chip)
         # The FilterBar closes the head so it sits INSIDE the 900px measure (V1 — it used to
         # float at the page's far left), aligned with the title/outline left edge.
         body = h("div", {"class_": "proj"},
                  h("div", {"class_": "proj-head"}, h("h1", {"class_": "h1"}, proj["title"]),
-                   h("p", {"class_": "lead"}, proj.get("goal", "")), raw(run_chip), files_chip,
+                   h("p", {"class_": "lead"}, proj.get("goal", "")), chips,
                    head_tools, bar),
                  main_view)
         # Write affordances (web CRUD, V10 §9): the ONE visible "…" overflow — Edit opens the

@@ -69,7 +69,7 @@ def _first_steps_html() -> str:
              h("h2", {"class_": "fsex-h"}, t("fs_example_h")),
              h("p", {"class_": "muted"}, t("fs_example_d")),
              h("div", {"class_": "fscard"}, example_rows),
-             h("p", {"style": "margin-top:14px"},
+             h("p", {"style": "margin-top:16px"},
                h("a", {"class_": "sl-btn", "href": DOCS_GETTING_STARTED_URL,
                        "target": "_blank", "rel": "noopener"},
                  raw(_icon("external")), " ", t("fs_docs_link")),
@@ -172,31 +172,31 @@ def register_lists(app) -> None:
 # Co-located CSS (spec/roadmap.md R3): the shared linear list rows used by every index page.
 register_css(r"""
 /* ---- linear list rows (G3) ---- */
-.group{margin:18px 0 2px;display:flex;align-items:center;gap:8px;font-size:var(--t-sm);color:var(--muted);font-weight:600}
+.group{margin:16px 0 2px;display:flex;align-items:center;gap:8px;font-size:var(--t-sm);color:var(--muted);font-weight:600}
 .group .cnt{color:var(--muted);font-weight:500}
 .rows{border:0;border-top:1px solid var(--line-2);background:transparent}
-.row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-bottom:1px solid var(--line-2);min-height:40px;border-radius:var(--radius-sm);transition:background 110ms}
+.row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--line-2);min-height:40px;border-radius:var(--radius-sm);transition:background 110ms}
 .row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
 .row>svg.ic,.row>.ic{color:var(--faint);flex-shrink:0;width:16px;height:16px}.row:hover>svg.ic{color:var(--muted)}
 .rico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;border-radius:var(--radius-sm);background:var(--panel-2)}
 .rico svg{width:15px;height:15px}
-.h1cnt{font-size:var(--t-body);font-weight:500;color:var(--faint);margin-left:7px;vertical-align:middle}
+.h1cnt{font-size:var(--t-body);font-weight:500;color:var(--faint);margin-left:8px;vertical-align:middle}
 .list-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 0;color:var(--muted);text-align:center}.list-empty svg{width:26px;height:26px;color:var(--faint)}
 .row .title{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .row .sub{color:var(--muted);font-size:var(--t-sm);flex-shrink:0}
-.row .right{display:flex;align-items:center;gap:11px;flex-shrink:0;color:var(--faint);font-size:var(--t-sm)}
+.row .right{display:flex;align-items:center;gap:8px;flex-shrink:0;color:var(--faint);font-size:var(--t-sm)}
 .votebar{display:inline-flex;height:6px;width:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line)}
 .votebar i{display:block;height:100%}
 /* ---- first-steps checklist (empty-DB home; ticket one-sentence-mcp-install) ---- */
 .fscard{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);max-width:640px}
-.fsrow{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line-2);align-items:flex-start}
+.fsrow{display:flex;gap:12px;padding:16px;border-bottom:1px solid var(--line-2);align-items:flex-start}
 .fsrow:last-child{border-bottom:0}
 .fsmark{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--panel-2);color:var(--faint)}
 .fsmark svg{width:14px;height:14px}
 .fsdone .fsmark{color:var(--green,#34a853)}
 .fsbody{display:flex;flex-direction:column;gap:2px;min-width:0}
 .fsbody code{font-size:var(--t-sm);word-break:break-all}
-.fsex-h{font-size:var(--t-md);margin:26px 0 4px}
+.fsex-h{font-size:var(--t-md);margin:24px 0 4px}
 .fsex{margin:0}
 .fsex .sl-btn{flex-shrink:0;align-self:center;margin-left:auto}
 """)

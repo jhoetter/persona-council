@@ -1,4 +1,204 @@
-# UX Audit — Phase U rubric (newest on top: Round 3 → Round 2 → P5 → U1 history)
+# UX Audit — Phase U rubric (newest on top: Round 4 → Round 3 → Round 2 → P5 → U1 history)
+
+## Round 4 (2026-06-12) — spacing conformance sweep (ux-contract §10 W1–W4)
+
+### Spacing conformance (W1)
+
+> Method: `scripts/ux_spacing.py` — the DOM-measured sweep. Boots the same seeded app as
+> `make ux`, walks every canonical screen (incl. the open slide-over) at 1440×900 and reads
+> the COMPUTED paddings/margins/gaps of every structural element (page chrome, topbar,
+> headers, tabs, filter bar, list containers, rows, section gaps, card paddings, drawer
+> chrome). Every value is classified against the density system (sonaloop-design "Spacing &
+> density"): **token** (0/4/8/12/16/20/24/28/32/40/48 px) · **optical** (documented 1–3px
+> hairlines/micro-nudges) · **em** (fractional px from the em-sized density-adaptive layer —
+> buttons, inputs, entity rows, tabs — deliberately off the px grid) · **center** (resolved
+> `margin: auto` of a measure). Anything else FLAGS; the script exits 1 while any flag
+> remains, so the sweep is re-runnable as a gate.
+
+**Before → after (flags per screen):** projects 4→0 · project-premium 7→0 ·
+project-positioning 7→0 · project-filtered 7→0 · project-slideover 28→0 ·
+project-slideover-ssr 28→0 · personas 4→0 · persona 16→0 · councils 5→0 · council 29→0 ·
+synthesis 28→0 · decisions 5→0 · hypotheses 5→0 · asset 12→0 · project-files 5→0 ·
+activity 4→0 · documentation 5→0 · palette 7→0 — **TOTAL 206 → 0**.
+
+Representative fixes (the off-grid rules, all snapped to tokens): page chrome `26/30→24/32`,
+proj-head top `22→24`, outline rows `7px/10px gaps→8px` (+ tree indent `10+n·26 → 8+n·24`),
+phase summary `13/6/9 → 12/8/8`, round label `34→32` (now exactly icon-column 8+16+8), doc
+grid `30→32`, rail `6→8` + h4 `10/6→8/8`, `.sec 26/18→24/16`, turn cards `13→12` & bare
+`11/13→8/12`, q-rounds `22/10→24/12`, q-banner `11/14→12/16` (+ count-chip reserve
+`64→48`), study lead `22→24`, finding/rec/segment rows `9/14/11/13→8/12`, filter bar
+`10→12`, list `.group 18→16` & `.row 9/10/11→8/12`, docs tabs `22→24`, synthesis blocks
+`26→24` & verdict `6/26→8/24`, plan drawer (`.psec/.ptask/.plan-fw` …) and the
+open-questions panel — all in `web_assets.py` / the co-located `register_css` blocks; no
+inline styles added (STYLE_BASELINE untouched at 35).
+
+**Exemption list: empty.** No per-rule exemptions were needed; the only non-token classes
+are the three documented SYSTEM categories above (optical 1–3px, the em density-adaptive
+layer, auto-centering) plus the grid-derived outline tree indent (8 + n×24).
+
+**Final conformance table** (distinct measured rule → classification; the per-screen run
+lives in `/tmp/ux/w1-spacing-table.txt`, regenerate with
+`uv run python scripts/ux_spacing.py`):
+
+| element | property | computed | class |
+|---|---|---|---|
+| card | margin-bottom | 24px | token |
+| card | margin-top | 8px | token |
+| card | padding-bottom | 13.65px | em |
+| card | padding-bottom | 15.75px | em |
+| card | padding-left | 13.65px | em |
+| card | padding-left | 15.75px | em |
+| card | padding-right | 13.65px | em |
+| card | padding-right | 15.75px | em |
+| card | padding-top | 13.65px | em |
+| card | padding-top | 15.75px | em |
+| doc-grid | column-gap | 32px | token |
+| doc-grid | row-gap | 32px | token |
+| drawer-body | padding-bottom | 20px | token |
+| drawer-body | padding-left | 24px | token |
+| drawer-body | padding-right | 24px | token |
+| drawer-body | padding-top | 20px | token |
+| drawer-head | column-gap | 8px | token |
+| drawer-head | padding-left | 16px | token |
+| drawer-head | padding-right | 8px | token |
+| drawer-head | row-gap | 8px | token |
+| entity-row | column-gap | 11.05px | em |
+| entity-row | padding-bottom | 9.1px | em |
+| entity-row | padding-left | 11.7px | em |
+| entity-row | padding-right | 11.7px | em |
+| entity-row | padding-top | 9.1px | em |
+| entity-row | row-gap | 11.05px | em |
+| filter-bar | column-gap | 8px | token |
+| filter-bar | margin-bottom | 2px | optical |
+| filter-bar | margin-top | 12px | token |
+| filter-bar | row-gap | 8px | token |
+| finding-row | column-gap | 12px | token |
+| finding-row | padding-bottom | 8px | token |
+| finding-row | padding-top | 8px | token |
+| finding-row | row-gap | 12px | token |
+| h1 | margin-bottom | 4px | token |
+| lead | margin-bottom | 16px | token |
+| outline | margin-left | 146px | center |
+| outline | margin-right | 146px | center |
+| outline | padding-left | 24px | token |
+| outline | padding-right | 24px | token |
+| outline-row | column-gap | 8px | token |
+| outline-row | padding-bottom | 8px | token |
+| outline-row | padding-left | 8px | token |
+| outline-row | padding-right | 8px | token |
+| outline-row | padding-top | 8px | token |
+| outline-row | row-gap | 8px | token |
+| outlinecard | padding-bottom | 40px | token |
+| outlinecard | padding-top | 8px | token |
+| page-chrome | padding-bottom | 24px | token |
+| page-chrome | padding-left | 32px | token |
+| page-chrome | padding-right | 32px | token |
+| page-chrome | padding-top | 24px | token |
+| page-header | column-gap | 16px | token |
+| page-header | row-gap | 16px | token |
+| page-header-main | column-gap | 8px | token |
+| page-header-main | row-gap | 8px | token |
+| proj-chips | column-gap | 8px | token |
+| proj-chips | row-gap | 8px | token |
+| proj-head | margin-left | 146px | center |
+| proj-head | margin-right | 146px | center |
+| proj-head | padding-bottom | 12px | token |
+| proj-head | padding-left | 24px | token |
+| proj-head | padding-right | 24px | token |
+| proj-head | padding-top | 24px | token |
+| prop | column-gap | 12px | token |
+| prop | row-gap | 12px | token |
+| props-quiet | column-gap | 12px | token |
+| props-quiet | row-gap | 12px | token |
+| rail | margin-bottom | 28px | token |
+| rail | margin-top | 20px | token |
+| rail | padding-bottom | 20px | token |
+| rail | padding-top | 8px | token |
+| rail-h4 | column-gap | 8px | token |
+| rail-h4 | margin-bottom | 8px | token |
+| rail-h4 | row-gap | 8px | token |
+| rec-row | column-gap | 12px | token |
+| rec-row | padding-bottom | 8px | token |
+| rec-row | padding-left | 8px | token |
+| rec-row | padding-right | 8px | token |
+| rec-row | padding-top | 8px | token |
+| rec-row | row-gap | 12px | token |
+| row-group | column-gap | 8px | token |
+| row-group | margin-bottom | 2px | optical |
+| row-group | margin-top | 16px | token |
+| row-group | row-gap | 8px | token |
+| section | margin-top | 24px | token |
+| section | padding-top | 16px | token |
+| study-lead | margin-bottom | 4px | token |
+| study-lead | margin-top | 24px | token |
+| tab | column-gap | 8px | token |
+| tab | margin-bottom | -1px | optical |
+| tab | padding-bottom | 7.176px | em |
+| tab | padding-left | 9.568px | em |
+| tab | padding-right | 9.568px | em |
+| tab | padding-top | 7.176px | em |
+| tab | row-gap | 8px | token |
+| tabs | column-gap | 4px | token |
+| tabs | margin-bottom | 24px | token |
+| tabs | margin-top | 2px | optical |
+| tabs | row-gap | 4px | token |
+| topbar | column-gap | 12px | token |
+| topbar | padding-left | 12px | token |
+| topbar | padding-right | 12px | token |
+| topbar | row-gap | 12px | token |
+| turn-answers | column-gap | 12px | token |
+| turn-answers | row-gap | 12px | token |
+| turn-card | padding-bottom | 12px | token |
+| turn-card | padding-bottom | 8px | token |
+| turn-card | padding-left | 12px | token |
+| turn-card | padding-right | 12px | token |
+| turn-card | padding-top | 12px | token |
+| turn-card | padding-top | 8px | token |
+| turn-q | column-gap | 12px | token |
+| turn-q | padding-bottom | 12px | token |
+| turn-q | padding-left | 16px | token |
+| turn-q | padding-right | 48px | token |
+| turn-q | padding-top | 12px | token |
+| turn-q | row-gap | 12px | token |
+| turn-refs | margin-top | 12px | token |
+| turn-round | column-gap | 12px | token |
+| turn-round | row-gap | 12px | token |
+| turn-rounds | column-gap | 24px | token |
+| turn-rounds | row-gap | 24px | token |
+
+### W2 — full-width filter bar
+
+`.sl-filter-bar--grow` (new design-system modifier, vendored): the search slot stretches
+(`flex: 1 1 220px`) so search · divider · Filter · chips span the FULL content measure.
+Applied to every inspector bar (outline + all Library tabs); verified at 1280/1440/1680 on
+both surfaces (`/tmp/ux/w2-bar-*.png`).
+
+### W3 — one control vocabulary (header chrome)
+
+Decision: THREE shapes, one family — all on `--sl-radius-sm` with the shared hover:
+1. **Labeled actions** = `.sl-btn` (Plan, dialog buttons) — unchanged.
+2. **Icon actions** = `.sl-iconbtn--ghost` (28px box): the favourite ★ (was a bare
+   `.starbtn`), the "…" overflow summary (was a BORDERED iconbtn), the slide-over's
+   expand ⤢ / close × (were bare `.sl-overlay-close`), the sidebar toggle. Same box,
+   same hover, page header AND slide-over header.
+3. **Status chips** = `.sl-toolbtn` (the Filter-button contract): the project run chip
+   (`▶ Run · state`, was a 99px pill), the topbar "N runs" indicator (same), and the
+   "N files" lens chip (was a `.pill`) — state colours ride as modifiers. The project
+   header's chip row is one flex `pills` row (8px gap), so Run · files read as one toolbar.
+
+### W4 — quiet refs ("Drew on:")
+
+`render_ref` (web/_render.py) formats the raw memory-ref fallback: a leading
+`YYYY-MM-DD HH:MM` timestamp becomes a quiet mono `11 Jun · 08:45` prefix (`ui.fmt_ts`),
+an "Open loop:"/"Offener Loop:" marker a localized quiet italic label (`ref_open_loop`,
+de+en), and the body word-trims at ~110 chars with a real ellipsis + full text on the
+tooltip — same chip anatomy (icon · text) as every other srcchip. `.turn-refs` owns one
+rhythm now (12px top, 4/8px wrap gaps, faint lead label `turn-refs__lbl`); the
+hypotheses/surveys/syntheses pages route their ref lines through the shared `_refs_line`
+instead of composing their own (−1 inline style).
+
+Gate: `uv run pytest -x -q` 744 passed; `make ux UPDATE=1` refreshed all 36 goldens
+(spacing shifts deliberate), follow-up `make ux` green.
 
 ## Round 3 (2026-06-12) — closing CRAFT audit of the §9 findings (recalibrated bar)
 

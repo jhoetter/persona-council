@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._keymap import sibling_attrs, sibling_urls
-from .._render import render_ref
+from .._render import _refs_line
 from .._report import render_report
 
 
@@ -19,10 +19,8 @@ def _informed_decisions_html(synthesis_id: str, store) -> str:
                        for r in (d.get("based_on") or []) + (d.get("rejected") or []))]
     if not informed:
         return ""
-    chips = fragment(*(raw(render_ref({"kind": "decision", "id": d["id"]}, store))
-                       for d in informed))
-    return h("p", {"class_": "muted small turn-refs", "style": "margin:14px 0 0"},
-             t("dec_informed_h"), ": ", chips)
+    return _refs_line([{"kind": "decision", "id": d["id"]} for d in informed],
+                      t("dec_informed_h"), store)
 
 
 def register_syntheses(app) -> None:

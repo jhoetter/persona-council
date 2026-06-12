@@ -39,7 +39,7 @@ def _doc_tabbar(active: str, li: int) -> str:
                     "href": "/documentation" + (f"/{s}" if s else "")},
               raw(_icon(ic)), lab[li])
             for s, ic, lab in DOC_PAGES]
-    return h("nav", {"class_": "sl-tabs", "style": "margin:2px 0 22px"}, fragment(*tabs))
+    return h("nav", {"class_": "sl-tabs", "style": "margin:2px 0 24px"}, fragment(*tabs))
 
 
 def _docs_shell(slug: str, lead: str, body: str, subnav: list | None = None) -> str:

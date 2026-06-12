@@ -342,3 +342,21 @@ Linear/Notion screenshots, not against our own previous state). Concrete finding
 
 Round-3 audit rule: re-score EVERYTHING with the Craft dimension against external anchors; the
 9/10 claim must survive the owner's screenshots.
+
+## 10. Round 4 (2026-06-12, third screenshot review) — finish
+
+Owner: "erneut deutlich besser, aber ich finde immer noch Mängel … geh das bitte an — alles!"
+
+| # | finding | direction |
+|---|---|---|
+| W1 | Spacing violations still visible in places (Library shown) — "gehe das wirklich in der GESAMTEN UX durch" | App-wide spacing conformance sweep: DOM-measure every screen against the density tokens, fix every off-grid padding/gap/margin; record the measurement table |
+| W2 | Search+filter bar must take the FULL content width | Search input stretches; bar spans the measure |
+| W3 | Header chips (Run · Finished / 1 file) "nicht sauber visuell integriert"; adjacent controls mix sizes/styles (Plan bordered+label, … bordered square, ★ bare; slide-over: … boxed vs ★/⤢/× bare) | ONE control vocabulary: consistent heights, one icon-button treatment, chips share one shape family with the buttons |
+| W4 | "Drew on:" memory-ref chips are raw (timestamp-prefixed grey slabs) | Quiet refs: formatted date, trimmed text, consistent chip anatomy |
+| W5 | Council Q→A linkage is flat | Thread the answers: slight indentation + descending angled connector lines (file-tree look) from question to each answer |
+| W6 | Document file cards show an empty stage with a badge — "schon die Titel-Slide anzeigen" | Export writes a first-slide preview PNG (own rasterizer); file cards/thumbs use it; images keep real thumbs |
+| W7 | Documentation is absent from the sidebar and the docs page is plain; footer trio still under-designed ("? for shortcuts") | Documentation becomes a visible sidebar footer entry; docs page design pass; footer rows final polish (kbd chip for ?) |
+| W8 | Session image lightbox buggy: prototype iframe bleeds over the dialog | Fix stacking/containment (z-index/top-layer; iframe clipped) |
+| W9 | (Owner round-3 H2, now decided) donut + stance bars encode the same data twice | Keep the scaled stance bars, drop the donut on web council/synthesis blocks (deck keeps its single donut card) |
+| W10 | Leftovers G1/G2/G5 | prototype-page session section naming; report lifecycle pill; sidebar active-state rule aligned with project-rooted crumbs |
+| W11 | Persona attribution is inconsistent: prototype rows show "2 sessions" but NO persona avatars while councils show the avatar group | ONE rule app-wide: wherever an artifact's data carries persona participation (council participants, session subjects, prototype session drivers, survey respondents, report voices), the row AND the detail header show the persona avatar-group (max 4 + overflow), identical anatomy everywhere |

@@ -20,7 +20,7 @@ from ._html import h, raw, fragment, register_css
 # Co-located CSS (spec/roadmap.md R3): analytics charts + voices/Stimmen cockpit.
 register_css(r"""
 /* ---- analytics (Linear-style insight cards) ---- */
-.insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .insight{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:16px}
 .insight.wide{grid-column:1 / -1}
 .insight h3{margin:0 0 2px;font-size:var(--t-body)}
@@ -36,17 +36,17 @@ register_css(r"""
 .dnrow{display:flex;align-items:center;gap:18px}
 .donut{width:118px;height:118px;border-radius:50%;background:var(--g);flex-shrink:0;
   -webkit-mask:radial-gradient(closest-side,transparent 60%,#000 61%);mask:radial-gradient(closest-side,transparent 60%,#000 61%)}
-.brow{display:grid;grid-template-columns:118px 1fr 30px;gap:10px;align-items:center;padding:5px 0;font-size:var(--t-sm)}
+.brow{display:grid;grid-template-columns:118px 1fr 30px;gap:8px;align-items:center;padding:5px 0;font-size:var(--t-sm)}
 .brow .blab{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow .btrack{height:9px;border-radius:var(--radius-sm);background:var(--line-2);overflow:hidden}
 .brow .btrack i{display:block;height:100%}
 .brow .bval{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
-.crow{display:grid;grid-template-columns:1fr 150px 64px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line-2)}
+.crow{display:grid;grid-template-columns:1fr 150px 64px;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2)}
 .crow:last-child{border-bottom:0}.crow .ct{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
 .crow .cn{text-align:right;color:var(--muted);font-size:var(--t-sm)}
 /* per-persona enthusiasm rows (V3): plain rows — avatar · name · diverging bar · score.
    The bar is zero-CENTERED; its length encodes |score|, its color the stance sign. */
-.prow{display:grid;grid-template-columns:150px 1fr 42px;gap:11px;align-items:center;padding:6px 0}
+.prow{display:grid;grid-template-columns:150px 1fr 42px;gap:12px;align-items:center;padding:6px 0}
 .prow .pwho{display:flex;align-items:center;gap:8px;overflow:hidden;text-decoration:none;color:var(--ink)}
 .prow .pwho:hover span{color:var(--accent)}
 .prow .pwho span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
@@ -71,20 +71,20 @@ register_css(r"""
 .syn-goal{color:var(--muted);font-size:var(--t-md);line-height:1.5;max-width:72ch;margin:0 0 14px}
 .syn-meta{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .mchip{font-size:var(--t-sm);color:var(--muted);border:1px solid var(--line);background:var(--panel-2);border-radius:var(--radius-sm);padding:3px 10px}
-.block{margin:40px 0 0;padding-top:26px;border-top:1px solid var(--line)}
+.block{margin:40px 0 0;padding-top:24px;border-top:1px solid var(--line)}
 .block>.bh{font-size:var(--t-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:0 0 16px;display:flex;align-items:center;gap:8px}
 .block>.bh .cnt{color:var(--accent);background:var(--accent-weak);border-radius:var(--radius-sm);padding:1px 9px;font-size:var(--t-xs)}details.block>summary.bh{cursor:pointer;margin-bottom:0}details.block[open]>summary.bh{margin-bottom:16px}
 .syn-main section{padding:0;overflow:visible}
-.syn-main .block{margin-top:40px;padding-top:26px}
-.cgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.syn-main .block{margin-top:40px;padding-top:24px}
+.cgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .ref-list{display:flex;flex-direction:column;gap:6px}
-.ref-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);text-decoration:none;color:var(--ink)}
+.ref-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);text-decoration:none;color:var(--ink)}
 .ref-row:hover{border-color:var(--accent)}
 .ref-n{font-weight:700;color:var(--accent);font-size:var(--t-sm);flex:none;width:26px}
 .ref-t{flex:1;font-size:var(--t-body);line-height:1.35;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ref-bar{flex:none;width:120px}.ref-go{flex:none;color:var(--muted)}
 .ccard{border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 16px;background:var(--panel);display:flex;flex-direction:column;gap:9px}
-.cc-top{display:flex;align-items:center;gap:10px}
+.cc-top{display:flex;align-items:center;gap:8px}
 .cc-n{font-weight:740;color:var(--accent);font-size:var(--t-sm);letter-spacing:.03em}
 .cc-bar{flex:1}
 .cc-title{font-size:var(--t-md);line-height:1.3;margin:0;font-weight:660}
@@ -101,13 +101,13 @@ register_css(r"""
 .cc-jump{font-weight:600;color:var(--accent);font-size:var(--t-body)}
 .syn-main [id]{scroll-margin-top:26px}
 /* verdict/POV card — the structural opener of every report (ux-contract §3.6a) */
-.syn-verdict{margin:6px 0 26px}
+.syn-verdict{margin:8px 0 24px}
 .syn-verdict .sl-card__title{font-size:var(--t-md);line-height:1.45;margin-top:.5em}
 .syn-verdict .sl-card__body{margin-top:.4em}
 .syn-verdict .sl-card__body p{margin:0}
 /* effort·impact chart is a design-system component now (.sl-quad/.sl-legend, vendored from
    sonaloop-design via _components_css.py) — no local chart CSS here. */
-.reclist .rec{display:flex;gap:11px;padding:10px 8px;border-bottom:1px solid var(--line-2);scroll-margin-top:72px}
+.reclist .rec{display:flex;gap:12px;padding:8px;border-bottom:1px solid var(--line-2);scroll-margin-top:72px}
 .reclist .rec:last-child{border-bottom:none}
 .recnum{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--accent-weak);color:var(--accent);font-size:var(--t-sm);font-weight:700;display:flex;align-items:center;justify-content:center}
 .reclist .rec:target{background:var(--accent-weak);border-radius:var(--radius)}
@@ -395,7 +395,7 @@ def _persona_voices_html(store: Store, pid: str) -> str:
     if not cards:
         return ""
     return h("div", {"class_": "sec", "id": "stimmen"}, h("h2", {}, t("voices_in_analyses")),
-             h("div", {"style": "display:flex;flex-direction:column;gap:10px"}, fragment(*cards)))
+             h("div", {"style": "display:flex;flex-direction:column;gap:12px"}, fragment(*cards)))
 
 
 # --------------------------- synthesis report --------------------------- #

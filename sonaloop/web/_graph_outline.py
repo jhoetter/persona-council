@@ -363,7 +363,7 @@ def _outline_html(graph: dict, sessions: dict | None = None, decisions: list | N
         dw_url = drawer_url(it.get("rkind", ""), it["href"])
         attrs = {"class_": f"olrow {tw}", "data-oid": it["oid"],
                  "data-rkind": it.get("rkind", ""), "id": it.get("anchor"),
-                 "style": f'padding-left:{10 + it["indent"] * 26}px'
+                 "style": f'padding-left:{8 + it["indent"] * 24}px'
                           + (f';--ti:{it["indent"]}' if it["indent"] else "")}
         # Click = slide-over (§8.1): the row keeps its href as the deep link (middle-click /
         # no-JS); data-drawer carries the SAME canonical URL, which the drawer opens as a

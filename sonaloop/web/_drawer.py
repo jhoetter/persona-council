@@ -118,7 +118,7 @@ def drawer_markup(close_label: str, expand_label: str) -> str:
     if ssr is None:
         detail, body, title = None, None, ""
         scrim = h("div", {"class_": "sl-drawer__scrim", "data_drawer_close": True})
-        expand = h("button", {"class_": "sl-overlay-close", "type": "button", "data_drawer_expand": True,
+        expand = h("button", {"class_": "sl-iconbtn sl-iconbtn--ghost", "type": "button", "data_drawer_expand": True,
                               "aria_label": expand_label, "title": expand_label}, expand_icon)
     else:
         detail, body_html, close_href = ssr
@@ -128,7 +128,7 @@ def drawer_markup(close_label: str, expand_label: str) -> str:
         title = raw(_re.sub(r"<[^>]+>", "", m.group(1)).strip()) if m else ""  # already-escaped text
         scrim = h("a", {"class_": "sl-drawer__scrim", "data_drawer_close": True, "href": close_href,
                         "aria_label": close_label})
-        expand = h("a", {"class_": "sl-overlay-close", "data_drawer_expand": True, "href": detail,
+        expand = h("a", {"class_": "sl-iconbtn sl-iconbtn--ghost", "data_drawer_expand": True, "href": detail,
                          "aria_label": expand_label, "title": expand_label}, expand_icon)
     return str(h(
         "div", {"class_": "sl-drawer sl-drawer--wide" + (" is-open" if ssr else ""),
@@ -139,7 +139,7 @@ def drawer_markup(close_label: str, expand_label: str) -> str:
           h("header", {"class_": "sl-drawer__head"},
             h("span", {"class_": "sl-drawer__title", "id": "drawer-title"}, title),
             expand,
-            h("button", {"class_": "sl-overlay-close", "type": "button", "data_drawer_close": True,
+            h("button", {"class_": "sl-iconbtn sl-iconbtn--ghost", "type": "button", "data_drawer_close": True,
                          "aria_label": close_label, "title": close_label}, close_x)),
           h("div", {"class_": "sl-drawer__body"}, body))))
 

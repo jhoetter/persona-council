@@ -6,6 +6,8 @@ looks identical everywhere (consistency by construction). Reads the primitives p
 """
 from __future__ import annotations
 
+import re as _re
+
 from .. import artifacts as _A
 from ._i18n import t
 from ._html import h, raw, fragment, register_css
@@ -14,18 +16,26 @@ from ._components import _prose, _avatar, _label, _icon
 # Co-located CSS for the §3.6 dosing affordances this renderer emits: collapsible prompt
 # rounds (the banner doubles as the <summary>) and expandable verbatim quotes on a statement.
 register_css(r"""
-details.qround>summary{position:relative;list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:10px}
+details.qround>summary{position:relative;list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:12px}
 details.qround>summary::-webkit-details-marker{display:none}
-details.qround>summary .qround-q{padding-right:64px}
-.qround-cnt{position:absolute;right:14px;top:12px;color:var(--accent);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 9px;font-size:var(--t-xs);font-weight:600}
+details.qround>summary .qround-q{padding-right:48px}
+.qround-cnt{position:absolute;right:12px;top:12px;color:var(--accent);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 8px;font-size:var(--t-xs);font-weight:600}
 details.qround>summary:hover .qround-q{border-color:var(--accent)}
 .turn-quotes{margin:8px 0 0}
 .turn-quotes>summary{cursor:pointer;list-style:none}
 .turn-quotes>summary::-webkit-details-marker{display:none}
 .turn-quotes>summary::before{content:"▸ "}
 .turn-quotes[open]>summary::before{content:"▾ "}
-.turn-quote{margin:8px 0 0;padding:6px 12px;border-left:2px solid var(--line-2);font-size:var(--t-sm);color:var(--muted)}
+.turn-quote{margin:8px 0 0;padding:4px 12px;border-left:2px solid var(--line-2);font-size:var(--t-sm);color:var(--muted)}
 .turn-quote p{margin:0 0 3px;font-style:italic}
+/* Grounding-chip lines (§10 W4): one explicit rhythm under a turn/finding — quiet faint lead
+   label, consistent 4px/8px wrap spacing for the chips (the base .srcchip margin-left is the
+   inline-citation idiom; inside a refs LINE the chips space themselves). */
+.turn-refs{margin:12px 0 0;line-height:1.6}
+.turn-refs .srcchip{margin:2px 8px 2px 0;vertical-align:middle}
+.turn-refs__lbl{color:var(--faint)}
+.srcchip-ts{font-family:var(--mono);font-size:var(--t-xs);color:var(--faint);margin-right:4px;white-space:nowrap}
+.srcchip-mark{color:var(--faint);font-style:italic;margin-right:4px}
 """)
 
 
@@ -39,14 +49,32 @@ def render_stance(st: dict | None) -> str:
     return _label(t(meta["label_key"]), meta["color"], title=st.get("label_raw"))
 
 
+# Raw memory-ref anatomy (ux-contract §10 W4): host-authored grounding texts often open with
+# the memory line's timestamp ("2026-06-11 08:45: …") and/or an "Open loop:" marker. The chip
+# renders those as a quiet mono date + a localized quiet marker instead of a grey text slab.
+_REF_TS = _re.compile(r"^\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::\d{2})?\s*[:·–—-]?\s*")
+_REF_LOOP = _re.compile(r"^\s*(?:open\s+loops?|offene[rs]?\s+loops?)\s*[:·–—-]\s*", _re.I)
+
+
+def _trim(text: str, n: int = 110) -> str:
+    """Word-boundary trim with a real ellipsis — chip text stays scannable, the full text
+    rides the tooltip."""
+    s = " ".join((text or "").split())
+    if len(s) <= n:
+        return s
+    return s[:n].rsplit(" ", 1)[0].rstrip(" ,;:·–—-") + "…"
+
+
 def render_ref(r: dict, store=None, *, show_role: bool = True) -> str:
     """A cross-reference chip (spec/artifact-cross-references.md). With a `store` and a record-pointing
     Ref, it RESOLVES the addressed artifact/part LIVE — showing the current persona/title + the typed
     role + a deep-link to the part (never a stale copy); a broken ref renders honestly. Without a store
-    (or for memory/observed-state/external refs) it falls back to the plain grounding chip. The kind→route
-    mapping lives in the domain layer (artifacts.ref_href) so no kind literal is hardcoded here.
-    `show_role=False` drops the typed-role suffix — for chip groups whose lead label already states
-    the role ("Based on: …"), where the suffix would just repeat it (round-3 craft pass)."""
+    (or for memory/observed-state/external refs) it falls back to the plain grounding chip — formatted
+    quietly (§10 W4): a leading memory timestamp renders as a mono `11 Jun · 08:45` prefix, an
+    "Open loop:" marker as a localized quiet label, and the body is word-trimmed with the full text
+    on the tooltip. The kind→route mapping lives in the domain layer (artifacts.ref_href) so no kind
+    literal is hardcoded here. `show_role=False` drops the typed-role suffix — for chip groups whose
+    lead label already states the role ("Based on: …"), where the suffix would just repeat it."""
     role = r.get("role") if show_role else None
     rolebit = (" · " + role.replace("_", " ")) if role else ""
     if store is not None and r.get("id") and _A.ref_href(r):
@@ -58,17 +86,30 @@ def render_ref(r: dict, store=None, *, show_role: bool = True) -> str:
                  raw(_icon("link")), " ", label,
                  h("span", {"class_": "xref-role"}, rolebit) if rolebit else None)
     href = _A.ref_href(r)
-    txt = r.get("quote") or r.get("text") or r.get("id") or ""
+    full = str(r.get("quote") or r.get("text") or r.get("id") or "")
     if href:
-        return h("a", {"class_": "srcchip", "href": href}, raw(_icon("link")), " ", txt, rolebit or None)
+        return h("a", {"class_": "srcchip", "href": href, "title": full[:240]},
+                 raw(_icon("link")), " ", _trim(full), rolebit or None)
     ico = "memory" if r.get("kind") == "memory" else ("compass" if r.get("kind") == "prototype_state" else "link")
-    return h("span", {"class_": "srcchip"}, raw(_icon(ico)), " ", txt)
+    txt, ts_html, loop_html = full, None, None
+    m = _REF_TS.match(txt)
+    if m:
+        from . import ui
+        ts_html = h("span", {"class_": "srcchip-ts"}, ui.fmt_ts(f"{m.group(1)} {m.group(2)}"))
+        txt = txt[m.end():]
+    lm = _REF_LOOP.match(txt)
+    if lm:
+        loop_html = h("span", {"class_": "srcchip-mark"}, t("ref_open_loop"))
+        txt = txt[lm.end():]
+    return h("span", {"class_": "srcchip", "title": full[:240] if full != txt or len(full) > 110 else None},
+             raw(_icon(ico)), " ", ts_html, loop_html, _trim(txt))
 
 
 def _refs_line(refs: list, label: str, store=None) -> str:
     if not refs:
         return ""
-    return h("p", {"class_": "muted small turn-refs"}, label, ": ",
+    return h("p", {"class_": "muted small turn-refs"},
+             h("span", {"class_": "turn-refs__lbl"}, label, ": "),
              fragment(*(raw(render_ref(r, store)) for r in refs)))
 
 
@@ -92,7 +133,8 @@ def _backlinks_line(st: dict, backlinks) -> str:
     chips = [h("a", {"class_": "srcchip xref", "href": r["href"]}, raw(_icon("link")), " ", r.get("label") or "—",
                h("span", {"class_": "xref-role"}, " · " + r["role"].replace("_", " ")) if r.get("role") else None)
              for r in bl]
-    return h("p", {"class_": "muted small turn-refs"}, t("cited_by"), ": ", fragment(*chips))
+    return h("p", {"class_": "muted small turn-refs"},
+             h("span", {"class_": "turn-refs__lbl"}, t("cited_by"), ": "), fragment(*chips))
 
 
 def _quotes_details(refs: list, store=None) -> str:
@@ -230,7 +272,7 @@ def render_statements(items: list, store, *, group_by: str = "persona", prompts:
                                         h("div", {}, h("div", {"class_": "qround-n"}, t("further_answers")))),
                                       rest))
         return h("div", {"class_": "qrounds"}, fragment(*rounds))
-    return h("div", {"style": "display:flex;flex-direction:column;gap:10px"}, cards(items))
+    return h("div", {"style": "display:flex;flex-direction:column;gap:12px"}, cards(items))
 
 
 def render_finding(f: dict, *, n: int | None = None, store=None) -> str:

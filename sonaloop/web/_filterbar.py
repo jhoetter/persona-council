@@ -149,7 +149,7 @@ def filter_bar(base: str, facets: list[dict], selected: dict[str, list[str]],
     clear = (h("a", {"class_": "sl-filter-clear", "href": base}, t("clear_filter"))
              if any(selected.values()) else None)
     search_html = _search_form(base, search, selected) if search is not None else None
-    return fragment(h("div", {"class_": "sl-filter-bar", "data-filterbar": True},
+    return fragment(h("div", {"class_": "sl-filter-bar sl-filter-bar--grow", "data-filterbar": True},
                       search_html, trigger, fragment(*chips), clear), raw(_FB_JS))
 
 
@@ -190,6 +190,6 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
 # value panels can be long (personas), so the popover scrolls; the bar sits quietly between
 # the page head and the rows it filters.
 register_css(
-    ".sl-filter-bar{margin:10px 0 2px}"
+    ".sl-filter-bar{margin:12px 0 2px}"
     ".sl-filter-bar .sl-popover{min-width:230px;max-height:340px;overflow:auto}"
     ".sl-filter-bar .sl-menu-item__label .sl-dot{flex:none}")

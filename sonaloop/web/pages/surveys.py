@@ -11,7 +11,7 @@ from __future__ import annotations
 from ._ctx import *  # noqa: F401,F403  (shared render toolkit)
 from .._html import register_css
 from .._presence import survey_status_pill as _status_pill
-from .._render import render_ref
+from .._render import _refs_line
 from ... import artifacts as _A
 
 
@@ -92,8 +92,7 @@ def _predicted_vs_actual(comparison: dict, store) -> str:
         bar = _stance_strip(dist.get("counts") or {}, n) if n else h("div", {"class_": "pvbar"})
         rows.append(h("div", {"class_": "pvline"},
                       h("span", {"class_": "pvlbl"}, f"{label} ({n})"), raw(bar)))
-    chips = fragment(*(raw(render_ref(r, store)) for r in (pred.get("refs") or [])))
-    refs_line = (h("p", {"class_": "muted small turn-refs"}, t("rel_based_on"), ": ", chips)
+    refs_line = (raw(_refs_line(pred.get("refs") or [], t("rel_based_on"), store))
                  if pred.get("refs") else None)
     return h("div", {}, fragment(*rows), refs_line)
 
@@ -199,9 +198,7 @@ def register_surveys(app) -> None:
             crumbs.append((proj["title"], f'/projects/{proj["id"]}'))
         crumbs.append((s["title"], None))
         derived = s.get("derived_from") or []
-        derived_html = (h("p", {"class_": "muted small turn-refs"},
-                          t("rel_based_on"), ": ",
-                          fragment(*(raw(render_ref(r, store)) for r in derived)))
+        derived_html = (raw(_refs_line(derived, t("rel_based_on"), store))
                         if derived else None)
         intro_html = (h("p", {"class_": "sub"}, s.get("intro", "")) if s.get("intro") else None)
         # When every question shares one answered count, state it ONCE at section level instead

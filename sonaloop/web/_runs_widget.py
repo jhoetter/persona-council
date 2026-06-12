@@ -77,7 +77,7 @@ def project_run_chip(project_id: str, store: Store) -> str:
              "finished": t("runs_finished_h")}[state]
     last = (rs.get("last_activity") or "")[:16].replace("T", " ")
     ready = rs.get("next_ready") or []
-    btn = h("button", {"type": "button", "class_": f"runchip runchip--{state}",
+    btn = h("button", {"type": "button", "class_": f"sl-toolbtn runchip runchip--{state}",
                        "data-runchip-toggle": True, "aria-haspopup": "true",
                        "aria-expanded": "false"},
             raw(_picon("play")), f'{t("run_chip")} · {label}')
@@ -102,10 +102,9 @@ RUNS_WIDGET_CSS = r"""
 .runsw{position:relative;display:inline-flex}
 .runsw[hidden]{display:none}
 /* the topbar runs indicator is a STATUS CHIP ("1 run active" + pulse) — and at zero it is
-   not rendered at all ("• 0" taught nothing; ux-contract §9 V7) */
-.runsw-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:99px;
-  background:var(--panel);color:var(--muted);font-size:var(--t-sm);font-weight:500;padding:2px 10px;cursor:pointer}
-.runsw-btn:hover{background:var(--hover)}
+   not rendered at all ("• 0" taught nothing; ux-contract §9 V7). Shape/hover come from the
+   shared .sl-toolbtn contract (W3 one control vocabulary); only the state colours live here. */
+.runsw-btn{gap:8px;font-weight:500}
 .runsw-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--faint)}
 .runsw.has-active .runsw-dot{background:var(--green,#34a853);animation:livepulse 1.6s ease-out infinite}
 .runsw.has-stalled .runsw-dot{background:var(--amber);animation:none}
@@ -121,12 +120,10 @@ RUNS_WIDGET_CSS = r"""
 .runsw-row .runsw-ts{flex:none;color:var(--muted);font-size:var(--t-sm)}
 .runsw-empty{color:var(--muted);font-size:var(--t-sm);padding:10px 8px}
 .runsw-all{display:block;text-align:center;font-size:var(--t-sm);color:var(--accent);text-decoration:none;border-top:1px solid var(--line-2);margin-top:4px;padding:7px 8px 4px}
-/* ---- project-header run chip (+ popover) ---- */
-.runchip-wrap{position:relative;display:inline-flex;margin:6px 0 0}
-.runchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;
-  background:var(--panel);color:var(--muted);font-size:var(--t-sm);font-weight:500;padding:2px 10px;cursor:pointer}
+/* ---- project-header run chip (+ popover): the .sl-toolbtn shape family (W3) ---- */
+.runchip-wrap{position:relative;display:inline-flex}
+.runchip{font-weight:500}
 .runchip svg{width:12px;height:12px}
-.runchip:hover{background:var(--hover)}
 .runchip--active{color:var(--green,#34a853);border-color:color-mix(in srgb,var(--green,#34a853) 45%,var(--line))}
 .runchip--stalled{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}
 .runchip-fly{position:absolute;left:0;top:calc(100% + 8px);width:min(380px,86vw);z-index:160;background:var(--panel);
@@ -167,7 +164,7 @@ def runs_widget_markup(store: Store) -> str:
     states = collect_run_states(store)
     n_active, n_stalled = len(states["active"]), len(states["stalled"])
     cls = "runsw" + (" has-active" if n_active else "") + (" has-stalled" if n_stalled else "")
-    btn = h("button", {"type": "button", "class_": "runsw-btn", "data-runsw-toggle": True,
+    btn = h("button", {"type": "button", "class_": "sl-toolbtn runsw-btn", "data-runsw-toggle": True,
                        "aria-haspopup": "true", "aria-expanded": "false",
                        "title": t("active_runs"), "aria-label": t("active_runs")},
             h("span", {"class_": "runsw-dot"}),
