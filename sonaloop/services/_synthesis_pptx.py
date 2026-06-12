@@ -559,7 +559,7 @@ def export_synthesis_deliverable(synthesis_id: str, fmt: str, out: str | None = 
     result = {"synthesis_id": syn["id"], "format": fmt, "path": path, "bytes": len(data),
               "url": export_download_url(path)}                             # noqa: F821 (bound)
     proj = (store.get_research_project(syn["project_id"]) if syn.get("project_id")
-            else parent_project_of_synthesis(synthesis_id, store=store))    # noqa: F821 (bound)
+            else owning_project_of_synthesis(synthesis_id, store=store))    # noqa: F821 (bound)
     if proj:
         rec = attach_asset(proj["id"], path=path, kind="document",          # noqa: F821 (bound)
                            title=f'{syn.get("title") or synthesis_id} ({fmt.upper()})',

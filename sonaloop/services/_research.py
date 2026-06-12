@@ -192,9 +192,9 @@ def parent_project_of_council(council_id: str, store: Store | None = None) -> di
 
 def parent_project_of_synthesis(synthesis_id: str, store: Store | None = None) -> dict[str, Any] | None:
     """Which project owns this synthesis? Robust for PLAN-based projects (the synthesis is produced by
-    a plan verify task, not listed in the old `study_ids`) and for ABSORBED ones recorded outside the
-    governed loop (declared project_id, or citing only one project's owned councils — the same rule
-    plan_graph absorbs by). Powers correct breadcrumbs + the deliverable export's asset attach."""
+    a plan verify task, not listed in the old `study_ids`) and for ones that DECLARE their project_id
+    (record_synthesis project_id). Powers correct breadcrumbs. For a deliverable's asset attach the
+    export path additionally falls back to the citation rule (owning_project_of_synthesis)."""
     store = store or Store()
     syn = store.get_synthesis(synthesis_id) or {}
     declared = store.get_research_project(syn["project_id"]) if syn.get("project_id") else None
@@ -209,7 +209,19 @@ def parent_project_of_synthesis(synthesis_id: str, store: Store | None = None) -
             if any(r.get("kind") == "synthesis" and r.get("id") == synthesis_id
                    for r in task.get("produces", [])):
                 return {"id": proj["id"], "slug": proj["slug"], "title": proj["title"]}
-    cited = list(syn.get("council_ids") or [])                    # absorption rule (citations)
+    return None
+
+
+def owning_project_of_synthesis(synthesis_id: str, store: Store | None = None) -> dict[str, Any] | None:
+    """parent_project_of_synthesis + the absorption fallback: a synthesis that DECLARES no project
+    but cites ONLY one project's owned councils is owned by it (the same rule plan_graph absorbs by).
+    Used where ownership must be resolved for a SIDE EFFECT (the deliverable export's asset attach) —
+    kept off the breadcrumb resolver so a citing synthesis's detail page stays library-rooted."""
+    store = store or Store()
+    p = parent_project_of_synthesis(synthesis_id, store=store)
+    if p:
+        return p
+    cited = list((store.get_synthesis(synthesis_id) or {}).get("council_ids") or [])
     if cited:
         for proj in store.list_research_projects():
             owned = set(proj.get("council_ids") or [])
