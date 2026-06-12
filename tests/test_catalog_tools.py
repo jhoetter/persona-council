@@ -11,6 +11,8 @@ import json
 import pathlib
 import sys
 import types
+import urllib.error
+import urllib.request
 
 import pytest
 
@@ -460,6 +462,114 @@ def test_pull_prefers_manifest_avatar_url_over_repo_path(monkeypatch, tmp_path):
     cat.catalog_pull(persona_slugs=[slug], store=Store(tmp_path / "dest.db"))
     assert cdn in fetched
     assert not any(u.endswith(f"personas/{slug}/avatar.png") for u in fetched)
+
+
+# --------------------------------------------------------------------------- #
+# the free/premium split: tier surfacing + the catalog token                   #
+# --------------------------------------------------------------------------- #
+
+def _serve_tiered(files: dict[str, bytes], premium_slugs: set[str], monkeypatch):
+    """The split published catalog: /personas/<premium slug>/* answers 401 to anonymous
+    requests (what _fetch_bytes raises as CatalogAuthError); manifest, packs and free
+    personas stay public."""
+    base = cat._base_url() + "/"
+    def fake_fetch(url: str) -> bytes | None:
+        assert url.startswith(base), f"unexpected URL shape: {url}"
+        path = url[len(base):]
+        if any(path.startswith(f"personas/{s}/") for s in premium_slugs):
+            raise cat.CatalogAuthError(f"GET {url} -> HTTP 401 (auth required)")
+        return files.get(path)
+    monkeypatch.setattr(cat, "_fetch_bytes", fake_fetch)
+
+
+def _mark_tier(files: dict[str, bytes], tiers: dict[str, str]) -> None:
+    manifest = json.loads(files["manifest.json"])
+    for p in manifest["personas"]:
+        if p["slug"] in tiers:
+            p["tier"] = tiers[p["slug"]]
+    files["manifest.json"] = json.dumps(manifest).encode()
+
+
+class _Resp:
+    def __init__(self, body: bytes): self._body = body
+    def read(self) -> bytes: return self._body
+    def __enter__(self): return self
+    def __exit__(self, *exc): return False
+
+
+def test_fetch_sends_bearer_token_only_when_env_set(monkeypatch):
+    seen: list[urllib.request.Request] = []
+    monkeypatch.setattr("urllib.request.urlopen",
+                        lambda req, timeout=0: seen.append(req) or _Resp(b"{}"))
+    monkeypatch.delenv("SONALOOP_CATALOG_TOKEN", raising=False)
+    cat._fetch_bytes(cat._base_url() + "/manifest.json")
+    assert not seen[0].has_header("Authorization")                       # anonymous == no header
+    monkeypatch.setenv("SONALOOP_CATALOG_TOKEN", "tok-123")
+    cat._fetch_bytes(cat._base_url() + "/manifest.json")
+    assert seen[1].get_header("Authorization") == "Bearer tok-123"       # every catalog request
+
+
+def test_fetch_auth_failures_are_typed_not_generic(monkeypatch):
+    def deny(req, timeout=0):
+        raise urllib.error.HTTPError(req.full_url, 401, "Unauthorized", None, None)
+    monkeypatch.setattr("urllib.request.urlopen", deny)
+    with pytest.raises(cat.CatalogAuthError):                            # subclass of FetchError
+        cat._fetch_bytes(cat._base_url() + "/personas/x/profile.json")
+    assert issubclass(cat.CatalogAuthError, cat.CatalogFetchError)
+
+
+def test_pull_skips_premium_inband_and_still_lands_the_free_ones(monkeypatch, tmp_path):
+    """A mixed anonymous pull NEVER raises: free personas land, premium ones come back
+    in `skipped_premium` with the sign-in recipe."""
+    _no_data_pkg(monkeypatch)
+    files, personas = _mini_catalog(Store(), ["Fred Free", "Petra Premium"])
+    free, premium = personas[0]["slug"], personas[1]["slug"]
+    _mark_tier(files, {free: "free", premium: "premium"})
+    _serve_tiered(files, {premium}, monkeypatch)
+    dest = Store(tmp_path / "dest.db")
+
+    out = cat.catalog_pull(persona_slugs=[free, premium], store=dest)
+    assert out["personas"] == [free]
+    assert [p["slug"] for p in out["landed"]] == [free]                  # free half unaffected
+    assert out["skipped_premium"] == [{"slug": premium, "tier": "premium",
+                                       "reason": cat.PREMIUM_NOTE}]
+    assert "app.sonaloop.com" in cat.PREMIUM_NOTE and "Workspace" in cat.PREMIUM_NOTE
+    assert "SONALOOP_CATALOG_TOKEN" in cat.PREMIUM_NOTE
+    assert dest.get_persona(premium) is None                             # nothing half-imported
+
+
+def test_pull_all_premium_is_an_inband_answer_not_an_error(monkeypatch, tmp_path):
+    _no_data_pkg(monkeypatch)
+    files, personas = _mini_catalog(Store(), ["Petra Premium"])
+    premium = personas[0]["slug"]
+    _serve_tiered(files, {premium}, monkeypatch)                         # pre-tier manifest, gated anyway
+    out = cat.catalog_pull(persona_slugs=[premium], store=Store(tmp_path / "dest.db"))
+    assert out["personas"] == [] and out["landed"] == []
+    assert out["skipped_premium"][0]["reason"] == cat.PREMIUM_NOTE       # 401 truth beats manifest
+
+
+def test_search_surfaces_tier_and_tolerates_its_absence(monkeypatch):
+    _no_data_pkg(monkeypatch)
+    files = _manifest_only(2)
+    _mark_tier(files, {"persona-000": "premium"})
+    _serve(files, monkeypatch)
+    by_slug = {e["slug"]: e for e in cat.catalog_search()["items"]}
+    assert by_slug["persona-000"]["tier"] == "premium"
+    assert "tier" not in by_slug["persona-001"]                          # pre-tier row == free
+
+
+def test_status_surfaces_tier_from_the_catalog_index(monkeypatch, tmp_path):
+    _no_data_pkg(monkeypatch)
+    files, personas = _mini_catalog(Store(), ["Anna Architect"])
+    _serve(files, monkeypatch)
+    dest = Store(tmp_path / "dest.db")
+    slug = personas[0]["slug"]
+    cat.catalog_pull(persona_slugs=[slug], store=dest)
+    assert "tier" not in cat.catalog_status(store=dest)["items"][0]      # pre-tier manifest
+    _mark_tier(files, {slug: "premium"})
+    out = cat.catalog_status(store=dest)
+    assert out["items"][0]["tier"] == "premium"
+    assert out["items"][0]["status"] == "up_to_date"                     # tier never breaks status
 
 
 # --------------------------------------------------------------------------- #

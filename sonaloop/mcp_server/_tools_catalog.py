@@ -24,6 +24,8 @@ def register_catalog(mcp):
         ({facet -> [values]}, e.g. {"lebensphase": ["schichtarbeit"]}) needs the sonaloop-data
         package with a local catalog. Paginated per the shared convention (docs/pagination.md):
         `limit` (default 25) + opaque `cursor`; answers {items, total, has_more, next_cursor}.
+        Items carry `tier` ("free"|"premium") when the manifest declares it (absent == free);
+        premium personas need SONALOOP_CATALOG_TOKEN to pull (browsing stays public).
         Works WITHOUT the sonaloop-data package via the published catalog API
         (data.sonaloop.com; SONALOOP_CATALOG_BASE_URL overrides; explicit `ref` reads git raw)."""
         t = time.perf_counter()
@@ -47,8 +49,9 @@ def register_catalog(mcp):
         (coarse: the catalog index has no per-persona timestamp at this ref), `locally_modified`
         (the persona lived on here after the pull), `diverged` (both) or `removed_upstream`.
         Compares against the local checkout when sonaloop-data is installed, else the
-        published catalog API at data.sonaloop.com. Plain catalog_pull refreshes `behind` personas;
-        locally_modified/diverged need catalog_pull(force=True)."""
+        published catalog API at data.sonaloop.com. Items carry `tier` ("free"|"premium") when
+        the catalog index declares it (absent == free). Plain catalog_pull refreshes `behind`
+        personas; locally_modified/diverged need catalog_pull(force=True)."""
         t = time.perf_counter()
         return _env("catalog_status", services.catalog_status(persona_slugs, ref), t)
 
@@ -63,7 +66,10 @@ def register_catalog(mcp):
         overwrite them (catalog_status shows the drift first). Uses sonaloop-data when
         installed (local checkout for the default ref, else the published catalog at `ref`);
         without it a built-in stdlib fallback pulls from the published catalog directly.
-        `embed=True` re-derives embedding vectors (needs a configured provider; skipped
-        gracefully otherwise). Returns what landed (slug, id, provenance)."""
+        PREMIUM personas need SONALOOP_CATALOG_TOKEN (the catalog token from
+        app.sonaloop.com's Workspace page) — without it they are skipped and reported
+        in-band (`skipped_premium`, with the sign-in recipe) while the free selection still
+        lands. `embed=True` re-derives embedding vectors (needs a configured provider;
+        skipped gracefully otherwise). Returns what landed (slug, id, provenance)."""
         t = time.perf_counter()
         return _env("catalog_pull", services.catalog_pull(persona_slugs, pack, ref, embed, force), t)

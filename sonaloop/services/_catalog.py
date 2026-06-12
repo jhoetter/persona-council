@@ -42,11 +42,21 @@ Sync semantics (the git analogy, deliberately):
 
 `catalog_search` paginates per the shared convention (docs/pagination.md:
 limit default 25 + opaque cursor, {items,total,has_more,next_cursor} envelope).
+
+Tiers (the free/premium catalog split): manifest persona entries MAY carry
+`tier: "free"|"premium"` — search/status surface it when present and treat its
+absence as free/unknown (pre-tier manifests keep working untouched). Premium
+persona files answer 401/403 to anonymous requests; SONALOOP_CATALOG_TOKEN (the
+catalog token from app.sonaloop.com's Workspace page) rides along as a Bearer
+header on every catalog request. Without a token, free personas stay 100%
+functional and a pull that hits premium personas skips them IN-BAND
+(`skipped_premium`, with the sign-in recipe) — never an error.
 """
 from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
 import urllib.error
 import urllib.request
@@ -59,6 +69,7 @@ from ..storage import Store
 CATALOG_REPO = "jhoetter/sonaloop-data"
 RAW_URL = "https://raw.githubusercontent.com/{repo}/{ref}/{path}"
 DEFAULT_BASE_URL = "https://data.sonaloop.com"
+TOKEN_ENV = "SONALOOP_CATALOG_TOKEN"
 
 
 def _base_url() -> str:
@@ -81,9 +92,18 @@ INSTALL_NOTE = ("The sonaloop-data package is not installed — catalog_search, 
 FORCE_HINT = ("skipped personas were modified locally after their last pull — "
               "catalog_pull(force=True) overwrites them; catalog_status shows the drift")
 
+PREMIUM_NOTE = ("premium persona — sign in at https://app.sonaloop.com, copy your catalog "
+                "token from the Workspace page, and set SONALOOP_CATALOG_TOKEN")
+
 
 class CatalogFetchError(RuntimeError):
     """A remote catalog fetch failed for a reason other than a plain 404."""
+
+
+class CatalogAuthError(CatalogFetchError):
+    """The catalog answered 401/403 — a premium persona fetched without (or with an
+    invalid) SONALOOP_CATALOG_TOKEN. The pull paths absorb this in-band
+    (`skipped_premium` + PREMIUM_NOTE); it never surfaces as a traceback."""
 
 
 def _data_pkg():
@@ -108,14 +128,22 @@ def _local_root(pkg) -> Path | None:
 
 
 def _fetch_bytes(url: str) -> bytes | None:
-    """stdlib fetcher mirroring sonaloop_data.remote._urllib_fetcher (None == 404)."""
-    req = urllib.request.Request(url, headers={"User-Agent": "sonaloop"})
+    """stdlib fetcher mirroring sonaloop_data.remote._urllib_fetcher (None == 404).
+    SONALOOP_CATALOG_TOKEN (when set) rides along as `Authorization: Bearer` on
+    EVERY catalog request, so premium persona files resolve for signed-in users."""
+    headers = {"User-Agent": "sonaloop"}
+    token = os.environ.get(TOKEN_ENV)
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 — https only
             return resp.read()
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return None
+        if exc.code in (401, 403):
+            raise CatalogAuthError(f"GET {url} -> HTTP {exc.code} (auth required)") from exc
         raise CatalogFetchError(f"GET {url} -> HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:
         raise CatalogFetchError(f"GET {url} failed: {exc.reason}") from exc
@@ -156,6 +184,8 @@ def _local_entries(pkg) -> list[dict[str, Any]]:
         entry = {"slug": profile.get("slug"), "display_name": profile.get("display_name", ""),
                  "role": role, "has_avatar": bool(profile.get("avatar")),
                  "facets": pkg.derive_facets(profile)}
+        if profile.get("tier"):                          # absent == free (pre-tier profiles)
+            entry["tier"] = profile["tier"]
         entry["_text"] = " ".join([entry["slug"] or "", entry["display_name"], role,
                                    " ".join(profile.get("goals") or []),
                                    " ".join(profile.get("pain_points") or [])]).casefold()
@@ -170,6 +200,8 @@ def _remote_entries(ref: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     for p in manifest.get("personas", []):
         entry = {"slug": p.get("slug"), "display_name": p.get("display_name", ""),
                  "role": p.get("role", ""), "has_avatar": bool(p.get("has_avatar"))}
+        if p.get("tier"):                                # absent == free (pre-tier manifests)
+            entry["tier"] = p["tier"]
         entry["_text"] = " ".join(str(v) for v in (entry["slug"], entry["display_name"],
                                                    entry["role"]) if v).casefold()
         entries.append(entry)
@@ -243,11 +275,11 @@ def _catalog_index(ref: str) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]
     None and callers fall back to the coarse manifest `generated_at`."""
     pkg = _data_pkg()
     if pkg is not None and _local_root(pkg) is not None:
-        index = {p.get("slug"): {"updated_at": p.get("updated_at")}
+        index = {p.get("slug"): {"updated_at": p.get("updated_at"), "tier": p.get("tier")}
                  for p in pkg.read_persona_files()}
         return index, {"source": "local-catalog", "generated_at": None}
     manifest = json.loads(_get(ref, "manifest.json", required=True))
-    index = {p.get("slug"): {"updated_at": p.get("updated_at")}
+    index = {p.get("slug"): {"updated_at": p.get("updated_at"), "tier": p.get("tier")}
              for p in manifest.get("personas", [])}
     return index, {"source": f"{CATALOG_REPO}@{ref}",
                    "generated_at": manifest.get("generated_at")}
@@ -310,11 +342,14 @@ def catalog_status(persona_slugs: list[str] | None = None, ref: str = "main",
                 status = "locally_modified"
             else:
                 status = "up_to_date"
-        items.append({"slug": p.get("slug"), "id": p.get("id"), "status": status,
-                      "pulled_at": stamp.get("pulled_at"), "ref": stamp.get("ref"),
-                      "pack": stamp.get("pack"),
-                      "local_updated_at": p.get("updated_at"),
-                      "catalog_updated_at": (upstream or {}).get("updated_at")})
+        item = {"slug": p.get("slug"), "id": p.get("id"), "status": status,
+                "pulled_at": stamp.get("pulled_at"), "ref": stamp.get("ref"),
+                "pack": stamp.get("pack"),
+                "local_updated_at": p.get("updated_at"),
+                "catalog_updated_at": (upstream or {}).get("updated_at")}
+        if (upstream or {}).get("tier"):                 # absent == free (pre-tier manifests)
+            item["tier"] = upstream["tier"]
+        items.append(item)
     items.sort(key=lambda i: i["slug"] or "")
     counts: dict[str, int] = {}
     for i in items:
@@ -378,40 +413,56 @@ def _builtin_pull(store: Store, persona_slugs: list[str] | None, pack: str | Non
     if pack:
         stamp["pack"] = pack
 
+    pulled: list[str] = []
+    skipped_premium: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="sonaloop-catalog-") as tmp:
         base = Path(tmp)
         (base / "manifest.json").write_bytes(manifest_raw)
         for slug in slugs:
             pdir = base / "personas" / slug
             pdir.mkdir(parents=True, exist_ok=True)
-            for name in _PERSONA_FILES:
-                data = _get(ref, f"personas/{slug}/{name}", required=(name == "profile.json"))
-                if data is None:
-                    continue
-                if name == "profile.json":
-                    profile = json.loads(data)
-                    profile.setdefault("provenance", {})["catalog"] = {**stamp, "slug": slug}
-                    data = (json.dumps(profile, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
-                (pdir / name).write_bytes(data)
-            if roster[slug].get("has_avatar"):
-                # avatar_url escape hatch (ticket sonaloop-data/avatar-policy-lean-distribution):
-                # an absolute URL on the roster entry wins over the in-repo path, so avatars can
-                # move to release assets/CDN later without breaking any consumer.
-                url = roster[slug].get("avatar_url")
-                avatar = (_fetch_bytes(url) if url
-                          else _get(ref, f"personas/{slug}/avatar.png"))
-                if avatar is not None:
-                    (pdir / "avatar.png").write_bytes(avatar)
-        try:
-            out = import_snapshot(in_dir=str(base), store=store, embed=embed)  # noqa: F821 (bound)
-        except ValueError:
-            # import_snapshot computes a ROOT-relative summary path AFTER every DB write
-            # (and the embed backfill); a temp snapshot outside the repo trips exactly that
-            # last step. State is fully imported by then — same absorb as sonaloop_data.loader.
-            store.commit()
-            out = {"embeddings": "re-derived" if embed else "skipped"}
-    return {**out, "personas": slugs, "repo": CATALOG_REPO, "ref": ref,
-            "source": "built-in remote fallback", "note": INSTALL_NOTE}
+            try:
+                for name in _PERSONA_FILES:
+                    data = _get(ref, f"personas/{slug}/{name}", required=(name == "profile.json"))
+                    if data is None:
+                        continue
+                    if name == "profile.json":
+                        profile = json.loads(data)
+                        profile.setdefault("provenance", {})["catalog"] = {**stamp, "slug": slug}
+                        data = (json.dumps(profile, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+                    (pdir / name).write_bytes(data)
+                if roster[slug].get("has_avatar"):
+                    # avatar_url escape hatch (ticket sonaloop-data/avatar-policy-lean-distribution):
+                    # an absolute URL on the roster entry wins over the in-repo path, so avatars can
+                    # move to release assets/CDN later without breaking any consumer.
+                    url = roster[slug].get("avatar_url")
+                    avatar = (_fetch_bytes(url) if url
+                              else _get(ref, f"personas/{slug}/avatar.png"))
+                    if avatar is not None:
+                        (pdir / "avatar.png").write_bytes(avatar)
+            except CatalogAuthError:
+                # Premium persona without a (valid) catalog token: 401/403 is the catalog's
+                # tier gate, never a bug — answer in-band and keep pulling the free ones.
+                shutil.rmtree(pdir, ignore_errors=True)
+                skipped_premium.append({"slug": slug,
+                                        "tier": roster[slug].get("tier") or "premium",
+                                        "reason": PREMIUM_NOTE})
+                continue
+            pulled.append(slug)
+        if pulled:
+            try:
+                out = import_snapshot(in_dir=str(base), store=store, embed=embed)  # noqa: F821 (bound)
+            except ValueError:
+                # import_snapshot computes a ROOT-relative summary path AFTER every DB write
+                # (and the embed backfill); a temp snapshot outside the repo trips exactly that
+                # last step. State is fully imported by then — same absorb as sonaloop_data.loader.
+                store.commit()
+                out = {"embeddings": "re-derived" if embed else "skipped"}
+        else:
+            out = {}
+    return {**out, "personas": pulled, "repo": CATALOG_REPO, "ref": ref,
+            "source": "built-in remote fallback", "note": INSTALL_NOTE,
+            **({"skipped_premium": skipped_premium} if skipped_premium else {})}
 
 
 def catalog_pull(persona_slugs: list[str] | None = None, pack: str | None = None,
@@ -463,7 +514,10 @@ def catalog_pull(persona_slugs: list[str] | None = None, pack: str | None = None
         out = _builtin_pull(store, pull_slugs or None, use_pack, ref, embed)
 
     landed = []
+    premium = {s["slug"] for s in out.get("skipped_premium") or []}    # skipped, not landed
     for slug in out.get("personas") or pull_slugs or []:
+        if slug in premium:
+            continue
         p = store.get_persona(slug)
         if p:
             landed.append({"slug": p["slug"], "id": p["id"],
