@@ -129,7 +129,9 @@ def filter_bar(base: str, facets: list[dict], selected: dict[str, list[str]],
                 h("button", {"class_": "sl-toolbtn", "type": "button", "data-flt-toggle": True,
                              "aria-haspopup": "true", "aria-expanded": "false"},
                   raw(_icon("filter")), t("filter_h")),
-                h("div", {"class_": "sl-popover sl-popover--bottom-start", "hidden": True},
+                # --bottom-end: the Filter button is the bar's LAST control, so the menu
+                # right-aligns with it and stays inside the content measure (round-4 audit)
+                h("div", {"class_": "sl-popover sl-popover--bottom-end", "hidden": True},
                   fragment(*panels)))
 
     chips = []

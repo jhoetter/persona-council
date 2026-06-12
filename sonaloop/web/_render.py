@@ -67,7 +67,7 @@ def render_stance(st: dict | None) -> str:
 # Raw memory-ref anatomy (ux-contract §10 W4): host-authored grounding texts often open with
 # the memory line's timestamp ("2026-06-11 08:45: …") and/or an "Open loop:" marker. The chip
 # renders those as a quiet mono date + a localized quiet marker instead of a grey text slab.
-_REF_TS = _re.compile(r"^\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::\d{2})?\s*[:·–—-]?\s*")
+_REF_TS = _re.compile(r"^\s*(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2})(?::\d{2})?)?\s*[:·–—-]?\s*")
 _REF_LOOP = _re.compile(r"^\s*(?:open\s+loops?|offene[rs]?\s+loops?)\s*[:·–—-]\s*", _re.I)
 
 
@@ -110,7 +110,8 @@ def render_ref(r: dict, store=None, *, show_role: bool = True) -> str:
     m = _REF_TS.match(txt)
     if m:
         from . import ui
-        ts_html = h("span", {"class_": "srcchip-ts"}, ui.fmt_ts(f"{m.group(1)} {m.group(2)}"))
+        ts = ui.fmt_ts(f"{m.group(1)} {m.group(2)}") if m.group(2) else ui.fmt_day(m.group(1))
+        ts_html = h("span", {"class_": "srcchip-ts"}, ts)
         txt = txt[m.end():]
     lm = _REF_LOOP.match(txt)
     if lm:

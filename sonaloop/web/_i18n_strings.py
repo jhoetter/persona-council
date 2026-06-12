@@ -174,7 +174,7 @@ STRINGS: dict[str, dict[str, str]] = {
         # sessions in the project outline (child rows under their subject + the funnel chip)
         "session_kind_live": "Live-Session", "session_kind_prototype": "Prototyp-Session",
         "session_kind_artifact": "Artefakt-Session", "live_surface": "Live-Oberfläche", "replays_h": "Replays", "proto_sessions_h": "Prototyp-Sessions",
-        "sessions_n": "{n} Sessions", "no_dropoffs": "keine Abbrüche",
+        "sessions_n": "{n} Sessions", "sessions_n_one": "{n} Session", "no_dropoffs": "keine Abbrüche",
         "drop_at_step": "{n}× Drop @ Schritt {s}", "dropoffs_n": "{n} Abbrüche",
         # outline chip contract (_outline_chips — every row kind declares its chips)
         "chip_statements_n": "{n} Statements", "chip_statements_n_one": "{n} Statement",
@@ -567,7 +567,7 @@ STRINGS: dict[str, dict[str, str]] = {
         # sessions in the project outline (child rows under their subject + the funnel chip)
         "session_kind_live": "Live session", "session_kind_prototype": "Prototype session",
         "session_kind_artifact": "Artifact session", "live_surface": "Live surface", "replays_h": "Replays", "proto_sessions_h": "Prototype sessions",
-        "sessions_n": "{n} sessions", "no_dropoffs": "no drop-offs",
+        "sessions_n": "{n} sessions", "sessions_n_one": "{n} session", "no_dropoffs": "no drop-offs",
         "drop_at_step": "{n}× drop @ step {s}", "dropoffs_n": "{n} drop-offs",
         # outline chip contract (_outline_chips — every row kind declares its chips)
         "chip_statements_n": "{n} statements", "chip_statements_n_one": "{n} statement",

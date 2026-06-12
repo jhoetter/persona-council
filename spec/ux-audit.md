@@ -1,5 +1,112 @@
 # UX Audit — Phase U rubric (newest on top: Round 4 → Round 3 → Round 2 → P5 → U1 history)
 
+## Round 4 (2026-06-12) — CLOSING AUDIT: every screen re-scored from fresh pixels, W1–W11 verified
+
+> Method: same harsh bar as round 3 (CR anchor: 9 = "würde unverändert bei Linear/Notion
+> shippen"). Real showcase DB ("Mittagspause unter Termindruck" + "Component finder") on
+> :8799 (live :18787–:18789 untouched, server killed after), every canonical screen PLUS the
+> round-4 surfaces — Library tabs with the full-width bar, the threaded council round,
+> prototype rows with avatars, the PPTX title-slide preview card (row, files lens, asset
+> detail), the docs hub, the sidebar footer, the lightbox over a live prototype iframe, the
+> single sentiment encoding — shot fresh at 1440×900 light + dark spot-checks and scored
+> from the pixels (shots: `/tmp/ux-audit-r4`, `v-*`/`zz-*` = post-fix verification crops).
+> Context: round 3 closed at **9.01 overall / craft 8.3** BEFORE the H-fixes and round 4.
+> Scores below are POST-everything, including the three straggler fixes made during this audit.
+
+### Per-screen scores (7 dimensions, CR = craft)
+
+| screen | OR | RP | HD | TX | KB | HN | CR | avg | one-line justification |
+|---|---|---|---|---|---|---|---|---|---|
+| Projects list | 10 | 9 | 9 | 10 | 9 | 10 | 9 | **9.4** | Cohort avatar group (+1 overflow) on the project row (W11); quiet count chips; nothing floats. |
+| Project outline | 10 | 10 | 9 | 9 | 9 | 9 | 8 | **9.1** | W3 verified: Run·Finished + 1 file share ONE chip family beside the Plan/…/★ control row; prototype/survey rows carry avatar groups; the deck row shows its real title slide. CR 8: nine consecutive NOTE eyebrows are still columnar noise. |
+| Outline filter (open) | 9 | 10 | 9 | 9 | 9 | 10 | 8 | **9.1** | Facets clean; popover now right-aligns with the Filter button INSIDE the measure (fixed during this audit — was left-anchored, bleeding to the window edge). |
+| Files lens (?view=files) | 9 | 9 | 9 | 9 | 8 | 9 | 9 | **8.9** | W6 verified: the PPTX card shows the rasterized first slide (title readable), filename.ext, size · day, ONE download, source chip. Sparse one-card grid stands. |
+| Slide-over: decision | 9 | 10 | 9 | 9 | 10 | 9 | 9 | **9.3** | W3 verified in-panel: ★/⤢/× are the same 28px ghost icon-buttons as the page header; quiet props; ADR clamp. |
+| Library tabs (Councils/Reports/Prototypes/Sessions/Surveys/Assets) | 9 | 10 | 9 | 9 | 9 | 10 | 9 | **9.3** | W2 verified: search stretches, the bar spans the full measure on every tab; W11 verified: council rows avatar-group +1, prototype rows show their session drivers, session rows the group of one; "1 sessions" → "1 session" fixed during this audit. |
+| Library empty tab (Hypotheses) | 9 | 9 | 9 | 9 | 9 | 10 | 9 | **9.1** | Teach card with the MCP verb; no phantom filter bar on an empty tab. |
+| Council detail | 9 | 9 | 9 | 9 | 9 | 10 | 8 | **9.0** | W5 verified: answers indent under the question banner, a hairline spine elbows into each card and ENDS curving into the last; W9 verified: no donut anywhere, stance bars ∝ count, diverging persona bars; W4 verified: refs read "11 Jun · 13:25 …" with trim + tooltip (a date-only "2026-06-10:" prefix slipped the formatter — fixed during this audit). CR 8: strip legend, stance bars and rail counts state the same 5 votes three times (J1). |
+| Synthesis detail (final) | 9 | 9 | 9 | 9 | 9 | 9 | 8 | **8.9** | H1 holds (exec opens with non-consumed sentence); Done lifecycle pill (G2); voices' avatar group on the cover; effort·value chart strong. CR 8: sentiment strip card + stance bars card still co-encode one distribution (J1). |
+| Synthesis detail (Define) | 9 | 9 | 9 | 9 | 9 | 9 | 8 | **8.9** | Same anatomy, verdict-first; same J1 remainder. |
+| Report detail (auto-seeded) | 9 | 9 | 9 | 9 | 9 | 9 | 8 | **8.9** | Done pill + contents card + honest "(noch nicht verfasst)" ems; cover meta follows the content language by documented decision (P5), no avatars because the seeded outline carries no voices (negative rule). |
+| Decision detail | 9 | 9 | 9 | 10 | 9 | 9 | 8 | **9.0** | Adopted pill, quiet Based-on/Rejected chip groups; raw ids inside the ADR body are data, not UI. |
+| Survey detail | 9 | 10 | 9 | 9 | 9 | 10 | 8 | **9.1** | W11 verified: respondent avatar group (+1) in the header; H4 holds ("5 responses per question" once). CR 8: "DERIVED FROM" role suffix rides only some Based-on chips (data-driven, reads inconsistent). |
+| Session detail (usability) + replay | 10 | 9 | 10 | 10 | 9 | 10 | 9 | **9.6** | Step shots + per-step transcript + would-continue chips; still the strongest screen. |
+| Lightbox over the prototype iframe | 9 | 9 | 9 | 9 | 9 | 9 | 9 | **9.0** | W8 verified: the dialog stacks ABOVE the live iframe (backdrop dims it, zero bleed); close × and "Step 0 · Look" caption present (H6). |
+| Session detail (prototype) | 9 | 9 | 9 | 9 | 9 | 10 | 9 | **9.1** | Verdict-first, plain header meta, grounded pill, 12-step replay with shots. |
+| Prototype detail | 9 | 9 | 9 | 9 | 9 | 9 | 9 | **9.0** | G1 verified fixed: section reads "PROTOTYPE SESSIONS (3)"; header avatar group + "v0.1" (no slug); live embed; honest Grounding 3/3 rail. |
+| Note detail (carried, slide-over re-checked) | 9 | 9 | 9 | 9 | 9 | 9 | 9 | **9.0** | Quiet props + prose; unchanged anatomy. |
+| Hypothesis detail (carried, seeded golden) | 9 | 9 | 9 | 9 | 9 | 9 | 8 | **8.9** | Unchanged; golden still green. |
+| Asset detail (PPTX deliverable) | 9 | 9 | 9 | 9 | 9 | 10 | 7 | **8.9** | W6 verified: full title-slide preview leads the page. CR 7 honest — the W6 preview exposes a redundancy cluster: the raw mimetype string on the meta line AND the file card, the size printed 3×, rail Type/Direction echoing the header pills, and the file card's empty PPTX stage directly UNDER the real preview (J2). |
+| Persona detail | 9 | 9 | 9 | 9 | 9 | 9 | 8 | **8.9** | Photo + current state + calendar; long rail values still wrap 3–4 cramped lines. |
+| Personas list | 9 | 9 | 9 | 10 | 9 | 9 | 9 | **9.1** | Entity rows, honest counts. |
+| Activity + run group | 9 | 9 | 9 | 9 | 9 | 9 | 8 | **8.9** | Run group header + ×2 coalescing verified. CR 8: re-export triplets ("Asset attached · …final-report.pptx" 06:51/06:53/06:54) still render as 3 near-identical rows (J3). |
+| /runs (carried, F5 ceiling) | 8 | 8 | 8 | 9 | 8 | 9 | 8 | **8.3** | Minimal by decision. |
+| Documentation hub | 10 | 9 | 9 | 10 | 9 | 9 | 9 | **9.3** | W7 verified: sidebar footer entry with active state, eyebrow + tabs + 6 cards + NEXT pointer, clean in dark; footer rows read as nav rows, ? in a kbd chip. |
+| ⌘K palette | 10 | 9 | 9 | 9 | 10 | 9 | 9 | **9.3** | Recent w/ icons + project context · Navigate (incl. Documentation, Keyboard shortcuts) · Actions · kbd footer. |
+| Slide-over: council (carried) | 10 | 10 | 9 | 9 | 10 | 9 | 9 | **9.4** | Unchanged anatomy, re-checked via outline click. |
+| Deck export (carried + H5 re-verified by XML) | 9 | 8 | 8 | 9 | — | 8 | 8 | **8.3** | Valid native votes donut (ONE holeSize, pinned); W6 rasterizer reuses the deck's own first slide. |
+
+**Overall average: 9.04. The craft column alone: 8.5** (14 screens at CR 9, 13 at 8, one at 7).
+Round 3's honest gap (structure 9 / craft 8.3) has narrowed but is NOT closed: the H-fixes and
+W1–W11 moved real pixels (threading, single encoding, previews, attribution, docs, footer,
+lightbox), and the remaining distance to "ships at Linear unchanged" is now concentrated in
+THREE patterns — same-data-twice (J1), the asset redundancy cluster (J2), feed coalescing
+(J3) — plus two long-standing texture nits (NOTE eyebrow column, persona rail wrap).
+
+### W1–W11 — pixel verdicts (verified against fresh shots, not the implementation notes)
+
+| # | item | pixel evidence | verdict |
+|---|---|---|---|
+| W1 | spacing sweep | `scripts/ux_spacing.py` re-run during this audit: **TOTAL FLAGS 0** across all 18 screens, exemptions none | **fixed** (gate, re-runnable) |
+| W2 | full-width filter bar | every Library tab + the outline: search stretches to the divider, bar spans the measure edge-to-edge | **fixed** |
+| W3 | one control vocabulary | page header: Plan (labeled) + … + ★ same-height boxes; Run·Finished + 1 file are one toolbtn chip row; slide-over header … /★/⤢/× identical ghost boxes | **fixed** |
+| W4 | quiet refs | "Drew on:" chips: mono "11 Jun · 13:25" prefix, trimmed body, tooltip, open-loop label | **fixed** — straggler found+fixed: a DATE-ONLY "2026-06-10:" prefix passed through raw (formatter required a time); now "10 Jun" |
+| W5 | council threading | answer column indents; hairline spine descends from the question, elbows into every card at the avatar line, curves into the last | **fixed** |
+| W6 | document title-slide previews | outline file row, files-lens card and asset detail all show the rasterized first slide (title legible); images keep real thumbs | **fixed** — exposed the J2 redundancy cluster on asset detail |
+| W7 | docs in sidebar + design pass + footer | Documentation footer entry w/ active state; docs hub eyebrow/tabs/cards/NEXT; footer rows nav-styled, ? as kbd chip | **fixed** |
+| W8 | lightbox stacking | lightbox opened OVER the live prototype iframe: backdrop covers it, no bleed; × + caption | **fixed** |
+| W9 | single sentiment encoding | zero donuts on council detail + both synthesis kinds; stance bars ∝ count | **fixed** — strip-vs-bars co-encoding remains as J1 (new finding, narrower than W9) |
+| W10 | G1/G2/G5 leftovers | "PROTOTYPE SESSIONS (3)" heading; report/synthesis Done lifecycle pill; sidebar active state follows the project-rooted crumb (Library active on /prototypes, Documentation active on /documentation) | **fixed** |
+| W11 | persona-attribution rule | avatar groups verified on: project rows, council rows+opener, prototype rows+header, survey rows+header, session rows (group of one), report/synthesis covers; decision/note/asset rows show none | **fixed** — plus the "1 sessions" grammar straggler fixed |
+
+### Fixes made during this audit (all in-contract; gates stayed green, STYLE_BASELINE=35)
+
+| # | finding (screen) | fix |
+|---|---|---|
+| 1 | "1 sessions" on prototype rows (Library, both outlines) | `sessions_n_one` de+en ("1 Session"/"1 session") — the existing `_one` singular mechanism, two table entries |
+| 2 | W4 straggler: refs with a date-only prefix ("2026-06-10: Linus-Huddle kippt …") rendered the raw ISO slab | `_REF_TS` time part made optional; date-only prefixes format via `ui.fmt_day` ("10 Jun"), timed ones keep `fmt_ts` |
+| 3 | Filter popover left-anchored to the bar's LAST control — overflowed the measure to the window edge | `.sl-popover--bottom-start` → `--bottom-end` (existing vendored variant): the menu right-aligns with the Filter button |
+
+Verification: `/tmp/ux-audit-r4/zz-vproto.png`, `zz-vrefs.png` + srcchip-ts HTML sweep (raw ISO
+survives only in tooltips = the full quote, by design), `zz-vfilter.png`.
+
+### Follow-ups (concrete, honest — the measured craft remainder)
+
+- **J1** One encoding per surface, finishing W9's spirit: the sentiment STRIP card and the
+  stance-BARS card co-encode the same distribution on council detail and the synthesis charts
+  row (the rail repeats the counts a third time on council). Owner taste call: keep the bars,
+  fold the strip into the rail/legend — small renderer change, ~6 goldens shift.
+- **J2** Asset-detail redundancy pass: drop the mimetype from the H1 meta line (it rides the
+  file card), print the size once, drop the rail Type/Direction rows that echo the header
+  pills (the H3 precedent), and suppress the file card's empty-stage panel when the real
+  preview leads the page.
+- **J3** Activity feed: coalesce same-subject re-export events within a run (3× "Asset
+  attached · mittagspause-final-report.pptx" minutes apart → one row "×3"), beyond the
+  current adjacent-identical ×n.
+- **J4** Outline texture: nine consecutive NOTE eyebrows read as a noise column — consider
+  collapsing repeated kind-eyebrows within a contiguous same-kind run (show on first row).
+- **J5** Persona rail: long Role/Size values wrap 3–4 cramped lines — widen the value column
+  or tier the rail rows.
+- F5 stands for /runs (deliberately minimal); G4 (avatar binaries in snapshots) stands.
+
+### Gate (closing)
+
+`uv run pytest -x -q`: **762 passed, 3 skipped** (unchanged — the three fixes sit under
+existing contracts). `scripts/ux_spacing.py`: **0 flags, exemptions none**. `make ux`:
+**all 36 goldens match with zero refresh** — the audit fixes touch only showcase-visible
+states (singular counts, date-only refs, open popover), none of which the seeded goldens
+exercise. Ratchets unchanged: STYLE_BASELINE=35, frozen class whitelist, no new `style=`.
+
 ## Round 4 (2026-06-12) — spacing sweep + threading + attribution (ux-contract §10 W1–W5, W9, W11)
 
 ### Spacing conformance (W1)
