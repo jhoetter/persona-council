@@ -221,9 +221,16 @@ def title_brand() -> str:
 def load_extensions(app: Any) -> list[str]:
     """Discover and run installed web extensions. Each entry in the
     `sonaloop.web.extensions` group resolves to a callable run as `setup(app)`.
-    A broken extension is skipped (logged) rather than taking down the core."""
+    A broken extension is skipped (logged) rather than taking down the core —
+    EXCEPT extensions named in SONALOOP_REQUIRED_EXTENSIONS (comma list): those
+    are security-bearing (auth/tenancy middleware), and serving without them
+    would fail OPEN. A required extension that fails (or is absent) raises, so
+    the process dies loudly instead of running unprotected."""
+    import os
     from importlib.metadata import entry_points
 
+    required = {n.strip() for n in
+                (os.getenv("SONALOOP_REQUIRED_EXTENSIONS") or "").split(",") if n.strip()}
     loaded: list[str] = []
     try:
         eps = entry_points(group="sonaloop.web.extensions")
@@ -233,8 +240,17 @@ def load_extensions(app: Any) -> list[str]:
         try:
             ep.load()(app)
             loaded.append(ep.name)
-        except Exception as exc:  # noqa: BLE001 - never let one extension break boot
+        except Exception as exc:  # noqa: BLE001 - never let one OPTIONAL extension break boot
+            if ep.name in required:
+                raise RuntimeError(
+                    f"required extension {ep.name!r} failed to load — refusing to "
+                    f"serve without it (fail closed): {exc}") from exc
             import logging
             logging.getLogger("sonaloop.web").warning(
                 "extension %r failed to load: %s", ep.name, exc)
+    missing = required - set(loaded)
+    if missing:
+        raise RuntimeError(
+            f"required extension(s) {sorted(missing)} not installed — refusing to "
+            "serve without them (fail closed)")
     return loaded
