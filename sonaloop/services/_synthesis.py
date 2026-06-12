@@ -719,6 +719,7 @@ def export_synthesis_html(synthesis_id: str, out_dir: str | None = None,
         raise ValueError(f"export path escapes the data dir ({data_root}): {out_dir!r}")
     path = write_export(doc, parent / token / "index.html")
     return {"synthesis_id": syn["id"], "token": token, "dir": str(parent / token), "path": path,
+            "url": export_download_url(path),  # noqa: F821 (bound) — the served /data link
             "title": syn.get("title", "")}
 
 

@@ -453,6 +453,28 @@ def _study_lead(answer_html: str, answer_label: str, *, question: str = "",
              h("div", {"class_": "sl-prose"}, raw(answer_html)))
 
 
+def _framed_rows(rows: list) -> str:
+    """Stack consecutive `.sl-entity` rows under ONE `.sl-entity-list` hairline frame (the
+    design-system idiom for entity lists — flush rows are only legal INSIDE the frame, the
+    spacing harness enforces it). Non-entity rows (`.group` headers, card rows like `.hyp`
+    or `.sl-file--row`) break the frame and ride the `.rows` container's gap rhythm."""
+    out: list[str] = []
+    frame: list[str] = []
+    def _flush() -> None:
+        if frame:
+            out.append(f'<div class="sl-entity-list">{"".join(frame)}</div>')
+            frame.clear()
+    for r in rows:
+        html = str(r)
+        if "sl-entity" in html[:120] and "sl-entity-list" not in html[:120]:
+            frame.append(html)
+        else:
+            _flush()
+            out.append(html)
+    _flush()
+    return "".join(out)
+
+
 def _list_page(store: Store, *, title: str, lead: str, rows: list,
                empty_icon: str, empty_msg: str, active: str,
                pre: str = "", count: int | None = None,
@@ -469,7 +491,7 @@ def _list_page(store: Store, *, title: str, lead: str, rows: list,
     the teach line — the next action that produces this kind — becomes the body; `after` is
     optional HTML below the rows (e.g. the pager controls)."""
     if rows:
-        rows_html = raw("".join(str(r) for r in rows))
+        rows_html = raw(_framed_rows(rows))
     else:
         cta = (h("a", {"class_": "sl-btn", "href": empty_action[1]},
                  raw(_icon(empty_action[2])), " ", empty_action[0]) if empty_action else None)

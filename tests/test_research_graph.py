@@ -256,3 +256,17 @@ def test_record_synthesis_project_id_links_and_validates(store):
     assert again["project_id"] == pid
     with pytest.raises(KeyError):
         services.record_synthesis("Bad", "arc", project_id="rproject_missing", store=store)
+
+
+def test_citing_synthesis_resolves_its_owning_project(store):
+    """The claude.ai session's exact deliverable gap: the synthesis carried no project_id
+    (the old tool had no such param), so its PPTX export attached nowhere ('0 files').
+    parent_project_of_synthesis now applies the absorption rule — declared project_id
+    first, else citing only one project's owned councils is ownership enough."""
+    pid = services.start_project("Own", "?", store=store)["id"]
+    c = services.record_council(pid, "Q", [], [{"persona_id": "p1", "text": "x"}],
+                                store=store, key="own-c")
+    syn = services.record_synthesis("Report", "arc", council_ids=[c["id"]], store=store)
+    assert services.parent_project_of_synthesis(syn["id"], store=store)["id"] == pid
+    declared = services.record_synthesis("Declared", "arc", project_id=pid, store=store)
+    assert services.parent_project_of_synthesis(declared["id"], store=store)["id"] == pid

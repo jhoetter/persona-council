@@ -143,12 +143,20 @@ _MEASURE_REL_JS = """
   // between them, so that distance is content, not rhythm.
   const adjacent = (a, b) => a && b && a.parentElement === b.parentElement && nextVis(a) === b;
   const out = [];
+  // a "boxed" element is its own card (border + radius + own surface): two ADJACENT boxed
+  // siblings may never sit flush/hairline OUTSIDE an .sl-entity-list frame — that is exactly
+  // how the library's flush card stack shipped as 'conformant' (owner, round 5 re-review #2).
+  const boxed = el => { const s = getComputedStyle(el);
+    return parseFloat(s.borderTopWidth) > 0 && parseFloat(s.borderTopLeftRadius) > 0
+      && s.backgroundColor !== 'rgba(0, 0, 0, 0)'; };
+  const framed = el => !!el.closest('.sl-entity-list');
   const gap = (label, a, b, mode) => {
     if (!a || !b) return;
     if (mode !== 'top' && !adjacent(a, b)) return;
     const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
     const d = mode === 'top' ? rb.top - ra.top : rb.top - ra.bottom;
-    out.push({label, px: Math.round(d * 100) / 100});
+    const boxedPair = mode !== 'top' && boxed(a) && boxed(b) && !(framed(a) && framed(b));
+    out.push({label, px: Math.round(d * 100) / 100, boxedPair});
   };
   const header = first('.sl-page-header') || first('.lead') || first('.h1');
   const tabs = first('.sl-tabs');
@@ -158,7 +166,7 @@ _MEASURE_REL_JS = """
   if (bar) gap(tabs ? 'tabs→bar' : 'header→bar', tabs || header, bar);
   if (bar && list) gap('bar→list', bar, list);
   if (list) {
-    const rows = [...list.querySelectorAll('.sl-entity, a.row, .olrow')].filter(vis);
+    const rows = [...list.querySelectorAll('.sl-entity, .sl-entity-list, a.row, .olrow, .hyp')].filter(vis);
     if (rows.length) gap('list→first-row', list, rows[0], 'top');
     for (let i = 1; i < Math.min(rows.length, 5); i++)
       if (rows[i].previousElementSibling === rows[i - 1]) gap('row→row', rows[i - 1], rows[i]);
@@ -186,11 +194,13 @@ def classify(label: str, prop: str, px: float, centered: bool) -> str:
     return "FLAG"
 
 
-def classify_rel(px: float) -> str:
+def classify_rel(px: float, boxed_pair: bool = False) -> str:
     """A neighbor RELATIONSHIP (rendered distance between blocks): flush, a 1px hairline, or
     a token gap. The 2-3px optical class does NOT apply between blocks — that loophole is how
     the 3px filter-bar→rows gap shipped as 'conformant' (owner round 5)."""
     v = abs(px)
+    if boxed_pair and v < 8 - GRID_TOL:
+        return "FLAG"            # two cards almost touching — needs a token gap or the list frame
     if v <= GRID_TOL:
         return "flush"
     if abs(v - 1) <= GRID_TOL:
@@ -238,7 +248,7 @@ def main() -> int:
                 # the round-5 relationship sweep: distances BETWEEN neighbors, same table
                 for m in page.evaluate(_MEASURE_REL_JS):
                     rows.append((name, "rel:" + m["label"], "(relationship)", "gap",
-                                 m["px"], classify_rel(m["px"])))
+                                 m["px"], classify_rel(m["px"], m.get("boxedPair", False))))
             ctx.close()
             browser.close()
     finally:

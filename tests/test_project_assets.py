@@ -333,3 +333,45 @@ def test_file_cards_use_the_preview_as_thumb_stage(store, project):
     txt = services.attach_asset(project["id"], content_base64=base64.b64encode(b"x").decode(),
                                 filename="brief.pdf", store=store)
     assert "sl-file__ext" in file_stage(txt) and "img" not in file_stage(txt)
+
+
+def test_asset_binary_lives_in_the_served_data_tree(store, project):
+    """The record's `url` must be REAL: the binary lands under config.DATA_DIR — the
+    tree the web app mounts at /data — not under ROOT (= site-packages on an installed
+    package: unserved, and erased by the next reinstall)."""
+    from pathlib import Path
+
+    from sonaloop import config
+    rec = services.attach_asset(project["id"], content_base64=base64.b64encode(b"hello").decode(),
+                                filename="note.txt", store=store)
+    name = Path(rec["asset_path"]).name
+    assert (Path(config.DATA_DIR) / "assets" / name).read_bytes() == b"hello"
+    assert rec["url"] == f"/data/assets/{name}"
+    data, _ = services.get_asset_content(project["id"], rec["id"], store=store)
+    assert data == b"hello"
+
+
+def test_export_synthesis_deliverable_returns_download_url(store, project, monkeypatch):
+    """The hand-off contract for remote (MCP) hosts: the result's `url` is the absolute,
+    auth-gated DOWNLOAD link (the supersede-managed asset URL once attached) and
+    `project_url` points at the files lens — a server filesystem path alone is not a
+    hand-off ('Datei liegt auf dem Sonaloop-Server' was the whole bug)."""
+    from pathlib import Path
+
+    from sonaloop import config
+    monkeypatch.setenv("SONALOOP_PUBLIC_BASE_URL", "https://app.sonaloop.test")
+    monkeypatch.setattr(services, "export_synthesis_pptx", lambda sid, store=None: b"PK deck")
+    syn = _project_synthesis(store, project)
+    res = services.export_synthesis_deliverable(syn["id"], "pptx", store=store)
+    rec = services.get_asset(project["id"], res["asset_id"], store=store)
+    assert res["url"] == "https://app.sonaloop.test" + rec["url"]
+    assert res["project_url"] == f'https://app.sonaloop.test/projects/{project["id"]}?view=files'
+    assert (Path(config.DATA_DIR) / "assets" / Path(rec["asset_path"]).name).read_bytes() == b"PK deck"
+
+
+def test_export_synthesis_deliverable_without_project_still_links_the_export(store, monkeypatch):
+    monkeypatch.setenv("SONALOOP_PUBLIC_BASE_URL", "https://app.sonaloop.test")
+    monkeypatch.setattr(services, "export_synthesis_pptx", lambda sid, store=None: b"PK bytes")
+    syn = services.record_synthesis("Standalone", "start", [], {}, store=store)
+    res = services.export_synthesis_deliverable(syn["id"], "pptx", store=store)
+    assert res["url"] == f'https://app.sonaloop.test/data/exports/{syn["id"]}.pptx'

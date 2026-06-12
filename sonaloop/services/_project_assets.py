@@ -47,9 +47,26 @@ _EXCERPT_CHARS = 4000
 
 
 def _assets_dir() -> Path:
-    # ROOT-relative like SOUL/avatars (and = DATA_DIR/assets in a source checkout,
-    # which the web app serves statically at /data/assets/…); tests monkeypatch ROOT.
-    return Path(ROOT) / "data" / "assets"
+    """The asset binary store of the ACTIVE data partition (DATA_DIR/assets for the
+    global store, <partition>/assets for a workspace) — always inside the tree the web
+    app serves at /data/…, so a record's `url` is real in every deployment. The old
+    ROOT-relative location only coincided with this in a source checkout; on an
+    installed package it landed in site-packages: unserved by the /data mount and
+    erased by the next reinstall."""
+    from ..config import partition_dir
+    return partition_dir() / "assets"
+
+
+def _assets_url_base() -> str:
+    """The /data-mounted URL prefix of _assets_dir() — `/data/assets` for the global
+    store, `/data/workspaces/<ws>/assets` for a partition (the cloud's membership
+    guard already covers those paths)."""
+    from .. import config
+    try:
+        rel = _assets_dir().resolve().relative_to(Path(config.DATA_DIR).resolve())
+    except ValueError:                  # a partition rooted outside DATA_DIR (not the norm)
+        return "/data/assets"
+    return "/data/" + rel.as_posix()
 
 
 def _project_assets(project: dict[str, Any]) -> list[dict[str, Any]]:
@@ -92,7 +109,7 @@ def _write_asset_preview(data: bytes, ext: str, sha: str) -> str:
         if not png:
             return ""
         target.write_bytes(png)
-    return f"/data/assets/{sha}.preview.png"
+    return f"{_assets_url_base()}/{sha}.preview.png"
 
 
 def ensure_asset_preview(project_id: str, asset_id: str | None = None,
@@ -110,7 +127,7 @@ def ensure_asset_preview(project_id: str, asset_id: str | None = None,
         ext = Path(a.get("asset_path", "")).suffix.lstrip(".").lower()
         if a.get("preview_url") or ext not in PREVIEW_EXTS:
             continue
-        binary = Path(ROOT) / a.get("asset_path", "")
+        binary = _assets_dir() / Path(a.get("asset_path", "")).name
         if not binary.is_file():
             continue
         sha = binary.stem
@@ -178,8 +195,10 @@ def attach_asset(project_id: str, path: str | None = None, content_base64: str |
         "direction": direction or (existing or {}).get("direction") or "in",
         "media_type": mimetypes.guess_type(name)[0] or "application/octet-stream",
         "bytes": len(data),
+        # asset_path is the record's stable KEY (its basename addresses the store);
+        # readers resolve via _assets_dir(), never against this literal prefix.
         "asset_path": f"data/assets/{sha}.{ext}",
-        "url": f"/data/assets/{sha}.{ext}",
+        "url": f"{_assets_url_base()}/{sha}.{ext}",
         # W6: document file cards show the title slide — '' (no renderer / unreadable deck)
         # degrades to the extension badge everywhere.
         "preview_url": _write_asset_preview(data, ext, sha),
@@ -257,9 +276,15 @@ def get_asset_content(project_id: str, asset_id: str,
     """The asset's bytes + its record — the multimodal feed (MCP view_asset wraps this).
     The read is contained to the asset store, never an arbitrary path from the record."""
     record = get_asset(project_id, asset_id, store=store)
-    target = (Path(ROOT) / record["asset_path"]).resolve()
+    # The record's asset_path is the canonical `data/assets/<sha>.<ext>`; we address the
+    # store by its BASENAME (partition-correct), but a path that isn't that exact shape
+    # (a tampered/legacy record) is rejected loudly rather than silently coerced.
+    ap = record["asset_path"]
+    if ap != f"data/assets/{Path(ap).name}":
+        raise ValueError(f"Asset path escapes the asset store: {ap}")
+    target = (_assets_dir() / Path(ap).name).resolve()
     if not target.is_relative_to(_assets_dir().resolve()):
-        raise ValueError(f"Asset path escapes the asset store: {record['asset_path']}")
+        raise ValueError(f"Asset path escapes the asset store: {ap}")
     if not target.exists():
         raise FileNotFoundError(f"Asset binary missing: {record['asset_path']} (re-attach or import-snapshot)")
     return target.read_bytes(), record

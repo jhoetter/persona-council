@@ -309,9 +309,11 @@ def register_council(mcp):
     @mcp.tool()
     def export_synthesis(synthesis_id: str, format: str = "md", out_path: str | None = None) -> dict[str, Any]:
         """Export a report (synthesis). format: `md`|`json` returned inline · `pdf`|`pptx` rendered as a
-        presentation-grade file written to disk (returns its path). Compose with the authoring tools
-        (record_synthesis_outline → record_synthesis_section, attach chart/figure figures) to shape the
-        report from a request, then export it to share — no UI button needed."""
+        presentation-grade file and attached to the owning project as a deliverable asset; the result's
+        `url` is the DOWNLOAD LINK — hand THAT to the user (the `path` is the server's own filesystem,
+        unreachable for remote hosts). Compose with the authoring tools (record_synthesis_outline →
+        record_synthesis_section, attach chart/figure figures) to shape the report from a request,
+        then export it to share — no UI button needed."""
         t = time.perf_counter()
         fmt = (format or "md").lower()
         if fmt in ("pdf", "pptx"):
@@ -329,8 +331,9 @@ def register_council(mcp):
         """Export a report (synthesis) as a SHAREABLE read-only static HTML bundle —
         `data/export/share/<token>/index.html`: the exact inspector document minus app chrome, all
         assets inlined (CSS, charts, figures, avatars), zero external requests, opens from file://.
-        Host the directory anywhere (S3, GitHub Pages, an intranet share); the unguessable token
-        directory name is the share secret. `out_dir` (optional) must stay inside the data dir."""
+        The result's `url` is the LIVE LINK to hand the user (auth-gated /data route); host the
+        directory anywhere else if needed (S3, GitHub Pages, an intranet share) — the unguessable
+        token directory name is the share secret. `out_dir` (optional) must stay inside the data dir."""
         t = time.perf_counter()
         return _env("export_synthesis_html", services.export_synthesis_html(synthesis_id, out_dir), t)
 

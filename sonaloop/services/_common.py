@@ -153,6 +153,19 @@ def write_export_bytes(data: bytes, path: str | Path) -> str:
     return str(out)
 
 
+def export_download_url(path: str | Path) -> str:
+    """The absolute, auth-gated download URL for an export file — the web app serves
+    DATA_DIR at /data, so anything written below it (exports/, the share bundles) is
+    one click away. '' for paths outside the served tree (an absolute out_path the
+    caller chose) — a server filesystem path is NOT a hand-off to a remote user."""
+    from .. import config
+    try:
+        rel = Path(path).resolve().relative_to(Path(config.DATA_DIR).resolve())
+    except ValueError:
+        return ""
+    return web_url("/data/" + rel.as_posix())
+
+
 # ===================================================================== #
 # Memory & multi-resolution orchestration                               #
 # spec/memory-and-simulation-architecture.md §3, §4, §4A, §12.          #

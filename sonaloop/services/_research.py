@@ -192,8 +192,14 @@ def parent_project_of_council(council_id: str, store: Store | None = None) -> di
 
 def parent_project_of_synthesis(synthesis_id: str, store: Store | None = None) -> dict[str, Any] | None:
     """Which project owns this synthesis? Robust for PLAN-based projects (the synthesis is produced by
-    a plan verify task, not listed in the old `study_ids`). Powers correct breadcrumbs."""
+    a plan verify task, not listed in the old `study_ids`) and for ABSORBED ones recorded outside the
+    governed loop (declared project_id, or citing only one project's owned councils — the same rule
+    plan_graph absorbs by). Powers correct breadcrumbs + the deliverable export's asset attach."""
     store = store or Store()
+    syn = store.get_synthesis(synthesis_id) or {}
+    declared = store.get_research_project(syn["project_id"]) if syn.get("project_id") else None
+    if declared:
+        return {"id": declared["id"], "slug": declared["slug"], "title": declared["title"]}
     p = parent_project_of_study(synthesis_id, store=store)        # legacy/constellation path
     if p:
         return p
@@ -202,6 +208,12 @@ def parent_project_of_synthesis(synthesis_id: str, store: Store | None = None) -
         for task in plan.get("tasks", []):
             if any(r.get("kind") == "synthesis" and r.get("id") == synthesis_id
                    for r in task.get("produces", [])):
+                return {"id": proj["id"], "slug": proj["slug"], "title": proj["title"]}
+    cited = list(syn.get("council_ids") or [])                    # absorption rule (citations)
+    if cited:
+        for proj in store.list_research_projects():
+            owned = set(proj.get("council_ids") or [])
+            if owned and all(c in owned for c in cited):
                 return {"id": proj["id"], "slug": proj["slug"], "title": proj["title"]}
     return None
 

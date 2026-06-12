@@ -138,7 +138,8 @@ def export_snapshot(out_dir: str | None = None, store: Store | None = None) -> d
     for pr in projects:
         _w(base / "projects" / f"{pr['id']}.json", pr)
         for a in pr.get("assets", []):
-            src = ROOT / a["asset_path"]
+            from ._project_assets import _assets_dir
+            src = _assets_dir() / Path(a["asset_path"]).name
             if src.exists():
                 (base / "assets").mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(src, base / "assets" / src.name)
@@ -239,7 +240,8 @@ def import_snapshot(in_dir: str | None = None, store: Store | None = None, embed
             counts["projects"] = counts.get("projects", 0) + 1
     adir = base / "assets"
     if adir.exists():
-        dest_dir = ROOT / "data" / "assets"
+        from ._project_assets import _assets_dir
+        dest_dir = _assets_dir()
         dest_dir.mkdir(parents=True, exist_ok=True)
         for af in sorted(adir.glob("*")):
             shutil.copyfile(af, dest_dir / af.name)

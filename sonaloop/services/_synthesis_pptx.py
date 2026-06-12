@@ -553,7 +553,11 @@ def export_synthesis_deliverable(synthesis_id: str, fmt: str, out: str | None = 
     data = (export_synthesis_pptx(synthesis_id, store=store) if fmt == "pptx"
             else export_synthesis_pdf(synthesis_id, store=store))           # noqa: F821 (bound)
     path = write_export_bytes(data, out or f"{synthesis_id}.{fmt}")         # noqa: F821 (bound)
-    result = {"synthesis_id": syn["id"], "format": fmt, "path": path, "bytes": len(data)}
+    # The hand-off contract: a server filesystem path means nothing to a remote (MCP)
+    # user — `url` is the auth-gated download link ('' only for an out path outside
+    # the served /data tree); the asset URL below supersedes it once attached.
+    result = {"synthesis_id": syn["id"], "format": fmt, "path": path, "bytes": len(data),
+              "url": export_download_url(path)}                             # noqa: F821 (bound)
     proj = (store.get_research_project(syn["project_id"]) if syn.get("project_id")
             else parent_project_of_synthesis(synthesis_id, store=store))    # noqa: F821 (bound)
     if proj:
@@ -576,6 +580,8 @@ def export_synthesis_deliverable(synthesis_id: str, fmt: str, out: str | None = 
         if replaced:
             rec = record_asset_supersession(proj["id"], rec["id"], replaced, store=store)  # noqa: F821 (bound)
         result["project_id"], result["asset_id"] = proj["id"], rec["id"]
+        result["url"] = web_url(rec["url"])                                 # noqa: F821 (bound)
+        result["project_url"] = web_url(f'/projects/{proj["id"]}?view=files')  # noqa: F821 (bound)
     return result
 
 
