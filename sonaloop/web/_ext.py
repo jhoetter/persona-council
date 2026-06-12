@@ -111,6 +111,34 @@ def render_slot(name: str, store: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Authenticated identity (multi-user extensions)
+# ---------------------------------------------------------------------------
+# Core renders a per-user menu (sidebar foot) when an extension provides the
+# authenticated principal of the current request; local single-user mode never
+# sets one, so the plain Settings menu stays. Mirrors the theme-override seam:
+# a contextvar the extension's auth middleware sets/resets around call_next.
+
+_IDENTITY: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
+    "sonaloop_identity", default=None)
+
+
+def set_identity(principal: dict[str, Any] | None) -> contextvars.Token:
+    """Set the authenticated identity for this request — {sub, email, name} plus an
+    optional `logout_href` (rendered as the sign-out action when present). Returns a
+    token; pass it to reset_identity() in a finally block."""
+    return _IDENTITY.set(dict(principal) if principal else None)
+
+
+def reset_identity(token: contextvars.Token) -> None:
+    _IDENTITY.reset(token)
+
+
+def current_identity() -> dict[str, Any] | None:
+    """The authenticated user of the current request, or None (local mode)."""
+    return _IDENTITY.get()
+
+
+# ---------------------------------------------------------------------------
 # Per-request theme overrides (design-system-per-tenant/project)
 # ---------------------------------------------------------------------------
 

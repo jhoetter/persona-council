@@ -24,6 +24,7 @@ from ._tour import tour_footer_entry
 from ._ext import (  # noqa: F401  (extension seams; public surface re-exported by web/__init__)
     register_nav_section, register_nav_item, resolve_label, nav_model,
     render_slot, theme_override_css, brand_name, brand_logo, title_brand,
+    current_identity,
 )
 
 
@@ -223,10 +224,23 @@ def _nav(active: str, store: Store) -> str:
     return fragment(*blocks)
 
 
+_USER_MENU_ID_CSS = register_css(
+    ".sl-um-ava--initials{display:inline-flex;align-items:center;justify-content:center;"
+    "width:22px;height:22px;border-radius:999px;background:var(--accent);color:#fff;"
+    "font-size:10px;font-weight:650;letter-spacing:.02em;flex:none}"
+    ".sl-um-who{display:flex;flex-direction:column;gap:1px;margin:0 0 8px}"
+    ".sl-um-who strong{font-size:13px;font-weight:600}"
+    ".sl-um-who span{font-size:12px;color:var(--muted);word-break:break-all}")
+
+
 def _user_menu() -> str:
     """Modern user/settings menu pinned to the bottom of the sidebar — a popover with a
-    sun/system/moon theme switch and a language switch (replaces the old topbar buttons)."""
+    sun/system/moon theme switch and a language switch (replaces the old topbar buttons).
+    When an extension provides an authenticated identity (current_identity — multi-user
+    cloud mode), the trigger becomes the user chip and the popover gains an account
+    section with sign-out: Settings folds into the user menu. Local mode unchanged."""
     cur = _lang()
+    ident = current_identity()
     themes = [("light", "sun", t("theme_light")), ("system", "monitor", t("theme_system")), ("dark", "moon", t("theme_dark"))]
     theme_opts = [h("button", {"type": "button", "class_": "sl-segmented__item", "data-theme-set": val,
                                 "title": label, "aria-label": label}, raw(_icon(icon)), h("span", {}, label))
@@ -234,8 +248,29 @@ def _user_menu() -> str:
     langs = [("de", "Deutsch", "DE"), ("en", "English", "EN")]
     lang_opts = [h("a", {"class_": f'sl-segmented__item{" is-active" if code == cur else ""}', "href": f"?lang={code}",
                          "title": full, "aria-label": full}, h("span", {}, short)) for code, full, short in langs]
+    account_sec = None
+    if ident:
+        who = ident.get("name") or ident.get("email") or "?"
+        account_sec = h("div", {"class_": "sl-um-sec"},
+                        h("div", {"class_": "sl-um-lbl"}, t("signed_in_as")),
+                        h("div", {"class_": "sl-um-who"},
+                          h("strong", {}, who),
+                          h("span", {}, ident["email"]) if ident.get("name") and ident.get("email") else None),
+                        h("a", {"class_": "sl-btn", "href": ident["logout_href"]},
+                          raw(_icon("external")), " ", t("logout")) if ident.get("logout_href") else None)
+    if ident:
+        who = ident.get("name") or ident.get("email") or "?"
+        initials = ("".join(part[0] for part in who.split()[:2]) or "?").upper()
+        trigger_parts = (h("span", {"class_": "sl-um-ava sl-um-ava--initials"}, initials),
+                         h("span", {"class_": "sl-um-name"}, who),
+                         h("span", {"class_": "sl-um-caret"}, raw(_icon("chevron"))))
+    else:
+        trigger_parts = (h("span", {"class_": "sl-um-ava"}, raw(_icon("settings", animate=True))),
+                         h("span", {"class_": "sl-um-name"}, t("settings")),
+                         h("span", {"class_": "sl-um-caret"}, raw(_icon("chevron"))))
     return h("div", {"class_": "sl-usermenu"},
              h("div", {"class_": "sl-um-pop", "hidden": True},
+               account_sec,
                h("div", {"class_": "sl-um-sec"}, h("div", {"class_": "sl-um-lbl"}, t("theme")),
                  h("div", {"class_": "sl-segmented sl-segmented--fill sl-segmented--stacked"}, theme_opts)),
                h("div", {"class_": "sl-um-sec"}, h("div", {"class_": "sl-um-lbl"}, t("language")),
@@ -248,9 +283,7 @@ def _user_menu() -> str:
                  h("a", {"class_": "sl-btn", "href": "/documentation"}, raw(_icon("overview")), " ", t("documentation")))),
              h("button", {"type": "button", "class_": "sl-um-trigger pi-hover",
                           "aria-haspopup": "true", "aria-expanded": "false"},
-               h("span", {"class_": "sl-um-ava"}, raw(_icon("settings", animate=True))),
-               h("span", {"class_": "sl-um-name"}, t("settings")),
-               h("span", {"class_": "sl-um-caret"}, raw(_icon("chevron")))))
+               *trigger_parts))
 
 
 def _star(kind: str, ident: str, label: str, href: str) -> str:
