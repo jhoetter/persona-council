@@ -165,6 +165,11 @@ _MEASURE_REL_JS = """
   if (tabs) gap('header→tabs', header, tabs);
   if (bar) gap(tabs ? 'tabs→bar' : 'header→bar', tabs || header, bar);
   if (bar && list) gap('bar→list', bar, list);
+  // mixed idiom: a self-boxed element inside the flat outline (owner round 5 #2: the
+  // Deliver file card floating between flat rows under a phase hairline)
+  for (const el of document.querySelectorAll('.outline .sl-file--row, .outline .sl-entity')) {
+    if (boxed(el)) out.push({label: 'outline-mixed-idiom', px: 999, boxedPair: true});
+  }
   if (list) {
     const rows = [...list.querySelectorAll('.sl-entity, .sl-entity-list, a.row, .olrow, .hyp')].filter(vis);
     if (rows.length) gap('list→first-row', list, rows[0], 'top');
@@ -199,6 +204,8 @@ def classify_rel(px: float, boxed_pair: bool = False) -> str:
     a token gap. The 2-3px optical class does NOT apply between blocks — that loophole is how
     the 3px filter-bar→rows gap shipped as 'conformant' (owner round 5)."""
     v = abs(px)
+    if boxed_pair and v == 999:
+        return "FLAG"            # boxed element inside a flat-idiom context (outline)
     if boxed_pair and v < 8 - GRID_TOL:
         return "FLAG"            # two cards almost touching — needs a token gap or the list frame
     if v <= GRID_TOL:

@@ -96,6 +96,11 @@ svg.ic{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke
 .ol-phase>summary .ol-gl{color:var(--accent);font-size:var(--t-sm);width:14px;text-align:center}
 .ol-phase>summary b{font-weight:650;letter-spacing:-.01em}
 .ol-rlabel{font-size:var(--t-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);padding:8px 8px 4px 32px}
+/* File rows INSIDE the outline follow the outline's FLAT idiom — the boxed .sl-file--row
+   card variant is for the Library/files lens. A box among flat siblings reads as a stray
+   divider + floating card (owner round 5); the spacing harness flags the mixed idiom. */
+.outline .sl-file--row{border:0;background:transparent;border-radius:0;padding:7px 8px}
+.outline .sl-file--row:hover{background:var(--hover);border-radius:var(--radius-sm)}
 .olrow{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radius-sm);color:var(--ink);text-decoration:none;font-size:var(--t-body)}
 .olrow:hover{background:var(--hover)}
 .ol-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
