@@ -116,7 +116,9 @@ def register_decisions(app) -> None:
             ("dot", t("created"), ui.fmt_date(d.get("created_at") or "")),
         ]
         return detail_page(
-            store, title=d.get("title", ""), active="library", crumbs=crumbs,
+            store, title=d.get("title", ""), crumbs=crumbs,
+            # G5: sidebar active follows the crumb root (project-rooted → Projects)
+            active="projects" if proj else "library",
             icon="flag", kind=t("decision_kind"),
             pills=[decision_status_pill(d.get("status", "proposed"))],
             hid="sec-head", body=body, prop_rows=prop_rows,

@@ -73,7 +73,9 @@ def register_syntheses(app) -> None:
         ]
         from .._forms import overflow_delete
         return detail_page(
-            store, title=short_title, active="library", crumbs=crumbs,
+            store, title=short_title, crumbs=crumbs,
+            # G5: sidebar active follows the crumb root (project-rooted → Projects)
+            active="projects" if proj else "library",
             hero="", body=body, prop_rows=prop_rows,
             rel_study_id=f"synthesis:{synthesis_id}",
             rel_proj_id=(proj["id"] if proj else None),

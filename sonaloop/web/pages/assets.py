@@ -155,7 +155,7 @@ def register_assets(app) -> None:
             ("dot", t("created"), ui.fmt_date(a.get("created_at") or "")),
         ]
         return detail_page(
-            store, title=title, active="library",
+            store, title=title, active="projects",   # G5: an asset always lives on a project
             # Project-rooted crumb (§8.2 — the council pattern; an asset always has a project).
             crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'),
                     (title, None)],

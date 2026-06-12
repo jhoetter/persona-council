@@ -14,6 +14,7 @@ from . import ui
 from ._html import h, raw, fragment, register_css
 from ._components import _md, _icon
 from ._i18n import t
+from ._presence import synthesis_status_pill
 from ..config import content_language
 from ..assets import asset_url
 
@@ -150,16 +151,18 @@ def render_report(report: dict, store, *, with_toc: bool = False):
                                       for st in report.get("statements") or []) if p]
     crew = ui.avatar_group((store.get_persona(p) for p in vpids[:4]), total=len(vpids), size=22)
 
+    # G2: the lifecycle pill beside the cover eyebrow — the same words as the report rows
+    # (the convergence meta line dropped its status TEXT: one encoding, the pill).
+    status_pill = raw(synthesis_status_pill(report.get("status", "done")))
+
     if report.get("scope") != "project":
         # a convergence synthesis, rendered in the unified report shell.
         from ._synthesis import _synthesis_html
-        status = report.get("status", "done")
         meta_line = " · ".join(x for x in [
             (f'{len(report.get("council_ids", []))} {t("councils")}' if report.get("council_ids") else ""),
-            (t("done") if status == "done" else t("running")),
             ui.fmt_date(report.get("created_at") or "")] if x)
         cover = h("header", {"class_": "rp-cover"},
-                  h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind")),
+                  h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind"), status_pill),
                   h("h1", {"class_": "rp-title"}, project_title),
                   h("div", {"class_": "rp-metaline"}, crew if crew else None, h("span", {}, meta_line)))
         body, toc = _synthesis_html(store, report, embed=True)
@@ -184,7 +187,7 @@ def render_report(report: dict, store, *, with_toc: bool = False):
     ])
 
     cover = h("header", {"class_": "rp-cover"},
-              h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind")),
+              h("div", {"class_": "rp-eyebrow"}, t("synthesis_kind"), status_pill),
               h("h1", {"class_": "rp-title"}, project_title),
               h("div", {"class_": "rp-metaline"}, crew if crew else None, h("span", {}, meta_line)),
               (h("p", {"class_": "rp-lead"}, raw(_md(report["lead"])))
@@ -230,7 +233,8 @@ register_css(r"""
 .report h2,.report h3,.report p,.report ul,.report ol{max-width:none}
 /* cover */
 .rp-cover{padding:8px 0 26px;margin-bottom:30px;border-bottom:1px solid var(--line)}
-.rp-eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:600}
+.rp-eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:8px}
+.rp-eyebrow .lbl{text-transform:none;letter-spacing:normal}
 .rp-title{font-size:34px;line-height:1.12;font-weight:700;margin:10px 0 0;letter-spacing:-.01em}
 .rp-metaline{margin-top:12px;color:var(--muted);font-size:var(--t-sm);font-variant-numeric:tabular-nums;
   display:flex;align-items:center;gap:8px}

@@ -146,7 +146,9 @@ def register_hypotheses(app) -> None:
             ("dot", t("created"), ui.fmt_date(hx.get("created_at") or "")),
         ]
         return detail_page(
-            store, title=hx.get("text", ""), active="library", crumbs=crumbs,
+            store, title=hx.get("text", ""), crumbs=crumbs,
+            # G5: sidebar active follows the crumb root (project-rooted → Projects)
+            active="projects" if proj else "library",
             icon="target", kind=t("hypothesis_kind"),
             pills=[hypothesis_status_pill(hx.get("status", "open"))],
             hid="sec-head", body=body, prop_rows=prop_rows,

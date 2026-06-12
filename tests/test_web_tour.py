@@ -35,9 +35,13 @@ def test_tour_offer_is_a_sidebar_footer_row_not_a_toast(store):
     assert "tour-offer" not in first.headers.get("set-cookie", "")  # … and so is its cookie
     foot = first.text.split('class="sl-nav sl-sb-foot"')[1].split("</nav>")[0]
     assert STRINGS["en"]["tour_take"] in foot and "data-tour-start" in foot
-    # the footer rows share ONE row contract: Feedback, the tour, the ? hint
+    # the footer rows share ONE row contract: Documentation (W7), Feedback, the tour, the ? hint
     assert STRINGS["en"]["feedback_h"] in foot and "data-km-open" in foot
-    assert foot.count('class="pi-hover"') == 3
+    assert 'href="/documentation"' in foot
+    assert STRINGS["en"]["documentation"] in foot
+    assert foot.count('class="pi-hover"') == 4
+    # the ? keycap is the real .sl-kbd chip (W7 footer polish)
+    assert '<kbd class="sl-kbd">?</kbd>' in foot
     # never auto-start: the overlay ships hidden; only [data-tour-start] opens it
     assert re.search(r'id="tourov"[^>]*hidden', first.text)
 

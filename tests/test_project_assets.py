@@ -261,3 +261,75 @@ def test_attach_prototype_shot_uses_capture(store, project, monkeypatch, tmp_pat
                         lambda prototype_id, store=None: "assets/abc.png")
     rec = services.attach_prototype_shot(project["id"], "proto-x", store=store)
     assert rec["kind"] == "screenshot" and rec["source"] == "prototype:proto-x"
+
+# ---------------------------------------------------------------- W6: first-slide previews
+
+
+def _deck_bytes() -> bytes:
+    """A real one-slide deck through the production renderer (the W6 preview's input)."""
+    from sonaloop import _deck, _pptx
+    return _pptx.render(_deck.SAMPLE_SLIDES[:1], title="Preview test deck")
+
+
+def test_render_first_slide_pngs_the_title_slide():
+    import io
+    from PIL import Image
+    from sonaloop._pptx_preview import PREVIEW_WIDTH, render_first_slide
+    png = render_first_slide(_deck_bytes())
+    assert png and png.startswith(b"\x89PNG")
+    with Image.open(io.BytesIO(png)) as im:
+        assert im.width == PREVIEW_WIDTH and im.height > 0
+    # graceful: bytes that aren't a deck yield None, never an exception (badge fallback)
+    assert render_first_slide(b"PK\x03\x04 not a real deck") is None
+
+
+def test_attach_asset_writes_pptx_preview_beside_binary(store, project):
+    from pathlib import Path
+    from sonaloop.services._project_assets import _assets_dir
+    rec = services.attach_asset(project["id"], content_base64=base64.b64encode(_deck_bytes()).decode(),
+                                filename="positioning-deck.pptx", direction="out", store=store)
+    assert rec["preview_url"].endswith(".preview.png")
+    sha = Path(rec["asset_path"]).stem
+    assert rec["preview_url"] == f"/data/assets/{sha}.preview.png"
+    assert (_assets_dir() / f"{sha}.preview.png").read_bytes().startswith(b"\x89PNG")
+    # non-PPTX documents keep the badge: no preview_url content
+    txt = services.attach_asset(project["id"], content_base64=base64.b64encode(b"plain notes").decode(),
+                                filename="notes.txt", store=store)
+    assert txt["preview_url"] == ""
+    # a PPTX that doesn't open as a deck degrades the same way (graceful, no crash)
+    fake = services.attach_asset(project["id"], content_base64=base64.b64encode(b"PK fake").decode(),
+                                 filename="broken.pptx", store=store)
+    assert fake["preview_url"] == ""
+
+
+def test_ensure_asset_preview_backfills_legacy_records(store, project):
+    from pathlib import Path
+    from sonaloop.services._project_assets import _assets_dir
+    rec = services.attach_asset(project["id"], content_base64=base64.b64encode(_deck_bytes()).decode(),
+                                filename="legacy-deck.pptx", store=store)
+    sha = Path(rec["asset_path"]).stem
+    # simulate a pre-W6 record: no preview field, no preview file
+    (_assets_dir() / f"{sha}.preview.png").unlink()
+    proj = store.get_research_project(project["id"])
+    for a in proj["assets"]:
+        a.pop("preview_url", None)
+    store.upsert_research_project(proj)
+    updated = services.ensure_asset_preview(project["id"], store=store)
+    assert [a["id"] for a in updated] == [rec["id"]]
+    fresh = services.get_asset(project["id"], rec["id"], store=store)
+    assert fresh["preview_url"] == f"/data/assets/{sha}.preview.png"
+    assert (_assets_dir() / f"{sha}.preview.png").exists()
+    # idempotent: a second run finds nothing to do
+    assert services.ensure_asset_preview(project["id"], store=store) == []
+
+
+def test_file_cards_use_the_preview_as_thumb_stage(store, project):
+    from sonaloop.web._presence import file_stage
+    rec = services.attach_asset(project["id"], content_base64=base64.b64encode(_deck_bytes()).decode(),
+                                filename="deck.pptx", direction="out", store=store)
+    stage = file_stage(rec)
+    assert rec["preview_url"] in stage and "sl-file__thumb" in stage
+    # no preview (a pdf, a plain doc): the extension badge stays
+    txt = services.attach_asset(project["id"], content_base64=base64.b64encode(b"x").decode(),
+                                filename="brief.pdf", store=store)
+    assert "sl-file__ext" in file_stage(txt) and "img" not in file_stage(txt)

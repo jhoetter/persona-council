@@ -6,14 +6,17 @@ seam for data that moves in and out of the DB wholesale: `export-snapshot` /
 (ticket loadable-example-projects) whose commands mirror the MCP tools 1:1 —
 `load-example` with no slug lists what ships, with a slug loads one project
 idempotently, `--all` loads both; `remove-example` deletes exactly one example's
-entities (or every loaded one with `--all`)."""
+entities (or every loaded one with `--all`). `backfill-previews` is the W6
+maintenance hook: first-page previews for document assets attached before the
+preview seam existed (new attaches get theirs in attach_asset itself)."""
 from __future__ import annotations
 
 from typing import Any
 
 from . import services
 
-COMMANDS = ("export-snapshot", "import-snapshot", "load-example", "remove-example")
+COMMANDS = ("export-snapshot", "import-snapshot", "load-example", "remove-example",
+            "backfill-previews")
 
 
 def add_data_parsers(sub) -> None:
@@ -22,6 +25,8 @@ def add_data_parsers(sub) -> None:
     p = sub.add_parser("import-snapshot")
     p.add_argument("--in", dest="in_dir")
     p.add_argument("--no-embed", action="store_true")
+    p = sub.add_parser("backfill-previews", help="Generate missing first-page previews for document assets (W6).")
+    p.add_argument("--project")
     p = sub.add_parser("load-example", help="Load a shipped example project (no slug = list available; --all = load every example).")
     p.add_argument("slug", nargs="?")
     p.add_argument("--all", action="store_true")
@@ -44,4 +49,13 @@ def run_data_command(args) -> Any:
             return [services.remove_example(e["slug"])
                     for e in services.list_examples() if e["loaded"]]
         return services.remove_example(args.slug) if args.slug else services.list_examples()
+    if args.command == "backfill-previews":
+        from .storage import Store
+        store = Store()
+        projects = ([store.get_research_project(args.project)] if args.project
+                    else store.list_research_projects())
+        done = [{"project_id": p["id"], "asset_id": a["id"], "preview_url": a["preview_url"]}
+                for p in projects if p
+                for a in services.ensure_asset_preview(p["id"], store=store)]
+        return {"previews_written": len(done), "assets": done}
     raise SystemExit(f"unknown data command: {args.command}")

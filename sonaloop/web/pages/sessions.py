@@ -59,17 +59,26 @@ register_css(r"""
 .sl-shotstrip img{display:block;height:54px;width:auto;max-width:120px;object-fit:cover;object-position:top;
   border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
 .sl-shotstrip .sl-shotlink:hover img{border-color:var(--accent)}
-.sl-lightbox{border:0;padding:0;background:transparent;max-width:94vw;max-height:94vh;overflow:visible}
+/* W8 stacking/containment: the dialog is a CONTAINED panel (frame, padding, shadow) — a
+   chrome-less 94vw screenshot OF the prototype was indistinguishable from the live iframe
+   escaping over the dialog. position:fixed + z-index guard the paint order even on any
+   non-top-layer path (showModal-less fallback); the body scroll-locks while open so the
+   real iframe can't slide beneath the overlay. */
+.sl-lightbox{position:fixed;inset:0;margin:auto;width:fit-content;height:fit-content;
+  z-index:200;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel);
+  padding:10px;box-shadow:0 24px 70px rgba(0,0,0,.5);max-width:92vw;max-height:92vh;overflow:visible}
 .sl-lightbox::backdrop{background:rgba(0,0,0,.74)}
-.sl-lightbox img{display:block;max-width:94vw;max-height:90vh;border:1px solid var(--line);
-  border-radius:var(--radius);background:var(--panel);cursor:zoom-out}
+.sl-lightbox img{display:block;max-width:min(1100px,88vw);max-height:80vh;border:1px solid var(--line);
+  border-radius:var(--radius-sm);background:var(--panel);cursor:zoom-out}
+body:has(.sl-lightbox[open]){overflow:hidden}
 /* visible close × + step caption (round-3 H6) — Esc / click-out unchanged */
 .sl-lb-fig{margin:0;position:relative}
-.sl-lb-close{position:absolute;top:-12px;right:-12px;width:30px;height:30px;border-radius:50%;
+.sl-lb-close{position:absolute;top:-22px;right:-22px;width:30px;height:30px;border-radius:50%;
   border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:17px;line-height:1;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .sl-lb-close:hover{background:var(--panel-2)}
-.sl-lb-cap{margin-top:8px;text-align:center;color:rgba(255,255,255,.88);font-size:var(--t-sm)}
+.sl-lb-cap{margin-top:8px;text-align:center;color:var(--muted);font-size:var(--t-sm)}
 """)
 
 
@@ -79,6 +88,10 @@ register_css(r"""
 # (round-3 H6: data-caption on the anchor feeds the caption). Without JS the anchor simply opens
 # the file. Idempotent (the window flag), so the script may ride along with every surface that
 # renders shots (detail page, slide-over fragments re-execute their scripts, the prototype strip).
+# W8 stacking contract: the dialog must be a DIRECT child of <body> when shown (re-appended if a
+# fragment swap detached it) and opens through showModal() — the TOP LAYER, above the page, the
+# slide-over and any iframe; where showModal is unavailable the [open] attribute + the fixed
+# z-indexed .sl-lightbox CSS keep it above everything anyway.
 LIGHTBOX_JS = """<script>(function(){
 if(window.__slLightbox) return; window.__slLightbox=1;
 document.addEventListener('click',function(e){
@@ -95,14 +108,15 @@ document.addEventListener('click',function(e){
     var cap=document.createElement('figcaption'); cap.className='sl-lb-cap';
     fig.appendChild(cap);
     dlg.appendChild(fig);
-    dlg.addEventListener('click',function(){ dlg.close(); });
-    document.body.appendChild(dlg);
+    dlg.addEventListener('click',function(){ if(dlg.close) dlg.close(); else dlg.removeAttribute('open'); });
   }
+  if(!dlg.isConnected||dlg.parentNode!==document.body) document.body.appendChild(dlg);
   var img=dlg.querySelector('img'), thumb=a.querySelector('img'), cap=dlg.querySelector('.sl-lb-cap');
   img.src=a.getAttribute('href'); img.alt=(thumb&&thumb.alt)||'';
   cap.textContent=a.getAttribute('data-caption')||(thumb&&thumb.alt)||'';
   cap.style.display=cap.textContent?'':'none';
-  dlg.showModal();
+  if(dlg.showModal){ if(!dlg.open) dlg.showModal(); }
+  else dlg.setAttribute('open','');
 });
 })();</script>"""
 
@@ -400,7 +414,9 @@ def _proto_session_detail(store: Store, sess: dict) -> str:
         + ([("sec-predicted", t("predicted_behaviors_h"))] if predicted_html else [])
     pills = [_label(t("grounded_yes"), "var(--green)")] if grounded else []
     return detail_page(
-        store, title=_display_title(title), active="library", crumbs=crumbs,
+        store, title=_display_title(title), crumbs=crumbs,
+        # G5: the sidebar follows the crumb root — Projects when project-rooted, Library for orphans
+        active="projects" if proj else "library",
         hero=_hero(title, icon="activity", sub=sub, hid="sec-head",
                    top=detail_eyebrow(t("session_kind_prototype"), pills)),
         body=body, prop_rows=prop_rows, rel_proj_id=proto.get("project_id") or None,
@@ -452,10 +468,12 @@ def _funnel_html(funnel: dict) -> str:
 
 
 def _sessions_section(store: Store, sessions: list[dict], sid: str = "sec-sessions",
-                      *, shots: bool = False) -> str:
+                      *, shots: bool = False, heading: str = "") -> str:
     """The cross-link block other detail pages embed (persona / project / prototype): each of their
     sessions as one compact row — date · subject · fidelity · outcome. '' when there are none.
-    `shots=True` (the prototype page, §9 V4) appends each row's first/last step-shot strip."""
+    `shots=True` (the prototype page, §9 V4) appends each row's first/last step-shot strip;
+    `heading` overrides the section name (G1: the prototype page calls its replayable walks
+    "Replays" to read distinct from the reaction sessions below)."""
     if not sessions:
         return ""
     rows = []
@@ -464,7 +482,7 @@ def _sessions_section(store: Store, sessions: list[dict], sid: str = "sec-sessio
         if shots:
             rows.append(raw(session_shot_strip(s)))
     return h("div", {"class_": "sec", "id": sid},
-             h("h2", {}, f'{t("sessions")} ({len(sessions)})'),
+             h("h2", {}, f'{heading or t("sessions")} ({len(sessions)})'),
              h("div", {"class_": "rows"}, raw("".join(str(r) for r in rows))))
 
 
@@ -649,7 +667,9 @@ def register_sessions(app) -> None:
         pills = ([_label(t("grounded_yes"), "var(--green)")] if grounded else []) \
             + [_outcome_chip(sess)]
         return detail_page(
-            store, title=_display_title(title), active="library", crumbs=crumbs,
+            store, title=_display_title(title), crumbs=crumbs,
+            # G5: sidebar active follows the crumb root (project-rooted → Projects)
+            active="projects" if proj else "library",
             hero=_hero(title, icon="activity", sub=sub, hid="sec-head",
                        top=detail_eyebrow(kind_label, pills)),
             body=body,

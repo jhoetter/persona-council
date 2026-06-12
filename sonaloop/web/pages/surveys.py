@@ -230,7 +230,9 @@ def register_surveys(app) -> None:
         sub = (h("span", {"class_": "syn-meta"}, crew, h("span", {"class_": "muted"}, counts_txt))
                if crew else counts_txt)
         return detail_page(
-            store, title=s["title"], active="library", crumbs=crumbs,
+            store, title=s["title"], crumbs=crumbs,
+            # G5: sidebar active follows the crumb root (project-rooted → Projects)
+            active="projects" if proj else "library",
             icon="plan", kind=t("survey_kind"), pills=[_status_pill(s.get("status", "draft"))],
             sub=sub,
             body=body,

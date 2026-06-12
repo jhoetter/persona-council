@@ -39,6 +39,7 @@ from ._common import *  # noqa: F401,F403  (stable_id, _require_research_project
 IMAGE_EXTS = {"png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"}
 DOCUMENT_EXTS = {"pdf", "md", "txt", "csv", "json", "html", "docx", "rtf"}
 TEXT_EXCERPT_EXTS = {"md", "txt", "csv", "json", "html", "rtf"}
+PREVIEW_EXTS = {"pptx"}      # document types with a first-page preview renderer (W6)
 ASSET_KINDS = ("image", "screenshot", "document", "file")
 ASSET_DIRECTIONS = ("in", "out")   # in = evidence brought into the project · out = deliverable produced from it
 MAX_ASSET_BYTES = 25 * 1024 * 1024
@@ -72,6 +73,56 @@ def _text_excerpt(data: bytes, ext: str) -> str:
         return data.decode("utf-8", errors="ignore")[:_EXCERPT_CHARS].strip()
     except Exception:
         return ""
+
+
+def _write_asset_preview(data: bytes, ext: str, sha: str) -> str:
+    """The first-page preview PNG beside the binary (ux-contract §10 W6): `<sha>.preview.png`
+    in the content-addressed store, served from the same /data mount. The CHOSEN SEAM is
+    attach_asset itself — every path that creates a document asset (the deliverable export,
+    an MCP attach, a seed) gets its preview in the one place asset records are born; a
+    re-export carries new bytes → a new sha → a fresh preview beside the new binary.
+    Graceful: only PREVIEW_EXTS render; bytes that don't open as a deck return '' and the
+    record keeps its extension badge. Content-addressed = idempotent (existing file wins)."""
+    if ext not in PREVIEW_EXTS:
+        return ""
+    target = _assets_dir() / f"{sha}.preview.png"
+    if not target.exists():
+        from .._pptx_preview import render_first_slide
+        png = render_first_slide(data)
+        if not png:
+            return ""
+        target.write_bytes(png)
+    return f"/data/assets/{sha}.preview.png"
+
+
+def ensure_asset_preview(project_id: str, asset_id: str | None = None,
+                         store: Store | None = None) -> list[dict[str, Any]]:
+    """The maintenance hook for records attached BEFORE the preview seam existed (W6
+    backfill): (re)generate the missing first-page preview for the project's document
+    assets — one asset when `asset_id` is given, every previewable one otherwise.
+    Returns the records that gained a `preview_url`. CLI: `sonaloop backfill-previews`."""
+    store = store or Store()
+    project = _require_research_project(store, project_id)  # noqa: F821 (bound)
+    updated = []
+    for a in _project_assets(project):
+        if asset_id and a["id"] != asset_id:
+            continue
+        ext = Path(a.get("asset_path", "")).suffix.lstrip(".").lower()
+        if a.get("preview_url") or ext not in PREVIEW_EXTS:
+            continue
+        binary = Path(ROOT) / a.get("asset_path", "")
+        if not binary.is_file():
+            continue
+        sha = binary.stem
+        url = _write_asset_preview(binary.read_bytes(), ext, sha)
+        if url:
+            a["preview_url"] = url
+            a["updated_at"] = utc_now_iso()
+            updated.append(a)
+    if updated:
+        project["updated_at"] = utc_now_iso()
+        store.upsert_research_project(project)
+    return updated
 
 
 def attach_asset(project_id: str, path: str | None = None, content_base64: str | None = None,
@@ -129,6 +180,9 @@ def attach_asset(project_id: str, path: str | None = None, content_base64: str |
         "bytes": len(data),
         "asset_path": f"data/assets/{sha}.{ext}",
         "url": f"/data/assets/{sha}.{ext}",
+        # W6: document file cards show the title slide — '' (no renderer / unreadable deck)
+        # degrades to the extension badge everywhere.
+        "preview_url": _write_asset_preview(data, ext, sha),
         "text_excerpt": _text_excerpt(data, ext),
         "created_at": (existing or {}).get("created_at") or utc_now_iso(),
         "updated_at": utc_now_iso(),

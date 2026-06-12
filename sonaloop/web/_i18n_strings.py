@@ -55,7 +55,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "no_surveys": "Noch keine Umfragen.",
         "n_questions": "{n} Fragen", "n_responses": "{n} Antworten", "n_answers": "{n} Antworten", "n_responses_each": "{n} Antworten pro Frage",
         "respondents_h": "Teilnehmende",
-        "survey_status_draft": "Entwurf", "survey_status_open": "Offen", "survey_status_closed": "Geschlossen",
+        "survey_status_draft": "Entwurf", "survey_status_open": "Offen", "survey_status_closed": "Geschlossen", "syn_status_done": "Fertig", "syn_status_in_progress": "In Arbeit",
         "survey_stance_mapped": "Stance-gemappt",
         "survey_predicted": "Council-Prognose", "survey_actual": "Echte Antworten",
         "no_survey_responses": "Noch keine echten Antworten importiert (import_survey_responses).",
@@ -173,7 +173,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "friction_n": "{n}× Reibung",
         # sessions in the project outline (child rows under their subject + the funnel chip)
         "session_kind_live": "Live-Session", "session_kind_prototype": "Prototyp-Session",
-        "session_kind_artifact": "Artefakt-Session", "live_surface": "Live-Oberfläche",
+        "session_kind_artifact": "Artefakt-Session", "live_surface": "Live-Oberfläche", "replays_h": "Replays", "proto_sessions_h": "Prototyp-Sessions",
         "sessions_n": "{n} Sessions", "no_dropoffs": "keine Abbrüche",
         "drop_at_step": "{n}× Drop @ Schritt {s}", "dropoffs_n": "{n} Abbrüche",
         # outline chip contract (_outline_chips — every row kind declares its chips)
@@ -250,7 +250,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "sentiment_this_council": "Stimmungsbild dieses Councils",
         "proposal_short_summary": "Proposal &amp; Kurz-Summary",
         "proposal": "Proposal", "summary": "Summary",
-        "vote": "Abstimmung", "created": "Erzeugt", "project": "Projekt", "fidelity": "Fidelity", "done": "done",
+        "vote": "Abstimmung", "created": "Erzeugt", "project": "Projekt", "fidelity": "Fidelity",
         # persona detail
         "current_state": "Aktueller Zustand",
         "goals": "Ziele", "pain_points": "Pain Points", "relationships": "Beziehungen",
@@ -452,7 +452,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "no_surveys": "No surveys yet.",
         "n_questions": "{n} questions", "n_responses": "{n} responses", "n_answers": "{n} answers", "n_responses_each": "{n} responses per question",
         "respondents_h": "Respondents",
-        "survey_status_draft": "Draft", "survey_status_open": "Open", "survey_status_closed": "Closed",
+        "survey_status_draft": "Draft", "survey_status_open": "Open", "survey_status_closed": "Closed", "syn_status_done": "Done", "syn_status_in_progress": "In progress",
         "survey_stance_mapped": "stance-mapped",
         "survey_predicted": "Council prediction", "survey_actual": "Real answers",
         "no_survey_responses": "No real responses imported yet (import_survey_responses).",
@@ -566,7 +566,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "friction_n": "{n}× friction",
         # sessions in the project outline (child rows under their subject + the funnel chip)
         "session_kind_live": "Live session", "session_kind_prototype": "Prototype session",
-        "session_kind_artifact": "Artifact session", "live_surface": "Live surface",
+        "session_kind_artifact": "Artifact session", "live_surface": "Live surface", "replays_h": "Replays", "proto_sessions_h": "Prototype sessions",
         "sessions_n": "{n} sessions", "no_dropoffs": "no drop-offs",
         "drop_at_step": "{n}× drop @ step {s}", "dropoffs_n": "{n} drop-offs",
         # outline chip contract (_outline_chips — every row kind declares its chips)
@@ -643,7 +643,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "sentiment_this_council": "Sentiment of this council",
         "proposal_short_summary": "Proposal &amp; brief summary",
         "proposal": "Proposal", "summary": "Summary",
-        "vote": "Vote", "created": "Created", "project": "Project", "fidelity": "Fidelity", "done": "done",
+        "vote": "Vote", "created": "Created", "project": "Project", "fidelity": "Fidelity",
         # persona detail
         "current_state": "Current state",
         "goals": "Goals", "pain_points": "Pain points", "relationships": "Relationships",

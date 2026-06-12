@@ -183,6 +183,7 @@ sequenceDiagram
 | `sonaloop/artifacts.py` | Artifact validation + lifecycle |
 | `sonaloop/browser.py` | Playwright harness (optional, degrades gracefully) |
 | `sonaloop/_charts.py` / `_deck.py` / `_pptx.py` | SVG charts and PPTX export (design-system vendored) |
+| `sonaloop/_pptx_preview.py` | First-slide PPTX→PNG rasterizer (document file-card previews) |
 | `sonaloop/prototype_templates/`, `methodologies/`, `suggestions/` | Static catalogs |
 | `spec/` | Living design specs (architecture trackers) |
 | `docs/` | Deep agent-facing contracts; canonical user docs live in sonaloop-docs |

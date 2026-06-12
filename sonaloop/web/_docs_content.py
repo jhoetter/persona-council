@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from ._html import register_css
 
-
 # ============================ Page registry ============================ #
 # Ordered: drives the tab bar AND prev/next. Shape: (slug, icon, (label_de, label_en)). "" == Overview.
 DOC_PAGES = [
@@ -19,7 +18,6 @@ DOC_PAGES = [
     ("methodology",  "target",     ("Methodik", "Methodology")),
     ("mcp",          "prototype",  ("MCP-Referenz", "MCP reference")),
 ]
-
 
 # ============================ Overview ============================ #
 DOCS_INTRO = {
@@ -67,7 +65,6 @@ PRINCIPLES = [
       "Every report is presentation-ready by default and exports to **PDF** or **PPTX** — no cleanup "
       "needed to share the result.")),
 ]
-
 
 # ============================ Concepts ============================ #
 # One artefact per entry, in plain language: WHAT it is + WHY it matters to you. `group` keys it into a
@@ -252,7 +249,6 @@ SCHEMAS = {
                       "and can appear in several sections.")},
 }
 
-
 # ============================ How it works ============================ #
 # The lifecycle pipeline (rendered as a visual flow). Shape: (icon, (title_de, title_en), (sub_de, sub_en)).
 LIFECYCLE = [
@@ -280,7 +276,6 @@ RIGOUR_STEPS = [
      ("Erst schließen, wenn die Evidenz die Gates erfüllt — belegen statt behaupten.",
       "Only close once the evidence clears the gates — back it, don't assert it.")),
 ]
-
 
 # ============================ Working live (the inspector page) ============================ #
 # What the inspector itself offers the human at the keyboard — the features you SEE, in plain
@@ -441,7 +436,6 @@ INSPECTOR_SECTIONS = [
       "links a prefilled GitHub issue as the public channel.")),
 ]
 
-
 # ============================ Methodology ============================ #
 # Double Diamond as the worked EXAMPLE of the diverge → converge rhythm (one of many methodologies).
 DD_PHASES = [
@@ -475,7 +469,6 @@ PLAYBOOKS = [
      ("Übergib ein beliebiges Research-Ziel — der Agent entwirft und fährt die ganze Studie.",
       "Hand over any research goal — the agent designs and runs the whole study.")),
 ]
-
 
 # ============================ MCP reference taxonomy ============================ #
 # The catalogue groups tools by their source module (`_tools_*.py`), which is faithful but exposes code
@@ -525,14 +518,12 @@ SUPER_GROUPS = [
 
 
 
-
 # ============================ Co-located CSS ============================ #
 register_css(r"""
-/* ==== Documentation hub: header (secondary tab nav uses the shared .sl-tabs) ==== */
-.doc-head{margin-bottom:6px}
-.doc-head h1{font-size:var(--t-xl);line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:650;display:flex;align-items:center;gap:9px}
-.doc-head h1 svg{width:22px;height:22px;color:var(--accent)}
-.doc-lead{color:var(--muted);font-size:var(--t-body);margin:0 0 8px;max-width:74ch}
+/* ==== Documentation hub: the standard page header (eyebrow/.h1/.lead — W7) + tabs in the measure ==== */
+.doc-head{margin-bottom:2px}
+.doc-head .h1{display:flex;align-items:center;gap:12px}
+.doc-tabs{margin:8px 0 24px}
 .doc-p{color:var(--muted);font-size:var(--t-body);line-height:1.6;margin:0 0 16px;max-width:74ch}
 .doc-p strong{color:var(--ink)}
 .doc-p p{margin:0;max-width:none}
@@ -553,20 +544,19 @@ register_css(r"""
 
 /* ==== Overview: principle tiles + landing cards ==== */
 .principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-.ptile{border:1px solid var(--line);border-radius:var(--radius-md,10px);padding:16px 18px;background:var(--panel)}
-.ptile-ic{display:inline-flex;color:var(--accent);margin-bottom:9px}.ptile-ic svg{width:20px;height:20px}
+.ptile-ic{color:var(--accent);margin-bottom:9px}
 .ptile-t{font-weight:650;font-size:var(--t-md);letter-spacing:-.01em;margin-bottom:5px}
 .ptile-b{color:var(--muted)}.ptile-b p{margin:0;max-width:none}
 .navgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.navcard{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:var(--radius-md,10px);padding:15px 16px;background:var(--panel);text-decoration:none;transition:border-color 120ms,box-shadow 120ms}
+.navcard{display:flex;flex-direction:column;gap:8px;text-decoration:none;transition:border-color 120ms,box-shadow 120ms}
 .navcard:hover{border-color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.navcard-ic{color:var(--accent)}.navcard-ic svg{width:19px;height:19px}
+.navcard-ic{color:var(--accent)}
 .navcard-t{font-weight:650;font-size:var(--t-md);letter-spacing:-.01em;color:var(--ink)}
 .navcard-b{color:var(--muted);font-size:var(--t-sm);line-height:1.5}
 
 /* ==== Concepts: one dense grid, role shown as a per-card tag ==== */
 .concept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;align-items:start}
-.doccard{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius-md,10px);padding:15px 16px;background:var(--panel);text-decoration:none;color:inherit;transition:border-color 120ms,box-shadow 120ms}
+.doccard{display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:border-color 120ms,box-shadow 120ms}
 .doccard:hover{border-color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .doccard:hover .doc-open{color:var(--accent)}
 .doc-open{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line-2);font-size:var(--t-xs,11px);font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);transition:color 120ms}
@@ -592,7 +582,7 @@ register_css(r"""
 .dl-layer-t{font-weight:650;font-size:var(--t-md);letter-spacing:-.01em;margin-bottom:3px}
 .dl-layer-b{color:var(--muted)}.dl-layer-b p{margin:0;max-width:none}
 .prim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.prim-card{border:1px solid var(--line);border-radius:var(--radius-md,10px);padding:13px 14px;background:var(--panel)}
+
 .prim-card-h{margin-bottom:6px}
 .prim-card-n{font-family:var(--mono,'Geist Mono',monospace);font-size:var(--t-sm);font-weight:700;color:var(--accent)}
 .prim-card-d{color:var(--muted);font-size:var(--t-sm);line-height:1.5;margin-bottom:10px}
@@ -623,7 +613,7 @@ register_css(r"""
 
 /* ==== Methodology: catalogue cards + DD phases + playbooks ==== */
 .methgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-.methcard{border:1px solid var(--line);border-radius:var(--radius-md,10px);padding:15px 16px;background:var(--panel)}
+
 .methcard-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
 .methcard-n{font-weight:650;font-size:var(--t-md);letter-spacing:-.01em}
 .methcard-c{font-size:var(--t-xs,11px);color:var(--faint);font-weight:600;flex-shrink:0}
@@ -649,7 +639,7 @@ register_css(r"""
 
 /* ==== MCP reference: two-level taxonomy (super-group index → domains → tools) ==== */
 .mcp-superindex{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin:22px 0 8px}
-.mcp-super-card{border:1px solid var(--line);border-radius:var(--radius-md,10px);padding:14px 16px;background:var(--panel)}
+
 .mcp-super-card-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .mcp-super-card-t{font-weight:650;font-size:var(--t-md);letter-spacing:-.01em}
 .mcp-super-card-n{flex-shrink:0;font-size:var(--t-xs,11px);font-weight:700;color:var(--accent);background:var(--panel-2);border-radius:20px;padding:1px 8px}
@@ -673,11 +663,11 @@ register_css(r"""
 
 /* ==== Documentation: prev/next footer ==== */
 .doc-pn{display:flex;justify-content:space-between;gap:12px;margin-top:48px;padding-top:20px;border-top:1px solid var(--line)}
-.pn{display:flex;flex-direction:column;gap:3px;text-decoration:none;padding:11px 15px;border:1px solid var(--line);border-radius:var(--radius-md,10px);min-width:160px;transition:border-color 120ms}
-.pn:hover{border-color:var(--accent)}
+.pn{display:flex;flex-direction:column;gap:3px;text-decoration:none;min-width:160px}
 .pn.next{text-align:right;align-items:flex-end}
 .pn-eye{font-size:var(--t-xs,11px);text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:600}
-.pn-lab{display:flex;align-items:center;gap:5px;color:var(--ink);font-weight:600;font-size:var(--t-sm)}
+.pn-lab{display:flex;align-items:center;gap:5px;color:var(--ink);font-weight:600;font-size:var(--t-sm);transition:color 120ms}
+.pn:hover .pn-lab{color:var(--accent)}
 
 @media(max-width:900px){.doc-toc{display:none}.doc-wrap{gap:0}.flow-arrow{display:none}.flow,.cyc{gap:10px}}
 """)

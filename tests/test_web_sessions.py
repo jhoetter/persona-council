@@ -377,6 +377,32 @@ def test_prototype_session_timeline_shows_screenshots_when_files_exist(store, tm
     assert "proto-screen-1" in html
 
 
+def test_lightbox_stacking_contract(store, tmp_path, monkeypatch):
+    """W8 regression pin (the owner's screenshot: the prototype iframe bled over the dialog).
+    The lightbox must (a) open through showModal() — the top layer — with the [open]-attribute
+    fallback otherwise, (b) live as a direct child of <body> (re-appended if a fragment swap
+    detached it), (c) carry a fixed, z-indexed, CONTAINED panel style + a styled ::backdrop +
+    a body scroll-lock, and (d) the prototype iframe stays clipped inside its card."""
+    from sonaloop.web.pages.sessions import LIGHTBOX_JS
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    proj, proto, pid, sess = _proto_session(store)
+    html = _client().get(f'/prototypes/{proto["slug"]}?lang=en').text
+    # (a) top-layer first, honest fallback second
+    assert "dlg.showModal()" in LIGHTBOX_JS
+    assert "dlg.setAttribute('open','')" in LIGHTBOX_JS
+    # (b) the dialog is (re)attached directly under <body> before every open
+    assert "dlg.parentNode!==document.body" in LIGHTBOX_JS
+    assert "document.body.appendChild(dlg)" in LIGHTBOX_JS
+    # (c) contained panel + backdrop + scroll lock + non-top-layer z guard, shipped in the page CSS
+    for rule in (".sl-lightbox{position:fixed", "z-index:200",
+                 ".sl-lightbox::backdrop{background:rgba(0,0,0,.74)}",
+                 "body:has(.sl-lightbox[open]){overflow:hidden}"):
+        assert rule in html, f"lightbox CSS lost its stacking contract: {rule}"
+    # (d) the iframe card clips and isolates its embedded document
+    assert "isolation:isolate" in html and "contain:paint" in html
+    assert '<div class="protoframe"><iframe' in html
+
+
 def test_prototype_session_timeline_shape_renders_steps_and_screenshots(store, tmp_path, monkeypatch):
     """§9 V4 ROOT CAUSE pin: half the showcase's prototype reactions authored their walk
     under reaction.timeline (free-form keys, no reaction.steps) — the replay rendered

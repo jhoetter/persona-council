@@ -175,6 +175,20 @@ def presence_violations() -> list[str]:
 # ------------------------------------------------- shared per-kind pill / row renderers
 
 
+def synthesis_status_pill(status: str) -> str:
+    """Report lifecycle pill (ux-contract §10 W10 / audit G2 — the one kind that carried its
+    lifecycle only as meta text): done (green) or in progress (amber). Shared by the report
+    rows, the report cover's eyebrow line and the Library status facet."""
+    pills = {"done": (t("syn_status_done"), "var(--green)"),
+             "in_progress": (t("syn_status_in_progress"), "var(--amber)")}
+    label, color = pills.get(status, pills["done"])
+    return _label(label, color)
+
+
+def synthesis_status_label(status: str) -> str:
+    return t("syn_status_in_progress") if status == "in_progress" else t("syn_status_done")
+
+
 def survey_status_pill(status: str) -> str:
     """Survey lifecycle pill (a lifecycle, not a vocabulary). Resolved per request so the labels
     follow the active UI language. Shared by the survey pages and the outline chips."""
@@ -225,10 +239,12 @@ def open_question_status_pill(status: str) -> str:
 def record_status(kind: str, rec: dict) -> str:
     """The honest status a record ACTUALLY carries — the U10 filter facet's value extractor
     (ux-contract §8.5: no dead options, no invented lifecycle). Kinds without a lifecycle
-    (councils, reports, notes, prototypes, assets) return "" and simply don't fill the facet.
+    (councils, notes, prototypes, assets) return "" and simply don't fill the facet.
     Sessions read their grounding (verified against real observed usage or not)."""
     if kind in ("decision",):
         return rec.get("status") or "proposed"
+    if kind in ("synthesis", "report"):       # G2: reports DO carry one (in_progress | done)
+        return rec.get("status") or "done"
     if kind in ("hypothesis",):
         return rec.get("status") or "open"
     if kind in ("survey",):
@@ -245,6 +261,8 @@ def status_filter_label(kind: str, status: str) -> str:
     shows, so the filter menu and the rows always agree."""
     if kind in ("decision",):
         return decision_status_label(status)
+    if kind in ("synthesis", "report"):
+        return synthesis_status_label(status)
     if kind in ("hypothesis",):
         return hypothesis_status_label(status)
     if kind in ("survey",):
@@ -305,12 +323,18 @@ register_css(".assetprev{margin:6px 0 18px}"
 
 def asset_preview_html(asset: dict) -> str:
     """The detail page's content lead (UX U8): image assets render a full-width preview from the
-    static /data mount; other kinds render nothing here (the file card carries the download)."""
+    static /data mount; documents with a first-page render (W6 `preview_url`) show their title
+    page the same way (no link — the file card below is the ONE download affordance, V9); other
+    kinds render nothing here (the file card carries the download)."""
     if asset.get("kind") in ("image", "screenshot") and asset.get("url"):
         return h("div", {"class_": "assetprev"},
                  h("a", {"href": asset["url"], "target": "_blank", "rel": "noopener"},
                    h("img", {"src": asset["url"], "alt": asset.get("title") or asset.get("filename", ""),
                              "loading": "lazy"})))
+    if asset.get("preview_url"):
+        return h("div", {"class_": "assetprev"},
+                 h("img", {"src": asset["preview_url"],
+                           "alt": asset.get("title") or asset.get("filename", ""), "loading": "lazy"}))
     return ""
 
 
@@ -364,10 +388,13 @@ def file_ext_badge(asset: dict) -> str:
 
 def file_stage(asset: dict, *, thumb: bool = True) -> str:
     """The card's identity stage: the image thumbnail when the asset IS an image (and the
-    caller wants it), else the extension badge on the quiet stage."""
-    if thumb and asset.get("kind") in ("image", "screenshot") and asset.get("url"):
+    caller wants it), the first-page render for documents that carry one (W6 `preview_url` —
+    the PPTX card shows its title slide), else the extension badge on the quiet stage."""
+    src = (asset.get("url") if asset.get("kind") in ("image", "screenshot")
+           else asset.get("preview_url"))
+    if thumb and src:
         return h("span", {"class_": "sl-file__stage"},
-                 h("img", {"class_": "sl-file__thumb", "src": asset["url"], "alt": "",
+                 h("img", {"class_": "sl-file__thumb", "src": src, "alt": "",
                            "loading": "lazy"}))
     return h("span", {"class_": "sl-file__stage"}, raw(file_ext_badge(asset)))
 

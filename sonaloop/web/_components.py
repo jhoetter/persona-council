@@ -233,6 +233,16 @@ _USER_MENU_ID_CSS = register_css(
     ".sl-um-who span{font-size:12px;color:var(--muted);word-break:break-all}")
 
 
+def docs_footer_entry(active: str) -> str:
+    """Documentation as a VISIBLE sidebar-footer row (ux-contract §10 W7 — the owner looked
+    for it there): the same nav-row idiom as the tour offer and the `?` shortcuts hint.
+    Reference, not workspace (§3.5) — footer cluster, off the 4-item nav; it left the
+    settings popover (C10: one home per concept)."""
+    return h("a", {"href": "/documentation",
+                   "class_": "pi-hover is-active" if active == "docs" else "pi-hover"},
+             raw(_icon("overview", animate=True)), h("span", {}, t("documentation")))
+
+
 def _user_menu() -> str:
     """Modern user/settings menu pinned to the bottom of the sidebar — a popover with a
     sun/system/moon theme switch and a language switch (replaces the old topbar buttons).
@@ -276,11 +286,10 @@ def _user_menu() -> str:
                h("div", {"class_": "sl-um-sec"}, h("div", {"class_": "sl-um-lbl"}, t("language")),
                  h("div", {"class_": "sl-segmented sl-segmented--fill"}, lang_opts)),
                h("div", {"class_": "sl-um-sec"},
-                 # the tour offer lives in the sidebar footer row now (V7 — concept economy C10)
+                 # the tour offer + Documentation live in the sidebar footer rows now
+                 # (V7/W7 — concept economy C10: one home per concept)
                  h("a", {"class_": "sl-btn", "href": "/feedback"},  # inbox: linked from HERE only
-                   raw(_icon("chat")), " ", t("feedback_h")), " ",
-                 # Documentation = reference, not workspace (ux-contract §3.5): footer cluster, off the 4-item nav.
-                 h("a", {"class_": "sl-btn", "href": "/documentation"}, raw(_icon("overview")), " ", t("documentation")))),
+                   raw(_icon("chat")), " ", t("feedback_h")))),
              h("button", {"type": "button", "class_": "sl-um-trigger pi-hover",
                           "aria-haspopup": "true", "aria-expanded": "false"},
                *trigger_parts))
@@ -376,7 +385,7 @@ def _layout(title: str, body: str, store: Store, crumbs: list | None = None,
     <div class="sl-brand"><a class="sl-logo" href="/">{_lockup}</a></div>
     <div class="sl-sb-search"><button type="button" class="sl-cmdk-trigger" data-cmdk-open aria-label="{t("search")}">{_icon("search")}<span>{t("search")}</span><kbd class="sl-kbd">⌘K</kbd></button></div>
     <div class="sl-sb-scroll">{_nav(active, store)}{render_slot("sidebar_extra", store)}</div>
-    <nav class="sl-nav sl-sb-foot">{render_slot("sidebar_footer", store)}{tour_footer_entry()}{keymap_hint()}</nav>
+    <nav class="sl-nav sl-sb-foot">{docs_footer_entry(active)}{render_slot("sidebar_footer", store)}{tour_footer_entry()}{keymap_hint()}</nav>
     {_user_menu()}
   </aside>
   <div class="sl-resize" id="rz" role="separator" aria-orientation="vertical" aria-label="{t("sidebar")}"></div>

@@ -277,7 +277,7 @@ def register_library(app) -> None:
         # note says "concept"; the section-kind label gate bans hardcoding these in web/)
         nkind = _pres.present(note.get("kind") or "note")["label"]
         return detail_page(
-            store, title=ntitle, active="library",
+            store, title=ntitle, active="projects",   # G5: notes are project-rooted
             crumbs=[(t("projects"), "/projects"), (proj["title"], f'/projects/{proj["id"]}'), (ntitle, None)],
             icon="panel", kind=nkind, hid="sec-content",
             body=h("div", {"class_": "sl-prose", "style": "margin-top:4px"}, raw(_md(note.get("text", "")))),
@@ -323,7 +323,7 @@ def register_library(app) -> None:
                          raw(session_shot_strip(s)))
                 for s in sessions))
         else:
-            sessions_html = h("div", {"class_": "muted small"}, f'— {t("prototypes_h")}: {t("no_sessions")} —')
+            sessions_html = h("div", {"class_": "muted small"}, f'— {t("no_sessions")} —')
         # Replayable usability sessions of THIS prototype (subject.id is the prototype id or slug) —
         # each row deep-links into the session replay view (and carries its shot strip, V4).
         useen, usess = set(), []
@@ -331,7 +331,10 @@ def register_library(app) -> None:
             for s in (services.list_usability_sessions(subject=key, store=store) if key else []):
                 if s["id"] not in useen:
                     useen.add(s["id"]); usess.append(s)
-        replay_html = _sessions_section(store, usess, sid="sec-replays", shots=True)
+        # G1: plain, distinct section names — replayable walks are "Replays", the recorded
+        # reaction sessions below are "Prototype sessions" (never "Prototypes · Sessions").
+        replay_html = _sessions_section(store, usess, sid="sec-replays", shots=True,
+                                        heading=t("replays_h"))
         body = fragment(
             h("p", {"style": "margin:8px 0 16px"},
               h("a", {"class_": "sl-btn", "href": src, "target": "_blank"},
@@ -339,7 +342,7 @@ def register_library(app) -> None:
             h("div", {"class_": "protoframe"}, h("iframe", {"src": src, "title": p["name"], "loading": "lazy"})),
             raw(replay_html),
             h("div", {"class_": "sec", "id": "sec-sessions", "style": "margin-top:22px"},
-              h("h2", {}, f'{t("prototypes_h")} · {t("sessions")} ({len(sessions)})'),
+              h("h2", {}, f'{t("proto_sessions_h")} ({len(sessions)})'),
               h("div", {"style": "margin-top:8px"}, sessions_html)),
             raw(LIGHTBOX_JS))
         concept_in = []
@@ -362,7 +365,9 @@ def register_library(app) -> None:
                  h("span", {"class_": "muted"}, p.get("version", "")) if p.get("version") else None)
                if crew else p.get("version", ""))
         return detail_page(
-            store, title=p["name"], active="library", crumbs=crumbs,
+            store, title=p["name"], crumbs=crumbs,
+            # G5: sidebar active follows the crumb root (project-rooted → Projects)
+            active="projects" if proj else "library",
             # meta line: drivers + the version only — the slug is an address, not information
             # (V12: no terminal-flavored identifiers in UI copy; the URL bar already shows it)
             hero=_hero(p["name"], icon="prototype", sub=sub,
@@ -376,8 +381,8 @@ def register_library(app) -> None:
                        ("check", t("grounding_h"), f"{n_grounded}/{len(sessions)}" if sessions else "—"),
                        ("dot", t("created"), ui.fmt_date(p.get("created_at") or ""))],
             rel_study_id=f"prototype:{p['id']}", rel_proj_id=p.get("project_id"), rel_extra_in=concept_in,
-            rail_sections=(([("sec-replays", t("sessions"))] if replay_html else [])
-                           + [("sec-sessions", t("sessions"))]),
+            rail_sections=(([("sec-replays", t("replays_h"))] if replay_html else [])
+                           + [("sec-sessions", t("proto_sessions_h"))]),
             star=("prototype", p["id"], p["name"], f'/prototypes/{slug}'),
             # delete-only (no content editing): prototypes are recorded artifacts — the
             # subtle header overflow (U9 §8.4), never a danger zone

@@ -34,16 +34,31 @@ from ._docs_content import (
 
 # ============================ The shared shell ============================ #
 def _doc_tabbar(active: str, li: int) -> str:
-    """The secondary tab nav shared by every doc page (and concept-detail sub-pages)."""
+    """The secondary tab nav shared by every doc page (and concept-detail sub-pages) —
+    BELOW the page header, aligned to the measure (W7 design pass: the Library idiom)."""
     tabs = [h("a", {"class_": "sl-tab" + (" is-active" if s == active else ""),
                     "href": "/documentation" + (f"/{s}" if s else "")},
               raw(_icon(ic)), lab[li])
             for s, ic, lab in DOC_PAGES]
-    return h("nav", {"class_": "sl-tabs", "style": "margin:2px 0 24px"}, fragment(*tabs))
+    return h("nav", {"class_": "sl-tabs doc-tabs"}, fragment(*tabs))
+
+
+def _doc_header(title: str, lead: str, icon: str = "", color: str = "") -> str:
+    """The standard page-header anatomy (W7 design pass — ux-contract §8.2: eyebrow ·
+    title · lead in the measure): the DOCUMENTATION eyebrow keys the area, the page name
+    is the h1; sub-pages lead the title with their colored concept icon."""
+    return h("div", {"class_": "doc-head"},
+             h("div", {"class_": "eyebrow"}, t("documentation")),
+             h("h1", {"class_": "h1"},
+               h("span", {"class_": "rico lg", "style": f"color:{color}"}, raw(_icon(icon)))
+               if icon else None,
+               title),
+             h("p", {"class_": "lead"}, raw(_md_inline(lead))) if lead else None)
 
 
 def _docs_shell(slug: str, lead: str, body: str, subnav: list | None = None) -> str:
-    """Wrap one doc page: breadcrumb · tab bar · (content + optional on-this-page rail) · prev/next."""
+    """Wrap one doc page: breadcrumb · page header · tab bar · (content + optional
+    on-this-page rail) · prev/next."""
     store = Store()
     de = _lang() == "de"
     li = 0 if de else 1
@@ -53,9 +68,7 @@ def _docs_shell(slug: str, lead: str, body: str, subnav: list | None = None) -> 
 
     tabbar = _doc_tabbar(slug, li)
 
-    header = h("div", {"class_": "doc-head"},
-        h("h1", {}, raw(_icon(icon)), title),
-        h("p", {"class_": "doc-lead"}, raw(_md_inline(lead))) if lead else None)
+    header = _doc_header(label[li], lead)
 
     if subnav:
         rail = h("aside", {"class_": "doc-toc"},
@@ -80,7 +93,7 @@ def _docs_shell(slug: str, lead: str, body: str, subnav: list | None = None) -> 
                    raw("&nbsp;&rarr;") if kind == "next" else None))
     footer = h("div", {"class_": "doc-pn"}, _pn(prev, "prev"), _pn(nxt, "next"))
 
-    page = h("section", {}, tabbar, header, content, footer)
+    page = h("div", {"class_": "page"}, header, tabbar, content, footer)
     crumbs = ([(t("documentation"), None)] if slug == ""
               else [(t("documentation"), "/documentation"), (title, None)])
     return _layout(title, page, store, crumbs=crumbs, active="docs")
@@ -115,9 +128,7 @@ def _doc_subpage(active: str, crumbs: list, title: str, lead: str, icon: str, co
     store = Store()
     de = _lang() == "de"
     li = 0 if de else 1
-    header = h("div", {"class_": "doc-head"},
-        h("h1", {}, h("span", {"class_": "rico lg", "style": f"color:{color}"}, raw(_icon(icon))), title),
-        h("p", {"class_": "doc-lead"}, raw(_md_inline(lead))) if lead else None)
+    header = _doc_header(title, lead, icon=icon, color=color)
     if subnav:
         rail = h("aside", {"class_": "doc-toc"},
             h("nav", {"class_": "toc-nav"},
@@ -126,7 +137,7 @@ def _doc_subpage(active: str, crumbs: list, title: str, lead: str, icon: str, co
         content = h("div", {"class_": "doc-wrap"}, h("div", {"class_": "doc-main"}, body), rail)
     else:
         content = h("div", {"class_": "doc-main wide"}, body)
-    page = h("section", {}, _doc_tabbar(active, li), header, content, footer)
+    page = h("div", {"class_": "page"}, header, _doc_tabbar(active, li), content, footer)
     return _layout(title, page, store, crumbs=crumbs, active="docs")
 
 
@@ -157,7 +168,7 @@ def _doc_datamodel_body(de: bool, li: int) -> str:
           h("div", {"class_": "dl-layer-t"}, ti[li]),
           h("div", {"class_": "sl-prose sm dl-layer-b"}, raw(_md(body[li])))))
         for n, (ti, body) in enumerate(layers)]
-    prim_cards = [h("div", {"class_": "prim-card"},
+    prim_cards = [h("div", {"class_": "sl-card prim-card"},
         h("div", {"class_": "prim-card-h"}, h("code", {"class_": "prim-card-n"}, nm)),
         h("div", {"class_": "prim-card-d"}, raw(_md_inline(dde if de else den))),
         _code(PRIM_JSON[nm])) for nm, dde, den in PRIMITIVES]
@@ -205,8 +216,8 @@ def _doc_overview() -> str:
          ("Die komplette MCP-Tool-Referenz, nach Domäne geordnet.",
           "The complete MCP tool reference, organized by domain.")),
     ]
-    cards = [h("a", {"class_": "navcard", "href": href},
-               h("span", {"class_": "navcard-ic"}, raw(_icon(ic))),
+    cards = [h("a", {"class_": "sl-card navcard", "href": href},
+               h("span", {"class_": "rico navcard-ic"}, raw(_icon(ic))),
                h("span", {"class_": "navcard-t"}, lab[li]),
                h("span", {"class_": "navcard-b"}, blurb[li]))
              for href, ic, lab, blurb in NAV]
@@ -227,8 +238,8 @@ def _doc_principles_page() -> str:
     """The principles as their own sub-page (opened from the Overview directory)."""
     de = _lang() == "de"
     li = 0 if de else 1
-    tiles = [h("div", {"class_": "ptile"},
-        h("span", {"class_": "ptile-ic"}, raw(_icon(ic))),
+    tiles = [h("div", {"class_": "sl-card ptile"},
+        h("span", {"class_": "rico ptile-ic"}, raw(_icon(ic))),
         h("div", {"class_": "ptile-t"}, ti[li]),
         h("div", {"class_": "sl-prose sm ptile-b"}, raw(_md(body[li]))))
         for ic, ti, body in PRINCIPLES]
@@ -265,7 +276,7 @@ def _doc_concepts() -> str:
         name, pres = _art_name(d["art"], d["name"])
         glabel_de, glabel_en, gcolor = GROUP_MAP[d["group"]]
         open_lbl = ("Schema ansehen" if de else "View schema") if d["art"] in SCHEMAS else ("Mehr" if de else "More")
-        return h("a", {"class_": "doccard", "href": f"/documentation/concepts/{d['art']}"},
+        return h("a", {"class_": "sl-card doccard", "href": f"/documentation/concepts/{d['art']}"},
             h("div", {"class_": "doc-h"},
               h("span", {"class_": "rico", "style": f"color:{pres['color']}"}, raw(_icon(d["icon"]))),
               h("span", {"class_": "doc-name"}, name),
@@ -281,7 +292,7 @@ def _doc_concepts() -> str:
     # One dense grid: the artefacts (ordered by role band) + a Data-model card. Each opens a sub-page.
     order = [k for k, _ in GROUPS]
     cards = [_card(d) for d in sorted(DOCS, key=lambda d: order.index(d["group"]))]
-    dm_card = h("a", {"class_": "doccard", "href": "/documentation/concepts/data-model"},
+    dm_card = h("a", {"class_": "sl-card doccard", "href": "/documentation/concepts/data-model"},
         h("div", {"class_": "doc-h"},
           h("span", {"class_": "rico", "style": "color:var(--accent)"}, raw(_icon("squareGrid"))),
           h("span", {"class_": "doc-name"}, "Datenmodell" if de else "Data model"),
@@ -401,7 +412,7 @@ def _doc_methodology() -> str:
         when = s.get("when_to_use", "")
         when_html = (h("div", {"class_": "methcard-when"},
                        h("b", {}, ("Wann" if de else "When") + ": "), when) if when else "")
-        meth_cards.append(h("div", {"class_": "methcard"},
+        meth_cards.append(h("div", {"class_": "sl-card methcard"},
             h("div", {"class_": "methcard-h"},
               h("span", {"class_": "methcard-n"}, s.get("name", s.get("key", ""))),
               h("span", {"class_": "methcard-c"}, f'{len(steps)} ' + ("Phasen" if de else "phases"))),
@@ -515,7 +526,7 @@ def _doc_mcp() -> str:
         pills = [h("a", {"class_": "mcp-pill", "href": f"#d-{rk}"}, rt,
                    h("span", {"class_": "mcp-pill-c"}, str(rc)))
                  for rk, rt, rc, _rd, _ri in resolved]
-        index_cards.append(h("div", {"class_": "mcp-super-card"},
+        index_cards.append(h("div", {"class_": "sl-card mcp-super-card"},
             h("div", {"class_": "mcp-super-card-h"},
               h("span", {"class_": "mcp-super-card-t"}, (t_de if de else t_en)),
               h("span", {"class_": "mcp-super-card-n"}, f"{total}")),

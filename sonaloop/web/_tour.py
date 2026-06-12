@@ -39,8 +39,8 @@ def tour_steps() -> list[dict]:
         {"sel": '.sl-nav a[href="/library"]', "title": t("tour_library_h"), "body": t("tour_library_d")},
         {"sel": '.sl-nav a[href="/activity"]', "title": t("tour_activity_h"), "body": t("tour_activity_d")},
         {"sel": ".sl-cmdk-trigger", "title": t("tour_cmdk_h"), "body": t("tour_cmdk_d")},
-        # Documentation/Feedback live in the settings footer cluster now (ux-contract §3.5).
-        {"sel": ".sl-um-trigger", "title": t("tour_docs_h"), "body": t("tour_docs_d")},
+        # Documentation/Feedback/? are the sidebar FOOTER rows now (ux-contract §10 W7).
+        {"sel": ".sl-sb-foot", "title": t("tour_docs_h"), "body": t("tour_docs_d")},
     ]
 
 

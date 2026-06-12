@@ -201,7 +201,8 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
     stands (e.g. the session's walked subject)."""
     from .. import presentation as _pres
     from ._components import _display_title, _icon, _label
-    from ._presence import decision_status_pill, hypothesis_status_pill, survey_status_pill
+    from ._presence import (decision_status_pill, hypothesis_status_pill, survey_status_pill,
+                            synthesis_status_pill)
     rec = record or {}
     date = _fmt_day(rec.get("created_at") or "")
     icons = dict(council="councils", synthesis="syntheses", report="syntheses", decision="flag",
@@ -224,6 +225,9 @@ def primitive_row(kind: str, record: dict, store: Any = None, *, href: str | Non
                                         total=len(pids)))
     elif kind in ("synthesis", "report"):
         badges.append(raw(_label(t("synthesis_kind"), "var(--violet)")))
+        # G2: the lifecycle pill — reports carry one (in_progress | done) like every
+        # lifecycled kind; rows and the report cover show the same words.
+        badges.append(raw(synthesis_status_pill(rec.get("status", "done"))))
         if rec.get("sections") is not None:
             meta.insert(0, raw(_label(t("n_sections", n=len(rec.get("sections") or [])))))
         else:
