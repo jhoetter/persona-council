@@ -153,41 +153,63 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         _rule(slide, 0.72, 1.34, 0.85)
 
         has_visual = bool(s.get("chart") or s.get("image"))
-        # prose measure: without a visual, text caps at ~10in (≈90 chars/line at body size) —
-        # full-frame lines read like terminal output (ux-contract §9 V11).
-        body_w = (Inches(6.5) if has_visual else min(W - Inches(1.4), Inches(10.0)))
-        top = Inches(1.65)
-        blocks = s.get("blocks") or []
-        if blocks:
-            tf = _box(slide, Inches(0.7), top, body_w, H - top - Inches(0.9))
-            first = True
-            for b in blocks:
-                p = tf.paragraphs[0] if first else tf.add_paragraph()
-                first = False
-                bt = b.get("type", "p"); txt = b.get("text", "")
-                if bt == "li":
-                    p.space_after = Pt(5)
-                    _run(p, "•  ", size=13, bold=True, color=_ACCENT)
-                    _run(p, txt, size=13, color=_INK)
-                elif bt == "quote":
-                    p.space_before = Pt(6); p.space_after = Pt(8)
-                    _run(p, txt, size=15, italic=True, color=_MUTED)
-                elif bt == "callout":
-                    p.space_before = Pt(6); p.space_after = Pt(8)
-                    _run(p, b.get("label", "Insight") + "  ", size=13, bold=True,
-                         color=_CALLOUT_RGB.get(b.get("kind"), _ACCENT))
-                    _run(p, txt, size=13, color=_INK)
-                elif bt == "h":
-                    p.space_before = Pt(10); p.space_after = Pt(3)
-                    _run(p, txt, size=15, bold=True, color=_INK)
-                else:
-                    p.space_after = Pt(7)
-                    _run(p, txt, size=14, color=_INK)
+        # prose caps at ~10in without a visual (full-frame lines read like terminal output).
+        body_w = 6.4 if has_visual else min(W.inches - 1.4, 10.0)
+        region_top = 1.62
+        region_bot = H.inches - (0.78 if s.get("footnote") else 0.5)
+        region_h = region_bot - region_top
+
+        # Segment the blocks: runs of flowing text (p/li/h/quote) interleaved with boxed callouts.
+        _flow_sz = {"li": 13, "quote": 15, "h": 15}
+        segs = []; run_blocks = []
+        def _flush_run():
+            if run_blocks:
+                h = sum(_est_h(b.get("text", ""), body_w - 0.2, _flow_sz.get(b.get("type", "p"), 14)) + 0.10
+                        for b in run_blocks)
+                segs.append(("text", list(run_blocks), h)); run_blocks.clear()
+        for b in (s.get("blocks") or []):
+            if b.get("type") == "callout":
+                _flush_run()
+                bh = max(0.66, 0.4 + (0.26 if b.get("label") else 0) + _est_h(b.get("text", ""), body_w - 0.5, 13))
+                segs.append(("callout", b, bh))
+            else:
+                run_blocks.append(b)
+        _flush_run()
+
+        gap = 0.16
+        total = sum(h for _, _, h in segs) + gap * max(0, len(segs) - 1)
+        y = region_top + (max(0.0, (region_h - total) / 2) if total < region_h else 0.0)
+        for kind_, payload, h in segs:
+            if kind_ == "callout":
+                _callout_box(slide, 0.7, y, body_w, payload)
+            else:
+                tf = _box(slide, Inches(0.7), Inches(y), Inches(body_w), Inches(h + 0.4))
+                first = True
+                for b in payload:
+                    p = tf.paragraphs[0] if first else tf.add_paragraph(); first = False
+                    bt = b.get("type", "p"); txt = b.get("text", "")
+                    if bt == "li":
+                        p.space_after = Pt(5)
+                        _run(p, "•  ", size=13, bold=True, color=_ACCENT); _run(p, txt, size=13, color=_INK)
+                    elif bt == "quote":
+                        p.space_before = Pt(4); p.space_after = Pt(6); _run(p, txt, size=15, italic=True, color=_MUTED)
+                    elif bt == "h":
+                        p.space_before = Pt(8); p.space_after = Pt(2); _run(p, txt, size=15, bold=True, color=_INK)
+                    else:
+                        p.space_after = Pt(6); _run(p, txt, size=14, color=_INK)
+            y += h + gap
+
+        rx = 7.35; rw = W.inches - rx - 0.7
         if s.get("chart"):
-            _chart(slide, s["chart"], Inches(7.4), top, Inches(5.2), Inches(4.5))
+            _chart(slide, s["chart"], Inches(rx), Inches(region_top), Inches(rw), Inches(region_h))
         elif s.get("image"):
             try:
-                slide.shapes.add_picture(s["image"], Inches(7.4), top, width=Inches(5.2))
+                pic = slide.shapes.add_picture(s["image"], Inches(rx), Inches(region_top))
+                sc = min(Inches(rw) / pic.width, Inches(region_h) / pic.height)
+                pic.width = int(pic.width * sc); pic.height = int(pic.height * sc)
+                pic.left = Inches(rx) + (Inches(rw) - pic.width) // 2
+                pic.top = Inches(region_top) + (Inches(region_h) - pic.height) // 2
+                pic.line.color.rgb = rgb(_LINE); pic.line.width = Pt(0.75)
             except Exception:
                 pass
         if s.get("footnote"):
@@ -297,6 +319,44 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         p = tf.paragraphs[0]; p.alignment = PP_ALIGN.CENTER
         _run(p, str(num), size=9, bold=True, color=edge)
         return ov
+
+    # ── presentation-layout helpers: vertical balance + boxed callouts ───────────
+    def _est_h(text, width_in, size, *, lf=1.34):
+        """Rough rendered height (inches) of wrapped text — used to vertically balance a slide."""
+        if not text:
+            return size * lf / 72.0
+        cpl = max(8, int(width_in / (size * 0.0072)))      # chars per line at this width/size
+        line = 1; cur = 0
+        for word in str(text).split():
+            wl = len(word) + 1
+            if cur + wl > cpl and cur:
+                line += 1; cur = wl
+            else:
+                cur += wl
+        return line * size * lf / 72.0
+
+    _CALLOUT_BAR = {"accent": _ACCENT, "green": _GREEN, "amber": _AMBER,
+                    "blue": _PALETTE.get("blue", _ACCENT), "red": _RED}
+    _CALLOUT_TINT = {"accent": _ACCENT_WEAK, "green": "E7F3EC", "amber": "F6ECDD",
+                     "blue": "E4EEF7", "red": "F7E6E9"}
+
+    def _callout_box(slide, x, y, w, block, *, size=13):
+        """A boxed callout: tinted rounded panel + colour bar + label + body. Returns its height."""
+        kind = block.get("kind") or "accent"
+        bar = _CALLOUT_BAR.get(kind, _ACCENT); tint = _CALLOUT_TINT.get(kind, _ACCENT_WEAK)
+        label = (block.get("label") or "").strip(); txt = block.get("text") or ""
+        pad = 0.2; inner_w = w - 0.5
+        h = max(0.66, pad * 2 + (0.26 if label else 0) + _est_h(txt, inner_w, size))
+        _rrect(slide, x, y, w, h, tint, radius=0.06)
+        _rrect(slide, x, y + 0.12, 0.07, h - 0.24, bar, radius=0.5)
+        tf = _box(slide, Inches(x + 0.3), Inches(y + pad - 0.04), Inches(inner_w), Inches(h - pad))
+        if label:
+            _mono_run(_run(tf.paragraphs[0], label.upper(), size=10, bold=True, color=bar))
+            bp = tf.add_paragraph(); bp.space_before = Pt(3)
+            _run(bp, txt, size=size, color=_INK)
+        else:
+            _run(tf.paragraphs[0], txt, size=size, color=_INK)
+        return h
 
     # The chart painters (bar/pie/…/scatter) live in _pptx_charts; they draw through the
     # SAME shape primitives via this ctx, so slide and chart layers can't drift apart.
@@ -499,20 +559,29 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
                        size=_TS["eyebrow"], bold=True, color=tc))
         if s.get("num"):
             _mono_run(_run(ep, "  ·  " + s["num"], size=_TS["eyebrow"], bold=True, color=_FAINT))
-        body_w = 6.9 if s.get("chart") else W.inches - 1.4
-        _rrect(slide, 0.7, 1.02, 0.055, 1.7, tc, radius=0.3)
-        tf = _box(slide, Inches(0.95), Inches(1.05), Inches(body_w - 0.25), Inches(1.75))
-        _run(tf.paragraphs[0], s.get("statement", ""), size=_TS["statement"], bold=True)
-        sf = _box(slide, Inches(0.95), Inches(2.95), Inches(body_w - 0.25), H - Inches(3.8))
-        first = True
-        for t in s.get("support") or []:
-            sp = sf.paragraphs[0] if first else sf.add_paragraph()
-            first = False
-            sp.space_after = Pt(8)
-            _run(sp, "•  ", size=13, bold=True, color=tc)
-            _run(sp, str(t), size=13)
-        if s.get("chart"):
-            _chart(slide, s["chart"], Inches(7.9), Inches(1.65), Inches(4.7), Inches(4.3))
+        has_chart = bool(s.get("chart"))
+        body_w = 6.9 if has_chart else W.inches - 1.4
+        stmt_size, sup_size = 30, 15
+        # Content region between the eyebrow and the footnote band; balance the block in it.
+        region_top = 1.4
+        region_bot = H.inches - (0.95 if (s.get("meta") or s.get("footnote")) else 0.6)
+        region_h = region_bot - region_top
+        # full-height accent bar (always reads intentional, no matter the block height)
+        _rrect(slide, 0.7, region_top, 0.055, region_h, tc, radius=0.3)
+        support = [str(t) for t in (s.get("support") or [])]
+        est = _est_h(s.get("statement", ""), body_w - 0.3, stmt_size) + 0.18
+        est += sum(_est_h(t, body_w - 0.5, sup_size) + 0.11 for t in support)
+        anchor = MSO_ANCHOR.MIDDLE if est < region_h - 0.2 else MSO_ANCHOR.TOP
+        cf = _box(slide, Inches(0.98), Inches(region_top), Inches(body_w - 0.28), Inches(region_h))
+        cf.vertical_anchor = anchor
+        _run(cf.paragraphs[0], s.get("statement", ""), size=stmt_size, bold=True)
+        for i, t in enumerate(support):
+            sp = cf.add_paragraph()
+            sp.space_before = Pt(16 if i == 0 else 7); sp.space_after = Pt(0)
+            _run(sp, "•  ", size=sup_size, bold=True, color=tc)
+            _run(sp, t, size=sup_size)
+        if has_chart:
+            _chart(slide, s["chart"], Inches(7.55), Inches(1.55), Inches(5.05), Inches(4.5))
         if s.get("meta"):
             mt = _box(slide, Inches(0.7), H - Inches(0.85), Inches(7.0), Inches(0.3))
             _mono_run(_run(mt.paragraphs[0], s["meta"], size=11, bold=True, color=tc))
@@ -523,12 +592,13 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
 
     def _quote_slide(s):
         slide = prs.slides.add_slide(blank); _bg(slide)
-        _text(slide, 1.5, 1.45, 1.2, 1.2, "“", size=80, bold=True, color=_ACCENT_WEAK,
+        _text(slide, 1.35, 1.05, 1.6, 1.4, "“", size=120, bold=True, color=_ACCENT_WEAK,
               anchor=MSO_ANCHOR.TOP)
-        _text(slide, 1.9, 2.35, W.inches - 3.8, 2.6, s.get("text", ""), size=_TS["quote"],
-              anchor=MSO_ANCHOR.TOP)
-        _initials_chip(slide, 1.9, 5.45, 0.34, s.get("attribution"))
-        nt = _text(slide, 2.36, 5.45, W.inches - 4.3, 0.34, s.get("attribution", ""), size=12, bold=True)
+        # large, vertically-centred quote — the emotional anchor of the chapter
+        _text(slide, 1.9, 1.65, W.inches - 3.4, 3.75, s.get("text", ""), size=30,
+              anchor=MSO_ANCHOR.MIDDLE)
+        _initials_chip(slide, 1.9, 5.95, 0.36, s.get("attribution"))
+        nt = _text(slide, 2.42, 5.97, W.inches - 4.3, 0.4, s.get("attribution", ""), size=13, bold=True)
         _run(nt.text_frame.paragraphs[0], "   " + s.get("role", ""), size=11, color=_MUTED)
         _footer(slide)
 
@@ -565,19 +635,22 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         slide = prs.slides.add_slide(blank); _bg(slide)
         _heading_band(slide, s)
         items = s.get("items") or []
-        n = max(len(items), 1); gap = 0.25
+        n = max(len(items), 1); gap = 0.28
         tw = (W.inches - 1.4 - gap * (n - 1)) / n
+        th = 3.0; ty = 1.75 + (H.inches - 1.75 - 0.6 - th) / 2     # centre the KPI band below the heading
         for i, it in enumerate(items):
             tx = 0.7 + i * (tw + gap)
-            _rrect(slide, tx, 2.5, tw, 2.3, _PANEL, radius=0.05, line=_LINE)
-            tf = _box(slide, Inches(tx + 0.24), Inches(2.74), Inches(tw - 0.48), Inches(1.9))
-            _run(tf.paragraphs[0], str(it.get("label", "")), size=_TS["kpiLabel"], color=_MUTED)
-            p1 = tf.add_paragraph(); p1.space_before = Pt(4)
+            _rrect(slide, tx, ty, tw, th, _PANEL, radius=0.05, line=_LINE)
+            _rrect(slide, tx + 0.28, ty + 0.32, 0.05, 0.34, _ACCENT, radius=0.3)
+            tf = _box(slide, Inches(tx + 0.28), Inches(ty + 0.24), Inches(tw - 0.52), Inches(th - 0.48))
+            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
             v = it.get("value")
-            _run(p1, v if isinstance(v, str) else _num(v or 0), size=_TS["kpi"], bold=True)
+            _run(tf.paragraphs[0], v if isinstance(v, str) else _num(v or 0), size=40, bold=True)
+            pl = tf.add_paragraph(); pl.space_before = Pt(8)
+            _run(pl, str(it.get("label", "")), size=12, color=_MUTED)
             if it.get("sub"):
-                p2 = tf.add_paragraph(); p2.space_before = Pt(4)
-                _run(p2, str(it["sub"]), size=9, color=_FAINT)
+                p2 = tf.add_paragraph(); p2.space_before = Pt(3)
+                _run(p2, str(it["sub"]), size=10, color=_FAINT)
         _footer(slide)
 
     def _chart_slide(s):
@@ -617,26 +690,33 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         rows = [list(r) for r in (s.get("rows") or [])]
         if cols:
             tw = W.inches - 1.4
-            th = min(0.42 * (len(rows) + 1), H.inches - 1.9 - 1.0)
-            gf = slide.shapes.add_table(len(rows) + 1, len(cols),
+            nrows = len(rows) + 1
+            avail = H.inches - 1.9 - (0.95 if s.get("footnote") else 0.6)
+            row_h = max(0.5, min(0.95, avail / nrows))      # grow rows to fill the frame (capped)
+            th = row_h * nrows
+            gf = slide.shapes.add_table(nrows, len(cols),
                                         Inches(0.7), Inches(1.9), Inches(tw), Inches(th))
             tbl = gf.table
             # kill the theme's banding/header styling; the cells below carry the deck's own
             tbl.first_row = False
             tbl.horz_banding = False
+            for i in range(nrows):
+                tbl.rows[i].height = Inches(row_h)
             for j, c in enumerate(cols):
                 cell = tbl.cell(0, j)
                 cell.fill.solid(); cell.fill.fore_color.rgb = rgb(_ACCENT_WEAK)
+                cell.vertical_anchor = MSO_ANCHOR.MIDDLE
                 cell.text_frame.word_wrap = True
-                _run(cell.text_frame.paragraphs[0], str(c), size=11.5, bold=True)
+                _run(cell.text_frame.paragraphs[0], str(c), size=12.5, bold=True)
             for i, row in enumerate(rows, start=1):
                 for j in range(len(cols)):
                     cell = tbl.cell(i, j)
                     cell.fill.solid()
                     cell.fill.fore_color.rgb = rgb(_BG if i % 2 else _PANEL)
+                    cell.vertical_anchor = MSO_ANCHOR.MIDDLE
                     cell.text_frame.word_wrap = True
                     val = str(row[j]) if j < len(row) else ""
-                    _run(cell.text_frame.paragraphs[0], val, size=11.5,
+                    _run(cell.text_frame.paragraphs[0], val, size=12.5,
                          bold=(j == 0), color=_INK if j == 0 else _MUTED)
         if s.get("footnote"):
             ft = _box(slide, Inches(0.7), H - Inches(0.72), W - Inches(1.4), Inches(0.4))
@@ -653,14 +733,15 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
             cx = 0.7 + j * (cw + gap)
             _rrect(slide, cx, cy, cw, ch, _PANEL if accent else _SURFACE2, radius=0.04,
                    line=_ACCENT if accent else _LINE)
-            tf = _box(slide, Inches(cx + 0.3), Inches(cy + 0.26), Inches(cw - 0.6), Inches(ch - 0.5))
-            _run(tf.paragraphs[0], col.get("title", ""), size=14, bold=True,
+            tf = _box(slide, Inches(cx + 0.34), Inches(cy + 0.3), Inches(cw - 0.68), Inches(ch - 0.6))
+            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+            _run(tf.paragraphs[0], col.get("title", ""), size=15, bold=True,
                  color=_ACCENT if accent else _MUTED)
-            tf.paragraphs[0].space_after = Pt(12)
+            tf.paragraphs[0].space_after = Pt(14)
             for t in col.get("items") or []:
-                cp = tf.add_paragraph(); cp.space_after = Pt(7)
-                _run(cp, "•  ", size=12, bold=True, color=_ACCENT if accent else _FAINT)
-                _run(cp, str(t), size=12)
+                cp = tf.add_paragraph(); cp.space_after = Pt(9)
+                _run(cp, "•  ", size=13, bold=True, color=_ACCENT if accent else _FAINT)
+                _run(cp, str(t), size=13)
         _footer(slide)
 
     def _timeline_slide(s):
@@ -686,19 +767,19 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
     def _closing_slide(s):
         slide = prs.slides.add_slide(blank); _bg(slide)
         if s.get("logo"):
-            _logo_row(slide, 0.9, 1.15)
-        _rule(slide, 0.92, 2.0, 1.0)
-        tf = _box(slide, Inches(0.9), Inches(2.2), Inches(8.6), Inches(3.6))
-        _run(tf.paragraphs[0], s.get("title", ""), size=32, bold=True)
+            _logo_row(slide, 0.9, 1.1)
+        _rule(slide, 0.92, 2.35, 1.0)
+        tf = _box(slide, Inches(0.9), Inches(2.55), Inches(10.2), Inches(H.inches - 3.6))
+        _run(tf.paragraphs[0], s.get("title", ""), size=40, bold=True)
         if s.get("text"):
-            p1 = tf.add_paragraph(); p1.space_before = Pt(16)
-            _run(p1, s["text"], size=14)
+            p1 = tf.add_paragraph(); p1.space_before = Pt(18)
+            _run(p1, s["text"], size=16, color=_INK)
         if s.get("contact"):
             p2 = tf.add_paragraph(); p2.space_before = Pt(20)
-            _run(p2, s["contact"], size=13, bold=True, color=_ACCENT)
+            _run(p2, s["contact"], size=14, bold=True, color=_ACCENT)
         if s.get("meta"):
             mt = _box(slide, Inches(0.9), H - Inches(1.0), W - Inches(1.8), Inches(0.4))
-            _mono_run(_run(mt.paragraphs[0], s["meta"], size=10, color=_FAINT))
+            _mono_run(_run(mt.paragraphs[0], s["meta"], size=11, color=_FAINT))
 
     painters = {"title": _title_slide, "cover": _cover_slide, "agenda": _agenda_slide,
                 "section": _section_slide, "canvas-section": _canvas_section_slide,
