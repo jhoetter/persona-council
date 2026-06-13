@@ -62,6 +62,17 @@ class SqliteBackend(StorageBackend):
 _UPSERT_RE = re.compile(r"^\s*INSERT\s+OR\s+(REPLACE|IGNORE)\s+INTO\s+(\w+)\s*\(([^)]*)\)",
                         re.IGNORECASE | re.DOTALL)
 _UPSERT_PREFIX_RE = re.compile(r"INSERT\s+OR\s+(?:REPLACE|IGNORE)\s+INTO", re.IGNORECASE)
+_INSERT_TABLE_RE = re.compile(r"^\s*INSERT\s+INTO\s+(\w+)", re.IGNORECASE)
+_ONCONFLICT_RE = re.compile(r"\bON\s+CONFLICT\s*\(([^)]*)\)", re.IGNORECASE)
+
+_TENANT_TABLES_CACHE: frozenset[str] | None = None
+
+
+def _tenant_tables() -> frozenset[str]:
+    global _TENANT_TABLES_CACHE
+    if _TENANT_TABLES_CACHE is None:
+        _TENANT_TABLES_CACHE = frozenset(_tenant_table_names())
+    return _TENANT_TABLES_CACHE
 
 
 def _pg_params(sql: str) -> str:
@@ -95,8 +106,9 @@ class _PgConnection:
     translates `INSERT OR REPLACE/IGNORE` → `ON CONFLICT`, `?` → `%s`, and yields dict
     rows. `execute`/`executemany` return a psycopg cursor (rowcount/fetch* as usual)."""
 
-    def __init__(self, raw: Any) -> None:
+    def __init__(self, raw: Any, tenant: bool = False) -> None:
         self._raw = raw
+        self._tenant = tenant
         self._pk: dict[str, list[str]] = {}
 
     def _pk_cols(self, table: str) -> list[str]:
@@ -125,6 +137,20 @@ class _PgConnection:
             else:
                 sets = ", ".join(f'"{c}" = EXCLUDED."{c}"' for c in non_pk)
                 sql = f"{base} ON CONFLICT ({target}) DO UPDATE SET {sets}"
+            return _pg_params(sql)
+        # Explicit `INSERT INTO t … ON CONFLICT(cols)`: under tenancy the PK + UNIQUE
+        # constraints gained a leading workspace_id, so the conflict target must too — for
+        # TENANT tables only (`meta` keeps its plain key). The mixins' hardcoded targets
+        # (ON CONFLICT(id), ON CONFLICT(persona_id, scope, period_start), …) thus stay correct.
+        if self._tenant:
+            tm = _INSERT_TABLE_RE.match(sql)
+            if tm and tm.group(1) in _tenant_tables():
+                def _scope_target(mo: re.Match) -> str:
+                    cols = [c.strip() for c in mo.group(1).split(",")]
+                    if "workspace_id" in cols:
+                        return mo.group(0)
+                    return "ON CONFLICT (workspace_id, " + ", ".join(cols) + ")"
+                sql = _ONCONFLICT_RE.sub(_scope_target, sql, count=1)
         return _pg_params(sql)
 
     def execute(self, sql: str, params: tuple = ()) -> Any:
@@ -145,18 +171,46 @@ class _PgConnection:
         return self._raw.cursor()
 
 
+def _tenant_table_names() -> list[str]:
+    """The tables that carry a workspace (everything the schema creates EXCEPT `meta`,
+    which is per-database metadata — the schema_version stamp, not tenant data)."""
+    names: list[str] = []
+    for stmt in schema_statements_postgres():
+        m = re.match(r"CREATE TABLE IF NOT EXISTS (\w+)", stmt, re.IGNORECASE)
+        if m and m.group(1) != "meta":
+            names.append(m.group(1))
+    return names
+
+
+# RLS: a row is READable when its workspace is in the request's accessible set, and
+# WRITEable only into the active workspace. Unset scope → both settings NULL → no rows
+# (fail-closed). FORCE makes it apply even to the table owner, so isolation is real.
+_RLS_USING = "workspace_id = ANY (current_setting('app.workspace_ids', true)::text[])"
+_RLS_CHECK = "workspace_id = current_setting('app.active_workspace', true)"
+
+# Modules guard one-time schema init per (dsn, schema) so apply_schema isn't re-run (and the
+# tenancy ALTERs aren't re-introspected) on every Store() — and concurrent CREATEs don't race.
+_PG_INITIALIZED: set[str] = set()
+
+
 class PostgresBackend(StorageBackend):
-    """The cloud backend: one shared Postgres. Single-tenant in Phase 1 (parity with
-    SQLite); row-level tenancy + RLS arrive next (sonaloop/storage-row-tenancy-and-rls).
-    An optional `SONALOOP_PG_SCHEMA` isolates a run into its own schema (per-test
-    isolation, and the future control/tenant split)."""
+    """The cloud backend: one shared Postgres with row-level tenancy. `tenant=True` (the
+    cloud default, env SONALOOP_PG_TENANT) adds a `workspace_id` to every tenant table,
+    makes the PK composite, scopes UNIQUE constraints, and enforces isolation with RLS —
+    all driven by introspection, so the Store's mixins are untouched. `tenant=False` is a
+    plain single-tenant Postgres (Phase-1 parity). `SONALOOP_PG_SCHEMA` isolates a run into
+    its own schema (per-test isolation). The SQLite schema NEVER gains any of this."""
 
     dialect = "postgres"
     path = None
 
-    def __init__(self, dsn: str, schema: str | None = None) -> None:
+    def __init__(self, dsn: str, schema: str | None = None, tenant: bool | None = None) -> None:
         self.dsn = dsn
         self.schema = schema or os.getenv("SONALOOP_PG_SCHEMA") or None
+        self.tenant = (os.getenv("SONALOOP_PG_TENANT") == "1") if tenant is None else tenant
+
+    def _key(self) -> str:
+        return f"{self.dsn}|{self.schema or ''}|{int(self.tenant)}"
 
     def connect(self) -> _PgConnection:
         import psycopg
@@ -167,12 +221,125 @@ class PostgresBackend(StorageBackend):
             raw.execute(f'CREATE SCHEMA IF NOT EXISTS "{self.schema}"')
             raw.execute(f'SET search_path TO "{self.schema}"')
             raw.commit()
-        return _PgConnection(raw)
+        self._bind_scope(raw)
+        return _PgConnection(raw, tenant=self.tenant)
+
+    def _bind_scope(self, raw: Any) -> None:
+        """Push the request's tenant scope into RLS session vars. Session-level (is_local=
+        false) so it survives the Store's many commits on this one connection; a pooled
+        deployment re-binds per transaction instead (cloud-tenant-scope-flip)."""
+        if not self.tenant:
+            return
+        from ..config import request_tenant_scope
+        scope = request_tenant_scope()
+        if scope is None:
+            return
+        accessible, active = scope
+        arr = "{" + ",".join(f'"{a}"' for a in accessible) + "}"
+        raw.execute("SELECT set_config('app.workspace_ids', %s, false)", (arr,))
+        raw.execute("SELECT set_config('app.active_workspace', %s, false)", (active,))
+        raw.commit()
 
     def apply_schema(self, conn: _PgConnection) -> None:
+        key = self._key()
+        if key in _PG_INITIALIZED:
+            return
+        raw = conn._raw
         for stmt in schema_statements_postgres():
-            conn._raw.execute(stmt)
-        conn._raw.commit()
+            raw.execute(stmt)
+        raw.commit()
+        if self.tenant:
+            self._apply_tenancy(raw)
+        _PG_INITIALIZED.add(key)
+
+    def _apply_tenancy(self, raw: Any) -> None:
+        """Idempotent post-pass over the freshly-created tables: add `workspace_id`, make the
+        PK + any UNIQUE composite with it, and enforce RLS. Introspection-driven — no
+        per-table hand-written DDL, no touching the mixins."""
+        for t in _tenant_table_names():
+            raw.execute(
+                f"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS workspace_id TEXT NOT NULL "
+                "DEFAULT current_setting('app.active_workspace', true)")
+            # PK → (workspace_id, *original_pk), once
+            pk_name, pk_cols = self._constraint(raw, t, "p")
+            if pk_name and "workspace_id" not in pk_cols:
+                cols = ", ".join(pk_cols)
+                raw.execute(f'ALTER TABLE {t} DROP CONSTRAINT "{pk_name}"')
+                raw.execute(f"ALTER TABLE {t} ADD PRIMARY KEY (workspace_id, {cols})")
+            # every UNIQUE → scoped per workspace (a slug is unique WITHIN a workspace)
+            for u_name, u_cols in self._unique_constraints(raw, t):
+                if "workspace_id" not in u_cols:
+                    cols = ", ".join(u_cols)
+                    raw.execute(f'ALTER TABLE {t} DROP CONSTRAINT "{u_name}"')
+                    raw.execute(f"ALTER TABLE {t} ADD UNIQUE (workspace_id, {cols})")
+            raw.execute(f"ALTER TABLE {t} ENABLE ROW LEVEL SECURITY")
+            raw.execute(f"ALTER TABLE {t} FORCE ROW LEVEL SECURITY")
+            cur = raw.execute(
+                "SELECT 1 FROM pg_policies WHERE schemaname = current_schema() "
+                "AND tablename = %s AND policyname = 'tenant_isolation'", (t,))
+            if not cur.fetchone():
+                raw.execute(f"CREATE POLICY tenant_isolation ON {t} "
+                            f"USING ({_RLS_USING}) WITH CHECK ({_RLS_CHECK})")
+        raw.commit()
+
+    @staticmethod
+    def _constraint(raw: Any, table: str, contype: str) -> tuple[str | None, list[str]]:
+        cur = raw.execute(
+            "SELECT con.conname, a.attname FROM pg_constraint con "
+            "JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey) "
+            "WHERE con.conrelid = %s::regclass AND con.contype = %s "
+            "ORDER BY array_position(con.conkey, a.attnum)", (table, contype))
+        rows = cur.fetchall()
+        if not rows:
+            return None, []
+        return rows[0]["conname"], [r["attname"] for r in rows]
+
+    @staticmethod
+    def _unique_constraints(raw: Any, table: str) -> list[tuple[str, list[str]]]:
+        cur = raw.execute(
+            "SELECT con.conname, a.attname FROM pg_constraint con "
+            "JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey) "
+            "WHERE con.conrelid = %s::regclass AND con.contype = 'u' "
+            "ORDER BY con.conname, array_position(con.conkey, a.attnum)", (table,))
+        out: dict[str, list[str]] = {}
+        for r in cur.fetchall():
+            out.setdefault(r["conname"], []).append(r["attname"])
+        return list(out.items())
+
+
+def import_sqlite_to_postgres(sqlite_path: str | Path, workspace_id: str,
+                             pg_backend: "PostgresBackend | None" = None) -> dict[str, int]:
+    """One-shot migration: fold a single-tenant SQLite DB's tenant rows into the shared
+    Postgres under `workspace_id`. Used at the cloud cutover (tracker:
+    sonaloop-cloud/cloud-tenant-scope-flip) to absorb each per-tenant partition file. `meta`
+    (per-database) is skipped; ids/timestamps are preserved verbatim; idempotent
+    (ON CONFLICT DO NOTHING). Returns per-table row counts."""
+    from ..config import reset_request_tenant_scope, set_request_tenant_scope
+
+    pg_backend = pg_backend or PostgresBackend(os.environ["DATABASE_URL"], tenant=True)
+    src = sqlite3.connect(str(sqlite_path))
+    src.row_factory = sqlite3.Row
+    tok = set_request_tenant_scope([workspace_id], workspace_id)
+    counts: dict[str, int] = {}
+    try:
+        from . import Store
+        dst = Store(backend=pg_backend)
+        for table in _tenant_table_names():
+            rows = src.execute(f"SELECT * FROM {table}").fetchall()
+            for row in rows:
+                cols = list(row.keys())
+                collist = ", ".join(f'"{c}"' for c in cols)
+                placeholders = ", ".join("?" for _ in cols)
+                dst.conn.execute(
+                    f"INSERT INTO {table} ({collist}) VALUES ({placeholders}) ON CONFLICT DO NOTHING",
+                    tuple(row))
+            counts[table] = len(rows)
+        dst.conn.commit()
+        dst.close()
+    finally:
+        reset_request_tenant_scope(tok)
+        src.close()
+    return counts
 
 
 def make_backend(path: Path | None = None) -> StorageBackend:

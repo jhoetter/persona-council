@@ -73,6 +73,32 @@ def request_partition() -> Path | None:
     return _REQUEST_PARTITION.get()
 
 
+# --- request-bound TENANT SCOPE (cloud row-level tenancy; page: cloud-data-model) ----------
+# The shared-Postgres successor to the partition file-swap: a request binds the SET of
+# workspace_ids the principal may read + the ACTIVE workspace (write destination). The
+# Postgres backend turns this into RLS session vars (app.workspace_ids / app.active_workspace);
+# open-core (SQLite) ignores it entirely — scope stays None, single-tenant, unchanged.
+_REQUEST_TENANT_SCOPE: contextvars.ContextVar[tuple[tuple[str, ...], str] | None] = \
+    contextvars.ContextVar("sonaloop_request_tenant_scope", default=None)
+
+
+def set_request_tenant_scope(accessible_ids, active_id: str) -> contextvars.Token:
+    """Bind the request's tenant scope: `accessible_ids` (every workspace the principal may
+    READ) + `active_id` (the workspace new rows are WRITTEN to). A finally block must
+    reset_request_tenant_scope() — the scope must never leak across requests (with a pooled
+    connection that means SET LOCAL per transaction; see the Postgres backend)."""
+    return _REQUEST_TENANT_SCOPE.set((tuple(accessible_ids), active_id))
+
+
+def reset_request_tenant_scope(token: contextvars.Token) -> None:
+    _REQUEST_TENANT_SCOPE.reset(token)
+
+
+def request_tenant_scope() -> tuple[tuple[str, ...], str] | None:
+    """The active (accessible_ids, active_id) scope, or None (open-core / unscoped)."""
+    return _REQUEST_TENANT_SCOPE.get()
+
+
 def load_env(path: Path | None = None) -> None:
     """Load a simple .env file without requiring python-dotenv at import time.
 
