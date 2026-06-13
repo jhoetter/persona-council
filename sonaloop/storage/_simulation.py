@@ -7,7 +7,7 @@ from typing import Any
 class SimulationMixin:
     def insert_calendar_event(self, event: dict[str, Any]) -> None:
         self.conn.execute(
-            "INSERT OR REPLACE INTO calendar_events (id, persona_id, start, end, data) VALUES (?, ?, ?, ?, ?)",
+            'INSERT OR REPLACE INTO calendar_events (id, persona_id, start, "end", data) VALUES (?, ?, ?, ?, ?)',
             (event["id"], event["persona_id"], event["start"], event["end"], json.dumps(event, ensure_ascii=False)),
         )
 

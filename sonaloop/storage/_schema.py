@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS calendar_events (
   id TEXT PRIMARY KEY,
   persona_id TEXT NOT NULL,
   start TEXT NOT NULL,
-  end TEXT NOT NULL,
+  "end" TEXT NOT NULL,
   data TEXT NOT NULL
 );
 

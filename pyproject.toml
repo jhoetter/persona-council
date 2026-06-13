@@ -33,6 +33,12 @@ dependencies = [
     "python-pptx>=0.6.23",
 ]
 
+[project.optional-dependencies]
+# The cloud Postgres backend (tracker: sonaloop/storage-backend-abstraction; page:
+# cloud-data-model). OPTIONAL on purpose — open-core/self-host runs on the bundled SQLite
+# and never imports psycopg; only a `postgresql://` DATABASE_URL (cloud) pulls it in.
+postgres = ["psycopg[binary]>=3.1"]
+
 [project.urls]
 Homepage = "https://github.com/jhoetter/sonaloop"
 Repository = "https://github.com/jhoetter/sonaloop"

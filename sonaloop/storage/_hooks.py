@@ -48,10 +48,10 @@ class HooksMixin:
         recycle, so `id <= lastrowid - cap` is exactly 'everything but the newest cap'."""
         cur = self.conn.execute(
             "INSERT INTO events (ts, event, entity_type, entity_id, project_id, data) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (ts, event, entity_type, entity_id, project_id,
-             json.dumps(data, ensure_ascii=False)))
-        event_id = int(cur.lastrowid)
+            "VALUES (?, ?, ?, ?, ?, ?) RETURNING id",      # RETURNING works on both dialects
+            (ts, event, entity_type, entity_id, project_id,  # (sqlite >= 3.35); Postgres has no
+             json.dumps(data, ensure_ascii=False)))          # lastrowid for IDENTITY columns
+        event_id = int(cur.fetchone()["id"])
         self.conn.execute("DELETE FROM events WHERE id <= ?", (event_id - cap,))
         self.conn.commit()
         return event_id
