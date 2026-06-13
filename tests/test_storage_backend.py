@@ -102,3 +102,25 @@ def test_backend_interface_is_abstract():
         b.connect()
     with pytest.raises(NotImplementedError):
         b.apply_schema(None)
+
+
+def test_store_is_a_context_manager_with_idempotent_close():
+    """A Store releases its connection deterministically (ticket store-connection-lifecycle):
+    `with`, an explicit close(), and the __del__ backstop must all be safe and release exactly
+    once — cloud's Postgres connections leak otherwise."""
+    with Store() as s:
+        assert s._closed is False
+        assert s.schema_version() >= 0
+    assert s._closed is True                       # __exit__ closed it
+
+    s2 = Store()
+    s2.close()
+    assert s2._closed is True
+    s2.close()                                     # idempotent — no double-release, no error
+
+    # __del__ backstop: an unreferenced Store must close without raising (the ~60 unclosed
+    # web-route sites rely on this; a function-local Store is refcount-collected at return).
+    s3 = Store()
+    s3.__del__()                                   # explicit, deterministic invocation
+    assert s3._closed is True
+    s3.__del__()                                   # still safe after already closed

@@ -13,6 +13,8 @@ class StoreBase:
         # The backend owns the dialect (SQLite today; Postgres + row tenancy next — see the
         # cloud-data-model page). Mixins keep using `self.conn` with `?` placeholders; a
         # backend is free to translate those, so this class stays dialect-agnostic.
+        self._closed = True                    # set FIRST: a Store whose __init__ raises before
+                                               # connect() must be a safe no-op in __del__/close()
         self.backend = backend or make_backend(path)
         self.path = self.backend.path          # the SQLite file path (None for server backends)
         # parents=True: a cold uvx/pipx install starts with NO per-user data dir (and possibly
@@ -21,6 +23,7 @@ class StoreBase:
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = self.backend.connect()
+        self._closed = False                   # past connect(): there is a connection to release
         self.backend.apply_schema(self.conn)
         self._stamp_schema_version()
 
@@ -39,7 +42,31 @@ class StoreBase:
         return int(row["value"]) if row else 0
 
     def close(self) -> None:
+        # Idempotent: an explicit close(), __exit__, and the __del__ backstop may all fire for
+        # the same Store. Guard so the underlying connection is released exactly once.
+        if getattr(self, "_closed", True):
+            return
+        self._closed = True
         self.conn.close()
+
+    def __enter__(self) -> "StoreBase":
+        return self
+
+    def __exit__(self, *exc: object) -> bool:
+        self.close()
+        return False
+
+    def __del__(self) -> None:
+        # Backstop for the many call sites — especially cloud's SHARED core web routes running
+        # on Postgres — that build a Store and never close it. CPython refcounting collects a
+        # function-local Store at function return, so __del__ then releases its connection
+        # deterministically instead of leaving it idle-in-transaction (holding locks) until the
+        # next cyclic GC. Under SQLite this only makes the existing GC-close prompt; behaviour is
+        # unchanged. Never raise from __del__: interpreter shutdown may have torn down globals.
+        try:
+            self.close()
+        except Exception:
+            pass
 
     def delete_persona_cascade(self, persona_id: str) -> dict[str, int]:
         """Delete a persona and all of its persona-scoped rows (memory, simulation,

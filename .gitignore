@@ -94,6 +94,8 @@ data/export/
 spec/persona-source-prompts.md
 # Rendered synthesis reports (markdown / PDF) — keep private.
 exports/
+# Stray generated avatar that `git add -A` keeps sweeping in (a local artifact, never shipped).
+avatar.png
 # Local Claude Code skill symlinks (created by `make skills`) — not committed;
 # the real skills live in claude-skills/.
 .claude/
