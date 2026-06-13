@@ -81,14 +81,13 @@ def _pg_params(sql: str) -> str:
     return sql.replace("%", "%%").replace("?", "%s")
 
 
-def schema_statements_postgres() -> list[str]:
-    """Port the one SQLite SCHEMA to Postgres DDL, split into executable statements:
-    drop the WAL pragma, AUTOINCREMENT → IDENTITY, BLOB → BYTEA. Everything else
-    (TEXT/INTEGER/UNIQUE/PRIMARY KEY/CREATE INDEX IF NOT EXISTS, the quoted "end" column)
-    is already valid Postgres. Pure function — no driver needed, so it is unit-testable."""
-    # Strip `--` line comments first: some contain a ';' (e.g. "…the cursor; the table…")
-    # which would corrupt a naive split. SQLite's executescript tolerates them natively.
-    no_comments = "\n".join(re.sub(r"--.*$", "", line) for line in SCHEMA.splitlines())
+def port_sqlite_schema_to_postgres(schema_sql: str) -> list[str]:
+    """Port ANY SQLite schema string to Postgres DDL statements: drop the WAL pragma,
+    AUTOINCREMENT → IDENTITY, BLOB → BYTEA, strip `--` comments (some contain a ';' that
+    would corrupt a naive split), split on ';'. Everything else (TEXT/INTEGER/UNIQUE/
+    PRIMARY KEY/CREATE INDEX IF NOT EXISTS, quoted identifiers) is already valid Postgres.
+    Reused by the cloud control-plane schema (sonaloop-cloud) — pure, unit-testable."""
+    no_comments = "\n".join(re.sub(r"--.*$", "", line) for line in schema_sql.splitlines())
     out: list[str] = []
     for raw in no_comments.split(";"):
         stmt = raw.strip()
@@ -99,6 +98,11 @@ def schema_statements_postgres() -> list[str]:
         stmt = re.sub(r"\bBLOB\b", "BYTEA", stmt)
         out.append(stmt)
     return out
+
+
+def schema_statements_postgres() -> list[str]:
+    """The core Store's SQLite SCHEMA ported to Postgres DDL statements."""
+    return port_sqlite_schema_to_postgres(SCHEMA)
 
 
 class _PgConnection:
