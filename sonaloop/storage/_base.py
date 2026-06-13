@@ -1,24 +1,27 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from pathlib import Path
 from typing import Any
 
-from ..config import DATA_DIR, database_path, utc_now_iso
-from ._schema import SCHEMA
+from ..config import DATA_DIR, utc_now_iso
+from ._backend import StorageBackend, make_backend
 
 
 class StoreBase:
-    def __init__(self, path: Path | None = None) -> None:
-        self.path = path or database_path()
+    def __init__(self, path: Path | None = None, backend: StorageBackend | None = None) -> None:
+        # The backend owns the dialect (SQLite today; Postgres + row tenancy next — see the
+        # cloud-data-model page). Mixins keep using `self.conn` with `?` placeholders; a
+        # backend is free to translate those, so this class stays dialect-agnostic.
+        self.backend = backend or make_backend(path)
+        self.path = self.backend.path          # the SQLite file path (None for server backends)
         # parents=True: a cold uvx/pipx install starts with NO per-user data dir (and possibly
         # no ~/.local/share at all) — first touch must create the whole chain, not error.
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.path)
-        self.conn.row_factory = sqlite3.Row
-        self.conn.executescript(SCHEMA)
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.conn = self.backend.connect()
+        self.backend.apply_schema(self.conn)
         self._stamp_schema_version()
 
     def _stamp_schema_version(self) -> None:
