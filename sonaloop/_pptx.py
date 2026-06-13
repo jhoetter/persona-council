@@ -341,15 +341,19 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
                      "blue": "E4EEF7", "red": "F7E6E9"}
 
     def _callout_box(slide, x, y, w, block, *, size=13):
-        """A boxed callout: tinted rounded panel + colour bar + label + body. Returns its height."""
+        """A boxed callout: tinted rounded panel + colour bar + optional icon + label + body. Returns height."""
         kind = block.get("kind") or "accent"
         bar = _CALLOUT_BAR.get(kind, _ACCENT); tint = _CALLOUT_TINT.get(kind, _ACCENT_WEAK)
         label = (block.get("label") or "").strip(); txt = block.get("text") or ""
-        pad = 0.2; inner_w = w - 0.5
+        icon_b64 = _da.ICONS.get(block.get("icon") or "", {}).get("accent")
+        pad = 0.2; inner_w = w - 0.5 - (0.72 if icon_b64 else 0)
         h = max(0.66, pad * 2 + (0.26 if label else 0) + _est_h(txt, inner_w, size))
         _rrect(slide, x, y, w, h, tint, radius=0.06)
         _rrect(slide, x, y + 0.12, 0.07, h - 0.24, bar, radius=0.5)
-        tf = _box(slide, Inches(x + 0.3), Inches(y + pad - 0.04), Inches(inner_w), Inches(h - pad))
+        tx = x + 0.3
+        if icon_b64:
+            isz = min(0.5, h - 0.3); _pic(slide, icon_b64, x + 0.28, y + (h - isz) / 2, isz, isz); tx = x + 0.28 + isz + 0.18
+        tf = _box(slide, Inches(tx), Inches(y + pad - 0.04), Inches(x + w - 0.24 - tx), Inches(h - pad))
         if label:
             _mono_run(_run(tf.paragraphs[0], label.upper(), size=10, bold=True, color=bar))
             bp = tf.add_paragraph(); bp.space_before = Pt(3)
@@ -391,6 +395,17 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         except Exception:
             pass
         return pic
+
+    def _icon_chip(slide, x, y, size, name, *, bg=_ACCENT_WEAK):
+        """A hi-fi icon in a tinted rounded chip (the pillars treatment, reusable on any card).
+        Returns True if the icon exists in the embedded deck set, else draws nothing."""
+        b64 = _da.ICONS.get(name or "", {}).get("accent")
+        if not b64:
+            return False
+        _rrect(slide, x, y, size, size, bg, radius=0.26)
+        pad = size * 0.24
+        _pic(slide, b64, x + pad, y + pad, size - 2 * pad, size - 2 * pad)
+        return True
 
     def _logo_row(slide, x, y, mark=0.42):
         """The brand moment: mark + wordmark ("sona" ink · "loop" muted)."""
@@ -537,9 +552,12 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         items = s.get("items") or []
         for it, (cx, cy, cw, ch) in zip(items, _grid_cells(items)):
             _rrect(slide, cx, cy, cw, ch, _PANEL, radius=0.05, line=_LINE)
-            _rrect(slide, cx + 0.26, cy + 0.27, 0.05, 0.21, _ACCENT, radius=0.3)
+            if it.get("icon") and _icon_chip(slide, cx + 0.28, cy + 0.26, 0.52, it["icon"]):
+                tx0 = cx + 0.96
+            else:
+                _rrect(slide, cx + 0.26, cy + 0.27, 0.05, 0.21, _ACCENT, radius=0.3); tx0 = cx + 0.42
             # ONE flowing frame (title → body → meta): a wrapping title can never overlap the body
-            tf = _box(slide, Inches(cx + 0.42), Inches(cy + 0.18), Inches(cw - 0.68), Inches(ch - 0.36))
+            tf = _box(slide, Inches(tx0), Inches(cy + 0.18), Inches(cx + cw - 0.26 - tx0), Inches(ch - 0.36))
             _run(tf.paragraphs[0], it.get("title", ""), size=15, bold=True)
             if it.get("text"):
                 pb = tf.add_paragraph(); pb.space_before = Pt(6)
@@ -641,9 +659,13 @@ def render(slides: list[dict], *, title: str = "Report") -> bytes:
         for i, it in enumerate(items):
             tx = 0.7 + i * (tw + gap)
             _rrect(slide, tx, ty, tw, th, _PANEL, radius=0.05, line=_LINE)
-            _rrect(slide, tx + 0.28, ty + 0.32, 0.05, 0.34, _ACCENT, radius=0.3)
-            tf = _box(slide, Inches(tx + 0.28), Inches(ty + 0.24), Inches(tw - 0.52), Inches(th - 0.48))
-            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+            if it.get("icon") and _icon_chip(slide, tx + 0.28, ty + 0.32, 0.66, it["icon"]):
+                tf = _box(slide, Inches(tx + 0.28), Inches(ty + 1.18), Inches(tw - 0.52), Inches(th - 1.4))
+                tf.vertical_anchor = MSO_ANCHOR.TOP
+            else:
+                _rrect(slide, tx + 0.28, ty + 0.32, 0.05, 0.34, _ACCENT, radius=0.3)
+                tf = _box(slide, Inches(tx + 0.28), Inches(ty + 0.24), Inches(tw - 0.52), Inches(th - 0.48))
+                tf.vertical_anchor = MSO_ANCHOR.MIDDLE
             v = it.get("value")
             _run(tf.paragraphs[0], v if isinstance(v, str) else _num(v or 0), size=40, bold=True)
             pl = tf.add_paragraph(); pl.space_before = Pt(8)
