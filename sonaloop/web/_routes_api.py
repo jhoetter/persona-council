@@ -193,6 +193,9 @@ def register_api(app) -> None:
         from ..storage import Store
         from ._palette_registry import closest_rows, search_rows
         store = Store()
-        rows = search_rows(q, store=store)
-        closest = [] if rows or not (q or "").strip() else closest_rows(q, store=store)
+        try:
+            rows = search_rows(q, store=store)
+            closest = [] if rows or not (q or "").strip() else closest_rows(q, store=store)
+        finally:
+            store.close()                # cloud is Postgres: an unclosed Store leaks a connection per call
         return JSONResponse({"rows": rows, "closest": closest})
