@@ -28,26 +28,31 @@ def _events_heartbeat_every() -> float:
         return 15.0
 
 
-async def _event_stream(request, last_id: int | None, partition=None):
+async def _event_stream(request, last_id: int | None, partition=None, scope=None):
     """Tail the cross-process `events` table as SSE frames. `id:` carries the bus row
     id, so EventSource reconnects replay via Last-Event-ID; a fresh connection (no
     last id) starts at the current high-water mark — live tail, no history dump.
 
-    `partition` is the request-bound data partition captured BY THE ENDPOINT: this
-    body outlives the middleware that bound the contextvar (its finally resets the
-    binding before the first poll runs), so every table read re-binds explicitly —
-    without it a workspace tenant's stream silently tails the GLOBAL events table."""
-    from ..config import reset_request_partition, set_request_partition
+    `partition` AND `scope` are the request-bound tenant context captured BY THE
+    ENDPOINT: this body outlives the middleware that bound the contextvars (its finally
+    resets them before the first poll runs), so every table read re-binds explicitly —
+    without it a tenant's stream silently tails the GLOBAL events table (SQLite partition)
+    or, on Postgres, sees nothing (RLS fail-closed because the scope is gone)."""
+    from ..config import (reset_request_partition, reset_request_tenant_scope,
+                          set_request_partition, set_request_tenant_scope)
     from ..storage import Store
 
     def _read(fn):
-        token = set_request_partition(partition)
+        p_token = set_request_partition(partition)
+        s_token = set_request_tenant_scope(*scope) if scope else None
         store = Store()                              # fresh per poll: never hold a
         try:                                         # connection across the sleep
             return fn(store)
         finally:
             store.close()
-            reset_request_partition(token)
+            if s_token is not None:
+                reset_request_tenant_scope(s_token)
+            reset_request_partition(p_token)
 
     cursor = last_id if last_id is not None else _read(lambda s: s.latest_event_id())
     yield ": connected\n\n"                         # immediate flush → onopen fires
@@ -82,9 +87,10 @@ def register_api(app) -> None:
             last_id = int(raw_last) if raw_last is not None else None
         except ValueError:
             last_id = None
-        from ..config import request_partition
+        from ..config import request_partition, request_tenant_scope
         return StreamingResponse(
-            _event_stream(request, last_id, partition=request_partition()),
+            _event_stream(request, last_id, partition=request_partition(),
+                          scope=request_tenant_scope()),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
