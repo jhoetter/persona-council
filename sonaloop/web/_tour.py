@@ -6,12 +6,12 @@ chrome module stays plug-in shaped. Dependency-free vanilla JS: a fixed spotligh
 (box-shadow scrim) around the current target plus a positioned tooltip card with
 title/body, progress dots and Back/Next/Skip; Esc ends the tour.
 
-The steps are declared once in tour_steps() — URL + selector + i18n'd title/body
+The steps are declared once in tour_steps() — project URL + selector + i18n'd title/body
 (literal t() calls keep the i18n usage scan honest). When the showcase is not yet
 loaded, a deliberate tour click POSTs the bundled onboarding example through the same
 CSRF-protected route as the empty-home example cards, then resumes on the real project.
-Cross-page steps persist in sessionStorage so the tour can walk actual artifact pages
-instead of only the sidebar.
+After the first navigation the tour stays on the project outline and opens real detail
+drawers for each artifact, so Next/Back is local and fast instead of full-page routing.
 
 Triggers — the tour NEVER auto-starts: any element with [data-tour-start] starts it.
 The permanent quiet offer is the sidebar-footer row (tour_footer_entry — the same nav-row
@@ -41,20 +41,19 @@ def _showcase() -> dict:
 def tour_steps() -> list[dict]:
     """The anchored showcase walkthrough, in order."""
     sc = _showcase()
-    pid = sc["project_id"]
+    url = sc["url"]
     return [
-        {"url": sc["url"], "sel": ".sl-scaffold__head,.h1", "title": t("tour_project_h"), "body": t("tour_project_d")},
-        {"url": f"/councils?project={pid}", "sel": ".sl-entity", "title": t("tour_council_h"), "body": t("tour_council_d")},
-        {"url": f"/surveys?project={pid}", "sel": ".sl-entity", "title": t("tour_survey_h"), "body": t("tour_survey_d")},
-        {"url": f"/syntheses?project={pid}", "sel": ".sl-entity", "title": t("tour_report_h"), "body": t("tour_report_d")},
-        {"url": f"/prototypes?project={pid}", "sel": ".sl-entity", "title": t("tour_prototype_h"), "body": t("tour_prototype_d")},
-        {"url": f"/sessions?project={pid}", "sel": ".sl-entity", "title": t("tour_session_h"), "body": t("tour_session_d")},
-        {"url": f"/hypotheses?project={pid}", "sel": ".sl-entity", "title": t("tour_hypothesis_h"), "body": t("tour_hypothesis_d")},
-        {"url": f"/decisions?project={pid}", "sel": ".sl-entity", "title": t("tour_decision_h"), "body": t("tour_decision_d")},
-        {"url": f"/notes?project={pid}", "sel": ".sl-entity", "title": t("tour_note_h"), "body": t("tour_note_d")},
-        {"url": f"/assets?project={pid}", "sel": ".sl-file,.sl-entity", "title": t("tour_asset_h"), "body": t("tour_asset_d")},
-        {"url": "/library", "sel": ".sl-tabs", "title": t("tour_library_h"), "body": t("tour_library_d")},
-        {"url": "/documentation", "sel": ".sl-sb-foot", "title": t("tour_docs_h"), "body": t("tour_docs_d")},
+        {"url": url, "sel": ".sl-scaffold__head,.h1", "title": t("tour_project_h"), "body": t("tour_project_d")},
+        {"url": url, "sel": '.olrow[data-rkind="council"]', "open": True, "title": t("tour_council_h"), "body": t("tour_council_d")},
+        {"url": url, "sel": '.olrow[data-rkind="survey"]', "open": True, "title": t("tour_survey_h"), "body": t("tour_survey_d")},
+        {"url": url, "sel": '.olrow[data-rkind="synthesis"]', "open": True, "title": t("tour_report_h"), "body": t("tour_report_d")},
+        {"url": url, "sel": '.olrow[data-rkind="prototype"]', "open": True, "title": t("tour_prototype_h"), "body": t("tour_prototype_d")},
+        {"url": url, "sel": '.olrow[data-rkind="session"]', "open": True, "title": t("tour_session_h"), "body": t("tour_session_d")},
+        {"url": url, "sel": '.olrow[data-rkind="hypothesis"]', "open": True, "title": t("tour_hypothesis_h"), "body": t("tour_hypothesis_d")},
+        {"url": url, "sel": '.olrow[data-rkind="decision"]', "open": True, "title": t("tour_decision_h"), "body": t("tour_decision_d")},
+        {"url": url, "sel": '.olrow[data-rkind="note"]', "open": True, "title": t("tour_note_h"), "body": t("tour_note_d")},
+        {"url": url, "sel": '.olrow[data-rkind="asset"],.sl-file', "open": True, "title": t("tour_asset_h"), "body": t("tour_asset_d")},
+        {"url": url, "sel": ".sl-tabs,.outline", "title": t("tour_library_h"), "body": t("tour_library_d")},
     ]
 
 
@@ -123,8 +122,10 @@ var steps=[], i=0, on=false;
 var KEY='sl-tour-resume';
 function q(sel){ try{ return document.querySelector(sel); }catch(e){ return null; } }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-function here(){ return location.pathname + location.search; }
-function same(a,b){ return String(a||'').split('#')[0]===String(b||'').split('#')[0]; }
+function cleanUrl(u){ var x; try{x=new URL(u||location.href, location.origin);}catch(e){return String(u||'').split('#')[0];}
+  x.hash=''; x.searchParams.delete('d'); return x.pathname+(x.searchParams.toString()?'?'+x.searchParams.toString():''); }
+function here(){ return cleanUrl(location.href); }
+function same(a,b){ return cleanUrl(a)===cleanUrl(b); }
 function go(n){ sessionStorage.setItem(KEY,String(n)); location.href=steps[n].url; }
 function resume(){
   var raw=sessionStorage.getItem(KEY); if(raw==null) return;
@@ -145,11 +146,41 @@ function loadSampleThenStart(){
   form.appendChild(input); document.body.appendChild(form);
   sessionStorage.setItem(KEY,'0'); form.submit();
 }
+function drawer(){ return document.getElementById('drawer'); }
+function closeDrawer(){
+  var d=drawer(); if(!d||!d.classList.contains('is-open')) return;
+  var b=d.querySelector('[data-drawer-close]'); if(b) b.click();
+}
+function targetFor(st, el){
+  var d=drawer();
+  if(st.open && d && d.classList.contains('is-open')){
+    return d.querySelector('.sl-drawer__panel') || d;
+  }
+  return el;
+}
+function ensureDetail(st, el, tries){
+  if(!st.open){ closeDrawer(); return false; }
+  var d=drawer(), href=el && el.getAttribute && el.getAttribute('data-drawer');
+  if(!href) return false;
+  if(!st._opened){
+    st._opened=true;
+    el.click();
+    setTimeout(place, 180);
+    return true;
+  }
+  if((!d || !d.classList.contains('is-open')) && (tries||0)<12){
+    setTimeout(function(){ ensureDetail(st, el, (tries||0)+1); place(); }, 50);
+    return true;
+  }
+  return false;
+}
 function place(){
   var st=steps[i], el=q(st.sel);
   if(!el){ next(1); return; }                            // target vanished mid-tour: auto-skip
-  el.scrollIntoView({block:'nearest'});
-  var r=el.getBoundingClientRect(), pad=5;
+  if(ensureDetail(st, el, 0)) return;
+  var tgt=targetFor(st, el);
+  tgt.scrollIntoView({block:'nearest'});
+  var r=tgt.getBoundingClientRect(), pad=5;
   ring.style.left=(r.left-pad)+'px'; ring.style.top=(r.top-pad)+'px';
   ring.style.width=(r.width+2*pad)+'px'; ring.style.height=(r.height+2*pad)+'px';
   var dots=''; for(var d=0;d<steps.length;d++){ dots+='<span class="tour-dot'+(d===i?' on':'')+'"></span>'; }

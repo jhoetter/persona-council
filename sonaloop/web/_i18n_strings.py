@@ -393,10 +393,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "tour_decision_h": "Decision: Evidenz wird bindend", "tour_decision_d": "Entscheidungen halten fest, was beschlossen wurde, worauf es basiert und welche Alternative verworfen wurde.",
         "tour_note_h": "Notes: kleine Beobachtungen", "tour_note_d": "Notizen sind leichte Graph-Knoten für Beobachtungen, Konzepte und Affinity-Arbeit. Sie lassen sich in Sections gruppieren.",
         "tour_asset_h": "Assets: echte Materialien", "tour_asset_d": "Assets sind eingehende Evidenz oder erzeugte Deliverables: Screenshots, Dokumente, Präsentationen und Exporte.",
-        "tour_library_h": "Die Bibliothek: alles Produzierte",
-        "tour_library_d": "Die Library ist der globale Browser über alle Artefakte. Tabs, Filter und Suche helfen beim Wiederfinden.",
-        "tour_docs_h": "Hilfe & Feedback",
-        "tour_docs_d": "Die Dokumentation erklärt jedes Konzept. Drücke ? für Shortcuts — und sag uns über Feedback, was fehlt.",
+        "tour_library_h": "Die Projekt-Outline bleibt die Bühne",
+        "tour_library_d": "Die gleichen Artefakte findest du später global in der Library. In der Tour bleiben sie im Projektkontext verbunden.",
         # calendar day/month names (comma-joined: ONE key per table keeps parity checkable
         # without 31 single-word keys; pages/_calendar.py splits at render)
         "cal_wd_short": "Mo,Di,Mi,Do,Fr,Sa,So",
@@ -785,10 +783,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "tour_decision_h": "Decision: evidence becomes commitment", "tour_decision_d": "Decisions record what was chosen, which evidence supports it, and which alternative was rejected.",
         "tour_note_h": "Notes: small observations", "tour_note_d": "Notes are lightweight graph nodes for observations, concepts, and affinity work. They can be grouped into sections.",
         "tour_asset_h": "Assets: real material", "tour_asset_d": "Assets are incoming evidence or outgoing deliverables: screenshots, documents, decks, and exports.",
-        "tour_library_h": "The Library: everything produced",
-        "tour_library_d": "The Library is the global browser over every artifact. Tabs, filters, and search keep the work findable.",
-        "tour_docs_h": "Help & feedback",
-        "tour_docs_d": "The documentation explains every concept. Press ? for shortcuts — and tell us what's missing via Feedback.",
+        "tour_library_h": "The project outline stays the stage",
+        "tour_library_d": "You can find the same artifacts globally in the Library later. In the tour, they stay connected in project context.",
         # calendar day/month names (comma-joined: ONE key per table keeps parity checkable
         # without 31 single-word keys; pages/_calendar.py splits at render)
         "cal_wd_short": "Mon,Tue,Wed,Thu,Fri,Sat,Sun",

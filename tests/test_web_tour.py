@@ -48,9 +48,15 @@ def test_tour_offer_is_a_sidebar_footer_row_not_a_toast(store):
 def test_tour_has_localized_artifact_steps():
     steps = tour_steps()
     assert len(steps) >= 10
-    assert {"/councils", "/surveys", "/syntheses", "/prototypes", "/sessions",
-            "/hypotheses", "/decisions", "/notes", "/assets"} <= {
-                s["url"].split("?")[0] for s in steps}
+    urls = {s["url"] for s in steps}
+    assert len(urls) == 1                              # no slow page-hop tour
+    rkinds = set()
+    for s in steps:
+        if m := re.search(r'data-rkind="([^"]+)"', s["sel"]):
+            rkinds.add(f'data-rkind="{m.group(1)}"')
+    assert {f'data-rkind="{k}"' for k in ("council", "survey", "synthesis", "prototype",
+                                          "session", "hypothesis", "decision", "note", "asset")} <= rkinds
+    assert all(s.get("open") for s in steps[1:10])     # real detail drawers, not just list rows
     for lang in ("de", "en"):
         token = _UI_LANG.set(lang)
         try:
@@ -77,7 +83,12 @@ def _steps_in(lang: str):
 def _selector_present(selector: str, html: str) -> bool:
     for part in selector.split(","):
         part = part.strip()
-        if part.startswith("."):
+        if "data-rkind=" in part:
+            m = re.search(r'data-rkind="([^"]+)"', part)
+            assert m, f"unsupported selector shape: {selector}"
+            if f'data-rkind="{m.group(1)}"' in html:
+                return True
+        elif part.startswith("."):
             cls = part[1:]
             assert re.fullmatch(r"[a-z0-9_-]+", cls), f"unsupported selector shape: {selector}"
             if cls in html:

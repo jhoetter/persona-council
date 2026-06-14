@@ -385,11 +385,15 @@ def get_project_graph(project_id: str, store: Store | None = None) -> dict[str, 
         g["project"]["url"] = web_url(f"/projects/{project_id}")  # noqa: F821 (bound) — the link to hand the user
         return g
     # Plan-less fallback (start_project always seeds a plan, so this is only hit by hand-built data /
-    # the study_ids-based report path): nodes from the project's studies + notes — NO study-edge
-    # layer (retired), so no edges.
+    # the study_ids-based report path): nodes from the project's councils/studies + notes — NO
+    # study-edge layer (retired), so no edges.
     project = _require_research_project(store, project_id)
     tags = project.get("study_tags", {})
     nodes = []
+    for cid in project.get("council_ids", []):
+        c = store.get_council_session(cid)
+        if c:
+            nodes.append(_evidence_node("council", cid, c.get("prompt", cid), {}, store))
     for sid in project.get("study_ids", []):
         node = _study_node(store, sid)
         if node:
