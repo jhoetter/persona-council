@@ -40,6 +40,7 @@ REGULAR: dict[str, dict[str, str | None]] = {
     "councils": {"body": "<path d=\"M21 11.5a8.5 8.5 0 0 1-12.5 7.5L4 20l1-4.5A8.5 8.5 0 1 1 21 11.5z\"/>", "cls": None},
     "syntheses": {"body": "<path d=\"M12 3l9 5-9 5-9-5 9-5z\"/><path d=\"M3 13l9 5 9-5\"/>", "cls": None},
     "projects": {"body": "<path data-part=\"folder\" d=\"M4 20h16a2 2 0 0 0 2-2V8.5a2 2 0 0 0-2-2h-7.1a2 2 0 0 1-1.6-.8l-.9-1.2a2 2 0 0 0-1.6-.8H4a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2z\"/>", "cls": None},
+    "folderOpen": {"body": "<path data-part=\"folder\" d=\"M6 14l1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2\"/>", "cls": None},
     "plan": {"body": "<path data-part=\"checks\" d=\"M3.5 7l1.3 1.3L7.3 5.3M3.5 12l1.3 1.3L7.3 10.3M3.5 17l1.3 1.3L7.3 15.3\"/><path data-part=\"lines\" d=\"M10.8 7H20.5M10.8 12H20.5M10.8 17H17\"/>", "cls": None},
     "memory": {"body": "<path d=\"M12 3a4 4 0 0 0-4 4 3.5 3.5 0 0 0-1 6.8V17a3 3 0 0 0 5 2 3 3 0 0 0 5-2v-3.2A3.5 3.5 0 0 0 16 7a4 4 0 0 0-4-4z\"/>", "cls": None},
     "panel": {"body": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M9 4v16\"/>", "cls": None},
