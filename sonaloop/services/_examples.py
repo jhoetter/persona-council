@@ -1,6 +1,6 @@
 """Loadable example projects (ticket loadable-example-projects): one-command demo data.
 
-Two flagship example projects ship INSIDE the wheel as committed fixtures
+Shipped example projects live INSIDE the wheel as committed fixtures
 (`sonaloop/examples/*.json`) — authored content, like docs. `load_example` replays a
 fixture through the REAL record_* service layer (never the Store directly), so every
 validation contract holds, every deterministic aggregation (price-ladder cliffs,
@@ -85,6 +85,15 @@ def _resolve_ref(raw: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
     elif raw.get("key") is not None:
         r["id"] = ctx[raw["kind"]][raw["key"]]
     return r
+
+
+def _resolve_subject(raw: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+    """Fixture session subject -> real subject. Flow/prototype ids are produced while
+    replaying the fixture; URL subjects pass through unchanged."""
+    out = {k: v for k, v in raw.items() if k not in ("key",)}
+    if raw.get("key") is not None:
+        out["id"] = ctx[raw["kind"]][raw["key"]]
+    return out
 
 
 def _resolve_statements(raw: Any, pids: dict[str, str]) -> list[dict[str, Any]]:
@@ -181,7 +190,10 @@ def load_example(slug: str, store: Store | None = None) -> dict[str, Any]:  # no
         project["updated_at"] = utc_now_iso()
         store.upsert_research_project(project)
 
-    ctx: dict[str, Any] = {"project_id": pid, "council": {}, "synthesis": {}, "hypothesis": {}}
+    ctx: dict[str, Any] = {
+        "project_id": pid, "asset": {}, "flow": {}, "prototype": {}, "survey": {},
+        "usability_session": {}, "council": {}, "synthesis": {}, "hypothesis": {},
+    }
 
     # -- open questions + the HMW reframe (stable per-text ids -> idempotent) ---
     if fx.get("open_questions"):
@@ -201,6 +213,21 @@ def load_example(slug: str, store: Store | None = None) -> dict[str, Any]:  # no
                 "hmw_ref": _oq_id(pid, hmw["questions"][idea["hmw"]]),
                 "cluster": idea.get("cluster"),
             }], store=store)
+
+    # -- project assets + screenshot flows (artifact-first walkthroughs) --------
+    for a in fx.get("assets", []):
+        rec = attach_asset(  # noqa: F821 (bound)
+            pid, content_base64=a["content_base64"], filename=a["filename"],
+            kind=a.get("kind"), title=a.get("title", ""), notes=a.get("notes", ""),
+            source=a.get("source", ""), direction=a.get("direction"), store=store)
+        ctx["asset"][a["key"]] = rec["id"]
+    for f in fx.get("flows", []):
+        rec = define_flow(  # noqa: F821 (bound)
+            pid, f["title"],
+            [{"asset_id": ctx["asset"][s["asset"]], "caption": s.get("caption", "")}
+             for s in f.get("steps") or []],
+            key=_ns(slug, f["key"]), store=store)
+        ctx["flow"][f["key"]] = rec["id"]
 
     # -- hypotheses, phase 1: the bets stamped BEFORE exposure -------------------
     def _record_hypothesis(h: dict[str, Any]) -> None:
@@ -290,6 +317,31 @@ def load_example(slug: str, store: Store | None = None) -> dict[str, Any]:  # no
         project["updated_at"] = utc_now_iso()
         store.upsert_research_project(project)
 
+    # -- surveys + imported responses -----------------------------------------
+    for s in fx.get("surveys", []):
+        rec = record_survey(  # noqa: F821 (bound)
+            pid, s["title"], s["questions"], intro=s.get("intro", ""),
+            derived_from=[_resolve_ref(r, ctx) for r in s.get("derived_from") or []],
+            status=s.get("status", "draft"), slug=s.get("slug"), key=_ns(slug, s["key"]),
+            store=store)["survey"]
+        ctx["survey"][s["key"]] = rec["id"]
+        if s.get("responses"):
+            import_survey_responses(rec["id"], responses=s["responses"],  # noqa: F821 (bound)
+                                    source=s.get("response_source", "example"), store=store)
+
+    # -- prototypes + usability sessions --------------------------------------
+    for p in fx.get("prototypes", []):
+        rec = scaffold_prototype(  # noqa: F821 (bound)
+            p["slug"], p["name"], p["concept"], template=p.get("template"),
+            project_id=pid, fidelity=p.get("fidelity"), store=store)
+        ctx["prototype"][p["key"]] = rec["id"]
+    for s in fx.get("usability_sessions", []):
+        rec = record_usability_session(  # noqa: F821 (bound)
+            pids[s["persona"]], _resolve_subject(s["subject"], ctx), s["fidelity"],
+            s["date"], s["steps"], s["outcome"], statements=_resolve_statements(s.get("statements"), pids),
+            project_id=pid, session_id=s.get("session_id"), key=_ns(slug, s["key"]), store=store)
+        ctx["usability_session"][s["key"]] = rec["usability_session"]["id"]
+
     # -- decision records (keyed upsert; refs must resolve by contract) ----------
     for d in fx.get("decisions", []):
         record_decision(pid, d["title"], d["decision"],  # noqa: F821 (bound)
@@ -328,6 +380,11 @@ def load_example(slug: str, store: Store | None = None) -> dict[str, Any]:  # no
             "personas": len(pids),
             "councils": len(ctx["council"]),
             "syntheses": len(ctx["synthesis"]),
+            "surveys": len(ctx["survey"]),
+            "assets": len(fx.get("assets", [])),
+            "flows": len(ctx["flow"]),
+            "prototypes": len(ctx["prototype"]),
+            "sessions": len(ctx["usability_session"]),
             "hypotheses": len(hypotheses),
             "decisions": len(fx.get("decisions", [])),
             "open_questions": len(store.list_open_questions(pid)),
@@ -346,7 +403,16 @@ def remove_example(slug: str, store: Store | None = None) -> dict[str, Any]:
     fx = _fixture(slug)
     pid = _example_project_id(slug)
     deleted = {"project": 0, "personas": 0, "councils": 0, "syntheses": 0,
-               "hypotheses": 0, "decisions": 0}
+               "hypotheses": 0, "decisions": 0, "surveys": 0, "prototypes": 0,
+               "sessions": 0}
+    for s in fx.get("usability_sessions", []):
+        deleted["sessions"] += store.delete_usability_session(
+            stable_id("usession", _ns(slug, s["key"])))  # noqa: F821 (bound)
+    for p in fx.get("prototypes", []):
+        deleted["prototypes"] += store.delete_prototype(p["slug"])
+    for s in fx.get("surveys", []):
+        deleted["surveys"] += store.delete_survey(
+            stable_id("survey", _ns(slug, s["key"])))  # noqa: F821 (bound)
     for c in fx.get("councils", []):
         deleted["councils"] += store.delete_council_session(
             stable_id("council", _ns(slug, c["key"])))  # noqa: F821 (bound)

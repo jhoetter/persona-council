@@ -1,6 +1,6 @@
 """Loadable example projects (ticket loadable-example-projects).
 
-The contract: two flagship example projects ship INSIDE the wheel as committed
+The contract: shipped example projects live INSIDE the wheel as committed
 fixtures, load on demand through the real record_* layer (so every inspector page
 is non-empty afterwards), re-load idempotently (stable example-namespaced ids,
 keyed upserts — no duplicates), and remove cleanly without touching user data.
@@ -17,6 +17,7 @@ from conftest import create_persona
 
 PREMIUM = "premium-pricing-study"
 POSITIONING = "positioning-council"
+ONBOARDING = "onboarding-showcase"
 
 
 def _client():
@@ -39,22 +40,23 @@ def test_fixtures_ship_inside_the_package_via_importlib_resources():
     from importlib import resources
     examples = resources.files("sonaloop").joinpath("examples")
     names = {e.name for e in examples.iterdir() if e.name.endswith(".json")}
-    assert names == {f"{PREMIUM}.json", f"{POSITIONING}.json"}
+    assert names == {f"{ONBOARDING}.json", f"{PREMIUM}.json", f"{POSITIONING}.json"}
     for name in names:
         fx = json.loads(examples.joinpath(name).read_text(encoding="utf-8"))
         assert fx["schema"] == "sonaloop_example/1"
         assert fx["slug"] and fx["project"]["title"] and fx["tagline"]
-        assert len(fx["personas"]) >= 4 and len(fx["councils"]) >= 3
+        assert len(fx["personas"]) >= 4 and len(fx["councils"]) >= 1
 
 
 def test_list_examples_names_both_and_tracks_loaded_state(store):
     examples = services.list_examples(store=store)
-    assert [e["slug"] for e in examples] == [POSITIONING, PREMIUM]  # sorted by filename
+    assert [e["slug"] for e in examples] == [ONBOARDING, POSITIONING, PREMIUM]  # sorted by filename
     assert all(e["loaded"] is False for e in examples)
     services.load_example(PREMIUM, store=store)
     by_slug = {e["slug"]: e for e in services.list_examples(store=store)}
     assert by_slug[PREMIUM]["loaded"] is True
     assert by_slug[POSITIONING]["loaded"] is False
+    assert by_slug[ONBOARDING]["loaded"] is False
 
 
 def test_unknown_slug_raises_keyerror_listing_available(store):
@@ -132,18 +134,32 @@ def test_positioning_loads_red_team_hmw_and_ideation(store):
     assert [h["status"] for h in services.list_hypotheses(pid, store=store)] == ["open", "open"]
 
 
+def test_onboarding_showcase_loads_every_tour_artifact(store):
+    out = services.load_example(ONBOARDING, store=store)
+    c = out["counts"]
+    assert c["personas"] == 4
+    assert c["councils"] == 1 and c["syntheses"] == 1 and c["surveys"] == 1
+    assert c["prototypes"] == 1 and c["sessions"] == 1
+    assert c["hypotheses"] == 1 and c["decisions"] == 1
+    assert c["assets"] == 3 and c["flows"] == 1 and c["notes"] == 2 and c["sections"] == 1
+    assert services.list_surveys(out["project_id"], store=store)[0]["response_count"] == 3
+    assert services.list_prototypes_artifacts(out["project_id"], store=store)
+    assert services.list_usability_sessions(project_id=out["project_id"], store=store)
+    assert len(services.list_assets(out["project_id"], store=store)) == 3
+
+
 def test_double_load_is_idempotent_for_both_examples(store):
-    for slug in (PREMIUM, POSITIONING):
+    for slug in (ONBOARDING, PREMIUM, POSITIONING):
         first = services.load_example(slug, store=store)
         second = services.load_example(slug, store=store)
         assert first["project_id"] == second["project_id"]
         assert first["counts"] == second["counts"]
-    assert len(store.list_research_projects()) == 2
-    assert len(store.list_personas()) == 9
-    assert len(store.list_council_sessions()) == 6
-    assert len(store.list_syntheses()) == 2
-    assert len(store.list_hypotheses()) == 5
-    assert len(store.list_decisions()) == 2
+    assert len(store.list_research_projects()) == 3
+    assert len(store.list_personas()) == 13
+    assert len(store.list_council_sessions()) == 7
+    assert len(store.list_syntheses()) == 3
+    assert len(store.list_hypotheses()) == 6
+    assert len(store.list_decisions()) == 3
 
 
 # ----------------------------------------------------------------------- removal
@@ -163,8 +179,10 @@ def test_remove_deletes_only_the_examples_entities(store):
 
     services.load_example(PREMIUM, store=store)
     services.load_example(POSITIONING, store=store)
+    services.load_example(ONBOARDING, store=store)
     services.remove_example(PREMIUM, store=store)
     services.remove_example(POSITIONING, store=store)
+    services.remove_example(ONBOARDING, store=store)
 
     # Example data: gone, fully.
     assert services.list_examples(store=store) and \
@@ -174,6 +192,7 @@ def test_remove_deletes_only_the_examples_entities(store):
     assert len(store.list_council_sessions()) == 1
     assert not store.list_syntheses() and len(store.list_hypotheses()) == 1
     assert not store.list_decisions()
+    assert not store.list_surveys() and not store.list_prototypes() and not store.list_usability_sessions()
 
     # User data: untouched.
     assert store.get_persona(user_pid)
@@ -204,6 +223,7 @@ def test_empty_home_offers_one_click_example_load_and_303s_to_project():
     html = client.get("/?lang=en").text
     assert f'action="/examples/{PREMIUM}/load"' in html
     assert f'action="/examples/{POSITIONING}/load"' in html
+    assert f'action="/examples/{ONBOARDING}/load"' in html
     assert "Load example" in html
 
     # CSRF is enforced on the load POST like on every write route.
@@ -221,24 +241,32 @@ def test_empty_home_offers_one_click_example_load_and_303s_to_project():
     assert _post(client, "/examples/nope/load").status_code == 404
 
     # Once data exists the checklist (and the example buttons) yield to the real lists.
-    assert "/examples/" not in client.get("/?lang=en").text
+    home = client.get("/?lang=en").text
+    assert 'class="fsrow fsex"' not in home
+    assert f'action="/examples/{PREMIUM}/load"' not in home
 
 
 def test_every_major_inspector_page_is_non_empty_after_loading_both(store):
     p1 = services.load_example(PREMIUM, store=store)
     p2 = services.load_example(POSITIONING, store=store)
+    p3 = services.load_example(ONBOARDING, store=store)
     client = _client()
     checks = {
-        "/projects": ["Klar money coaching", "Schichtwerk"],
+        "/projects": ["Klar money coaching", "Schichtwerk", "TeamPulse"],
         "/personas": ["Maren Ostendorf", "Birgit Krautmann"],
         "/councils": ["Klar Lite at €19/month", "Position under fire"],
         "/syntheses": ["Pricing story", "fair, audit-proof roster"],
+        "/surveys": ["TeamPulse pilot readiness"],
+        "/prototypes": ["TeamPulse first-run prototype"],
+        "/sessions": ["TeamPulse first-run flow"],
         "/hypotheses": ["€19/month", "works council"],
         "/decisions": ["Ship two tiers", "audit-proof roster"],
         "/notes": ["Subscription fatigue", "fairness ledger"],
+        "/assets": ["Prototype screen: intro"],
         "/activity": ["example.loaded"],
         p1["url"]: ["Willingness-to-pay evidence"],
         p2["url"]: ["Positioning bets"],
+        p3["url"]: ["TeamPulse"],
     }
     for url, needles in checks.items():
         r = client.get(f"{url}?lang=en")

@@ -1,0 +1,43 @@
+{
+  "title": "TeamPulse first-run prototype",
+  "summary": "A two-screen prototype showing privacy and follow-up ownership.",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "title": "Privacy first",
+      "elements": [
+        {
+          "id": "why",
+          "kind": "text",
+          "label": "Your answer is grouped with the team. Managers see themes, not individual replies."
+        },
+        {
+          "id": "start",
+          "kind": "button",
+          "label": "Continue",
+          "goto": "owner",
+          "action": "owner"
+        }
+      ]
+    },
+    {
+      "id": "owner",
+      "title": "One visible follow-up",
+      "elements": [
+        {
+          "id": "owner_copy",
+          "kind": "text",
+          "label": "This week's top issue gets an owner and due date before Friday."
+        },
+        {
+          "id": "finish",
+          "kind": "button",
+          "label": "Looks clear",
+          "goto": "intro",
+          "action": "intro"
+        }
+      ]
+    }
+  ]
+}

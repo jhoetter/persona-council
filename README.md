@@ -41,7 +41,8 @@ One sentence per host (needs [`uv`](https://docs.astral.sh/uv/)):
 
 That's it — no data dir, no `.env`, no setup step. The server bootstraps itself, and the
 first tool call on a fresh database returns the first steps (project → personas → council).
-Two complete **example projects** ship with the install: ask your agent to call
+Complete **example projects** ship with the install, including an onboarding showcase:
+ask your agent to call
 `load_example`, or click **Load example** in the inspector. `sonaloop info` checks the
 wiring; `sonaloop setup` adds the optional headless browser for prototype testing.
 

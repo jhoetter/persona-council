@@ -1,7 +1,6 @@
-"""Opt-in product tour (web/_tour.py): chrome presence, the quiet sidebar-footer offer
-(ux-contract §9 V7 — it retired the one-time floating toast), i18n'd copy, and THE
-CANARY — every step's selector must keep existing in the rendered chrome (the
-palette-canary spirit: the tour cannot rot silently when the chrome changes)."""
+"""Opt-in product tour (web/_tour.py): chrome presence, the quiet sidebar-footer offer,
+i18n'd copy, and THE CANARY — every artifact-tour selector must keep existing on
+the page it claims to explain."""
 from __future__ import annotations
 
 import re
@@ -10,7 +9,7 @@ from starlette.testclient import TestClient
 
 from sonaloop import services, web
 from sonaloop.web._i18n import STRINGS, _UI_LANG
-from sonaloop.web._tour import tour_steps
+from sonaloop.web._tour import SHOWCASE_SLUG, tour_steps
 
 
 def _client():
@@ -46,13 +45,18 @@ def test_tour_offer_is_a_sidebar_footer_row_not_a_toast(store):
     assert re.search(r'id="tourov"[^>]*hidden', first.text)
 
 
-def test_tour_has_six_localized_steps():
-    assert len(tour_steps()) == 6
+def test_tour_has_localized_artifact_steps():
+    steps = tour_steps()
+    assert len(steps) >= 10
+    assert {"/councils", "/surveys", "/syntheses", "/prototypes", "/sessions",
+            "/hypotheses", "/decisions", "/notes", "/assets"} <= {
+                s["url"].split("?")[0] for s in steps}
     for lang in ("de", "en"):
         token = _UI_LANG.set(lang)
         try:
             for s in tour_steps():
                 assert s["title"].strip() and s["body"].strip()
+                assert s["url"].strip() and s["sel"].strip()
                 # localized through the catalog, not raw keys leaking into the UI
                 assert not s["title"].startswith("tour_") and not s["body"].startswith("tour_")
         finally:
@@ -70,28 +74,41 @@ def _steps_in(lang: str):
         _UI_LANG.reset(token)
 
 
-def test_canary_every_step_selector_exists_in_the_rendered_chrome(store):
-    """THE CANARY: each step anchors to the persistent chrome. A selector is either
-    `<scope> a[href="…"]` (assert the link exists in the sidebar) or a bare `.class`
-    (assert the class is rendered). Fails naming the dead selector when the chrome
-    drops or renames a target — fix the step, don't let it rot."""
-    # seed one project so the canary also holds on the NON-empty home (the normal case)
-    services.create_research_project("Tour canary", goal="g", store=store)
+def _selector_present(selector: str, html: str) -> bool:
+    for part in selector.split(","):
+        part = part.strip()
+        if part.startswith("."):
+            cls = part[1:]
+            assert re.fullmatch(r"[a-z0-9_-]+", cls), f"unsupported selector shape: {selector}"
+            if cls in html:
+                return True
+        else:
+            assert False, f"unsupported selector shape: {selector}"
+    return False
+
+
+def test_canary_every_step_selector_exists_on_its_destination_page(store):
+    """THE CANARY: each tour step has a URL and selector that resolves after the
+    onboarding showcase is loaded. Fails naming the dead step when a page or class
+    changes — fix the step, don't let it rot."""
+    services.load_example(SHOWCASE_SLUG, store=store)
     client = _client()
-    html = client.get("/?lang=en").text
-    sidebar = html.split('class="sl-sidebar"')[1].split("</aside>")[0]
     dead = []
     for s in tour_steps():
-        m = re.search(r'a\[href="([^"]+)"\]$', s["sel"])
-        if m:
-            if f'href="{m.group(1)}"' not in sidebar:
-                dead.append(s["sel"])
-        else:
-            cls = s["sel"].lstrip(".")
-            assert re.fullmatch(r"[a-z-]+", cls), f"unsupported selector shape: {s['sel']}"
-            if cls not in html:
-                dead.append(s["sel"])
-    assert not dead, f"tour steps point at chrome that no longer renders: {dead}"
+        html = client.get(s["url"] + ("&lang=en" if "?" in s["url"] else "?lang=en")).text
+        if not _selector_present(s["sel"], html):
+            dead.append((s["url"], s["sel"]))
+    assert not dead, f"tour steps point at pages/selectors that no longer render: {dead}"
+
+
+def test_tour_config_knows_whether_showcase_is_loaded(store):
+    client = _client()
+    html = client.get("/?lang=en").text
+    assert '"slug": "onboarding-showcase"' in html
+    assert '"loaded": false' in html
+    services.load_example(SHOWCASE_SLUG, store=store)
+    html = client.get("/?lang=en").text
+    assert '"loaded": true' in html
 
 
 def test_take_the_tour_link_on_home_both_states(store):

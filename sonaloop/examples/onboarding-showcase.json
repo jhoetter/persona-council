@@ -1,0 +1,236 @@
+{
+  "schema": "sonaloop_example/1",
+  "slug": "onboarding-showcase",
+  "tagline": "A guided sample project with every major artifact: council, report, survey, prototype, session, hypothesis, decision, notes, assets, and a flow.",
+  "project": {
+    "title": "Onboarding showcase — TeamPulse rollout",
+    "goal": "Show how Sonaloop turns one research question into connected artifacts a team can inspect, challenge, and hand off.",
+    "description": "TeamPulse is a lightweight workplace pulse-check for hybrid operations teams. This showcase is built for onboarding: it intentionally includes every major inspector artifact at least once, so the product tour can walk a real graph instead of explaining empty navigation."
+  },
+  "personas": [
+    {
+      "key": "ops",
+      "description": "Operations lead at a 120-person logistics company; owns shift handovers, field-team escalations, and weekly improvement meetings.",
+      "profile": {
+        "display_name": "Nina Vogt",
+        "identity_traits": {
+          "gender_presentation": "female",
+          "gender_confidence": "high",
+          "age_range": "35-44",
+          "appearance_notes": "Dark blazer, warehouse visitor badge, phone always face-up on the table.",
+          "avatar_profile": "Female-read operations lead in her late thirties, pragmatic expression, clean studio illustration.",
+          "avatar_constraints": "no logos, no readable badges"
+        },
+        "segment": {"customer_type": "operations buyer", "market": "B2B employee experience", "region": "Germany", "attitude": "will try tools only when they reduce meeting load"},
+        "demographics": {"age": 39, "occupation": "Head of Operations", "household": "partner and one child"},
+        "role": {"title": "Head of Operations", "responsibilities": "Keeps three sites aligned across handovers, escalation logs, and weekly improvement reviews.", "seniority": "12 years in operations", "decision_power": "Can sponsor pilots up to €15k with HR sign-off."},
+        "company_context": {"industry": "Logistics", "size": "120 employees", "stack": "Teams, Excel, paper shift boards, Jira for central projects", "operating_model": "Fast daily standups; formal decisions happen in Friday ops review."},
+        "goals": ["Reduce recurring handover misses", "Make employee feedback visible without another meeting", "Give site leads one accountable follow-up list"],
+        "constraints": ["No new tool can add admin to shift leads", "Works council must see privacy defaults early", "Mobile usage matters more than dashboards"],
+        "tool_ids": ["teams", "excel", "shift_board"],
+        "tools": ["Microsoft Teams", "Excel", "paper shift board"],
+        "relationships": [{"name": "Tarek", "type": "site lead", "friction": "accepts useful tools but kills anything that slows shift start"}],
+        "personality": {"working_style": "decisive and checklist-driven", "communication_style": "short, concrete, asks for owners and dates", "risk_tolerance": "medium when the pilot is reversible", "character_notes": "Judges software by whether it survives Monday morning."},
+        "pain_points": ["Feedback arrives as anecdotes after problems have already repeated", "Dashboards often hide who owns the next action", "Site leads distrust anything that looks like surveillance"],
+        "success_criteria": ["A site lead can close the loop in under five minutes", "The works council has no open privacy objection"]
+      }
+    },
+    {
+      "key": "hr",
+      "description": "HR business partner supporting distributed blue-collar teams; accountable for engagement reporting and employee relations.",
+      "profile": {
+        "display_name": "Mira Schulz",
+        "identity_traits": {"gender_presentation": "female", "gender_confidence": "high", "age_range": "30-39", "appearance_notes": "Soft cardigan, annotated notebook, calm posture.", "avatar_profile": "Female-read HR partner in her thirties, thoughtful, warm professional illustration.", "avatar_constraints": "no logos"},
+        "segment": {"customer_type": "HR evaluator", "market": "B2B employee experience", "region": "Germany", "attitude": "cares about trust and explainability before metrics"},
+        "demographics": {"age": 33, "occupation": "HR business partner", "household": "shared flat, no children"},
+        "role": {"title": "HR business partner", "responsibilities": "Engagement checks, works-council preparation, manager coaching, and pulse survey interpretation.", "seniority": "7 years HR", "decision_power": "Co-decides pilots with operations and legal."},
+        "company_context": {"industry": "Logistics", "size": "120 employees", "stack": "Personio, Teams, shared Drive, survey exports", "operating_model": "Monthly engagement review, ad hoc escalation calls."},
+        "goals": ["Protect employee trust", "Make survey results actionable for managers", "Avoid creating a second reporting process"],
+        "constraints": ["Privacy review cannot be vague", "Low response teams must not be blamed publicly", "Needs exportable evidence for leadership"],
+        "tool_ids": ["personio", "teams", "survey_exports"],
+        "tools": ["Personio", "Teams", "CSV survey exports"],
+        "relationships": [{"name": "Jana", "type": "works council chair", "friction": "asks hard questions about anonymity thresholds"}],
+        "personality": {"working_style": "careful and consensus-oriented", "communication_style": "precise, low-drama, translates risk into policy language", "risk_tolerance": "low on privacy, medium on reversible process pilots", "character_notes": "Will block a shiny dashboard if employees cannot understand it."},
+        "pain_points": ["Leaders ask for numbers before agreeing on what they mean", "Low participation makes dashboards misleading", "Follow-up promises disappear after town halls"],
+        "success_criteria": ["Employees know what happens after they answer", "Managers receive a small number of concrete next actions"]
+      }
+    },
+    {
+      "key": "lead",
+      "description": "Shift lead at a warehouse site; coordinates ten workers and hates tools that turn into homework after the late shift.",
+      "profile": {
+        "display_name": "Tarek Demir",
+        "identity_traits": {"gender_presentation": "male", "gender_confidence": "high", "age_range": "40-49", "appearance_notes": "Work jacket, tired eyes, practical watch.", "avatar_profile": "Male-read warehouse shift lead in his forties, direct expression, realistic illustration.", "avatar_constraints": "no logos, no safety-brand markings"},
+        "segment": {"customer_type": "frontline manager", "market": "B2B employee experience", "region": "Germany", "attitude": "skeptical until the first shift proves it saves time"},
+        "demographics": {"age": 44, "occupation": "Shift lead", "household": "married, two teenagers"},
+        "role": {"title": "Warehouse shift lead", "responsibilities": "Coordinates daily staffing, break cover, incidents, and handover notes.", "seniority": "18 years on site", "decision_power": "Can make or break adoption through daily usage."},
+        "company_context": {"industry": "Logistics", "size": "one 35-person site", "stack": "WhatsApp side-channel, paper board, scanner terminal", "operating_model": "Work starts fast; any admin waits until the line is stable."},
+        "goals": ["Stop repeating the same staffing complaint", "Keep the team focused during shift start", "Avoid being judged by anonymous complaints without context"],
+        "constraints": ["No desktop time during active shift", "German and Turkish are both used informally on the floor", "Trust is lost if answers feel traceable"],
+        "tool_ids": ["phone", "paper_board", "scanner"],
+        "tools": ["phone", "paper board", "scanner terminal"],
+        "relationships": [{"name": "Nina", "type": "operations lead", "friction": "pushes for clean reporting; he pushes for less admin"}],
+        "personality": {"working_style": "practical, protects the team from noise", "communication_style": "plain-spoken and skeptical", "risk_tolerance": "low for tools that expose his team", "character_notes": "Will adopt anything that makes the next shift less chaotic."},
+        "pain_points": ["Feedback tools arrive as management projects", "Action owners are unclear", "Late-shift issues are forgotten by morning"],
+        "success_criteria": ["He can log and close one issue from his phone", "The team sees one visible improvement within a week"]
+      }
+    },
+    {
+      "key": "finance",
+      "description": "Finance controller reviewing SaaS spend; wants proof that another engagement tool will change behavior, not just produce a nicer chart.",
+      "profile": {
+        "display_name": "Oskar Lehmann",
+        "identity_traits": {"gender_presentation": "male", "gender_confidence": "high", "age_range": "45-54", "appearance_notes": "Pressed shirt, spreadsheet window always open, compact laptop bag.", "avatar_profile": "Male-read finance controller in his late forties, measured expression, professional illustration.", "avatar_constraints": "no logos"},
+        "segment": {"customer_type": "budget gatekeeper", "market": "B2B employee experience", "region": "Germany", "attitude": "requires evidence before approving recurring spend"},
+        "demographics": {"age": 48, "occupation": "Finance controller", "household": "married, adult child"},
+        "role": {"title": "Finance controller", "responsibilities": "Approves SaaS renewals, checks pilot ROI, reports budget variance.", "seniority": "15 years finance", "decision_power": "Can reject recurring spend or force a smaller pilot."},
+        "company_context": {"industry": "Logistics", "size": "120 employees", "stack": "DATEV, Excel, procurement mailbox", "operating_model": "Quarterly cost review; prefers capped pilots with exit criteria."},
+        "goals": ["Avoid yet another unused SaaS subscription", "Tie engagement work to measurable operational outcomes", "Keep pilot costs capped"],
+        "constraints": ["Needs a stop/go criterion before launch", "No annual contract before proof", "Will compare against current survey tooling"],
+        "tool_ids": ["datev", "excel", "procurement_mailbox"],
+        "tools": ["DATEV", "Excel", "procurement mailbox"],
+        "relationships": [{"name": "Mira", "type": "HR partner", "friction": "brings trust arguments he accepts only when paired with operating metrics"}],
+        "personality": {"working_style": "methodical and evidence-first", "communication_style": "calm, numeric, asks what changes if the answer is bad", "risk_tolerance": "medium for capped pilots", "character_notes": "Not anti-people; anti-vague-spend."},
+        "pain_points": ["Engagement tools report activity, not outcomes", "Pilot success criteria are usually written after launch", "Recurring licenses hide in departmental budgets"],
+        "success_criteria": ["The pilot has a clear cost cap", "The report links usage to one operational decision"]
+      }
+    }
+  ],
+  "open_questions": [
+    "Would teams trust a weekly pulse check if follow-up is visible?",
+    "Which artifact proves enough value for a capped pilot?",
+    "Where would frontline managers abandon the first-run flow?"
+  ],
+  "assets": [
+    {"key": "screen_intro", "filename": "teampulse-intro.png", "kind": "screenshot", "title": "Prototype screen: intro", "notes": "First screen used in the artifact walkthrough.", "content_base64": "c2NyZWVuLWludHJv"},
+    {"key": "screen_action", "filename": "teampulse-action.png", "kind": "screenshot", "title": "Prototype screen: action owner", "notes": "Second screen used in the artifact walkthrough.", "content_base64": "c2NyZWVuLWFjdGlvbg=="},
+    {"key": "field_note", "filename": "field-note.txt", "kind": "document", "title": "Field note: shift handover", "notes": "Input evidence attached to the project.", "content_base64": "RmllbGQgbm90ZTogc2hpZnQgaGFuZG92ZXIgaXNzdWVzIGFyZSByZXBlYXRlZCB3aGVuIG5vIG93bmVyIGlzIG5hbWVkLg=="}
+  ],
+  "flows": [
+    {"key": "first_run", "title": "TeamPulse first-run flow", "steps": [
+      {"asset": "screen_intro", "caption": "Explain anonymity and the weekly rhythm"},
+      {"asset": "screen_action", "caption": "Assign one visible follow-up owner"}
+    ]}
+  ],
+  "councils": [
+    {
+      "key": "trust-council",
+      "prompt": "Would this team trust a weekly TeamPulse check if it shows visible follow-up?",
+      "questions": ["What would make this feel useful rather than like surveillance?"],
+      "personas": ["ops", "hr", "lead", "finance"],
+      "selection_reason": "The panel spans sponsor, trust owner, daily user, and budget gatekeeper.",
+      "summary": "The panel supports a capped pilot only if anonymity, owner visibility, and stop/go criteria are explicit.",
+      "exec_summary": "Trust is possible, but only when the first screen explains anonymity and the report shows named follow-up owners without exposing individual respondents.",
+      "statements": [
+        {"persona": "ops", "about": "q0", "text": "I would pilot it if every pulse item ends with an owner and a date; otherwise it becomes another sentiment chart.", "stance": {"value": 1, "label": "conditional"}},
+        {"persona": "hr", "about": "q0", "text": "The anonymity threshold has to be visible before anyone answers. Trust is built before the first question.", "stance": {"value": 1, "label": "conditional"}},
+        {"persona": "lead", "about": "q0", "text": "My team will not answer if they think I can identify them. Show what changes next week, not a dashboard.", "stance": {"value": -1, "label": "skeptical"}},
+        {"persona": "finance", "about": "q0", "text": "I need a capped pilot and one operational metric. Participation alone is not a business case.", "stance": {"value": 0, "label": "neutral"}}
+      ]
+    }
+  ],
+  "hypotheses": [
+    {
+      "key": "visible-followup",
+      "text": "If the first-run flow explains anonymity and shows a named follow-up owner, at least 60% of pilot respondents will support trying TeamPulse for four weeks.",
+      "prediction": {"metric": "support share on survey q3", "expected_value": 0.6, "tolerance": 0.1, "confidence": 0.72},
+      "derived_from": [{"kind": "council", "key": "trust-council", "role": "derived_from"}]
+    }
+  ],
+  "hypothesis_results": [
+    {"hypothesis": "visible-followup", "observed_value": 0.67, "source": {"kind": "external", "text": "2 of 3 imported showcase responses selected support or conditional."}, "note": "The small sample validates the onboarding demonstration bet, not a real market claim."}
+  ],
+  "syntheses": [
+    {
+      "key": "artifact-map",
+      "title": "Showcase report — from question to decision",
+      "start_input": "Synthesize the trust council into an onboarding-ready project report.",
+      "goal": "Explain how the artifacts connect.",
+      "councils": ["trust-council"],
+      "payload": {
+        "arc_narrative": "The council turned a broad trust question into concrete proof needs: visible follow-up, clear anonymity, and a capped pilot.",
+        "gesamtbild": "The product story is not 'measure engagement'; it is 'close one visible loop per week without exposing individuals.'",
+        "positionierung": "Position TeamPulse as a follow-up accountability layer for hybrid operations teams.",
+        "references": [{"council": "trust-council", "role": "primary evidence"}],
+        "findings": [
+          {"text": "Visible follow-up is the adoption hinge.", "kind": "key_problem", "refs": [{"kind": "council", "key": "trust-council", "role": "evidence"}]},
+          {"text": "Keep the pilot capped and reversible.", "kind": "recommendation", "score": {"effort": 2, "value": 4}, "refs": [{"kind": "council", "key": "trust-council", "role": "evidence"}]},
+          {"text": "Frontline managers need phone-first closure, not another dashboard.", "kind": "pain_solver", "refs": [{"kind": "council", "key": "trust-council", "role": "evidence"}]}
+        ],
+        "citations": [{"kind": "council", "council": "trust-council", "quote": "Show what changes next week, not a dashboard."}],
+        "statements": [
+          {"persona": "lead", "text": "Show me the action owner and I might use it.", "stance": {"value": 1, "label": "conditional"}, "about": "q0", "refs": [{"kind": "council", "key": "trust-council", "quote": "Show what changes next week, not a dashboard."}]}
+        ]
+      }
+    }
+  ],
+  "surveys": [
+    {
+      "key": "pilot-readiness",
+      "slug": "teampulse-pilot-readiness",
+      "title": "TeamPulse pilot readiness survey",
+      "intro": "Three questions to validate the pilot risk before launch.",
+      "status": "open",
+      "derived_from": [{"kind": "council", "key": "trust-council", "role": "derived_from"}],
+      "questions": [
+        {"id": "q1", "text": "What would make you answer a weekly pulse check?", "kind": "single", "options": ["Clear anonymity", "Visible follow-up", "Manager endorsement", "Nothing"]},
+        {"id": "q2", "text": "Which proof would matter?", "kind": "multi", "options": ["Owner named", "Due date shown", "Team result visible", "Export for works council"]},
+        {"id": "q3", "text": "I would support a four-week TeamPulse pilot.", "kind": "scale", "options": ["oppose", "skeptical", "neutral", "conditional", "support"], "stance_mapped": true},
+        {"id": "q4", "text": "What would make this unacceptable?", "kind": "text"}
+      ],
+      "responses": [
+        {"respondent_key": "persona:lead", "submitted_at": "2026-06-01T10:00:00Z", "answers": [{"question_id": "q1", "value": "Visible follow-up"}, {"question_id": "q2", "value": ["Owner named", "Due date shown"]}, {"question_id": "q3", "value": "conditional"}, {"question_id": "q4", "value": "If my team thinks answers can be traced back to them."}], "source": "showcase"},
+        {"respondent_key": "persona:hr", "submitted_at": "2026-06-01T11:00:00Z", "answers": [{"question_id": "q1", "value": "Clear anonymity"}, {"question_id": "q2", "value": ["Export for works council", "Team result visible"]}, {"question_id": "q3", "value": "support"}, {"question_id": "q4", "value": "Launching without a privacy explanation."}], "source": "showcase"},
+        {"respondent_key": "r_showcase_finance", "submitted_at": "2026-06-01T12:00:00Z", "answers": [{"question_id": "q1", "value": "Visible follow-up"}, {"question_id": "q2", "value": ["Owner named"]}, {"question_id": "q3", "value": "neutral"}, {"question_id": "q4", "value": "No stop/go rule."}], "source": "showcase"}
+      ]
+    }
+  ],
+  "prototypes": [
+    {
+      "key": "first-run-prototype",
+      "slug": "teampulse-first-run-showcase",
+      "name": "TeamPulse first-run prototype",
+      "fidelity": "flow",
+      "concept": {
+        "title": "TeamPulse first-run prototype",
+        "summary": "A two-screen prototype showing privacy and follow-up ownership.",
+        "start": "intro",
+        "screens": [
+          {"id": "intro", "title": "Privacy first", "elements": [{"id": "why", "kind": "text", "label": "Your answer is grouped with the team. Managers see themes, not individual replies."}, {"id": "start", "kind": "button", "label": "Continue", "goto": "owner"}]},
+          {"id": "owner", "title": "One visible follow-up", "elements": [{"id": "owner_copy", "kind": "text", "label": "This week's top issue gets an owner and due date before Friday."}, {"id": "finish", "kind": "button", "label": "Looks clear", "goto": "intro"}]}
+        ]
+      }
+    }
+  ],
+  "usability_sessions": [
+    {
+      "key": "lead-flow-walk",
+      "persona": "lead",
+      "subject": {"kind": "flow", "key": "first_run", "label": "TeamPulse first-run flow"},
+      "fidelity": "artifact",
+      "date": "2026-06-02",
+      "steps": [
+        {"index": 0, "action": {"type": "look", "target": "intro", "detail": "Reviewed anonymity screen"}, "monologue": "This has to be the first thing my team sees.", "state": {"screen": "screen_intro"}, "friction": {"level": "hesitation", "note": "Wants even plainer wording"}, "verdict": {"would_continue": true, "reason": "Privacy is addressed early."}},
+        {"index": 1, "action": {"type": "look", "target": "action-owner", "detail": "Reviewed owner screen"}, "monologue": "An owner and due date is useful. That is different from just collecting complaints.", "state": {"screen": "screen_action"}, "friction": {"level": "none", "note": ""}, "verdict": {"would_continue": true, "reason": "The follow-up loop is visible."}}
+      ],
+      "outcome": {"completed": true, "summary": "Continued through the flow because privacy and follow-up were both visible.", "predicted_behaviors": [{"action": "tries the four-week pilot with one team", "step": 1, "likelihood": "likely", "trigger": "named owner and due date"}]}
+    }
+  ],
+  "decisions": [
+    {
+      "key": "pilot-decision",
+      "title": "Run a capped TeamPulse pilot",
+      "decision": "Run a four-week pilot at one site, gated by visible owner follow-up and works-council privacy review.",
+      "status": "adopted",
+      "based_on": [{"kind": "synthesis", "key": "artifact-map", "role": "primary rationale"}, {"kind": "council", "key": "trust-council", "role": "risk evidence"}],
+      "rejected": [{"kind": "council", "key": "trust-council", "note": "Rejected a broad dashboard rollout because the panel asked for a smaller trust-building pilot."}]
+    }
+  ],
+  "notes": [
+    {"key": "privacy-note", "title": "Privacy before value", "text": "The first screen must explain anonymity before asking for feedback.", "created_at": "2026-06-03T09:00:00Z"},
+    {"key": "owner-note", "title": "Owner loop", "text": "Every result view should name one follow-up owner and due date.", "created_at": "2026-06-03T09:30:00Z"}
+  ],
+  "sections": [
+    {"title": "Tour path", "kind": "phase", "note": "The artifacts the onboarding tour walks through.", "members": [{"kind": "synthesis", "key": "artifact-map"}, {"kind": "note", "key": "privacy-note"}, {"kind": "note", "key": "owner-note"}]}
+  ]
+}

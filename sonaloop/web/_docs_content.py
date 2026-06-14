@@ -375,14 +375,14 @@ INSPECTOR_SECTIONS = [
       "panel. On detail pages `[`/`]` step to the sibling record. Everything is disabled while you type in a field.")),
     ("tour", "compass",
      ("Produkt-Tour", "Product tour"),
-     ("Eine optionale 60-Sekunden-Tour zeigt die Oberfläche in sechs Schritten. Sie startet **nie von "
-      "selbst**: Beim ersten Besuch bietet ein einmaliger, schließbarer Hinweis sie an; danach findest "
-      "du **„Tour starten“** auf der Startseite und **„Tour neu starten“** im Einstellungs-Popover. "
+     ("Die optionale Tour startet **nie von selbst**. Wenn du **„Tour starten“** wählst, lädt sie bei "
+      "Bedarf das Showcase-Beispielprojekt und führt dann durch echte Artefakte: Projekt, Council, "
+      "Survey, Report, Prototype, Session, Hypothese, Entscheidung, Notes, Assets und Library. "
       "`Esc` beendet sie jederzeit.",
-      "An optional 60-second tour walks the chrome in six steps. It **never auto-starts**: on your "
-      "first visit a one-time dismissible note offers it; after that, **“Take the tour”** "
-      "lives on the home page and **“Restart tour”** in the settings popover. `Esc` ends it "
-      "any time.")),
+      "The optional tour **never auto-starts**. When you choose **“Take the tour”**, it loads the "
+      "showcase example project if needed, then walks real artifacts: project, council, survey, "
+      "report, prototype, session, hypothesis, decision, notes, assets, and the Library. `Esc` "
+      "ends it any time.")),
     ("editing", "pencil",
      ("Was du bearbeiten kannst", "What you can edit"),
      ("Der Inspector ist eine Lese-Oberfläche mit einer klaren Grenze: **ansehen und bearbeiten, "

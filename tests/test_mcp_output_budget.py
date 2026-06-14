@@ -1,6 +1,6 @@
 """MCP output budget (ticket mcp-output-budget-audit): every read tool stays ≤ ~20k
 tokens (80k chars on the serialized envelope, safety margin under the 25k-token
-directory line) against a REALISTIC fixture — the two shipped example projects plus
+directory line) against a REALISTIC fixture — two flagship example projects plus
 one persona with 16 weeks of lived memory, real-sized corpora, a survey with
 responses, a usability session, assets/flows, a plan run and chats.
 
